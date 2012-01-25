@@ -46,7 +46,7 @@ genEx (P.Case exp v t alts) = do
   --         using case construct.
   exp' <- genEx exp
   v' <- genVar v
-  emit $ Assign (AST.Var v') exp'
+  emit $ Assign (AST.Var v') (Eval exp')
   genAlts v' alts
 genEx (Cast exp co) =
   genEx exp
@@ -87,7 +87,7 @@ genFun vs body = do
 genAlts :: JSVar -> [Alt P.Var] -> JSGen JSExp
 genAlts v as = do
   as' <- mapM (genAlt v) (reverse as)
-  emit $ AST.Case (Eval $ AST.Var v) $ reverse as'
+  emit $ AST.Case (AST.Var v) $ reverse as'
   return $ AST.Var v
 
 -- | Generate a case alternative. Each alternative is responsible for binding
