@@ -4,12 +4,6 @@ import Control.Monad.State
 import CodeGen.Javascript.Bag as Bag
 import CodeGen.Javascript.AST
 
-{-
-TODO: använd beginThunk för att sätta upp en "låda" där alla emittade uttryck
-samlas, endThunk ex för att "stänga" lådan och knyta ihop ex med sina
-supportande statements
--}
-
 data GenState = GenState {
     nextVar    :: JSVar,
     code       :: Bag JSStmt
