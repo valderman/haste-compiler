@@ -46,3 +46,9 @@
 
 * Get IO working.
   [important/should be easy]
+
+* Implement tail call elimination using trampolining.
+  [important/medium]
+
+* Implement tail recursion as loops.
+  [nice to have/easy after general tail calls]
