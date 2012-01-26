@@ -2,8 +2,10 @@
   codegen, since JS doesn't have sane scoping rules. Since variables are SSA,
   we should also keep track of whether the variable contains a thunk or
   a value, and perhaps other similarly interesting things, in said table.
+  [critical/easy]
 
 * Represent constructors as tags rather than their fully qualified names.
+  [important/easy]
 
 * Case expression currently compares the entire scrutinee to constructors;
   this is obviously incorrect, as we only want to look at the constructor
@@ -12,28 +14,35 @@
   in the switch() part perhaps, that "intelligently" figures out whether we
   want to compare constructors or literals. Analyzing the case alternatives
   and then making the decision at compile time might also work.
+  [critical/should be easy]
 
 * Implement Thunk and Eval; Eval should be fairly straightforward, there's
   a variety of options for Thunk. Look into getters and setters; could be
   elegant.
+  [critical/easy]
 
 * Implement link step, stitching all compiled modules together and dumping
   the code to a .js file.
+  [important/easy]
 
 * Add user dirs for compiled libraries, and a compiler flag to install code
   into those dirs, as unlinked files, rather than link and dump to the current
   working dir.
+  [nice to have/easy]
 
 * Implement runtime library.
+  [critical/easy]
 
 * Generate primops as JS ops rather than function calls. Also look into
   generating certain ops on the lifted numeric types in pure JS to save space.
-
-* Make sure thunks never contain functions; that's both slow AND large!
+  [critical/easy]
 
 * Fix foreign calls.
+  [important/could require some work]
 
 * Look into rewriting as much of the base libraries as possible in pure JS;
   huge space savings are likely!
+  [nice to have/hard work]
 
 * Get IO working.
+  [important/should be easy]
