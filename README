@@ -1,0 +1,5 @@
+This will, one day, be a plugin for GHC 7.2 and up which generates Javascript
+from Haskell source. Currently, it generates chunks of broken pseudo-JS, and
+is completely useless.
+
+Stay tuned.
