@@ -1,0 +1,33 @@
+Name:           jsplug
+Version:        0.1
+License:        GPL3
+License-File:   LICENSE
+Synopsis:       Generate Javascript from Haskell by way of a GHC plugin
+Description:    Generate Javascript from Haskell by way of a GHC plugin
+Cabal-Version:  >= 1.10
+Build-Type:     Simple
+Author:         Anton Ekblad <anton@ekblad.cc>
+Copyright:      Anton Ekblad <anton@ekblad.cc>
+Maintainer:     Anton Ekblad <anton@ekblad.cc>
+Homepage:       http://ekblad.cc
+Bug-reports:    http://ekblad.cc
+Stability:      Experimental
+
+Library
+    Hs-Source-Dirs: src
+    GHC-Options: -Wall
+    Build-Depends:
+        base,
+        ghc-prim,
+        ghc >= 7.2,
+        mtl
+    Exposed-Modules:
+        Plugin.GenJS
+    Other-Modules:
+        CodeGen.Javascript
+        CodeGen.Javascript.AST
+        CodeGen.Javascript.Monad
+        CodeGen.Javascript.Bag
+        CodeGen.Javascript.Generate
+        CodeGen.Javascript.PrintJS
+    default-language: Haskell98
