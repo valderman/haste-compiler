@@ -1,6 +1,6 @@
 Name:           jsplug
 Version:        0.1
-License:        GPL3
+License:        GPL-3
 License-File:   LICENSE
 Synopsis:       Generate Javascript from Haskell by way of a GHC plugin
 Description:    Generate Javascript from Haskell by way of a GHC plugin
