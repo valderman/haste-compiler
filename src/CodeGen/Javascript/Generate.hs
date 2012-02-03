@@ -30,8 +30,8 @@ genEx (P.Lit lit) =
   genLit lit
 genEx (App exp arg) = do
   exp' <- genEx exp
-  arg' <- genEx arg
-  return $ Call exp' [arg']
+  let (argEx, argBody) = genJS $ genEx arg
+  return $ Call exp' [Thunk (toList argBody) argEx]
 genEx (Lam v exp) =
   genFun [v] exp
 genEx (Let bind exp) = do
