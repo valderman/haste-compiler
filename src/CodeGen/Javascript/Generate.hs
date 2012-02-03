@@ -22,6 +22,8 @@ genBind (NonRec v ex) = do
   let (retEx, body) = genJS (genEx ex)
   v' <- genVar v
   emit $ Assign (AST.Var v') (Thunk (toList $ body) retEx)
+genBind (Rec bs) =
+  mapM_ (\(v, ex) -> genBind (NonRec v ex)) bs
 
 genEx :: Expr Var -> JSGen JSExp
 genEx (P.Var v) =
