@@ -29,7 +29,6 @@ genEx (P.Var v) =
 genEx (P.Lit lit) =
   genLit lit
 genEx (App exp arg) = do
-  -- TODO: the function's argument needs to be a thunk!
   exp' <- genEx exp
   arg' <- genEx arg
   return $ Call exp' [arg']

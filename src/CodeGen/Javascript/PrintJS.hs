@@ -43,7 +43,7 @@ instance PrettyJS JSStmt where
     where
       stmts' = catLst $ map (pretty $ ind+step) stmts
   pretty ind (Case ex as) =
-    indent ind +> out "switch(" +> pretty ind ex +> out "){" +> endl +>
+    indent ind +> out "switch(C(" +> pretty ind ex +> out ")){" +> endl +>
       catLst (map (pretty $ ind+step) as) +> indent ind +> out "}" +> endl
   pretty ind (Assign lhs rhs) =
     indent ind +> pretty ind lhs +> out " = " +> pretty ind rhs +> out ";"+>endl
@@ -78,10 +78,10 @@ instance PrettyJS JSExp where
   pretty ind (Lit l) =
     pretty ind l
   pretty ind (Thunk ss ex) =
-    out "THUNK{" +> endl +> prettyList (ind+step) "" ss +>
-      pretty (ind+step) (Ret ex) +> indent ind +> out "}"
+    out "T(function(){" +> endl +> prettyList (ind+step) "" ss +>
+      pretty (ind+step) (Ret ex) +> indent ind +> out "})"
   pretty ind (Eval ex) =
-    out "EVAL(" +> pretty ind ex +> out ")"
+    out "E(" +> pretty ind ex +> out ")"
   pretty ind (GetDataArg ex n) =
     pretty ind ex +> out "[" +> out (show n) +> out "]"
 

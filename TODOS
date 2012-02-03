@@ -7,20 +7,6 @@
 * Represent constructors as tags rather than their fully qualified names.
   [important/easy]
 
-* Case expression currently compares the entire scrutinee to constructors;
-  this is obviously incorrect, as we only want to look at the constructor
-  part of it. This is trickier than it sounds since we still want to use
-  a JS case statement for the comparison. Use a special comparator function
-  in the switch() part perhaps, that "intelligently" figures out whether we
-  want to compare constructors or literals. Analyzing the case alternatives
-  and then making the decision at compile time might also work.
-  [critical/should be easy]
-
-* Implement Thunk and Eval; Eval should be fairly straightforward, there's
-  a variety of options for Thunk. Look into getters and setters; could be
-  elegant.
-  [critical/easy]
-
 * Implement link step, stitching all compiled modules together and dumping
   the code to a .js file.
   [important/easy]
