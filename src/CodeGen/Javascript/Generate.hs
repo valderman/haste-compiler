@@ -54,7 +54,7 @@ genEx (Cast exp co) =
 genEx (Tick t ex) =
   genEx ex
 genEx (Type t) =
-  return $ AST.Var $ Named $ "TYPE: " ++ show t
+  return $ AST.Var $ NamedLazy $ "TYPE: " ++ show t
 genEx (Coercion co) =
   error "Don't know what to do with a coercion!"
 
@@ -128,4 +128,14 @@ instance Show Type where
   show (ForAllTy v t) = "Forall " ++ show v ++ " " ++ show t
 
 genVar :: Var -> JSGen JSVar
-genVar = return . Named . show
+genVar v = do
+  return $ named $ show v
+  where
+    named = if isStrict v then NamedStrict else NamedLazy
+
+isStrict :: Var -> Bool
+isStrict var | isId var =
+  (isStrictType $ varType var) ||
+  (isValueUnfolding $ unfoldingInfo $ idInfo var)
+isStrict _ =
+  False

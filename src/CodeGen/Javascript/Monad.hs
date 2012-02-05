@@ -5,13 +5,13 @@ import CodeGen.Javascript.Bag as Bag
 import CodeGen.Javascript.AST
 
 data GenState = GenState {
-    nextVar    :: JSVar,
+    nextVar    :: VarID,
     code       :: Bag JSStmt
   }
 
 initialState :: GenState
 initialState = GenState {
-    nextVar = firstVar,
+    nextVar = varZero,
     code    = empty
   }
 
@@ -22,12 +22,12 @@ genJS (JSGen gen) = case runState gen initialState of
   (a, st) -> (a, code st)
 
 -- | Get a new, unique, variable
-newVar :: JSGen JSVar
-newVar = JSGen $ do
+newVar :: (VarID -> JSVar) -> JSGen JSVar
+newVar v = JSGen $ do
   st <- get
   let var = nextVar st
   put st {nextVar = succ var}
-  return var
+  return (v var)
 
 -- | Emit a JS statement to the code stream
 emit :: JSStmt -> JSGen ()

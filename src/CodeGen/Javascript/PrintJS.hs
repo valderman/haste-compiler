@@ -86,9 +86,15 @@ instance PrettyJS JSExp where
     pretty ind ex +> out "[" +> out (show n) +> out "]"
 
 instance PrettyJS JSVar where
-  pretty ind (Local n) =
-    out $ '_':show n
-  pretty ind (Named n) =
+  pretty ind (Arg n) =
+    out $ '_':'a':show n
+  pretty ind (Strict n) =
+    out $ '_':'s':show n
+  pretty ind (Lazy n) =
+    out $ '_':'l':show n
+  pretty ind (NamedLazy n) =
+    out n
+  pretty ind (NamedStrict n) =
     out n
 
 instance PrettyJS JSLit where

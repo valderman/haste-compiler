@@ -1,19 +1,22 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- | Abstract syntax for the Javascript constructs needed to generate JS from
 --   Core.
-module CodeGen.Javascript.AST where
+module CodeGen.Javascript.AST (
+  JSVar (..), VarID, varZero, JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
+  JSOp (..)) where
 
 data JSVar
-  = Local Int
-  | Named String
+  = Arg VarID          -- ^ Function argument; may or may not be a thunk
+  | Strict VarID       -- ^ A local temporary value; is definitely not a thunk
+  | Lazy VarID         -- ^ A local temporary thunk; obviously always a thunk
+  | NamedLazy String   -- ^ A named lazy variable, probably top level
+  | NamedStrict String -- ^ A named strict variable, also probably top level
     deriving (Show)
 
-instance Enum JSVar where
-  succ (Local n) = Local $ n+1
-  succ _         = error "succ only valid for local vars!"
+newtype VarID = VarID Int deriving (Show, Enum)
 
-firstVar :: JSVar
-firstVar = Local 0
+varZero :: VarID
+varZero = VarID 0
 
 data JSStmt
   = Ret JSExp
