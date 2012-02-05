@@ -19,11 +19,53 @@ genAST = concat . map (toList . snd . genJS . genBind) . mg_binds
 
 genBind :: CoreBind -> JSGen ()
 genBind (NonRec v ex) = do
-  let (retEx, body) = genJS (genEx ex)
   v' <- genVar v
-  emit $ Assign (AST.Var v') (Thunk (toList $ body) retEx)
+  ex' <- genThunk ex
+  emit $ Assign (AST.Var v') ex'
 genBind (Rec bs) =
   mapM_ (\(v, ex) -> genBind (NonRec v ex)) bs
+
+-- | Returns True if the given variable has a strict type.
+isStrict :: Var -> Bool
+isStrict var | isId var =
+  isStrictType $ varType var
+isStrict _ =
+  False
+
+isHNF :: Var -> Bool
+isHNF var | isId var =
+  isValueUnfolding $ unfoldingInfo $ idInfo var
+isHNF _ =
+  False
+
+-- | If the given expression is lazy, this function always returns False. If,
+--   on the other hand, the expression is strict, it may return True, depending
+--   on the expression.
+--
+--   TODO: mark the result of primops as strict
+isStrictExp :: Expr Var -> Bool
+isStrictExp (P.Var v) = isStrict v
+isStrictExp _         = False
+
+-- | Returns True if the given expression is variable that already contains a
+--   thunk.
+isLazyVar :: Expr Var -> Bool
+isLazyVar (P.Var v) = not (isStrict v)
+isLazyVar _         = False
+
+-- | Generate a thunk, but only if appropriate. If the type of an expression
+--   indicates that it is unlifted or if the expression is a variable containing 
+--   a thunk, no thunk is generated.
+genThunk :: Expr Var -> JSGen JSExp
+genThunk exp
+  | isStrictExp exp = do
+    genEx exp
+  | isLazyVar exp = do
+    genEx exp
+  | otherwise = do
+    let (exp', supportStmts) = genJS $ genEx exp
+    return $ Thunk (toList supportStmts) exp'
+
 
 genEx :: Expr Var -> JSGen JSExp
 genEx (P.Var v) =
@@ -32,8 +74,8 @@ genEx (P.Lit lit) =
   genLit lit
 genEx (App exp arg) = do
   exp' <- genEx exp
-  let (argEx, argBody) = genJS $ genEx arg
-  return $ Call exp' [Thunk (toList argBody) argEx]
+  arg' <- genThunk arg
+  return $ Call exp' [arg']
 genEx (Lam v exp) =
   genFun [v] exp
 genEx (Let bind exp) = do
@@ -132,10 +174,3 @@ genVar v = do
   return $ named $ show v
   where
     named = if isStrict v then NamedStrict else NamedLazy
-
-isStrict :: Var -> Bool
-isStrict var | isId var =
-  (isStrictType $ varType var) ||
-  (isValueUnfolding $ unfoldingInfo $ idInfo var)
-isStrict _ =
-  False
