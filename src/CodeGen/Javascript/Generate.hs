@@ -84,9 +84,6 @@ genEx (Let bind exp) = do
   genBind bind
   genEx exp
 genEx (P.Case exp v t alts) = do
-  --   TODO: data constructor compares entire scrutinee to the constructor;
-  --         figure out a good way to just look at the constructor while still
-  --         using case construct.
   exp' <- genEx exp
   v' <- genVar v
   emit $ Assign (AST.Var v') (Eval exp')
