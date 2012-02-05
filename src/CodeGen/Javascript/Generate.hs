@@ -41,11 +41,15 @@ isHNF _ =
 -- | If the given expression is lazy, this function always returns False. If,
 --   on the other hand, the expression is strict, it may return True, depending
 --   on the expression.
---
---   TODO: mark the result of primops as strict
 isStrictExp :: Expr Var -> Bool
-isStrictExp (P.Var v) = isStrict v
-isStrictExp _         = False
+isStrictExp (P.Var v) =
+  isStrict v
+isStrictExp (P.App f _) =
+  case f of
+    P.Var v | PrimOpId _ <- idDetails v -> True
+    _                                   -> isStrictExp f
+isStrictExp _ =
+  False
 
 -- | Returns True if the given expression is variable that already contains a
 --   thunk.
@@ -66,6 +70,13 @@ genThunk exp
     let (exp', supportStmts) = genJS $ genEx exp
     return $ Thunk (toList supportStmts) exp'
 
+-- | Generate an eval expression, where needed. Unlifted types don't need it.
+genEval :: Expr Var -> JSGen JSExp
+genEval exp
+  | isStrictExp exp = do
+    genEx exp
+  | otherwise = do
+    genEx exp >>= return . Eval 
 
 genEx :: Expr Var -> JSGen JSExp
 genEx (P.Var v) =
@@ -83,11 +94,8 @@ genEx (Let bind exp) = do
   --       generating names for vars rather than verbatim copy the Core names
   genBind bind
   genEx exp
-genEx (P.Case exp v t alts) = do
-  exp' <- genEx exp
-  v' <- genVar v
-  emit $ Assign (AST.Var v') (Eval exp')
-  genAlts v' alts
+genEx (P.Case exp v t alts) =
+  genCase exp v t alts
 genEx (Cast exp co) =
   genEx exp
 genEx (Tick t ex) =
@@ -117,6 +125,14 @@ genFun vs body = do
   vs' <- mapM genVar vs
   let (retExp, body') = genJS (genEx body)
   return $ Fun vs' (toList $ body' `snoc` Ret retExp)
+
+genCase :: Expr Var -> Var -> Type -> [Alt P.Var] -> JSGen JSExp
+genCase exp v t alts = do
+  v' <- genVar v
+  exp' <- genEval exp
+  emit $ Assign (AST.Var v') exp'
+  genAlts v' alts
+
 
 -- | Generate all case alternatives for a given case expression. After 
 --   evaluation of the expression, the return value of the case expression will
