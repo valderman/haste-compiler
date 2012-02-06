@@ -25,46 +25,35 @@ genBind (NonRec v ex) = do
 genBind (Rec bs) =
   mapM_ (\(v, ex) -> genBind (NonRec v ex)) bs
 
--- | Returns True if the given variable has a strict type.
-isStrict :: Var -> Bool
-isStrict var | isId var =
-  isStrictType $ varType var
-isStrict _ =
-  False
+isUnliftedExp :: Expr Var -> Bool
+isUnliftedExp = isStrictType . exprType
 
-isHNF :: Var -> Bool
-isHNF var | isId var =
-  isValueUnfolding $ unfoldingInfo $ idInfo var
-isHNF _ =
-  False
+isVar :: Expr Var -> Bool
+isVar (P.Var _) = True
+isVar _         = False
 
--- | If the given expression is lazy, this function always returns False. If,
---   on the other hand, the expression is strict, it may return True, depending
---   on the expression.
-isStrictExp :: Expr Var -> Bool
-isStrictExp (P.Var v) =
-  isStrict v
-isStrictExp (P.App f _) =
-  case f of
-    P.Var v | PrimOpId _ <- idDetails v -> True
-    _                                   -> isStrictExp f
-isStrictExp _ =
-  False
-
--- | Returns True if the given expression is variable that already contains a
---   thunk.
-isLazyVar :: Expr Var -> Bool
-isLazyVar (P.Var v) = not (isStrict v)
-isLazyVar _         = False
-
--- | Generate a thunk, but only if appropriate. If the type of an expression
---   indicates that it is unlifted or if the expression is a variable containing 
---   a thunk, no thunk is generated.
+-- | Generate a thunk, but only if appropriate. Generating a thunk is
+--   appropriate unless the expression:
+--   * has an unlifted type;
+--   * has a lifted type but is a variable, which is then obviously a thunk;
+--   * is a function;
+--   * is a type class dictionary;
+--   * is already in HNF.
+--   Not generating a thunk for expressions already in HNF but otherwise
+--   subject to thunking is only OK as long as the eval operation is able to
+--   cope with getting passed non-thunks; if this were to change, we must
+--   generate thunks even for HNF expressions!
 genThunk :: Expr Var -> JSGen JSExp
 genThunk exp
-  | isStrictExp exp = do
+  | isUnliftedExp exp = do
     genEx exp
-  | isLazyVar exp = do
+  | isVar exp = do
+    genEx exp
+  | isFunTy . dropForAlls . exprType $ exp = do
+    genEx exp
+  | isTyVarTy $ exprType exp = do
+    genEx exp
+  | exprIsHNF exp = do
     genEx exp
   | otherwise = do
     let (exp', supportStmts) = genJS $ genEx exp
@@ -73,7 +62,7 @@ genThunk exp
 -- | Generate an eval expression, where needed. Unlifted types don't need it.
 genEval :: Expr Var -> JSGen JSExp
 genEval exp
-  | isStrictExp exp = do
+  | isUnliftedExp exp = do
     genEx exp
   | otherwise = do
     genEx exp >>= return . Eval 
@@ -101,7 +90,7 @@ genEx (Cast exp co) =
 genEx (Tick t ex) =
   genEx ex
 genEx (Type t) =
-  return $ AST.Var $ NamedLazy $ "TYPE: " ++ show t
+  return $ AST.Var $ NamedLazy $ show t
 genEx (Coercion co) =
   error "Don't know what to do with a coercion!"
 
@@ -186,4 +175,4 @@ genVar :: Var -> JSGen JSVar
 genVar v = do
   return $ named $ show v
   where
-    named = if isStrict v then NamedStrict else NamedLazy
+    named = if isUnliftedExp (P.Var v) then NamedStrict else NamedLazy
