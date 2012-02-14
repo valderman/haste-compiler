@@ -38,8 +38,9 @@ data JSAlt
 data JSExp
   = Call JSExp [JSExp]
   | Fun [JSVar] [JSStmt]
-  | BinOp JSOp JSExp JSExp -- Unused; turn primitive ops into this
-  | Neg JSExp -- Unused; turn calls to not into this
+  | BinOp JSOp JSExp JSExp
+  | Neg JSExp
+  | Not JSExp
   | Var JSVar
   | Lit JSLit
   | Thunk [JSStmt] JSExp -- Statements + return expression = thunk
