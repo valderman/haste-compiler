@@ -68,6 +68,9 @@ instance PrettyJS JSExp where
     pretty ind f +> out "(" +> prettyList ind "," as +> out ")"
   pretty ind (NativeCall f as) =
     out f +> out "(" +> prettyList ind "," as +> out ")"
+  pretty ind (NativeMethCall obj f as) =
+    pretty ind obj +> out "." +> out f +>
+      out "(" +> prettyList ind "," as +> out ")"
   pretty ind (Fun as body) =
     out "function(" +> prettyList ind "," as +> out "){" +> endl +>
       prettyList (ind+step) "" body +> indent ind +> out "}"
