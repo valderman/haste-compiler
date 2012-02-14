@@ -186,7 +186,16 @@ genCase exp v t alts = do
 --   execution of the case expression, to enable implementing case expressions
 --   as JS case statements while still being able to use them as expressions in
 --   the JS AST.
+--   If the case expression only has one alternative, omit the case part
+--   entirely, as we're obviously just picking data apart.
 genAlts :: JSVar -> [Alt P.Var] -> JSGen JSExp
+genAlts v [a] = do
+  genAlt v a >>= mapM_ emit . getStmts
+  return $ AST.Var v
+  where
+    getStmts (Cond _ ss) = ss
+    getStmts (Def ss)    = ss
+    getStmts (Cons _ ss) = ss
 genAlts v as = do
   as' <- mapM (genAlt v) (reverse as)
   emit $ AST.Case (AST.Var v) $ reverse as'
