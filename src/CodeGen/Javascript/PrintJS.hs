@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings #-}
 -- | Code for generating actual JS from the JS AST.
 module CodeGen.Javascript.PrintJS (prettyJS) where
-import CodeGen.Javascript.AST
+import CodeGen.Javascript.AST as AST
 import CodeGen.Javascript.Bag as Bag
 import Data.List as List (intersperse, concat)
 
@@ -70,9 +70,11 @@ instance PrettyJS JSExp where
     out "function(" +> prettyList ind "," as +> out "){" +> endl +>
       prettyList (ind+step) "" body +> indent ind +> out "}"
   pretty ind (BinOp op a b) =
-    error "Not doing binary ops yet!"
+    prettyParens ind op a b
   pretty ind (Neg x) =
-    error "Not doing negation yet!"
+    if expPrec x < expPrec (Neg x)
+       then out "!(" +> pretty ind x +> out ")"
+       else out "!" +> pretty ind x
   pretty ind (Var v) =
     pretty ind v
   pretty ind (Lit l) =
@@ -85,16 +87,40 @@ instance PrettyJS JSExp where
   pretty ind (GetDataArg ex n) =
     pretty ind ex +> out "[" +> out (show n) +> out "]"
 
+-- | Pretty-print operator expressions.
+prettyParens :: Int -> JSOp -> JSExp -> JSExp -> Bag Output
+prettyParens ind op a b =
+  parens a +> pretty ind op +> parens b
+  where
+    parens x = if expPrec x < opPrec op
+                 then out "(" +> pretty ind x +> out ")"
+                 else pretty ind x
+
+instance PrettyJS JSOp where
+  pretty _ op = out $ case op of
+    Add    -> "+"
+    Mul    -> "*"
+    Sub    -> "-"
+    Div    -> "/"
+    And    -> "&&"
+    Or     -> "||"
+    Eq     -> "=="
+    Neq    -> "!="
+    AST.LT -> "<"
+    AST.GT -> ">"
+    LTE    -> "<="
+    GTE    -> ">="
+
 instance PrettyJS JSVar where
-  pretty ind (Arg n) =
+  pretty _ (Arg n) =
     out $ '_':'a':show n
-  pretty ind (Strict n) =
+  pretty _ (Strict n) =
     out $ '_':'s':show n
-  pretty ind (Lazy n) =
+  pretty _ (Lazy n) =
     out $ '_':'l':show n
-  pretty ind (NamedLazy n) =
+  pretty _ (NamedLazy n) =
     out n
-  pretty ind (NamedStrict n) =
+  pretty _ (NamedStrict n) =
     out n
 
 instance PrettyJS JSLit where
@@ -102,4 +128,5 @@ instance PrettyJS JSLit where
   pretty _ (Str s) = out s
   pretty _ (Chr c) = out [c]
 
+prettyList :: PrettyJS a => Int -> Output -> [a] -> Bag Output
 prettyList ind x xs = catLst $ intersperse (out x) (map (pretty ind) xs)
