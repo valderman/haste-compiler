@@ -105,13 +105,30 @@ genEx (Coercion co) =
 genPrimOp :: Expr Var -> JSExp -> JSGen (Maybe JSExp)
 genPrimOp (P.Var id) arg
   | PrimOpId op <- idDetails id = do
-    return . Just $ Neg arg
+    return . Just $ unOp op arg
 genPrimOp (App (P.Var id) arg2) arg1
   | PrimOpId op <- idDetails id = do
     arg2' <- genThunk arg2
     return . Just $ binOp op arg1 arg2'
 genPrimOp _ _ =
   return Nothing
+
+unOp :: PrimOp -> JSExp -> JSExp
+unOp op x =
+  case op of
+    IntNegOp       -> Neg x
+    ChrOp          -> NativeCall "String.fromCharCode" [x]
+    OrdOp          -> NativeMethCall x "charCodeAt" [lit (0::Double)]
+    Word2IntOp     -> x
+    Int2WordOp     -> x
+    Int2FloatOp    -> x
+    Int2DoubleOp   -> x
+    Double2IntOp   -> x
+    Double2FloatOp -> x
+    Float2IntOp    -> x
+    Float2DoubleOp -> x
+    NotOp          -> Not x
+    x              -> error $ "Unsupported operation: " ++ show x
 
 binOp :: PrimOp -> JSExp -> JSExp -> JSExp
 binOp op a b =
@@ -132,6 +149,7 @@ binOp op a b =
       IntLeOp -> LTE
       IntEqOp -> Eq
       IntNeOp -> Neq
+      x       -> error $ "Unsupported operation: " ++ show x
 
 genLit :: Literal -> JSGen JSExp
 genLit lit = do
