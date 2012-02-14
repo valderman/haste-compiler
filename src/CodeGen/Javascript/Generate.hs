@@ -197,8 +197,9 @@ genAlts v [a] = do
     getStmts (Def ss)    = ss
     getStmts (Cons _ ss) = ss
 genAlts v as = do
-  as' <- mapM (genAlt v) (reverse as)
-  emit $ AST.Case (AST.Var v) $ reverse as'
+  -- Core requires DEFAULT alts to come first, but we want them last in our JS.
+  (a':as') <- mapM (genAlt v) as
+  emit $ AST.Case (AST.Var v) $ as' ++ [a']
   return $ AST.Var v
 
 -- | Generate a case alternative. Each alternative is responsible for binding

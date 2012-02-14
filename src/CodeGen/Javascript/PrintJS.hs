@@ -55,10 +55,12 @@ instance PrettyJS JSStmt where
 instance PrettyJS JSAlt where
   pretty ind (Cond ex body) =
     indent ind +> out "case " +> pretty ind ex +> out ":" +> endl +>
-      prettyList (ind+step) "" body
+      prettyList (ind+step) "" body +>
+      indent (ind+step) +> out "break;" +> endl
   pretty ind (Cons con body) =
     indent ind +> out "case \"" +> out con +> out "\":" +> endl +>
-      prettyList (ind+step) "" body
+      prettyList (ind+step) "" body +>
+      indent (ind+step) +> out "break;" +> endl
   pretty ind (Def body) =
     indent ind +> out "default:" +> endl +>
       prettyList (ind+step) "" body
