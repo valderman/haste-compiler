@@ -1,6 +1,7 @@
 -- | Module to generate Javascript from a ModGuts structure
 module CodeGen.Javascript.Generate (generate) where
 import GhcPlugins as P
+import PrimOp
 import Name
 import OccName
 import TypeRep
@@ -73,9 +74,14 @@ genEx (P.Var v) =
 genEx (P.Lit lit) =
   genLit lit
 genEx (App exp arg) = do
-  exp' <- genEx exp
   arg' <- genThunk arg
-  return $ Call exp' [arg']
+  poExp <- genPrimOp exp arg'
+  case poExp of
+    Just primop -> do
+      return primop
+    _ -> do
+      exp' <- genEx exp
+      return $ Call exp' [arg']
 genEx (Lam v exp) =
   genFun [v] exp
 genEx (Let bind exp) = do
@@ -93,6 +99,39 @@ genEx (Type t) =
   return $ AST.Var $ NamedLazy $ show t
 genEx (Coercion co) =
   error "Don't know what to do with a coercion!"
+
+-- | Generate an expression for the given primitive operation. If the given
+--   expression isn't a primitive operation, return Nothing.
+genPrimOp :: Expr Var -> JSExp -> JSGen (Maybe JSExp)
+genPrimOp (P.Var id) arg
+  | PrimOpId op <- idDetails id = do
+    return . Just $ Neg arg
+genPrimOp (App (P.Var id) arg2) arg1
+  | PrimOpId op <- idDetails id = do
+    arg2' <- genThunk arg2
+    return . Just $ binOp op arg1 arg2'
+genPrimOp _ _ =
+  return Nothing
+
+binOp :: PrimOp -> JSExp -> JSExp -> JSExp
+binOp op a b =
+  BinOp op' a b
+  where
+    op' = case op of
+      IntAddOp -> Add
+      IntSubOp -> Sub
+      IntMulOp -> Mul
+      IntMulMayOfloOp -> Mul -- This is correct, but slow!
+      IntQuotOp -> error "IntQuotOp not implemented"
+      IntRemOp -> error "IntRemOp not implemented"
+      IntAddCOp -> error "IntAddCOp not implemented"
+      IntSubCOp -> error "IntSubCOp not implemented"
+      IntGtOp -> AST.GT
+      IntGeOp -> GTE
+      IntLtOp -> AST.LT
+      IntLeOp -> LTE
+      IntEqOp -> Eq
+      IntNeOp -> Neq
 
 genLit :: Literal -> JSGen JSExp
 genLit lit = do
