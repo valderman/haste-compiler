@@ -230,6 +230,9 @@ instance Show Type where
 
 genVar :: Var -> JSGen JSVar
 genVar v = do
-  return $ named $ show v
+  return . named . nameType $ P.varName v
   where
     named = if isUnliftedExp (P.Var v) then NamedStrict else NamedLazy
+    nameType = if isExternalName (P.varName v)
+                 then showPpr
+                 else showPpr . nameUnique
