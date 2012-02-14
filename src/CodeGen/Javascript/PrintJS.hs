@@ -66,6 +66,8 @@ instance PrettyJS JSAlt where
 instance PrettyJS JSExp where
   pretty ind (Call f as) =
     pretty ind f +> out "(" +> prettyList ind "," as +> out ")"
+  pretty ind (NativeCall f as) =
+    out f +> out "(" +> prettyList ind "," as +> out ")"
   pretty ind (Fun as body) =
     out "function(" +> prettyList ind "," as +> out "){" +> endl +>
       prettyList (ind+step) "" body +> indent ind +> out "}"

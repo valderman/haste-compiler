@@ -37,6 +37,7 @@ data JSAlt
 
 data JSExp
   = Call JSExp [JSExp]
+  | NativeCall String [JSExp]
   | Fun [JSVar] [JSStmt]
   | BinOp JSOp JSExp JSExp
   | Neg JSExp
