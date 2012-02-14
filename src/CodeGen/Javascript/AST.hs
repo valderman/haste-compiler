@@ -1,9 +1,11 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, 
+             TypeSynonymInstances,
+             FlexibleInstances #-}
 -- | Abstract syntax for the Javascript constructs needed to generate JS from
 --   Core.
 module CodeGen.Javascript.AST (
   JSVar (..), VarID, varZero, JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
-  JSOp (..), opPrec, expPrec) where
+  JSOp (..), opPrec, expPrec, lit) where
 import Prelude hiding (LT, GT)
 
 data JSVar
@@ -55,6 +57,18 @@ data JSLit
   | Str String
   | Chr Char
     deriving Show
+
+class Lit a where
+  lit :: a -> JSExp
+
+instance Lit Double where
+  lit = Lit . Num
+
+instance Lit String where
+  lit = Lit . Str
+
+instance Lit Char where
+  lit = Lit . Chr
 
 data JSOp
   = Add
