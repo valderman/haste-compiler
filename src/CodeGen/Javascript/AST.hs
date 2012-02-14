@@ -44,7 +44,7 @@ data JSExp
   | Fun [JSVar] [JSStmt]
   | BinOp JSOp JSExp JSExp
   | Neg JSExp
-  | Not JSExp
+  | Not JSExp -- Bitwise negation; JS ~ operator
   | Var JSVar
   | Lit JSLit
   | Thunk [JSStmt] JSExp -- Statements + return expression = thunk

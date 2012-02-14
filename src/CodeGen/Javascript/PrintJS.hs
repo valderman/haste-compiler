@@ -82,8 +82,8 @@ instance PrettyJS JSExp where
        else out "-" +> pretty ind x
   pretty ind (Not x) =
     if expPrec x < expPrec (Not x)
-       then out "!(" +> pretty ind x +> out ")"
-       else out "!" +> pretty ind x
+       then out "~(" +> pretty ind x +> out ")"
+       else out "~" +> pretty ind x
   pretty ind (Var v) =
     pretty ind v
   pretty ind (Lit l) =
