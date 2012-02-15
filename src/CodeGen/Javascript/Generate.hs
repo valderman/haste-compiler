@@ -99,15 +99,16 @@ genEx (Cast exp co) =
 genEx (Tick t ex) =
   genEx ex
 genEx (Type t) =
-  return $ AST.Var $ NamedLazy $ show t
+  return $ AST.Var $ NamedStrict $ show t
 genEx (Coercion co) =
   error "Don't know what to do with a coercion!"
 
 -- | Generate code for the given data constructor
 genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
-  return $ NativeCall "D" [lit $ (fromIntegral $ dataConTag dc :: Double),
-                           lit $ (fromIntegral $ dataConRepArity dc :: Double)]
+  return $ NativeCall "D" [
+    lit $ (fromIntegral $ dataConTag dc :: Double),
+    lit $ (fromIntegral $ dataConSourceArity dc :: Double)]
 
 -- | Generate an expression for the given primitive operation. If the given
 --   expression isn't a primitive operation, return Nothing.
@@ -242,7 +243,9 @@ n_occ :: Name -> String
 n_occ = occNameString . getOccName
 
 instance Show Type where
-  show (TyVarTy v) = show v
+  show (TyVarTy v) = if isExternalName (P.varName v)
+                       then showPpr $ P.varName v
+                       else showPpr . nameUnique $ P.varName v
   show (AppTy a b) = show a ++ " (" ++ show b ++ ")"
   show (TyConApp t ts) = n_occ (tyConName t) ++ concat (map (\x -> ' ':show x) ts)
   show (FunTy a b) = "(" ++ show a ++ ") -> (" ++ show b ++ ")"
