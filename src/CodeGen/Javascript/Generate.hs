@@ -157,6 +157,7 @@ binOp op a b =
   where
     call f a b = NativeCall f [a, b]
     op' = case op of
+      -- Int ops
       IntAddOp -> BinOp Add
       IntSubOp -> BinOp Sub
       IntMulOp -> BinOp Mul
@@ -171,6 +172,13 @@ binOp op a b =
       IntLeOp -> BinOp LTE
       IntEqOp -> BinOp Eq
       IntNeOp -> BinOp Neq
+      -- Char ops
+      CharGtOp -> BinOp AST.GT
+      CharGeOp -> BinOp GTE
+      CharEqOp -> BinOp Eq
+      CharNeOp -> BinOp Neq
+      CharLtOp -> BinOp AST.LT
+      CharLeOp -> BinOp LTE
       x       -> error $ "Unsupported operation: " ++ show x
 
 genLit :: Literal -> JSGen JSExp
