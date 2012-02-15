@@ -117,7 +117,7 @@ genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
   return $ NativeCall "D" [
     lit $ (fromIntegral $ dataConTag dc :: Double),
-    lit $ (fromIntegral $ dataConSourceArity dc :: Double)]
+    lit $ (fromIntegral $ dataConRepArity dc :: Double)]
 
 -- | Generate an expression for the given primitive operation. If the given
 --   expression isn't a primitive operation, return Nothing.
@@ -244,7 +244,7 @@ genAlt resultVar (con, binds, exp) = do
     -- actual arguments to them. Only call wrapped in genJS, or these bindings
     -- will end up outside its respective case alternative, likely crashing the
     -- program.
-    genBinds = sequence_ . zipWith genArgBind [1..]
+    genBinds = sequence_ . zipWith genArgBind [1..] . filter (not . isTyVar)
     genArgBind num var = do
       var' <- genVar var
       emit $ (Assign (AST.Var var') (GetDataArg (AST.Var resultVar) num))
