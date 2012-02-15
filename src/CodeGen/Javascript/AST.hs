@@ -75,6 +75,7 @@ data JSOp
   | Mul
   | Sub
   | Div
+  | Mod
   | And
   | Or
   | Eq
@@ -95,6 +96,7 @@ data JSOp
 opPrec :: JSOp -> Int
 opPrec Mul    = 100
 opPrec Div    = 100
+opPrec Mod    = 100
 opPrec Add    = 70
 opPrec Sub    = 70
 opPrec Shl    = 60

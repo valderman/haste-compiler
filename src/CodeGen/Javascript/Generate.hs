@@ -132,23 +132,24 @@ unOp op x =
 
 binOp :: PrimOp -> JSExp -> JSExp -> JSExp
 binOp op a b =
-  BinOp op' a b
+  op' a b
   where
+    call f a b = NativeCall f [a, b]
     op' = case op of
-      IntAddOp -> Add
-      IntSubOp -> Sub
-      IntMulOp -> Mul
-      IntMulMayOfloOp -> Mul -- This is correct, but slow!
-      IntQuotOp -> error "IntQuotOp not implemented"
-      IntRemOp -> error "IntRemOp not implemented"
-      IntAddCOp -> error "IntAddCOp not implemented"
-      IntSubCOp -> error "IntSubCOp not implemented"
-      IntGtOp -> AST.GT
-      IntGeOp -> GTE
-      IntLtOp -> AST.LT
-      IntLeOp -> LTE
-      IntEqOp -> Eq
-      IntNeOp -> Neq
+      IntAddOp -> BinOp Add
+      IntSubOp -> BinOp Sub
+      IntMulOp -> BinOp Mul
+      IntMulMayOfloOp -> BinOp Mul -- This is correct, but slow!
+      IntQuotOp -> call "quot"
+      IntRemOp -> BinOp Mod -- Javascript % operator is actually rem, not mod!
+      IntAddCOp -> call "addC"
+      IntSubCOp -> call "subC"
+      IntGtOp -> BinOp AST.GT
+      IntGeOp -> BinOp GTE
+      IntLtOp -> BinOp AST.LT
+      IntLeOp -> BinOp LTE
+      IntEqOp -> BinOp Eq
+      IntNeOp -> BinOp Neq
       x       -> error $ "Unsupported operation: " ++ show x
 
 genLit :: Literal -> JSGen JSExp

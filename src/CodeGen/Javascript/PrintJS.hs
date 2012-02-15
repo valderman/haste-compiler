@@ -113,6 +113,7 @@ instance PrettyJS JSOp where
     Mul    -> "*"
     Sub    -> "-"
     Div    -> "/"
+    Mod    -> "%"
     And    -> "&&"
     Or     -> "||"
     Eq     -> "=="
