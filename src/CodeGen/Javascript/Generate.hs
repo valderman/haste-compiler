@@ -124,7 +124,7 @@ foldUpApp exp =
 -- | Generate code for the given data constructor
 genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
-  return $ Call (AST.Var $ NamedStrict "D") [
+  return $ NativeCall "D" [
     lit $ (fromIntegral $ dataConTag dc :: Double),
     Array $ map strict (dataConRepStrictness dc)]
   where
