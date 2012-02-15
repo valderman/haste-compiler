@@ -77,14 +77,7 @@ genEx (P.Var v) = do
 genEx (P.Lit lit) =
   genLit lit
 genEx (App exp arg) = do
-  arg' <- genThunk arg
-  poExp <- genPrimOp exp arg'
-  case poExp of
-    Just primop -> do
-      return primop
-    _ -> do
-      exp' <- genEx exp
-      return $ Call exp' [arg']
+  genApp exp arg
 genEx (Lam v exp) =
   genFun [v] exp
 genEx (Let bind exp) = do
@@ -99,9 +92,25 @@ genEx (Cast exp co) =
 genEx (Tick t ex) =
   genEx ex
 genEx (Type t) =
-  return $ AST.Var $ NamedStrict $ show t
+  error "Type annotation encountered where it shouldn't be!"
 genEx (Coercion co) =
   error "Don't know what to do with a coercion!"
+
+-- | Generate code for funcion application
+genApp :: Expr Var -> Arg Var -> JSGen JSExp
+genApp exp (Type _) = do
+  -- Discard type annotations
+  genEx exp
+genApp exp arg = do 
+  arg' <- genThunk arg
+  poExp <- genPrimOp exp arg'
+  case poExp of
+    Just primop -> do
+      return primop
+    _ -> do
+      exp' <- genEx exp
+      return $ Call exp' [arg']
+
 
 -- | Generate code for the given data constructor
 genDataCon :: DataCon -> JSGen JSExp
@@ -173,11 +182,12 @@ genLit lit = do
     LitInteger i _ -> Num $ fromIntegral i
     x              -> error $ "Literal: " ++ show x
 
-
 -- | Generate code for a lambda and return it. Care is taken to ensure any and
 --   all evaluation takes place within the function where it's actually
 --   supposed to happen.
 genFun :: [Var] -> Expr Var -> JSGen JSExp
+genFun [v] body | isTyVar v =
+  genEx body
 genFun vs body = do
   vs' <- mapM genVar vs
   let (retExp, body') = genJS (genEx body)
@@ -239,23 +249,15 @@ genAlt resultVar (con, binds, exp) = do
       var' <- genVar var
       emit $ (Assign (AST.Var var') (GetDataArg (AST.Var resultVar) num))
 
-n_occ :: Name -> String
-n_occ = occNameString . getOccName
-
-instance Show Type where
-  show (TyVarTy v) = if isExternalName (P.varName v)
-                       then showPpr $ P.varName v
-                       else showPpr . nameUnique $ P.varName v
-  show (AppTy a b) = show a ++ " (" ++ show b ++ ")"
-  show (TyConApp t ts) = n_occ (tyConName t) ++ concat (map (\x -> ' ':show x) ts)
-  show (FunTy a b) = "(" ++ show a ++ ") -> (" ++ show b ++ ")"
-  show (ForAllTy v t) = "Forall " ++ show v ++ " " ++ show t
+getUsefulName :: Name -> String
+getUsefulName n
+  | isExternalName n =
+    showPpr n
+  | otherwise =
+    showPpr $ nameUnique n
 
 genVar :: Var -> JSGen JSVar
 genVar v = do
-  return . named . nameType $ P.varName v
+  return . named . getUsefulName $ P.varName v
   where
     named = if isUnliftedExp (P.Var v) then NamedStrict else NamedLazy
-    nameType = if isExternalName (P.varName v)
-                 then showPpr
-                 else showPpr . nameUnique
