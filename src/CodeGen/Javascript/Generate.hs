@@ -149,6 +149,13 @@ unOp op x =
     Float2IntOp    -> x
     Float2DoubleOp -> x
     NotOp          -> Not x
+    -- Narrowing ops
+    Narrow8IntOp   -> BinOp And x (lit (0xff :: Double))
+    Narrow16IntOp  -> BinOp And x (lit (0xffff :: Double))
+    Narrow32IntOp  -> BinOp And x (lit (0xffffffff :: Double))
+    Narrow8WordOp  -> BinOp And x (lit (0xff :: Double))
+    Narrow16WordOp -> BinOp And x (lit (0xffff :: Double))
+    Narrow32WordOp -> BinOp And x (lit (0xffffffff :: Double))
     x              -> error $ "Unsupported operation: " ++ show x
 
 binOp :: PrimOp -> JSExp -> JSExp -> JSExp
@@ -182,6 +189,23 @@ binOp op a b =
       CharNeOp -> BinOp Neq
       CharLtOp -> BinOp AST.LT
       CharLeOp -> BinOp LTE
+      -- Word ops
+      WordAddOp -> BinOp Add
+      WordSubOp -> BinOp Sub
+      WordMulOp -> BinOp Mul
+      WordQuotOp -> call "quot"
+      WordRemOp -> BinOp Mod
+      AndOp -> BinOp BitAnd
+      OrOp -> BinOp BitOr
+      XorOp -> BinOp BitXor
+      SllOp -> BinOp Shl
+      SrlOp -> BinOp ShrL
+      WordGtOp -> BinOp AST.GT
+      WordGeOp -> BinOp GTE
+      WordEqOp -> BinOp Eq
+      WordNeOp -> BinOp Neq
+      WordLtOp -> BinOp AST.LT
+      WordLeOp -> BinOp LTE
       x       -> error $ "Unsupported operation: " ++ show x
 
 genLit :: Literal -> JSGen JSExp
