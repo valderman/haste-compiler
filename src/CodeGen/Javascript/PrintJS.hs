@@ -58,7 +58,7 @@ instance PrettyJS JSAlt where
       prettyList (ind+step) "" body +>
       indent (ind+step) +> out "break;" +> endl
   pretty ind (Cons con body) =
-    indent ind +> out "case \"" +> out con +> out "\":" +> endl +>
+    indent ind +> out "case " +> out (show con) +> out ":" +> endl +>
       prettyList (ind+step) "" body +>
       indent (ind+step) +> out "break;" +> endl
   pretty ind (Def body) =

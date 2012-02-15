@@ -32,9 +32,9 @@ data JSStmt
     deriving Show
 
 data JSAlt
-  = Cond JSExp  [JSStmt]
-  | Def         [JSStmt]
-  | Cons String [JSStmt]
+  = Cond JSExp [JSStmt]
+  | Def        [JSStmt]
+  | Cons Int   [JSStmt]
     deriving Show
 
 data JSExp

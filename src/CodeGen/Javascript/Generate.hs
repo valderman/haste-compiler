@@ -69,8 +69,11 @@ genEval exp
     genEx exp >>= return . Eval 
 
 genEx :: Expr Var -> JSGen JSExp
-genEx (P.Var v) =
-  genVar v >>= return . AST.Var
+genEx (P.Var v) = do
+  case idDetails v of
+    DataConWorkId dc -> genDataCon dc
+    DataConWrapId dc -> genDataCon dc
+    _                -> genVar v >>= return . AST.Var
 genEx (P.Lit lit) =
   genLit lit
 genEx (App exp arg) = do
@@ -99,6 +102,12 @@ genEx (Type t) =
   return $ AST.Var $ NamedLazy $ show t
 genEx (Coercion co) =
   error "Don't know what to do with a coercion!"
+
+-- | Generate code for the given data constructor
+genDataCon :: DataCon -> JSGen JSExp
+genDataCon dc = do
+  return $ NativeCall "D" [lit $ (fromIntegral $ dataConTag dc :: Double),
+                           lit $ (fromIntegral $ dataConRepArity dc :: Double)]
 
 -- | Generate an expression for the given primitive operation. If the given
 --   expression isn't a primitive operation, return Nothing.
@@ -216,7 +225,7 @@ genAlt resultVar (con, binds, exp) = do
   con' <- case con of
     DEFAULT   -> return Def
     LitAlt l  -> genLit l >>= return . Cond
-    DataAlt c -> return $ Cons (show c)
+    DataAlt c -> return . Cons $ dataConTag c
   let (retEx, body) = genJS (genBinds binds >> genEx exp)
   return . con' . toList $ body `snoc` Assign (AST.Var resultVar) retEx
   where
