@@ -46,7 +46,8 @@ instance PrettyJS JSStmt where
     indent ind +> out "switch(C(" +> pretty ind ex +> out ")){" +> endl +>
       catLst (map (pretty $ ind+step) as) +> indent ind +> out "}" +> endl
   pretty ind (Assign lhs rhs) =
-    indent ind +> pretty ind lhs +> out " = " +> pretty ind rhs +> out ";"+>endl
+    indent ind +> out "var " +> pretty ind lhs +> out " = " +>
+      pretty ind rhs +> out ";"+>endl
   pretty ind (NamedFun n as body) =
     indent ind +>
       out "function " +> out n +> out "(" +> prettyList ind "," as +> out "){" +>
