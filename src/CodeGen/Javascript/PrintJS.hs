@@ -121,6 +121,12 @@ instance PrettyJS JSOp where
     AST.GT -> ">"
     LTE    -> "<="
     GTE    -> ">="
+    Shl    -> "<<"
+    Shr    -> ">>"
+    BitAnd -> "&"
+    BitXor -> "^"
+    BitOr  -> "|"
+
 
 instance PrettyJS JSVar where
   pretty _ (Arg n) =
