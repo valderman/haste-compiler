@@ -4,9 +4,6 @@
   a value, and perhaps other similarly interesting things, in said table.
   [critical/easy]
 
-* Represent constructors as tags rather than their fully qualified names.
-  [important/easy]
-
 * Implement link step, stitching all compiled modules together and dumping
   the code to a .js file.
   [important/easy]
