@@ -86,7 +86,8 @@ data JSOp
   | LTE
   | GTE
   | Shl
-  | Shr
+  | ShrL
+  | ShrA
   | BitAnd
   | BitOr
   | BitXor
@@ -101,7 +102,8 @@ opPrec Mod    = 100
 opPrec Add    = 70
 opPrec Sub    = 70
 opPrec Shl    = 60
-opPrec Shr    = 60
+opPrec ShrA   = 60
+opPrec ShrL   = 60
 opPrec LT     = 50
 opPrec GT     = 50
 opPrec LTE    = 50

@@ -166,6 +166,9 @@ binOp op a b =
       IntRemOp -> BinOp Mod -- Javascript % operator is actually rem, not mod!
       IntAddCOp -> call "addC"
       IntSubCOp -> call "subC"
+      ISllOp -> BinOp Shl
+      ISraOp -> BinOp ShrA
+      ISrlOp -> BinOp ShrL
       IntGtOp -> BinOp AST.GT
       IntGeOp -> BinOp GTE
       IntLtOp -> BinOp AST.LT
