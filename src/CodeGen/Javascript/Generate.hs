@@ -111,13 +111,15 @@ genApp exp arg = do
       exp' <- genEx exp
       return $ Call exp' [arg']
 
-
 -- | Generate code for the given data constructor
 genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
   return $ NativeCall "D" [
     lit $ (fromIntegral $ dataConTag dc :: Double),
-    lit $ (fromIntegral $ dataConRepArity dc :: Double)]
+    Array $ map strict (dataConRepStrictness dc)]
+  where
+    strict MarkedStrict = lit (1 :: Double)
+    strict _            = lit (0 :: Double)
 
 -- | Generate an expression for the given primitive operation. If the given
 --   expression isn't a primitive operation, return Nothing.

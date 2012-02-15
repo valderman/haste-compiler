@@ -97,6 +97,8 @@ instance PrettyJS JSExp where
     out "E(" +> pretty ind ex +> out ")"
   pretty ind (GetDataArg ex n) =
     pretty ind ex +> out "[" +> out (show n) +> out "]"
+  pretty ind (Array arr) =
+    out "[" +> prettyList ind "," arr +> out "]"
 
 -- | Pretty-print operator expressions.
 prettyParens :: Int -> JSOp -> JSExp -> JSExp -> Bag Output

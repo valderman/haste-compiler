@@ -50,6 +50,7 @@ data JSExp
   | Thunk [JSStmt] JSExp -- Statements + return expression = thunk
   | Eval JSExp
   | GetDataArg JSExp Int
+  | Array [JSExp]
     deriving Show
 
 data JSLit
