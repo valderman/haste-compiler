@@ -142,7 +142,10 @@ instance PrettyJS JSVar where
     out n
 
 instance PrettyJS JSLit where
-  pretty _ (Num d) = out $ show d
+  pretty _ (Num d) = let n = round d :: Int in
+    out $ if fromIntegral n == d
+            then show n
+            else show d
   pretty _ (Str s) = out s
   pretty _ (Chr c) = out [c]
 
