@@ -77,9 +77,9 @@ genEx (P.Var v) = do
 genEx (P.Lit lit) =
   genLit lit
 genEx (App exp arg) = do
-  genApp exp arg
+  genApp exp arg >>= return . foldUpApp
 genEx (Lam v exp) =
-  genFun [v] exp
+  genFun [v] exp >>= return . foldUpFun
 genEx (Let bind exp) = do
   -- TODO: bindings can overwrite each other - disaster! Solve by actually
   --       generating names for vars rather than verbatim copy the Core names
@@ -111,10 +111,20 @@ genApp exp arg = do
       exp' <- genEx exp
       return $ Call exp' [arg']
 
+-- | Fold up nested function applications into a single call as far as
+--   possible.
+foldUpApp :: JSExp -> JSExp
+foldUpApp (Call f as) =
+  case foldUpApp f of
+    Call f' as' -> Call f' (as' ++ as)
+    f'          -> Call f' as
+foldUpApp exp =
+  exp
+
 -- | Generate code for the given data constructor
 genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
-  return $ NativeCall "D" [
+  return $ Call (AST.Var $ NamedStrict "D") [
     lit $ (fromIntegral $ dataConTag dc :: Double),
     Array $ map strict (dataConRepStrictness dc)]
   where
@@ -229,6 +239,13 @@ genFun vs body = do
   vs' <- mapM genVar vs
   let (retExp, body') = genJS (genEx body)
   return $ Fun vs' (toList $ body' `snoc` Ret retExp)
+
+-- | Fold up nested lambdas into a single function as far as possible.
+foldUpFun :: JSExp -> JSExp
+foldUpFun (Fun vs [Ret (Fun vs' b)]) =
+  foldUpFun $ Fun (vs ++ vs') b
+foldUpFun exp =
+  exp
 
 genCase :: Expr Var -> Var -> Type -> [Alt P.Var] -> JSGen JSExp
 genCase exp v t alts = do
