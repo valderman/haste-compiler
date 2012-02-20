@@ -147,8 +147,12 @@ genPrimOp _ _ =
 unOp :: PrimOp -> JSExp -> JSExp
 unOp op x =
   case op of
+    -- Negations
     IntNegOp       -> Neg x
     DoubleNegOp    -> Neg x
+    FloatNegOp     -> Neg x
+    NotOp          -> Not x -- bitwise
+    -- Double ops
     DoubleExpOp    -> NativeCall "Math.exp" [x]
     DoubleLogOp    -> NativeCall "Math.log" [x]
     DoubleSqrtOp   -> NativeCall "Math.sqrt" [x]
@@ -161,6 +165,21 @@ unOp op x =
     DoubleCoshOp   -> NativeCall "cosh" [x]
     DoubleSinhOp   -> NativeCall "sinh" [x]
     DoubleTanhOp   -> NativeCall "tanh" [x]
+    -- Float ops
+    FloatNegOp     -> Neg x
+    FloatExpOp     -> NativeCall "Math.exp" [x]
+    FloatLogOp     -> NativeCall "Math.log" [x]
+    FloatSqrtOp    -> NativeCall "Math.sqrt" [x]
+    FloatCosOp     -> NativeCall "Math.cos" [x]
+    FloatSinOp     -> NativeCall "Math.sin" [x]
+    FloatTanOp     -> NativeCall "Math.tan" [x]
+    FloatAcosOp    -> NativeCall "Math.acos" [x]
+    FloatAsinOp    -> NativeCall "Math.asin" [x]
+    FloatAtanOp    -> NativeCall "Math.atan" [x]
+    FloatCoshOp    -> NativeCall "cosh" [x]
+    FloatSinhOp    -> NativeCall "sinh" [x]
+    FloatTanhOp    -> NativeCall "tanh" [x]
+    -- Conversions
     ChrOp          -> NativeCall "String.fromCharCode" [x]
     OrdOp          -> NativeMethCall x "charCodeAt" [lit (0::Double)]
     Word2IntOp     -> x
@@ -171,7 +190,6 @@ unOp op x =
     Double2FloatOp -> x
     Float2IntOp    -> x
     Float2DoubleOp -> x
-    NotOp          -> Not x
     -- Narrowing ops
     Narrow8IntOp   -> BinOp And x (lit (0xff :: Double))
     Narrow16IntOp  -> BinOp And x (lit (0xffff :: Double))
@@ -241,6 +259,18 @@ binOp op a b =
       DoubleMulOp -> BinOp Mul
       DoubleDivOp -> BinOp Div
       DoublePowerOp -> call "Math.pow"
+      -- Float ops
+      FloatGtOp -> BinOp AST.GT
+      FloatGeOp -> BinOp GTE
+      FloatEqOp -> BinOp Eq
+      FloatNeOp -> BinOp Neq
+      FloatLtOp -> BinOp AST.LT
+      FloatLeOp -> BinOp LTE
+      FloatAddOp -> BinOp Add
+      FloatSubOp -> BinOp Sub
+      FloatMulOp -> BinOp Mul
+      FloatDivOp -> BinOp Div
+      FloatPowerOp -> call "Math.pow"
       x       -> error $ "Unsupported operation: " ++ show x
 
 genLit :: Literal -> JSGen JSExp
