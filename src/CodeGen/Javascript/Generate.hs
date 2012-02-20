@@ -144,6 +144,9 @@ genPrimOp (App (P.Var id) arg2) arg1
 genPrimOp _ _ =
   return Nothing
 
+runtimeError :: String -> JSExp
+runtimeError s = NativeCall "die" [lit s]
+
 unOp :: PrimOp -> JSExp -> JSExp
 unOp op x =
   case op of
@@ -197,7 +200,7 @@ unOp op x =
     Narrow8WordOp  -> BinOp And x (lit (0xff :: Double))
     Narrow16WordOp -> BinOp And x (lit (0xffff :: Double))
     Narrow32WordOp -> BinOp And x (lit (0xffffffff :: Double))
-    x              -> error $ "Unsupported operation: " ++ show x
+    x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
 
 binOp :: PrimOp -> JSExp -> JSExp -> JSExp
 binOp op a b =
@@ -271,7 +274,7 @@ binOp op a b =
       FloatMulOp -> BinOp Mul
       FloatDivOp -> BinOp Div
       FloatPowerOp -> call "Math.pow"
-      x       -> error $ "Unsupported operation: " ++ show x
+      x       -> \_ _ -> runtimeError $ "Unsupported PrimOp: " ++ show x
 
 genLit :: Literal -> JSGen JSExp
 genLit lit = do
