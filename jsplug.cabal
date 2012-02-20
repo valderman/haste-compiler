@@ -30,4 +30,5 @@ Library
         CodeGen.Javascript.Bag
         CodeGen.Javascript.Generate
         CodeGen.Javascript.PrintJS
+        CodeGen.Javascript.PrimOps
     default-language: Haskell98
