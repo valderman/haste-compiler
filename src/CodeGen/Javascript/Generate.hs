@@ -148,6 +148,19 @@ unOp :: PrimOp -> JSExp -> JSExp
 unOp op x =
   case op of
     IntNegOp       -> Neg x
+    DoubleNegOp    -> Neg x
+    DoubleExpOp    -> NativeCall "Math.exp" [x]
+    DoubleLogOp    -> NativeCall "Math.log" [x]
+    DoubleSqrtOp   -> NativeCall "Math.sqrt" [x]
+    DoubleCosOp    -> NativeCall "Math.cos" [x]
+    DoubleSinOp    -> NativeCall "Math.sin" [x]
+    DoubleTanOp    -> NativeCall "Math.tan" [x]
+    DoubleAcosOp   -> NativeCall "Math.acos" [x]
+    DoubleAsinOp   -> NativeCall "Math.asin" [x]
+    DoubleAtanOp   -> NativeCall "Math.atan" [x]
+    DoubleCoshOp   -> NativeCall "cosh" [x]
+    DoubleSinhOp   -> NativeCall "sinh" [x]
+    DoubleTanhOp   -> NativeCall "tanh" [x]
     ChrOp          -> NativeCall "String.fromCharCode" [x]
     OrdOp          -> NativeMethCall x "charCodeAt" [lit (0::Double)]
     Word2IntOp     -> x
@@ -216,6 +229,18 @@ binOp op a b =
       WordNeOp -> BinOp Neq
       WordLtOp -> BinOp AST.LT
       WordLeOp -> BinOp LTE
+      -- Double ops
+      DoubleGtOp -> BinOp AST.GT
+      DoubleGeOp -> BinOp GTE
+      DoubleEqOp -> BinOp Eq
+      DoubleNeOp -> BinOp Neq
+      DoubleLtOp -> BinOp AST.LT
+      DoubleLeOp -> BinOp LTE
+      DoubleAddOp -> BinOp Add
+      DoubleSubOp -> BinOp Sub
+      DoubleMulOp -> BinOp Mul
+      DoubleDivOp -> BinOp Div
+      DoublePowerOp -> call "Math.pow"
       x       -> error $ "Unsupported operation: " ++ show x
 
 genLit :: Literal -> JSGen JSExp
