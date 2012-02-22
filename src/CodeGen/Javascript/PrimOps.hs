@@ -1,137 +1,137 @@
-module CodeGen.Javascript.PrimOps (unOp, binOp) where
+module CodeGen.Javascript.PrimOps (genOp) where
 import PrimOp
 import CodeGen.Javascript.AST as AST
 
 runtimeError :: String -> JSExp
 runtimeError s = NativeCall "die" [lit s]
 
-unOp :: PrimOp -> JSExp -> JSExp
-unOp op x =
+genOp :: PrimOp -> [JSExp] -> JSExp
+genOp op xs =
   case op of
     -- Negations
-    IntNegOp       -> Neg x
-    DoubleNegOp    -> Neg x
-    FloatNegOp     -> Neg x
-    NotOp          -> Not x -- bitwise
-    -- Double ops
-    DoubleExpOp    -> NativeCall "Math.exp" [x]
-    DoubleLogOp    -> NativeCall "Math.log" [x]
-    DoubleSqrtOp   -> NativeCall "Math.sqrt" [x]
-    DoubleCosOp    -> NativeCall "Math.cos" [x]
-    DoubleSinOp    -> NativeCall "Math.sin" [x]
-    DoubleTanOp    -> NativeCall "Math.tan" [x]
-    DoubleAcosOp   -> NativeCall "Math.acos" [x]
-    DoubleAsinOp   -> NativeCall "Math.asin" [x]
-    DoubleAtanOp   -> NativeCall "Math.atan" [x]
-    DoubleCoshOp   -> NativeCall "cosh" [x]
-    DoubleSinhOp   -> NativeCall "sinh" [x]
-    DoubleTanhOp   -> NativeCall "tanh" [x]
-    DoubleDecode_2IntOp -> NativeCall "decodeDouble" [x]
-    -- Float ops
-    FloatNegOp     -> Neg x
-    FloatExpOp     -> NativeCall "Math.exp" [x]
-    FloatLogOp     -> NativeCall "Math.log" [x]
-    FloatSqrtOp    -> NativeCall "Math.sqrt" [x]
-    FloatCosOp     -> NativeCall "Math.cos" [x]
-    FloatSinOp     -> NativeCall "Math.sin" [x]
-    FloatTanOp     -> NativeCall "Math.tan" [x]
-    FloatAcosOp    -> NativeCall "Math.acos" [x]
-    FloatAsinOp    -> NativeCall "Math.asin" [x]
-    FloatAtanOp    -> NativeCall "Math.atan" [x]
-    FloatCoshOp    -> NativeCall "cosh" [x]
-    FloatSinhOp    -> NativeCall "sinh" [x]
-    FloatTanhOp    -> NativeCall "tanh" [x]
-    FloatDecode_IntOp -> NativeCall "decodeFloat" [x]
-    -- Conversions
-    ChrOp          -> NativeCall "String.fromCharCode" [x]
-    OrdOp          -> NativeMethCall x "charCodeAt" [lit (0::Double)]
-    Word2IntOp     -> x
-    Int2WordOp     -> x
-    Int2FloatOp    -> x
-    Int2DoubleOp   -> x
-    Double2IntOp   -> x
-    Double2FloatOp -> x
-    Float2IntOp    -> x
-    Float2DoubleOp -> x
-    -- Narrowing ops
-    Narrow8IntOp   -> BinOp And x (lit (0xff :: Double))
-    Narrow16IntOp  -> BinOp And x (lit (0xffff :: Double))
-    Narrow32IntOp  -> BinOp And x (lit (0xffffffff :: Double))
-    Narrow8WordOp  -> BinOp And x (lit (0xff :: Double))
-    Narrow16WordOp -> BinOp And x (lit (0xffff :: Double))
-    Narrow32WordOp -> BinOp And x (lit (0xffffffff :: Double))
-    x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
+    IntNegOp       -> Neg (head xs)
+    DoubleNegOp    -> Neg (head xs)
+    FloatNegOp     -> Neg (head xs)
+    NotOp          -> Not (head xs) -- bitwise
 
-binOp :: PrimOp -> JSExp -> JSExp -> JSExp
-binOp op a b =
-  op' a b
+    -- Conversions
+    ChrOp          -> NativeCall "String.fromCharCode" xs
+    OrdOp          -> NativeMethCall (head xs) "charCodeAt" [lit (0::Double)]
+    Word2IntOp     -> head xs
+    Int2WordOp     -> head xs
+    Int2FloatOp    -> head xs
+    Int2DoubleOp   -> head xs
+    Double2IntOp   -> head xs
+    Double2FloatOp -> head xs
+    Float2IntOp    -> head xs
+    Float2DoubleOp -> head xs
+    
+    -- Narrowing ops
+    Narrow8IntOp   -> BinOp And (head xs) (lit (0xff :: Double))
+    Narrow16IntOp  -> BinOp And (head xs) (lit (0xffff :: Double))
+    Narrow32IntOp  -> BinOp And (head xs) (lit (0xffffffff :: Double))
+    Narrow8WordOp  -> BinOp And (head xs) (lit (0xff :: Double))
+    Narrow16WordOp -> BinOp And (head xs) (lit (0xffff :: Double))
+    Narrow32WordOp -> BinOp And (head xs) (lit (0xffffffff :: Double))
+
+    -- Char ops
+    CharGtOp -> binOp AST.GT
+    CharGeOp -> binOp GTE
+    CharEqOp -> binOp Eq
+    CharNeOp -> binOp Neq
+    CharLtOp -> binOp AST.LT
+    CharLeOp -> binOp LTE
+
+    -- Int ops
+    IntAddOp -> binOp Add
+    IntSubOp -> binOp Sub
+    IntMulOp -> binOp Mul
+    IntMulMayOfloOp -> binOp Mul -- This is correct, but slow!
+    IntQuotOp -> call "quot"
+    IntRemOp -> binOp Mod -- Javascript % operator is actually rem, not mod!
+    IntAddCOp -> call "addC"
+    IntSubCOp -> call "subC"
+    ISllOp -> binOp Shl
+    ISraOp -> binOp ShrA
+    ISrlOp -> binOp ShrL
+    IntGtOp -> binOp AST.GT
+    IntGeOp -> binOp GTE
+    IntLtOp -> binOp AST.LT
+    IntLeOp -> binOp LTE
+    IntEqOp -> binOp Eq
+    IntNeOp -> binOp Neq
+
+    -- Word ops
+    WordAddOp -> binOp Add
+    WordSubOp -> binOp Sub
+    WordMulOp -> binOp Mul
+    WordQuotOp -> call "quot"
+    WordRemOp -> binOp Mod
+    AndOp -> binOp BitAnd
+    OrOp -> binOp BitOr
+    XorOp -> binOp BitXor
+    SllOp -> binOp Shl
+    SrlOp -> binOp ShrL
+    WordGtOp -> binOp AST.GT
+    WordGeOp -> binOp GTE
+    WordEqOp -> binOp Eq
+    WordNeOp -> binOp Neq
+    WordLtOp -> binOp AST.LT
+    WordLeOp -> binOp LTE
+
+    -- Double ops
+    DoubleExpOp    -> NativeCall "Math.exp" xs
+    DoubleLogOp    -> NativeCall "Math.log" xs
+    DoubleSqrtOp   -> NativeCall "Math.sqrt" xs
+    DoubleCosOp    -> NativeCall "Math.cos" xs
+    DoubleSinOp    -> NativeCall "Math.sin" xs
+    DoubleTanOp    -> NativeCall "Math.tan" xs
+    DoubleAcosOp   -> NativeCall "Math.acos" xs
+    DoubleAsinOp   -> NativeCall "Math.asin" xs
+    DoubleAtanOp   -> NativeCall "Math.atan" xs
+    DoubleCoshOp   -> NativeCall "cosh" xs
+    DoubleSinhOp   -> NativeCall "sinh" xs
+    DoubleTanhOp   -> NativeCall "tanh" xs
+    DoubleDecode_2IntOp -> NativeCall "decodeDouble" xs
+    DoubleGtOp -> binOp AST.GT
+    DoubleGeOp -> binOp GTE
+    DoubleEqOp -> binOp Eq
+    DoubleNeOp -> binOp Neq
+    DoubleLtOp -> binOp AST.LT
+    DoubleLeOp -> binOp LTE
+    DoubleAddOp -> binOp Add
+    DoubleSubOp -> binOp Sub
+    DoubleMulOp -> binOp Mul
+    DoubleDivOp -> binOp Div
+    DoublePowerOp -> call "Math.pow"
+
+    -- Float ops
+    FloatNegOp     -> Neg (head xs)
+    FloatExpOp     -> NativeCall "Math.exp" xs
+    FloatLogOp     -> NativeCall "Math.log" xs
+    FloatSqrtOp    -> NativeCall "Math.sqrt" xs
+    FloatCosOp     -> NativeCall "Math.cos" xs
+    FloatSinOp     -> NativeCall "Math.sin" xs
+    FloatTanOp     -> NativeCall "Math.tan" xs
+    FloatAcosOp    -> NativeCall "Math.acos" xs
+    FloatAsinOp    -> NativeCall "Math.asin" xs
+    FloatAtanOp    -> NativeCall "Math.atan" xs
+    FloatCoshOp    -> NativeCall "cosh" xs
+    FloatSinhOp    -> NativeCall "sinh" xs
+    FloatTanhOp    -> NativeCall "tanh" xs
+    FloatDecode_IntOp -> NativeCall "decodeFloat" xs
+    FloatGtOp -> binOp AST.GT
+    FloatGeOp -> binOp GTE
+    FloatEqOp -> binOp Eq
+    FloatNeOp -> binOp Neq
+    FloatLtOp -> binOp AST.LT
+    FloatLeOp -> binOp LTE
+    FloatAddOp -> binOp Add
+    FloatSubOp -> binOp Sub
+    FloatMulOp -> binOp Mul
+    FloatDivOp -> binOp Div
+    FloatPowerOp -> call "Math.pow"
+    x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
   where
-    call f a b = NativeCall f [a, b]
-    op' = case op of
-      -- Int ops
-      IntAddOp -> BinOp Add
-      IntSubOp -> BinOp Sub
-      IntMulOp -> BinOp Mul
-      IntMulMayOfloOp -> BinOp Mul -- This is correct, but slow!
-      IntQuotOp -> call "quot"
-      IntRemOp -> BinOp Mod -- Javascript % operator is actually rem, not mod!
-      IntAddCOp -> call "addC"
-      IntSubCOp -> call "subC"
-      ISllOp -> BinOp Shl
-      ISraOp -> BinOp ShrA
-      ISrlOp -> BinOp ShrL
-      IntGtOp -> BinOp AST.GT
-      IntGeOp -> BinOp GTE
-      IntLtOp -> BinOp AST.LT
-      IntLeOp -> BinOp LTE
-      IntEqOp -> BinOp Eq
-      IntNeOp -> BinOp Neq
-      -- Char ops
-      CharGtOp -> BinOp AST.GT
-      CharGeOp -> BinOp GTE
-      CharEqOp -> BinOp Eq
-      CharNeOp -> BinOp Neq
-      CharLtOp -> BinOp AST.LT
-      CharLeOp -> BinOp LTE
-      -- Word ops
-      WordAddOp -> BinOp Add
-      WordSubOp -> BinOp Sub
-      WordMulOp -> BinOp Mul
-      WordQuotOp -> call "quot"
-      WordRemOp -> BinOp Mod
-      AndOp -> BinOp BitAnd
-      OrOp -> BinOp BitOr
-      XorOp -> BinOp BitXor
-      SllOp -> BinOp Shl
-      SrlOp -> BinOp ShrL
-      WordGtOp -> BinOp AST.GT
-      WordGeOp -> BinOp GTE
-      WordEqOp -> BinOp Eq
-      WordNeOp -> BinOp Neq
-      WordLtOp -> BinOp AST.LT
-      WordLeOp -> BinOp LTE
-      -- Double ops
-      DoubleGtOp -> BinOp AST.GT
-      DoubleGeOp -> BinOp GTE
-      DoubleEqOp -> BinOp Eq
-      DoubleNeOp -> BinOp Neq
-      DoubleLtOp -> BinOp AST.LT
-      DoubleLeOp -> BinOp LTE
-      DoubleAddOp -> BinOp Add
-      DoubleSubOp -> BinOp Sub
-      DoubleMulOp -> BinOp Mul
-      DoubleDivOp -> BinOp Div
-      DoublePowerOp -> call "Math.pow"
-      -- Float ops
-      FloatGtOp -> BinOp AST.GT
-      FloatGeOp -> BinOp GTE
-      FloatEqOp -> BinOp Eq
-      FloatNeOp -> BinOp Neq
-      FloatLtOp -> BinOp AST.LT
-      FloatLeOp -> BinOp LTE
-      FloatAddOp -> BinOp Add
-      FloatSubOp -> BinOp Sub
-      FloatMulOp -> BinOp Mul
-      FloatDivOp -> BinOp Div
-      FloatPowerOp -> call "Math.pow"
-      x       -> \_ _ -> runtimeError $ "Unsupported PrimOp: " ++ show x
+    call f = NativeCall f xs
+    binOp op = let [x, y] = xs in BinOp op x y

@@ -4,6 +4,7 @@ import GhcPlugins as P
 import Name
 import OccName
 import TypeRep
+import PrimOp (PrimOp)
 
 import CodeGen.Javascript.Monad
 import CodeGen.Javascript.AST as AST
@@ -101,7 +102,7 @@ genApp exp (Type _) = do
   genEx exp
 genApp exp arg = do 
   arg' <- genThunk arg
-  poExp <- genPrimOp exp arg'
+  poExp <- genPrimOp exp [arg']
   case poExp of
     Just primop -> do
       return primop
@@ -131,14 +132,15 @@ genDataCon dc = do
 
 -- | Generate an expression for the given primitive operation. If the given
 --   expression isn't a primitive operation, return Nothing.
-genPrimOp :: Expr Var -> JSExp -> JSGen (Maybe JSExp)
-genPrimOp (P.Var id) arg
-  | PrimOpId op <- idDetails id = do
-    return . Just $ unOp op arg
-genPrimOp (App (P.Var id) arg2) arg1
-  | PrimOpId op <- idDetails id = do
-    arg2' <- genThunk arg2
-    return . Just $ binOp op arg1 arg2'
+genPrimOp :: Expr Var -> [JSExp] -> JSGen (Maybe JSExp)
+genPrimOp (P.Var id) xs | PrimOpId op <- idDetails id =
+  return $ Just $ genOp op xs
+genPrimOp (App f x) xs
+  | Type _ <- x =
+    genPrimOp f xs
+  | otherwise = do
+    x' <- genThunk x
+    genPrimOp f (x':xs)
 genPrimOp _ _ =
   return Nothing
 
