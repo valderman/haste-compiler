@@ -26,6 +26,7 @@ unOp op x =
     DoubleCoshOp   -> NativeCall "cosh" [x]
     DoubleSinhOp   -> NativeCall "sinh" [x]
     DoubleTanhOp   -> NativeCall "tanh" [x]
+    DoubleDecode_2IntOp -> NativeCall "decodeDouble" [x]
     -- Float ops
     FloatNegOp     -> Neg x
     FloatExpOp     -> NativeCall "Math.exp" [x]
@@ -40,6 +41,7 @@ unOp op x =
     FloatCoshOp    -> NativeCall "cosh" [x]
     FloatSinhOp    -> NativeCall "sinh" [x]
     FloatTanhOp    -> NativeCall "tanh" [x]
+    DoubleDecode_2IntOp -> NativeCall "decodeFloat" [x]
     -- Conversions
     ChrOp          -> NativeCall "String.fromCharCode" [x]
     OrdOp          -> NativeMethCall x "charCodeAt" [lit (0::Double)]
