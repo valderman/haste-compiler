@@ -16,11 +16,11 @@ a +> b = a `Bag.concat` b
 
 -- | Whitespace factory!
 indent :: Int -> Bag Output
-indent ind = out $ replicate ind ' '
+indent ind = out $ replicate ind '\t'
 
 -- | Size of indentation step
 step :: Int
-step = 4
+step = 1
 
 class PrettyJS a where
   pretty :: Int -> a -> Bag Output
