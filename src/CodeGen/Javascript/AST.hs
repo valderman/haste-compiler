@@ -5,7 +5,7 @@
 --   Core.
 module CodeGen.Javascript.AST (
   JSVar (..), VarID, varZero, JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
-  JSOp (..), opPrec, expPrec, lit) where
+  JSOp (..), opPrec, expPrec, lit, litN, defTag, defState) where
 import Prelude hiding (LT, GT)
 
 data JSVar
@@ -27,7 +27,7 @@ data JSStmt
   | While JSExp JSStmt -- Unused; use for CSE
   | Block [JSStmt]
   | Case JSExp [JSAlt]
-  | Assign JSExp JSExp
+  | NewVar JSExp JSExp
   | NamedFun String [JSVar] [JSStmt] -- Unused; turn top level defs into tihs
     deriving Show
 
@@ -51,6 +51,8 @@ data JSExp
   | Eval JSExp
   | GetDataArg JSExp Int
   | Array [JSExp]
+  | Assign JSExp JSExp
+  | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
     deriving Show
 
 data JSLit
@@ -58,6 +60,17 @@ data JSLit
   | Str String
   | Chr Char
     deriving Show
+
+-- | First tag for data constructors
+defTag :: JSExp
+defTag = litN 0
+
+-- | Represents the state argument passed around by state monads like IO and
+--   ST. However, since this argument is never examined, anything can be used
+--   for it; defState is just a convenience value, when you have to explicitly
+--   put some value for the state.
+defState :: JSExp
+defState = litN 0
 
 class Lit a where
   lit :: a -> JSExp
@@ -70,6 +83,9 @@ instance Lit String where
 
 instance Lit Char where
   lit = Lit . Chr
+
+litN :: Double -> JSExp
+litN = lit
 
 data JSOp
   = Add

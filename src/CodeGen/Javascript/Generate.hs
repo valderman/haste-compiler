@@ -21,7 +21,7 @@ genBind :: CoreBind -> JSGen ()
 genBind (NonRec v ex) = do
   v' <- genVar v
   ex' <- genThunk ex
-  emit $ Assign (AST.Var v') ex'
+  emit $ NewVar (AST.Var v') ex'
 genBind (Rec bs) =
   mapM_ (\(v, ex) -> genBind (NonRec v ex)) bs
 
@@ -177,7 +177,7 @@ genCase :: Expr Var -> Var -> Type -> [Alt P.Var] -> JSGen JSExp
 genCase exp v t alts = do
   v' <- genVar v
   exp' <- genEval exp
-  emit $ Assign (AST.Var v') exp'
+  emit $ NewVar (AST.Var v') exp'
   genAlts v' alts
 
 
@@ -218,7 +218,7 @@ genAlt resultVar (con, binds, exp) = do
     LitAlt l  -> genLit l >>= return . Cond
     DataAlt c -> return . Cons $ dataConTag c
   let (retEx, body) = genJS (genBinds binds >> genEx exp)
-  return . con' . toList $ body `snoc` Assign (AST.Var resultVar) retEx
+  return . con' . toList $ body `snoc` NewVar (AST.Var resultVar) retEx
   where
     -- Generate variables for all data constructor arguments, then bind the
     -- actual arguments to them. Only call wrapped in genJS, or these bindings
@@ -227,7 +227,7 @@ genAlt resultVar (con, binds, exp) = do
     genBinds = sequence_ . zipWith genArgBind [1..] . filter (not . isTyVar)
     genArgBind num var = do
       var' <- genVar var
-      emit $ (Assign (AST.Var var') (GetDataArg (AST.Var resultVar) num))
+      emit $ (NewVar (AST.Var var') (GetDataArg (AST.Var resultVar) num))
 
 getUsefulName :: Name -> String
 getUsefulName n

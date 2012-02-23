@@ -45,7 +45,7 @@ instance PrettyJS JSStmt where
   pretty ind (Case ex as) =
     indent ind +> out "switch(C(" +> pretty ind ex +> out ")){" +> endl +>
       catLst (map (pretty $ ind+step) as) +> indent ind +> out "}" +> endl
-  pretty ind (Assign lhs rhs) =
+  pretty ind (NewVar lhs rhs) =
     indent ind +> out "var " +> pretty ind lhs +> out " = " +>
       pretty ind rhs +> out ";"+>endl
   pretty ind (NamedFun n as body) =
@@ -100,6 +100,10 @@ instance PrettyJS JSExp where
     pretty ind ex +> out "[" +> out (show n) +> out "]"
   pretty ind (Array arr) =
     out "[" +> prettyList ind "," arr +> out "]"
+  pretty ind (Index arr ix) =
+    pretty ind arr +> out "[" +> pretty ind ix +> out "]"
+  pretty ind (Assign lhs rhs) =
+    out "(" +> pretty ind lhs +> out "=" +> pretty ind rhs +> out ")"
 
 -- | Pretty-print operator expressions.
 prettyParens :: Int -> JSOp -> JSExp -> JSExp -> Bag Output
