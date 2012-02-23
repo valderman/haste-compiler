@@ -5,6 +5,12 @@ import CodeGen.Javascript.AST as AST
 runtimeError :: String -> JSExp
 runtimeError s = NativeCall "die" [lit s]
 
+-- | Generate primops.
+--   Many of these ops return lifted Bool values; however, no thunk is
+--   generated for them in order to conserve space and CPU time. This relies
+--   on the evaluation operation in the RTS being able to handle plain values
+--   as though they were thunks. If this were to change, all those ops MUST
+--   be changed to return thunks!
 genOp :: PrimOp -> [JSExp] -> JSExp
 genOp op xs =
   case op of
@@ -131,6 +137,22 @@ genOp op xs =
     FloatMulOp -> binOp Mul
     FloatDivOp -> binOp Div
     FloatPowerOp -> call "Math.pow"
+    
+    -- Array ops
+    NewArrayOp -> call "newArr"
+    SameMutableArrayOp -> Thunk [] $ binOp Eq
+    ReadArrayOp -> Array [defTag, defState, Index arr ix]
+      where (arr:ix:_) = xs
+    WriteArrayOp -> Assign (Index arr ix) rhs
+      where (arr:ix:rhs:_) = xs
+    SizeofArrayOp -> Index (head xs) (lit "length")
+    SizeofMutableArrayOp -> Index (head xs) (lit "length")
+    IndexArrayOp -> Array [defTag, Index arr ix]
+      where (arr:ix:_) = xs
+    UnsafeFreezeArrayOp -> Array [defTag, defState, (head xs)]
+    UnsafeThawArrayOp -> Array [defTag, defState, (head xs)]
+    -- TODO: copy, clone, freeze, thaw
+                                       
     x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
   where
     call f = NativeCall f xs
