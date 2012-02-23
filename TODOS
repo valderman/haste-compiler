@@ -1,9 +1,3 @@
-* We need to generate our own variable names and keep a symbol table for
-  codegen, since JS doesn't have sane scoping rules. Since variables are SSA,
-  we should also keep track of whether the variable contains a thunk or
-  a value, and perhaps other similarly interesting things, in said table.
-  [critical/easy]
-
 * Implement link step, stitching all compiled modules together and dumping
   the code to a .js file.
   [important/easy]
@@ -12,13 +6,6 @@
   into those dirs, as unlinked files, rather than link and dump to the current
   working dir.
   [nice to have/easy]
-
-* Implement runtime library.
-  [critical/easy]
-
-* Generate primops as JS ops rather than function calls. Also look into
-  generating certain ops on the lifted numeric types in pure JS to save space.
-  [critical/easy]
 
 * Fix foreign calls.
   [important/could require some work]
