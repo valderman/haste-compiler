@@ -5,6 +5,7 @@ import Name
 import OccName
 import TypeRep
 import PrimOp (PrimOp)
+import ForeignCall
 
 import CodeGen.Javascript.Monad
 import CodeGen.Javascript.AST as AST
@@ -229,15 +230,28 @@ genAlt resultVar (con, binds, exp) = do
       var' <- genVar var
       emit $ (NewVar (AST.Var var') (GetDataArg (AST.Var resultVar) num))
 
-getUsefulName :: Name -> String
-getUsefulName n
-  | isExternalName n =
-    showPpr n
-  | otherwise =
-    showPpr $ nameUnique n
+-- | Extracts the name of a foreign var.
+fcName :: ForeignCall -> String
+fcName (CCall (CCallSpec (StaticTarget str _) _ _)) =
+  showPpr str
+fcName _ =
+  error "Dynamic foreign calls not supported!"
+
+-- | Returns the name we'd like to use for the given Var.
+getUsefulName :: Var -> String
+getUsefulName v =
+  case idDetails v of
+    FCallId fc -> fcName fc
+    _          -> go (P.varName v)
+  where
+    go n
+      | isExternalName n =
+        showPpr n
+      | otherwise =
+        showPpr $ nameUnique n
 
 genVar :: Var -> JSGen JSVar
 genVar v = do
-  return . named . getUsefulName $ P.varName v
+  return . named $ getUsefulName v
   where
     named = if isUnliftedExp (P.Var v) then NamedStrict else NamedLazy
