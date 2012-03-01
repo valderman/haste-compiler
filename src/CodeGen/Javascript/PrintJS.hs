@@ -140,7 +140,7 @@ instance PrettyJS JSOp where
 instance PrettyJS JSVar where
   pretty _ (Foreign name) =
     out name
-  pretty _ (External external _unique) =
+  pretty _ (External _unique external) =
     out external
   pretty _ (Internal name) =
     out name
