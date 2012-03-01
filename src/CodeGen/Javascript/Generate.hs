@@ -231,27 +231,27 @@ genAlt resultVar (con, binds, exp) = do
       emit $ (NewVar (AST.Var var') (GetDataArg (AST.Var resultVar) num))
 
 -- | Extracts the name of a foreign var.
-fcName :: ForeignCall -> String
-fcName (CCall (CCallSpec (StaticTarget str _) _ _)) =
+foreignName :: ForeignCall -> String
+foreignName (CCall (CCallSpec (StaticTarget str _) _ _)) =
   showPpr str
-fcName _ =
+foreignName _ =
   error "Dynamic foreign calls not supported!"
 
--- | Returns the name we'd like to use for the given Var.
-getUsefulName :: Var -> String
-getUsefulName v =
+toJSVar :: Var -> JSVar
+toJSVar v =
   case idDetails v of
-    FCallId fc -> fcName fc
-    _          -> go (P.varName v)
+    FCallId fc ->
+        Foreign (foreignName fc)
+    _ | isExternalName name ->
+        External unique external
+      | otherwise ->
+        Internal unique
+      
   where
-    go n
-      | isExternalName n =
-        showPpr n
-      | otherwise =
-        showPpr $ nameUnique n
+    name     = P.varName v
+    unique   = showPpr $ nameUnique name
+    external = showPpr name
 
 genVar :: Var -> JSGen JSVar
-genVar v = do
-  return . named $ getUsefulName v
-  where
-    named = if isUnliftedExp (P.Var v) then NamedStrict else NamedLazy
+genVar =
+  return . toJSVar

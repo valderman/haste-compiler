@@ -138,16 +138,12 @@ instance PrettyJS JSOp where
 
 
 instance PrettyJS JSVar where
-  pretty _ (Arg n) =
-    out $ '_':'a':show n
-  pretty _ (Strict n) =
-    out $ '_':'s':show n
-  pretty _ (Lazy n) =
-    out $ '_':'l':show n
-  pretty _ (NamedLazy n) =
-    out n
-  pretty _ (NamedStrict n) =
-    out n
+  pretty _ (Foreign name) =
+    out name
+  pretty _ (External external _unique) =
+    out external
+  pretty _ (Internal name) =
+    out name
 
 instance PrettyJS JSLit where
   pretty _ (Num d) = let n = round d :: Int in

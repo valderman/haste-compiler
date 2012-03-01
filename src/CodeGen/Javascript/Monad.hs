@@ -1,17 +1,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module CodeGen.Javascript.Monad (JSGen, genJS, newVar, emit, merge) where
+module CodeGen.Javascript.Monad (JSGen, genJS, emit, merge) where
 import Control.Monad.State
 import CodeGen.Javascript.Bag as Bag
 import CodeGen.Javascript.AST
 
 data GenState = GenState {
-    nextVar    :: VarID,
     code       :: Bag JSStmt
   }
 
 initialState :: GenState
 initialState = GenState {
-    nextVar = varZero,
     code    = empty
   }
 
@@ -20,14 +18,6 @@ newtype JSGen a = JSGen {unJSG :: State GenState a} deriving Monad
 genJS :: JSGen a -> (a, Bag JSStmt)
 genJS (JSGen gen) = case runState gen initialState of
   (a, st) -> (a, code st)
-
--- | Get a new, unique, variable
-newVar :: (VarID -> JSVar) -> JSGen JSVar
-newVar v = JSGen $ do
-  st <- get
-  let var = nextVar st
-  put st {nextVar = succ var}
-  return (v var)
 
 -- | Emit a JS statement to the code stream
 emit :: JSStmt -> JSGen ()

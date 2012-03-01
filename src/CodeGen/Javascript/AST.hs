@@ -4,22 +4,17 @@
 -- | Abstract syntax for the Javascript constructs needed to generate JS from
 --   Core.
 module CodeGen.Javascript.AST (
-  JSVar (..), VarID, varZero, JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
+  JSVar (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
   JSOp (..), opPrec, expPrec, lit, litN, defTag, defState) where
 import Prelude hiding (LT, GT)
 
+type JSLabel = String
+
 data JSVar
-  = Arg VarID          -- ^ Function argument; may or may not be a thunk
-  | Strict VarID       -- ^ A local temporary value; is definitely not a thunk
-  | Lazy VarID         -- ^ A local temporary thunk; obviously always a thunk
-  | NamedLazy String   -- ^ A named lazy variable, probably top level
-  | NamedStrict String -- ^ A named strict variable, also probably top level
+  = Foreign JSLabel
+  | External {unique :: JSLabel, external :: JSLabel}
+  | Internal JSLabel
     deriving (Show)
-
-newtype VarID = VarID Int deriving (Show, Enum)
-
-varZero :: VarID
-varZero = VarID 0
 
 data JSStmt
   = Ret JSExp
