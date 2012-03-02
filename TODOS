@@ -7,8 +7,8 @@
   working dir.
   [nice to have/easy]
 
-* Fix foreign calls.
-  [important/could require some work]
+* Add stubs for class methods; don't forget default methods!
+  [critical/walk in the park]
 
 * Look into rewriting as much of the base libraries as possible in pure JS;
   huge space savings are likely!
