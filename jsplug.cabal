@@ -20,12 +20,15 @@ Library
         base,
         ghc-prim,
         ghc >= 7.2,
-        mtl
+        mtl,
+        binary,
+        data-binary-ieee754
     Exposed-Modules:
         Plugin.GenJS
     Other-Modules:
         CodeGen.Javascript
         CodeGen.Javascript.AST
+        CodeGen.Javascript.AST.Binary
         CodeGen.Javascript.Monad
         CodeGen.Javascript.Bag
         CodeGen.Javascript.Generate
