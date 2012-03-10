@@ -5,16 +5,24 @@
 --   Core.
 module CodeGen.Javascript.AST (
   JSVar (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
-  JSOp (..), opPrec, expPrec, lit, litN, defTag, defState) where
+  JSOp (..), JSMod (..), opPrec, expPrec, lit, litN, defTag, defState) where
 import Prelude hiding (LT, GT)
+import qualified Data.Map as M
+import Module (ModuleName)
 
 type JSLabel = String
+
+data JSMod = JSMod {
+    name :: ModuleName,
+    deps :: M.Map JSVar JSVar,
+    code :: M.Map JSVar JSExp
+  }
 
 data JSVar
   = Foreign JSLabel
   | External {unique :: JSLabel, external :: JSLabel}
   | Internal JSLabel
-    deriving (Show)
+    deriving (Show, Ord, Eq)
 
 data JSStmt
   = Ret JSExp

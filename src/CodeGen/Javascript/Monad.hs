@@ -2,15 +2,15 @@
 module CodeGen.Javascript.Monad (JSGen, genJS, emit, merge) where
 import Control.Monad.State
 import CodeGen.Javascript.Bag as Bag
-import CodeGen.Javascript.AST
+import CodeGen.Javascript.AST hiding (code)
 
-data GenState = GenState {
-    code       :: Bag JSStmt
+newtype GenState = GenState {
+    code :: Bag JSStmt
   }
 
 initialState :: GenState
 initialState = GenState {
-    code    = empty
+    code = empty
   }
 
 newtype JSGen a = JSGen {unJSG :: State GenState a} deriving Monad

@@ -3,6 +3,7 @@ module CodeGen.Javascript.AST.Binary where
 import Control.Applicative
 import Data.Binary
 import Data.Binary.IEEE754
+import Module (moduleNameString, mkModuleName)
 import CodeGen.Javascript.AST
 import Prelude hiding (LT, GT)
 
@@ -174,3 +175,12 @@ instance Binary JSOp where
       16 -> BitAnd
       17 -> BitOr
       18 -> BitXor
+
+instance Binary JSMod where
+  put (JSMod name deps code) = do
+    put $ moduleNameString name
+    put deps
+    put code
+
+  get =
+    JSMod <$> (mkModuleName <$> get) <*> get <*> get

@@ -22,7 +22,10 @@ Library
         ghc >= 7.2,
         mtl,
         binary,
-        data-binary-ieee754
+        data-binary-ieee754,
+        containers,
+        bytestring,
+        filepath
     Exposed-Modules:
         Plugin.GenJS
     Other-Modules:
@@ -34,4 +37,5 @@ Library
         CodeGen.Javascript.Generate
         CodeGen.Javascript.PrintJS
         CodeGen.Javascript.PrimOps
+        CodeGen.Javascript.Module
     default-language: Haskell98

@@ -6,14 +6,26 @@ import OccName
 import TypeRep
 import PrimOp (PrimOp)
 import ForeignCall
+import qualified Data.Map as M
+import Data.List (foldl')
 
 import CodeGen.Javascript.Monad
 import CodeGen.Javascript.AST as AST
 import CodeGen.Javascript.Bag as Bag hiding (concat)
 import CodeGen.Javascript.PrimOps
+import CodeGen.Javascript.Module
 
-generate :: ModGuts -> [JSStmt]
-generate = genAST
+-- | Turn a pile of Core into our intermediate JS AST.
+generate :: ModGuts -> JSMod
+generate mg =
+  JSMod {
+      name = moduleName $ mg_module mg,
+      deps = M.empty,
+      code = foldl' insFun M.empty (genAST mg)
+    }
+  where
+    insFun m (NewVar (AST.Var name) fun) =
+      M.insert name fun m
 
 genAST :: ModGuts -> [JSStmt]
 genAST = concat . map (toList . snd . genJS . genBind) . mg_binds

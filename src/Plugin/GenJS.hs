@@ -16,5 +16,5 @@ desc = "Generate Javascript code as a side effect"
 
 genJS :: CoreToDo
 genJS = CoreDoPluginPass desc $ \x -> do
-  liftIO . putStrLn . prettyJS . generate $ x
+  liftIO . writeModule $ generate x
   return x
