@@ -7,6 +7,7 @@ import TypeRep
 import PrimOp (PrimOp)
 import ForeignCall
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Data.List (foldl')
 
 import CodeGen.Javascript.Monad
@@ -14,29 +15,61 @@ import CodeGen.Javascript.AST as AST
 import CodeGen.Javascript.Bag as Bag hiding (concat)
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.Module
+import CodeGen.Javascript.PrintJS (prettyJS)
 
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: ModGuts -> JSMod
 generate mg =
   JSMod {
       name = moduleName $ mg_module mg,
-      deps = M.empty,
-      code = foldl' insFun M.empty (genAST mg)
+      deps = foldl' insDep M.empty theMod,
+      code = foldl' insFun M.empty theMod
     }
   where
-    insFun m (NewVar (AST.Var name) fun) =
+    theMod = genAST mg
+    insFun m (_, NewVar (AST.Var name) fun) =
       M.insert name fun m
+    
+    insDep m (deps, NewVar (AST.Var name) _) =
+      M.insert name deps m
 
-genAST :: ModGuts -> [JSStmt]
-genAST = concat . map (toList . snd . genJS . genBind) . mg_binds
+genAST :: ModGuts -> [(S.Set JSVar, JSStmt)]
+genAST =
+  map (depsAndCode . genJS . genBind) . concatMap unRec . mg_binds
+  where
+    depsAndCode (_, deps, code) =
+      case toList code of
+        [code'] ->
+          (deps, code')
+        lotsOfCode ->
+          error $  "Single top level exp generated several assignments!\n"
+                ++ prettyJS lotsOfCode
 
+-- | Turn a recursive binding into a list of non-recursive ones.
+unRec :: CoreBind -> [CoreBind]
+unRec (Rec bs) = unzipWith NonRec bs
+unRec b        = [b]
+
+-- | Generate code for all bindings. genBind spits out an error if it receives
+--   a recursive binding; this is because it's quite a lot easier to keep track
+--   of which functions depend on each other if every genBind call results in a
+--   single function being generated.
+--   Use `genBindRec` to generate code for local potentially recursive bindings 
+--   as their dependencies get merged into their parent's anyway.
 genBind :: CoreBind -> JSGen ()
 genBind (NonRec v ex) = do
   v' <- genVar v
   ex' <- genThunk ex
   emit $ NewVar (AST.Var v') ex'
 genBind (Rec bs) =
-  mapM_ (\(v, ex) -> genBind (NonRec v ex)) bs
+  error $  "genBind got recursive bindings: "
+        ++ showPpr bs
+
+-- | Generate code for a potentially recursive binding. Only use this for local
+--   functions; use `genBind` for top level bindings instead.
+genBindRec :: CoreBind -> JSGen ()
+genBindRec bs@(Rec _) = mapM_ genBind (unRec bs)
+genBindRec b          = genBind b
 
 isUnliftedExp :: Expr Var -> Bool
 isUnliftedExp = isStrictType . exprType
@@ -69,7 +102,8 @@ genThunk exp
   | exprIsHNF exp = do
     genEx exp
   | otherwise = do
-    let (exp', supportStmts) = genJS $ genEx exp
+    let (exp', deps, supportStmts) = genJS $ genEx exp
+    dependOn deps
     return $ Thunk (toList supportStmts) exp'
 
 -- | Generate an eval expression, where needed. Unlifted types don't need it.
@@ -93,9 +127,7 @@ genEx (App exp arg) = do
 genEx (Lam v exp) =
   genFun [v] exp >>= return . foldUpFun
 genEx (Let bind exp) = do
-  -- TODO: bindings can overwrite each other - disaster! Solve by actually
-  --       generating names for vars rather than verbatim copy the Core names
-  genBind bind
+  genBindRec bind
   genEx exp
 genEx (P.Case exp v t alts) =
   genCase exp v t alts
@@ -176,7 +208,8 @@ genFun [v] body | isTyVar v =
   genEx body
 genFun vs body = do
   vs' <- mapM genVar vs
-  let (retExp, body') = genJS (genEx body)
+  let (retExp, deps, body') = genJS (genEx body)
+  dependOn deps
   return $ Fun vs' (toList $ body' `snoc` Ret retExp)
 
 -- | Fold up nested lambdas into a single function as far as possible.
@@ -230,7 +263,8 @@ genAlt resultVar (con, binds, exp) = do
     DEFAULT   -> return Def
     LitAlt l  -> genLit l >>= return . Cond
     DataAlt c -> return . Cons $ dataConTag c
-  let (retEx, body) = genJS (genBinds binds >> genEx exp)
+  let (retEx, deps, body) = genJS (genBinds binds >> genEx exp)
+  dependOn deps
   return . con' . toList $ body `snoc` NewVar (AST.Var resultVar) retEx
   where
     -- Generate variables for all data constructor arguments, then bind the
@@ -264,6 +298,10 @@ toJSVar v =
     unique   = showPpr $ nameUnique name
     external = showPpr name
 
+-- | Generate a new variable and add a dependency on it to the function
+--   currently being generated.
 genVar :: Var -> JSGen JSVar
-genVar =
-  return . toJSVar
+genVar var = do
+  let var' = toJSVar var
+  dependOn var'
+  return var'

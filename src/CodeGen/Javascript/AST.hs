@@ -8,14 +8,15 @@ module CodeGen.Javascript.AST (
   JSOp (..), JSMod (..), opPrec, expPrec, lit, litN, defTag, defState) where
 import Prelude hiding (LT, GT)
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Module (ModuleName)
 
 type JSLabel = String
 
 data JSMod = JSMod {
-    name :: ModuleName,
-    deps :: M.Map JSVar JSVar,
-    code :: M.Map JSVar JSExp
+    name :: !ModuleName,
+    deps :: !(M.Map JSVar (S.Set JSVar)),
+    code :: !(M.Map JSVar JSExp)
   }
 
 data JSVar
