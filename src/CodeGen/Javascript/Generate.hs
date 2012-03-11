@@ -12,7 +12,7 @@ import Data.List (foldl')
 
 import CodeGen.Javascript.Monad
 import CodeGen.Javascript.AST as AST
-import CodeGen.Javascript.Bag as Bag hiding (concat)
+import Bag
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.Module
 import CodeGen.Javascript.PrintJS (prettyJS)
@@ -38,7 +38,7 @@ genAST =
   map (depsAndCode . genJS . genBind) . concatMap unRec . mg_binds
   where
     depsAndCode (_, deps, code) =
-      case toList code of
+      case bagToList code of
         [code'] ->
           (deps, code')
         lotsOfCode ->
@@ -104,7 +104,7 @@ genThunk exp
   | otherwise = do
     let (exp', deps, supportStmts) = genJS $ genEx exp
     dependOn deps
-    return $ Thunk (toList supportStmts) exp'
+    return $ Thunk (bagToList supportStmts) exp'
 
 -- | Generate an eval expression, where needed. Unlifted types don't need it.
 genEval :: Expr Var -> JSGen JSExp
@@ -210,7 +210,7 @@ genFun vs body = do
   vs' <- mapM genVar vs
   let (retExp, deps, body') = genJS (genEx body)
   dependOn deps
-  return $ Fun vs' (toList $ body' `snoc` Ret retExp)
+  return $ Fun vs' (bagToList $ body' `snocBag` Ret retExp)
 
 -- | Fold up nested lambdas into a single function as far as possible.
 foldUpFun :: JSExp -> JSExp
@@ -265,7 +265,7 @@ genAlt resultVar (con, binds, exp) = do
     DataAlt c -> return . Cons $ dataConTag c
   let (retEx, deps, body) = genJS (genBinds binds >> genEx exp)
   dependOn deps
-  return . con' . toList $ body `snoc` NewVar (AST.Var resultVar) retEx
+  return . con' . bagToList $ body `snocBag` NewVar (AST.Var resultVar) retEx
   where
     -- Generate variables for all data constructor arguments, then bind the
     -- actual arguments to them. Only call wrapped in genJS, or these bindings

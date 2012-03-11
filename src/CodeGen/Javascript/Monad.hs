@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module CodeGen.Javascript.Monad (JSGen, genJS, emit, dependOn) where
 import Control.Monad.State
-import CodeGen.Javascript.Bag as Bag
+import Bag
 import CodeGen.Javascript.AST hiding (code, deps)
 import qualified Data.Set as S
 
@@ -12,7 +12,7 @@ data GenState = GenState {
 
 initialState :: GenState
 initialState = GenState {
-    code = empty,
+    code = emptyBag,
     deps = S.empty
   }
 
@@ -40,4 +40,4 @@ genJS (JSGen gen) = case runState gen initialState of
 emit :: JSStmt -> JSGen ()
 emit stmt = JSGen $ do
   st <- get
-  put st {code = code st `snoc` stmt}
+  put st {code = code st `snocBag` stmt}

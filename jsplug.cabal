@@ -33,7 +33,6 @@ Library
         CodeGen.Javascript.AST
         CodeGen.Javascript.AST.Binary
         CodeGen.Javascript.Monad
-        CodeGen.Javascript.Bag
         CodeGen.Javascript.Generate
         CodeGen.Javascript.PrintJS
         CodeGen.Javascript.PrimOps
