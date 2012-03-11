@@ -1,37 +1,38 @@
+{-# LANGUAGE PatternGuards #-}
 -- | Module to generate Javascript from a ModGuts structure
 module CodeGen.Javascript.Generate (generate) where
 import GhcPlugins as P
-import Name
-import OccName
-import TypeRep
-import PrimOp (PrimOp)
 import ForeignCall
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.List (foldl')
 
 import CodeGen.Javascript.Monad
-import CodeGen.Javascript.AST as AST
+import CodeGen.Javascript.AST as AST hiding (unique,external,name,deps,code)
+import qualified CodeGen.Javascript.AST as AST (name, deps, code)
 import Bag
 import CodeGen.Javascript.PrimOps
-import CodeGen.Javascript.Module
 import CodeGen.Javascript.PrintJS (prettyJS)
 
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: ModGuts -> JSMod
 generate mg =
   JSMod {
-      name = moduleName $ mg_module mg,
-      deps = foldl' insDep M.empty theMod,
-      code = foldl' insFun M.empty theMod
+      AST.name = moduleName $ mg_module mg,
+      AST.deps = foldl' insDep M.empty theMod,
+      AST.code = foldl' insFun M.empty theMod
     }
   where
     theMod = genAST mg
     insFun m (_, NewVar (AST.Var name) fun) =
       M.insert name fun m
+    insFun _ ex =
+      error $ "Non-NewVar top binding to insFun: " ++ show ex
     
     insDep m (deps, NewVar (AST.Var name) _) =
       M.insert name (S.delete name deps) m
+    insDep _ ex =
+      error $ "Non-NewVar top binding to insDep: " ++ show ex
 
 genAST :: ModGuts -> [(S.Set JSVar, JSStmt)]
 genAST =
@@ -90,29 +91,29 @@ isVar _         = False
 --   cope with getting passed non-thunks; if this were to change, we must
 --   generate thunks even for HNF expressions!
 genThunk :: Expr Var -> JSGen JSExp
-genThunk exp
-  | isUnliftedExp exp = do
-    genEx exp
-  | isVar exp = do
-    genEx exp
-  | isFunTy . dropForAlls . exprType $ exp = do
-    genEx exp
-  | isTyVarTy $ exprType exp = do
-    genEx exp
-  | exprIsHNF exp = do
-    genEx exp
+genThunk ex
+  | isUnliftedExp ex = do
+    genEx ex
+  | isVar ex = do
+    genEx ex
+  | isFunTy . dropForAlls $ exprType ex = do
+    genEx ex
+  | isTyVarTy $ exprType ex = do
+    genEx ex
+  | exprIsHNF ex = do
+    genEx ex
   | otherwise = do
-    let (exp', deps, supportStmts) = genJS $ genEx exp
+    let (ex', deps, supportStmts) = genJS $ genEx ex
     dependOn deps
-    return $ Thunk (bagToList supportStmts) exp'
+    return $ Thunk (bagToList supportStmts) ex'
 
 -- | Generate an eval expression, where needed. Unlifted types don't need it.
 genEval :: Expr Var -> JSGen JSExp
-genEval exp
-  | isUnliftedExp exp = do
-    genEx exp
+genEval ex
+  | isUnliftedExp ex = do
+    genEx ex
   | otherwise = do
-    genEx exp >>= return . Eval 
+    genEx ex >>= return . Eval 
 
 genEx :: Expr Var -> JSGen JSExp
 genEx (P.Var v) = do
@@ -120,40 +121,40 @@ genEx (P.Var v) = do
     DataConWorkId dc -> genDataCon dc
     DataConWrapId dc -> genDataCon dc
     _                -> genVar v >>= return . AST.Var
-genEx (P.Lit lit) =
-  genLit lit
-genEx (App exp arg) = do
-  genApp exp arg >>= return . foldUpApp
-genEx (Lam v exp) =
-  genFun [v] exp >>= return . foldUpFun
-genEx (Let bind exp) = do
+genEx (P.Lit l) =
+  genLit l
+genEx (App f arg) = do
+  genApp f arg >>= return . foldUpApp
+genEx (Lam v ex) =
+  genFun [v] ex >>= return . foldUpFun
+genEx (Let bind ex) = do
   genBindRec bind
-  genEx exp
-genEx (P.Case exp v t alts) =
-  genCase exp v t alts
-genEx (Cast exp co) =
-  genEx exp
-genEx (Tick t ex) =
   genEx ex
-genEx (Type t) =
+genEx (P.Case ex v t alts) =
+  genCase ex v t alts
+genEx (Cast ex _) =
+  genEx ex
+genEx (Tick _ ex) =
+  genEx ex
+genEx (Type _) =
   error "Type annotation encountered where it shouldn't be!"
-genEx (Coercion co) =
+genEx (Coercion _) =
   error "Don't know what to do with a coercion!"
 
 -- | Generate code for funcion application
 genApp :: Expr Var -> Arg Var -> JSGen JSExp
-genApp exp (Type _) = do
+genApp expr (Type _) = do
   -- Discard type annotations
-  genEx exp
-genApp exp arg = do 
+  genEx expr
+genApp expr arg = do 
   arg' <- genThunk arg
-  poExp <- genPrimOp exp [arg']
+  poExp <- genPrimOp expr [arg']
   case poExp of
     Just primop -> do
       return primop
     _ -> do
-      exp' <- genEx exp
-      return $ Call exp' [arg']
+      expr' <- genEx expr
+      return $ Call expr' [arg']
 
 -- | Fold up nested function applications into a single call as far as
 --   possible.
@@ -162,8 +163,8 @@ foldUpApp (Call f as) =
   case foldUpApp f of
     Call f' as' -> Call f' (as' ++ as)
     f'          -> Call f' as
-foldUpApp exp =
-  exp
+foldUpApp expr =
+  expr
 
 -- | Generate code for the given data constructor
 genDataCon :: DataCon -> JSGen JSExp
@@ -178,7 +179,7 @@ genDataCon dc = do
 -- | Generate an expression for the given primitive operation. If the given
 --   expression isn't a primitive operation, return Nothing.
 genPrimOp :: Expr Var -> [JSExp] -> JSGen (Maybe JSExp)
-genPrimOp (P.Var id) xs | PrimOpId op <- idDetails id =
+genPrimOp (P.Var v) xs | PrimOpId op <- idDetails v =
   return $ Just $ genOp op xs
 genPrimOp (App f x) xs
   | Type _ <- x =
@@ -190,8 +191,8 @@ genPrimOp _ _ =
   return Nothing
 
 genLit :: Literal -> JSGen JSExp
-genLit lit = do
-  return $ AST.Lit $ case lit of
+genLit l = do
+  return $ AST.Lit $ case l of
     MachStr s      -> Str $ show s
     MachInt n      -> Num $ fromIntegral n
     MachFloat f    -> Num $ fromRational f
@@ -216,14 +217,14 @@ genFun vs body = do
 foldUpFun :: JSExp -> JSExp
 foldUpFun (Fun vs [Ret (Fun vs' b)]) =
   foldUpFun $ Fun (vs ++ vs') b
-foldUpFun exp =
-  exp
+foldUpFun expr =
+  expr
 
 genCase :: Expr Var -> Var -> Type -> [Alt P.Var] -> JSGen JSExp
-genCase exp v t alts = do
+genCase expr v _ alts = do
   v' <- genVar v
-  exp' <- genEval exp
-  emit $ NewVar (AST.Var v') exp'
+  expr' <- genEval expr
+  emit $ NewVar (AST.Var v') expr'
   genAlts v' alts
 
 
@@ -258,12 +259,12 @@ genAlts v as = do
 --
 --   TODO: constructors are represented as strings. :(
 genAlt :: JSVar -> Alt P.Var -> JSGen JSAlt
-genAlt resultVar (con, binds, exp) = do
+genAlt resultVar (con, binds, expr) = do
   con' <- case con of
     DEFAULT   -> return Def
     LitAlt l  -> genLit l >>= return . Cond
     DataAlt c -> return . Cons $ dataConTag c
-  let (retEx, deps, body) = genJS (genBinds binds >> genEx exp)
+  let (retEx, deps, body) = genJS (genBinds binds >> genEx expr)
   dependOn deps
   return . con' . bagToList $ body `snocBag` NewVar (AST.Var resultVar) retEx
   where
@@ -292,7 +293,6 @@ toJSVar v =
         External unique external
       | otherwise ->
         Internal unique
-      
   where
     name     = P.varName v
     unique   = showPpr $ nameUnique name

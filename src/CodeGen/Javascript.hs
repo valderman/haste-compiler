@@ -3,3 +3,4 @@ module CodeGen.Javascript (
 import CodeGen.Javascript.Generate as Gen
 import CodeGen.Javascript.PrintJS as Print
 import CodeGen.Javascript.Module
+import CodeGen.Javascript.AST (JSMod)
