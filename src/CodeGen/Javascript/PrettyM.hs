@@ -131,7 +131,7 @@ uniqueExternal v = PM $ do
       return $ '_' : show n
     _      -> do
       put $ VarStore (next+1) (M.insert v next vars)
-      return ('_' : show (next+1))
+      return ('_' : show next)
 
 -- | Emit a code fragment
 out :: Output -> PrettyM ()
