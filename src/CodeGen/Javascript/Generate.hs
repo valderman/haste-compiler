@@ -31,7 +31,7 @@ generate mg =
       M.insert name fun m
     
     insDep m (deps, NewVar (AST.Var name) _) =
-      M.insert name deps m
+      M.insert name (S.delete name deps) m
 
 genAST :: ModGuts -> [(S.Set JSVar, JSStmt)]
 genAST =

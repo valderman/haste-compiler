@@ -1,14 +1,20 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances #-}
 -- | Code for generating actual JS from the JS AST.
-module CodeGen.Javascript.PrintJS (prettyJS) where
+module CodeGen.Javascript.PrintJS (prettyJS, prettyMod) where
 import CodeGen.Javascript.AST as AST
+import qualified Data.Map as M
+import qualified Data.Set as S
 import Bag
 import Data.List as List (intersperse, concat)
+import Module (moduleNameString)
 
 type Output = String
 
 prettyJS :: [JSStmt] -> Output
 prettyJS = List.concat . List.concat . map (bagToList . pretty 0)
+
+prettyMod :: JSMod -> Output
+prettyMod = List.concat . bagToList . pretty 0
 
 -- | Syntactic sugar for concatBag.
 (+>) :: Bag a -> Bag a -> Bag a
@@ -30,6 +36,34 @@ out = unitBag
 
 endl :: Bag Output
 endl = out "\n"
+
+instance PrettyJS JSMod where
+  pretty ind (JSMod name deps code) =
+    out "/* Module: " +> out (moduleNameString name) +> endl +>
+        out "   Dependencies: " +> endl +>
+        prettyDeps +>
+        out "*/" +> endl +>
+        pretty ind code
+    where
+      prettyDeps =
+        M.foldlWithKey' insDep emptyBag deps
+
+      insDep :: Bag Output -> JSVar -> S.Set JSVar -> Bag Output
+      insDep a fun deps =
+        a +> indent (ind+1) +> pretty (ind+1) fun +> out ": " +>
+             prettyList (ind+1) "," (S.toList deps) +> endl
+
+instance PrettyJS (M.Map JSVar JSExp) where
+  pretty ind = M.foldlWithKey' insTopDef emptyBag
+    where
+      insTopDef a name (Fun args body) =
+        a +> out "function " +> pretty ind name +> out "(" +>
+          prettyList ind "," args +> out "){" +> endl +>
+          prettyList ind "\n" body +> endl +>
+          out "}" +> endl
+      
+      insTopDef a name exp =
+        a +> pretty ind (NewVar (Var name) exp)
 
 instance PrettyJS JSStmt where
   pretty ind (Ret ex) =

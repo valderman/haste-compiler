@@ -5,7 +5,8 @@
 --   Core.
 module CodeGen.Javascript.AST (
   JSVar (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
-  JSOp (..), JSMod (..), opPrec, expPrec, lit, litN, defTag, defState) where
+  JSOp (..), JSMod (..), JSLabel, opPrec, expPrec, lit, litN, defTag,
+  defState) where
 import Prelude hiding (LT, GT)
 import qualified Data.Map as M
 import qualified Data.Set as S
