@@ -184,7 +184,7 @@ instance PrettyJS JSLit where
     out $ if fromIntegral n == d
             then show n
             else show d
-  pretty _ (Str s) = out ('"':s) +> out "\""
+  pretty _ (Str s) = out s
   pretty _ (Chr c) = out [c]
 
 prettyList :: PrettyJS a => Int -> Output -> [a] -> Bag Output
