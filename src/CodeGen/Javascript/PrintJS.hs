@@ -186,12 +186,12 @@ instance PrettyJS JSOp where
 
 instance PrettyJS JSVar where
   emit (Foreign foreignName) =
-    out foreignName
+    out $ '_':foreignName
   emit theName@(External _ _) = do
     getName <- extName <$> ask
-    getName theName >>= out
+    getName theName >>= out . ('_':)
   emit (Internal intName) =
-    out intName
+    out $ '_':intName
 
 instance PrettyJS JSLit where
   emit (Num d) = let n = round d :: Int in
