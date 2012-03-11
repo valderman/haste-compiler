@@ -1,0 +1,129 @@
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances,
+             GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+-- | JS AST pretty printing monad.
+module CodeGen.Javascript.PrettyM where
+import CodeGen.Javascript.AST as AST
+import Control.Monad.Reader
+import Control.Monad.Writer
+import Control.Applicative
+import Bag
+
+type Output = String
+
+-- | Whitespace factory!
+indent :: PrettyM a -> PrettyM a
+indent printer = do
+  opts <- ask
+  let ind = indentLvl opts
+      str = indentStr opts
+  mapM_ out $ replicate ind str
+  printer
+
+-- | Indent the given pretty printer and terminate it with a newline.
+line :: PrettyM a -> PrettyM a
+line pp = do
+  x <- indent pp
+  endl
+  return x
+
+-- | Indent the given computation one level more than its parent computation.
+indentFurther :: PrettyM a -> PrettyM a
+indentFurther m =
+  local oneMoreIndent m
+  where
+    oneMoreIndent opts = opts {indentLvl = indentLvl opts + indentStep opts}
+
+-- | Options for the pretty printer
+data PrettyOpts = PrettyOpts {
+    indentLvl   :: Int,
+    indentStep  :: Int,
+    indentStr   :: Output,
+    useNewline  :: Bool,
+    printHeader :: Bool,
+    extName     :: JSVar -> PrettyM JSLabel
+  }
+
+defaultOpts :: PrettyOpts
+defaultOpts = PrettyOpts {
+    indentLvl   = 0,
+    indentStep  = 1,
+    indentStr   = "    ",
+    useNewline  = True,
+    printHeader = True,
+    extName     = useExternalName
+  }
+
+useExternalName :: JSVar -> PrettyM JSLabel
+useExternalName (External _uniq ext) = return ext
+useExternalName var                  = return $ unique var
+
+-- | Print code using readable, but syntaxly incorrect, names, indentation,
+--   newlines and dependency map header. Four spaces are used for indentation.
+--   These settings produce the most readable code; it doesn't run though. Use
+--   `pretty` for a compromise between readability and actually working.
+pseudo :: PrettyOpts
+pseudo = defaultOpts
+
+-- | Like `pseudo`, except correct (but unreadable) names are used, the
+--   dependency map header is not included and tabs are used for indentation
+--   rather than spaces.
+--   These settings produce code that actually works, unlike `pseudo`, but is
+--   at least minimally readable, unlike `compact`.
+pretty :: PrettyOpts
+pretty = defaultOpts {
+    extName     = return . unique,
+    indentStr   = "\t",
+    printHeader = False
+  }
+
+-- | Print code without indentation, newlines or any other readability
+--   concerns, minimizing code size.
+compact :: PrettyOpts
+compact = defaultOpts {
+    indentStep  = 0,
+    indentStr   = "",
+    useNewline  = False,
+    extName     = return . unique,
+    printHeader = False
+  }
+
+instance Monoid (Bag a) where
+  mempty  = emptyBag
+  mappend = unionBags
+
+newtype PrettyM a = PM {
+    unPretty :: (WriterT (Bag Output) (Reader PrettyOpts) a)
+  } deriving (Monad, Functor)
+
+-- | Run a pretty printer using the given options.
+runPretty :: PrettyOpts -> PrettyM a -> (a, Bag Output)
+runPretty opts = flip runReader opts . runWriterT . unPretty
+
+instance MonadReader PrettyOpts PrettyM where
+  ask = PM $ do
+    lift ask
+  local f (PM m) = PM $ do
+    let m' = runWriterT m
+    WriterT $ local f m'
+
+instance MonadWriter (Bag Output) PrettyM where
+  tell   = PM . tell
+  listen = PM . listen . unPretty
+  pass   = PM . pass . unPretty
+
+class PrettyJS a where
+  emit :: a -> PrettyM ()
+
+-- | Emit a code fragment
+out :: Output -> PrettyM ()
+out = tell . unitBag
+
+-- | Emit a newline
+endl :: PrettyM ()
+endl = do
+  newl <- useNewline <$> ask
+  if newl
+    then out "\n"
+    else return ()

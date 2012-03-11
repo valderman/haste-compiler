@@ -34,6 +34,7 @@ Library
         CodeGen.Javascript.Monad
         CodeGen.Javascript.Generate
         CodeGen.Javascript.PrintJS
+        CodeGen.Javascript.PrettyM
         CodeGen.Javascript.PrimOps
         CodeGen.Javascript.Module
     default-language: Haskell98
