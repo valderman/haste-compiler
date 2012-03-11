@@ -44,13 +44,9 @@ instance PrettyJS (M.Map JSVar JSExp) where
     where
       insTopDef :: PrettyM () -> JSVar -> JSExp -> PrettyM ()
       insTopDef previous bindName (Fun args body) = do
-        previous
-        out "function " >> emit bindName >> out "("
-        emitList "," args >> out "){" >> endl
-        indentFurther $ do
-          indent $ emitList "" body
-        line $ out "}"
-      
+        getName <- extName <$> ask
+        bindName' <- getName bindName
+        previous >> emit (NamedFun bindName' args body)      
       insTopDef previous bindName expr =
         previous >> emit (NewVar (Var bindName) expr)
 
@@ -192,8 +188,8 @@ instance PrettyJS JSVar where
   emit (Foreign foreignName) =
     out foreignName
   emit theName@(External _ _) = do
-    emitName <- extName <$> ask
-    emitName theName
+    getName <- extName <$> ask
+    getName theName >>= out
   emit (Internal intName) =
     out intName
 

@@ -35,9 +35,9 @@ instance Serialize JSMod where
     JSMod <$> (mkModuleName <$> get) <*> get <*> get
 
 data JSVar
-  = Foreign JSLabel
+  = Foreign  {unique :: JSLabel}
   | External {unique :: JSLabel, external :: JSLabel}
-  | Internal JSLabel
+  | Internal {unique :: JSLabel}
     deriving (Show, Ord, Eq, Generic)
 
 instance Serialize JSVar where
