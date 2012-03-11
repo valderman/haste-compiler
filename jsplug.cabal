@@ -28,12 +28,27 @@ Library
         filepath
     Exposed-Modules:
         Plugin.GenJS
-    Other-Modules:
         CodeGen.Javascript
+    Other-Modules:
         CodeGen.Javascript.AST
         CodeGen.Javascript.Monad
         CodeGen.Javascript.Generate
         CodeGen.Javascript.PrintJS
         CodeGen.Javascript.PrimOps
         CodeGen.Javascript.Module
+    default-language: Haskell98
+
+Executable jspcat
+    Main-Is: jspcat.hs
+    Hs-Source-Dirs: src
+    Build-Depends:
+        base,
+        cereal,
+        cereal-derive,
+        ghc-prim,
+        ghc,
+        containers,
+        filepath,
+        bytestring,
+        mtl
     default-language: Haskell98
