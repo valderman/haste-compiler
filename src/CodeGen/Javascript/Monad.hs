@@ -16,7 +16,7 @@ initialState = GenState {
     deps = S.empty
   }
 
-newtype JSGen a = JSGen {unJSG :: State GenState a} deriving Monad
+newtype JSGen a = JSGen (State GenState a) deriving Monad
 
 class Dependency a where
   -- | Add a dependency to the function currently being generated.
@@ -34,7 +34,7 @@ instance Dependency (S.Set JSVar) where
 
 genJS :: JSGen a -> (a, S.Set JSVar, Bag JSStmt)
 genJS (JSGen gen) = case runState gen initialState of
-  (a, GenState code deps) -> (a, deps, code)
+  (a, GenState stmts dependencies) -> (a, dependencies, stmts)
 
 -- | Emit a JS statement to the code stream
 emit :: JSStmt -> JSGen ()

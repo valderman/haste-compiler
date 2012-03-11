@@ -155,4 +155,4 @@ genOp op xs =
     x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
   where
     call f = NativeCall f xs
-    binOp op = let [x, y] = xs in BinOp op x y
+    binOp bop = let [x, y] = xs in BinOp bop x y

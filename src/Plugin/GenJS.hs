@@ -12,6 +12,7 @@ install _ passes = do
   reinitializeGlobals
   return $ passes ++ [genJS]
 
+desc :: String
 desc = "Generate Javascript code as a side effect"
 
 genJS :: CoreToDo
