@@ -1,12 +1,11 @@
 -- | Read and write JSMods.
 module CodeGen.Javascript.Module (writeModule, readModule) where
 import Module (moduleNameSlashes)
-import Data.Binary
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString as B
 import CodeGen.Javascript.AST
-import CodeGen.Javascript.AST.Binary ()
 import System.FilePath
 import Control.Applicative
+import Data.Serialize
 
 -- | The file extension to use for modules.
 fileExt :: String
@@ -23,5 +22,6 @@ writeModule m@(JSMod modName _ _) =
 
 -- | Read a module from file.
 readModule :: FilePath -> IO JSMod
-readModule path =
-  decode <$> B.readFile path
+readModule path = do
+  Right m <- decode <$> B.readFile path
+  return m

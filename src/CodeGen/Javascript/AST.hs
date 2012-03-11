@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, 
              TypeSynonymInstances,
-             FlexibleInstances #-}
+             FlexibleInstances, 
+             DeriveGeneric #-}
 -- | Abstract syntax for the Javascript constructs needed to generate JS from
 --   Core.
 module CodeGen.Javascript.AST (
@@ -10,7 +11,11 @@ module CodeGen.Javascript.AST (
 import Prelude hiding (LT, GT)
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Module (ModuleName)
+import Module (ModuleName, mkModuleName, moduleNameString)
+import GHC.Generics
+import Data.Serialize
+import Data.Serialize.Derive
+import Control.Applicative
 
 type JSLabel = String
 
@@ -20,11 +25,24 @@ data JSMod = JSMod {
     code :: !(M.Map JSVar JSExp)
   }
 
+instance Serialize JSMod where
+  put (JSMod modName depends binds) = do
+    put $ moduleNameString modName
+    put depends
+    put binds
+
+  get =
+    JSMod <$> (mkModuleName <$> get) <*> get <*> get
+
 data JSVar
   = Foreign JSLabel
   | External {unique :: JSLabel, external :: JSLabel}
   | Internal JSLabel
-    deriving (Show, Ord, Eq)
+    deriving (Show, Ord, Eq, Generic)
+
+instance Serialize JSVar where
+  get = deriveGet
+  put = derivePut
 
 data JSStmt
   = Ret JSExp
@@ -34,13 +52,21 @@ data JSStmt
   | Case JSExp [JSAlt]
   | NewVar JSExp JSExp
   | NamedFun String [JSVar] [JSStmt] -- Unused; turn top level defs into tihs
-    deriving Show
+    deriving (Show, Generic)
+
+instance Serialize JSStmt where
+  get = deriveGet
+  put = derivePut
 
 data JSAlt
   = Cond JSExp [JSStmt]
   | Def        [JSStmt]
   | Cons Int   [JSStmt]
-    deriving Show
+    deriving (Show, Generic)
+
+instance Serialize JSAlt where
+  get = deriveGet
+  put = derivePut
 
 data JSExp
   = Call JSExp [JSExp]
@@ -58,13 +84,21 @@ data JSExp
   | Array [JSExp]
   | Assign JSExp JSExp
   | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
-    deriving Show
+    deriving (Show, Generic)
+
+instance Serialize JSExp where
+  get = deriveGet
+  put = derivePut
 
 data JSLit
   = Num Double
   | Str String
   | Chr Char
-    deriving Show
+    deriving (Show, Generic)
+
+instance Serialize JSLit where
+  get = deriveGet
+  put = derivePut
 
 -- | First tag for data constructors
 defTag :: JSExp
@@ -112,7 +146,11 @@ data JSOp
   | BitAnd
   | BitOr
   | BitXor
-    deriving Show
+    deriving (Show, Generic)
+
+instance Serialize JSOp where
+  get = deriveGet
+  put = derivePut
 
 -- | Returns the precedence of the given operator as an int. Higher number
 --   means higher priority.
