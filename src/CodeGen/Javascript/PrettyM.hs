@@ -92,6 +92,7 @@ data VarStore = VarStore {
     vars :: M.Map JSVar Int
   }
 
+emptyStore :: VarStore
 emptyStore = VarStore {
     next = 0,
     vars = M.empty
@@ -124,14 +125,14 @@ class PrettyJS a where
 
 -- | Generate a unique ID for an external var.
 uniqueExternal :: JSVar -> PrettyM JSLabel
-uniqueExternal v = PM $ do
-  VarStore next vars <- get
-  case M.lookup v vars of
+uniqueExternal var = PM $ do
+  VarStore nextID labels <- get
+  case M.lookup var labels of
     Just n ->
       return $ '_' : show n
     _      -> do
-      put $ VarStore (next+1) (M.insert v next vars)
-      return ('_' : show next)
+      put $ VarStore (nextID+1) (M.insert var nextID labels)
+      return ('_' : show nextID)
 
 -- | Emit a code fragment
 out :: Output -> PrettyM ()
