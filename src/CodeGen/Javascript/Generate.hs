@@ -198,6 +198,9 @@ genLit l = do
     MachFloat f    -> Num $ fromRational f
     MachDouble d   -> Num $ fromRational d
     MachChar c     -> Chr c
+    MachWord w     -> Num $ fromIntegral w
+    MachWord64 w   -> Num $ fromIntegral w
+    MachNullAddr   -> Num 0
     LitInteger i _ -> Num $ fromIntegral i
     x              -> error $ "Literal: " ++ show x
 
