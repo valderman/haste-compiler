@@ -112,7 +112,6 @@ genOp op xs =
     DoublePowerOp -> call "Math.pow"
 
     -- Float ops
-    FloatNegOp     -> Neg (head xs)
     FloatExpOp     -> NativeCall "Math.exp" xs
     FloatLogOp     -> NativeCall "Math.log" xs
     FloatSqrtOp    -> NativeCall "Math.sqrt" xs
