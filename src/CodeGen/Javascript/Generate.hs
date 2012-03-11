@@ -8,7 +8,7 @@ import qualified Data.Set as S
 import Data.List (foldl')
 
 import CodeGen.Javascript.Monad
-import CodeGen.Javascript.AST as AST hiding (unique,external,name,deps,code)
+import CodeGen.Javascript.AST as AST hiding (unique,name,deps,code)
 import qualified CodeGen.Javascript.AST as AST (name, deps, code)
 import Bag
 import CodeGen.Javascript.PrimOps
@@ -293,7 +293,7 @@ toJSVar v =
     FCallId fc ->
         Foreign (foreignName fc)
     _ | isExternalName name ->
-        External unique external
+        External external
       | otherwise ->
         Internal unique
   where

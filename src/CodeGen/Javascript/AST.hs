@@ -36,7 +36,7 @@ instance Serialize JSMod where
 
 data JSVar
   = Foreign  {unique :: JSLabel}
-  | External {unique :: JSLabel, external :: JSLabel}
+  | External {unique :: JSLabel}
   | Internal {unique :: JSLabel}
     deriving (Show, Ord, Eq, Generic)
 

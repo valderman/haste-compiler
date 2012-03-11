@@ -187,7 +187,7 @@ instance PrettyJS JSOp where
 instance PrettyJS JSVar where
   emit (Foreign foreignName) =
     out $ '_':foreignName
-  emit theName@(External _ _) = do
+  emit theName@(External _) = do
     getName <- extName <$> ask
     getName theName >>= out . ('_':)
   emit (Internal intName) =

@@ -52,12 +52,8 @@ defaultOpts = PrettyOpts {
     indentStr   = "    ",
     useNewline  = True,
     printHeader = True,
-    extName     = useExternalName
+    extName     = return . unique
   }
-
-useExternalName :: JSVar -> PrettyM JSLabel
-useExternalName (External _uniq ext) = return ext
-useExternalName var                  = return $ unique var
 
 -- | Print code using readable, but syntaxly incorrect, names, indentation,
 --   newlines and dependency map header. Four spaces are used for indentation.
