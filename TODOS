@@ -14,9 +14,6 @@
   huge space savings are likely!
   [nice to have/hard work]
 
-* Get IO working.
-  [important/should be easy]
-
 * Implement tail call elimination using trampolining.
   [important/medium]
 
