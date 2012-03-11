@@ -12,7 +12,7 @@ import CodeGen.Javascript.AST as AST hiding (unique,external,name,deps,code)
 import qualified CodeGen.Javascript.AST as AST (name, deps, code)
 import Bag
 import CodeGen.Javascript.PrimOps
-import CodeGen.Javascript.PrintJS (prettyJS)
+import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
 
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: ModGuts -> JSMod
@@ -44,7 +44,7 @@ genAST =
           (deps, code')
         lotsOfCode ->
           error $  "Single top level exp generated several assignments!\n"
-                ++ prettyJS lotsOfCode
+                ++ prettyJS pseudo lotsOfCode
 
 -- | Turn a recursive binding into a list of non-recursive ones.
 unRec :: CoreBind -> [CoreBind]

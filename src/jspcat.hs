@@ -10,4 +10,4 @@ main = do
      else mapM_ catMod as
   where
     catMod m =
-      readModule m >>= return . prettyMod >>= putStrLn
+      readModule m >>= return . prettyJS pseudo >>= putStrLn

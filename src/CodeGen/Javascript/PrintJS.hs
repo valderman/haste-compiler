@@ -1,155 +1,174 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Code for generating actual JS from the JS AST.
-module CodeGen.Javascript.PrintJS (prettyJS, prettyMod) where
+module CodeGen.Javascript.PrintJS (prettyJS, pseudo, pretty, compact) where
 import CodeGen.Javascript.AST as AST
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Bag
-import Data.List as List (intersperse, concat)
+import Data.List as List (intersperse)
 import Module (moduleNameString)
+import CodeGen.Javascript.PrettyM
+import Control.Applicative
+import Control.Monad
+import Control.Monad.Reader
 
-type Output = String
+-- | Pretty print the given JS construct using the specified options.
+--   For now, only the presets `pseudo`, `pretty` and `compact` are exported.
+prettyJS :: PrettyJS a => PrettyOpts -> a -> Output
+prettyJS opts = concat . bagToList . snd . runPretty opts . emit
 
-prettyJS :: [JSStmt] -> Output
-prettyJS = List.concat . List.concat . map (bagToList . pretty 0)
-
-prettyMod :: JSMod -> Output
-prettyMod = List.concat . bagToList . pretty 0
-
--- | Syntactic sugar for concatBag.
-(+>) :: Bag a -> Bag a -> Bag a
-a +> b = a `unionBags` b
-
--- | Whitespace factory!
-indent :: Int -> Bag Output
-indent ind = out $ replicate ind '\t'
-
--- | Size of indentation step
-step :: Int
-step = 1
-
-class PrettyJS a where
-  pretty :: Int -> a -> Bag Output
-
-out :: Output -> Bag Output
-out = unitBag
-
-endl :: Bag Output
-endl = out "\n"
+instance PrettyJS a => PrettyJS [a] where
+  emit = emitList ""
 
 instance PrettyJS JSMod where
-  pretty ind (JSMod name deps code) =
-    out "/* Module: " +> out (moduleNameString name) +> endl +>
-        out "   Dependencies: " +> endl +>
-        prettyDeps +>
-        out "*/" +> endl +>
-        pretty ind code
+  emit (JSMod modName dependMap binds) = do
+    printHdr <- printHeader <$> ask
+    when printHdr $ do
+      out "/* Module: " >> out (moduleNameString modName) >> endl
+      out "   Dependencies: " >> endl
+      prettyDeps
+      out "*/" >> endl
+    emit binds
     where
       prettyDeps =
-        M.foldlWithKey' insDep emptyBag deps
+        M.foldlWithKey' insDep (return ()) dependMap
 
-      insDep :: Bag Output -> JSVar -> S.Set JSVar -> Bag Output
-      insDep a fun deps =
-        a +> indent (ind+1) +> pretty (ind+1) fun +> out ": " +>
-             prettyList (ind+1) "," (S.toList deps) +> endl
+      insDep previous fun funDeps = do
+        _ <- previous
+        indentFurther $ do
+          emit fun >> out ": " >> emitList "," (S.toList funDeps) >> endl
 
 instance PrettyJS (M.Map JSVar JSExp) where
-  pretty ind = M.foldlWithKey' insTopDef emptyBag
+  emit = M.foldlWithKey' insTopDef (return ())
     where
-      insTopDef a name (Fun args body) =
-        a +> out "function " +> pretty ind name +> out "(" +>
-          prettyList ind "," args +> out "){" +> endl +>
-          indent (ind+1) +> prettyList ind "\n\t" body +>
-          out "}" +> endl
+      insTopDef :: PrettyM () -> JSVar -> JSExp -> PrettyM ()
+      insTopDef previous bindName (Fun args body) = do
+        previous
+        out "function " >> emit bindName >> out "("
+        emitList "," args >> out "){" >> endl
+        indentFurther $ do
+          indent $ emitList "" body
+        indent $ out "}" >> endl
       
-      insTopDef a name exp =
-        a +> pretty ind (NewVar (Var name) exp)
+      insTopDef previous bindName expr =
+        previous >> emit (NewVar (Var bindName) expr)
 
 instance PrettyJS JSStmt where
-  pretty ind (Ret ex) =
-    indent ind +> out "return " +> pretty ind ex +> out ";" +> endl
-  pretty ind (CallRet f as) =
-    pretty ind (Ret (Call f as))
-  pretty ind (While ex body) =
-    indent ind +> out "while(" +> pretty ind ex +> out ")" +> pretty ind body
-  pretty ind (Block stmts) =
-    indent ind +> out "{" +> endl +> stmts' +> indent ind +> out "}" +> endl
-    where
-      stmts' = unionManyBags $ map (pretty $ ind+step) stmts
-  pretty ind (Case ex as) =
-    indent ind +> out "switch(C(" +> pretty ind ex +> out ")){" +> endl +>
-      unionManyBags (map (pretty $ ind+step) as) +> indent ind +> out "}" +> endl
-  pretty ind (NewVar lhs rhs) =
-    indent ind +> out "var " +> pretty ind lhs +> out " = " +>
-      pretty ind rhs +> out ";"+>endl
-  pretty ind (NamedFun n as body) =
-    indent ind +>
-      out "function " +> out n +> out "(" +> prettyList ind "," as +> out "){" +>
-        endl +> prettyList (ind+step) "" body +> indent ind +> out "}" +> endl
+  emit (Ret ex) =
+    indent $ out "return " >> emit ex >> out ";" >> endl
+  emit (CallRet f as) =
+    emit (Ret (Call f as))
+
+  emit (While ex body) = do
+    indent $ out "while(" >> emit ex >> out ")"
+    emit body
+
+  emit (Block stmts) = do
+    indent $ out "{" >> endl
+    indentFurther $ do
+      mapM_ emit stmts
+    indent $ out "}" >> endl
+  
+  emit (Case ex alts) = do
+    indent $ out "switch(C(" >> emit ex >> out ")){" >> endl
+    indentFurther $ mapM_ emit alts
+    indent $ out "}" >> endl
+
+  emit (NewVar lhs rhs) = do
+    indent $ out "var " >> emit lhs >> out " = " >> emit rhs >> out ";" >> endl
+
+  emit (NamedFun n as body) = do
+    indent $ do
+      out "function " >> out n >> out "(" >> emitList "," as >> out "){"
+      endl
+      indentFurther $ do
+        emitList "" body
+      indent $ out "}" >> endl
 
 instance PrettyJS JSAlt where
-  pretty ind (Cond ex body) =
-    indent ind +> out "case " +> pretty ind ex +> out ":" +> endl +>
-      prettyList (ind+step) "" body +>
-      indent (ind+step) +> out "break;" +> endl
-  pretty ind (Cons con body) =
-    indent ind +> out "case " +> out (show con) +> out ":" +> endl +>
-      prettyList (ind+step) "" body +>
-      indent (ind+step) +> out "break;" +> endl
-  pretty ind (Def body) =
-    indent ind +> out "default:" +> endl +>
-      prettyList (ind+step) "" body
+  emit (Cond ex body) = do
+    indent $ out "case " >> emit ex >> out ":" >> endl
+    indentFurther $ do
+      emitList "" body
+      indent $ out "break;" >> endl
+  
+  emit (Cons con body) = do
+    indent $ out "case " >> out (show con) >> out ":" >> endl
+    indentFurther $ do
+      emitList "" body
+      indent $ out "break;" >> endl
+
+  emit (Def body) = do
+    indent $ out "default:" >> endl
+    indentFurther $ do
+      emitList "" body
 
 instance PrettyJS JSExp where
-  pretty ind (Call f as) =
-    out "A(" +> prettyList ind "," [f, Array as] +> out ")"
-  pretty ind (NativeCall f as) =
-    out f +> out "(" +> prettyList ind "," as +> out ")"
-  pretty ind (NativeMethCall obj f as) =
-    pretty ind obj +> out "." +> out f +>
-      out "(" +> prettyList ind "," as +> out ")"
-  pretty ind (Fun as body) =
-    out "function(" +> prettyList ind "," as +> out "){" +> endl +>
-      prettyList (ind+step) "" body +> indent ind +> out "}"
-  pretty ind (BinOp op a b) =
-    prettyParens ind op a b
-  pretty ind (Neg x) =
+  emit (Call f as) =
+    out "A(" >> emitList "," [f, Array as] >> out ")"
+  emit (NativeCall f as) =
+    out f >> out "(" >> emitList "," as >> out ")"
+  emit (NativeMethCall obj f as) =
+    emit obj >> out "." >> out f >> out "(" >> emitList "," as >> out ")"
+
+  emit (Fun as body) = do
+    out "function(" >> emitList "," as >> out "){" >> endl
+    indentFurther $ do
+      emitList "" body
+    indent $ out "}"
+
+  emit (BinOp op a b) =
+    emitParens op a b
+
+  emit (Neg x) =
     if expPrec x < expPrec (Neg x)
-       then out "-(" +> pretty ind x +> out ")"
-       else out "-" +> pretty ind x
-  pretty ind (Not x) =
+       then out "-(" >> emit x >> out ")"
+       else out "-" >> emit x
+  
+  emit (Not x) =
     if expPrec x < expPrec (Not x)
-       then out "~(" +> pretty ind x +> out ")"
-       else out "~" +> pretty ind x
-  pretty ind (Var v) =
-    pretty ind v
-  pretty ind (Lit l) =
-    pretty ind l
-  pretty ind (Thunk ss ex) =
-    out "T(function(){" +> endl +> prettyList (ind+step) "" ss +>
-      pretty (ind+step) (Ret ex) +> indent ind +> out "})"
-  pretty ind (Eval ex) =
-    out "E(" +> pretty ind ex +> out ")"
-  pretty ind (GetDataArg ex n) =
-    pretty ind ex +> out "[" +> out (show n) +> out "]"
-  pretty ind (Array arr) =
-    out "[" +> prettyList ind "," arr +> out "]"
-  pretty ind (Index arr ix) =
-    pretty ind arr +> out "[" +> pretty ind ix +> out "]"
-  pretty ind (Assign lhs rhs) =
-    out "(" +> pretty ind lhs +> out "=" +> pretty ind rhs +> out ")"
+       then out "~(" >> emit x >> out ")"
+       else out "~" >> emit x
+  
+  emit (Var v) =
+    emit v
+  emit (Lit l) =
+    emit l
+  
+  emit (Thunk stmts ex) = do
+    out "T(function(){" >> endl
+    indentFurther $ do
+      emitList "" stmts
+      indent $ emit (Ret ex)
+    indent $ out "})"
+
+  emit (Eval ex) =
+    out "E(" >> emit ex >> out ")"
+  
+  emit (GetDataArg ex n) =
+    emit ex >> out "[" >> out (show n) >> out "]"
+  
+  emit (Array arr) =
+    out "[" >> emitList "," arr >> out "]"
+  
+  emit (Index arr ix) =
+    emit arr >> out "[" >> emit ix >> out "]"
+
+  emit (Assign lhs rhs) =
+    out "(" >> emit lhs >> out "=" >> emit rhs >> out ")"
 
 -- | Pretty-print operator expressions.
-prettyParens :: Int -> JSOp -> JSExp -> JSExp -> Bag Output
-prettyParens ind op a b =
-  parens a +> pretty ind op +> parens b
+emitParens :: JSOp -> JSExp -> JSExp -> PrettyM ()
+emitParens op a b =
+  parens a >> emit op >> parens b
   where
     parens x = if expPrec x < opPrec op
-                 then out "(" +> pretty ind x +> out ")"
-                 else pretty ind x
+                 then out "(" >> emit x >> out ")"
+                 else emit x
 
 instance PrettyJS JSOp where
-  pretty _ op = out $ case op of
+  emit op = out $ case op of
     Add    -> "+"
     Mul    -> "*"
     Sub    -> "-"
@@ -172,20 +191,24 @@ instance PrettyJS JSOp where
 
 
 instance PrettyJS JSVar where
-  pretty _ (Foreign name) =
-    out name
-  pretty _ (External _unique external) =
-    out external
-  pretty _ (Internal name) =
-    out name
+  emit (Foreign foreignName) =
+    out foreignName
+  emit theName@(External _ _) = do
+    emitName <- extName <$> ask
+    emitName theName
+  emit (Internal intName) =
+    out intName
 
 instance PrettyJS JSLit where
-  pretty _ (Num d) = let n = round d :: Int in
+  emit (Num d) = let n = round d :: Int in
     out $ if fromIntegral n == d
             then show n
             else show d
-  pretty _ (Str s) = out s
-  pretty _ (Chr c) = out [c]
+  emit (Str s) = out s
+  emit (Chr c) = out [c]
 
-prettyList :: PrettyJS a => Int -> Output -> [a] -> Bag Output
-prettyList ind x xs = unionManyBags $ intersperse (out x) (map (pretty ind) xs)
+-- emitList :: PrettyJS a => Int -> Output -> [a] -> Bag Output
+-- emitList ind x xs = unionManyBags $ intersperse (out x) (map (pretty ind) xs)
+emitList :: PrettyJS a => Output -> [a] -> PrettyM ()
+emitList between xs = do
+  sequence_ $ intersperse (out between) (map emit xs)
