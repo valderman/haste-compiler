@@ -4,9 +4,11 @@
 
 -- | JS AST pretty printing monad.
 module CodeGen.Javascript.PrettyM where
+import qualified Data.Map as M
 import CodeGen.Javascript.AST as AST
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Control.Monad.State
 import Control.Applicative
 import Bag
 
@@ -69,7 +71,7 @@ pseudo = defaultOpts
 --   at least minimally readable, unlike `compact`.
 pretty :: PrettyOpts
 pretty = defaultOpts {
-    extName     = return . unique,
+    extName     = uniqueExternal,
     indentStr   = "\t",
     printHeader = False
   }
@@ -81,8 +83,18 @@ compact = defaultOpts {
     indentStep  = 0,
     indentStr   = "",
     useNewline  = False,
-    extName     = return . unique,
+    extName     = uniqueExternal,
     printHeader = False
+  }
+
+data VarStore = VarStore {
+    next :: Int,
+    vars :: M.Map JSVar Int
+  }
+
+emptyStore = VarStore {
+    next = 0,
+    vars = M.empty
   }
 
 instance Monoid (Bag a) where
@@ -90,19 +102,17 @@ instance Monoid (Bag a) where
   mappend = unionBags
 
 newtype PrettyM a = PM {
-    unPretty :: (WriterT (Bag Output) (Reader PrettyOpts) a)
+    unPretty :: StateT VarStore (WriterT (Bag Output) (Reader PrettyOpts)) a
   } deriving (Monad, Functor)
 
 -- | Run a pretty printer using the given options.
-runPretty :: PrettyOpts -> PrettyM a -> (a, Bag Output)
-runPretty opts = flip runReader opts . runWriterT . unPretty
+runPretty :: PrettyOpts -> PrettyM a -> ((a, VarStore), Bag Output)
+runPretty opts =
+  flip runReader opts . runWriterT . flip runStateT emptyStore . unPretty
 
 instance MonadReader PrettyOpts PrettyM where
-  ask = PM $ do
-    lift ask
-  local f (PM m) = PM $ do
-    let m' = runWriterT m
-    WriterT $ local f m'
+  ask            = PM ask
+  local f (PM m) = PM $ local f m
 
 instance MonadWriter (Bag Output) PrettyM where
   tell   = PM . tell
@@ -111,6 +121,17 @@ instance MonadWriter (Bag Output) PrettyM where
 
 class PrettyJS a where
   emit :: a -> PrettyM ()
+
+-- | Generate a unique ID for an external var.
+uniqueExternal :: JSVar -> PrettyM JSLabel
+uniqueExternal v = PM $ do
+  VarStore next vars <- get
+  case M.lookup v vars of
+    Just n ->
+      return $ '_' : show n
+    _      -> do
+      put $ VarStore (next+1) (M.insert v next vars)
+      return ('_' : show (next+1))
 
 -- | Emit a code fragment
 out :: Output -> PrettyM ()
