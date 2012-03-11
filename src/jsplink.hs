@@ -11,7 +11,7 @@ main = do
   as <- getArgs
   if null as
      then putStrLn "Usage: jsplink Main.jsmod"
-     else addMain (head as) >>= putStrLn . prettyJS compact . bagToList
+     else addMain (head as) >>= putStrLn . prettyJS pretty . bagToList
 
 addMain :: FilePath -> IO (Bag JSStmt)
 addMain path = do
