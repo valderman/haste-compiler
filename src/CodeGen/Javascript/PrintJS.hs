@@ -49,14 +49,14 @@ instance PrettyJS (M.Map JSVar JSExp) where
         emitList "," args >> out "){" >> endl
         indentFurther $ do
           indent $ emitList "" body
-        indent $ out "}" >> endl
+        line $ out "}"
       
       insTopDef previous bindName expr =
         previous >> emit (NewVar (Var bindName) expr)
 
 instance PrettyJS JSStmt where
   emit (Ret ex) =
-    indent $ out "return " >> emit ex >> out ";" >> endl
+    line $ out "return " >> emit ex >> out ";"
   emit (CallRet f as) =
     emit (Ret (Call f as))
 
@@ -65,42 +65,40 @@ instance PrettyJS JSStmt where
     emit body
 
   emit (Block stmts) = do
-    indent $ out "{" >> endl
+    line $ out "{" >> endl
     indentFurther $ do
       mapM_ emit stmts
-    indent $ out "}" >> endl
+    line $ out "}" >> endl
   
   emit (Case ex alts) = do
-    indent $ out "switch(C(" >> emit ex >> out ")){" >> endl
+    line $ out "switch(C(" >> emit ex >> out ")){" >> endl
     indentFurther $ mapM_ emit alts
-    indent $ out "}" >> endl
+    line $ out "}" >> endl
 
   emit (NewVar lhs rhs) = do
-    indent $ out "var " >> emit lhs >> out " = " >> emit rhs >> out ";" >> endl
+    line $ out "var " >> emit lhs >> out " = " >> emit rhs >> out ";"
 
   emit (NamedFun n as body) = do
-    indent $ do
-      out "function " >> out n >> out "(" >> emitList "," as >> out "){"
-      endl
-      indentFurther $ do
-        emitList "" body
-      indent $ out "}" >> endl
+    line $ out "function " >> out n >> out "(" >> emitList "," as >> out "){"
+    indentFurther $ do
+      emitList "" body
+    line $ out "}"
 
 instance PrettyJS JSAlt where
   emit (Cond ex body) = do
-    indent $ out "case " >> emit ex >> out ":" >> endl
+    line $ out "case " >> emit ex >> out ":"
     indentFurther $ do
       emitList "" body
-      indent $ out "break;" >> endl
+      line $ out "break;"
   
   emit (Cons con body) = do
-    indent $ out "case " >> out (show con) >> out ":" >> endl
+    line $ out "case " >> out (show con) >> out ":"
     indentFurther $ do
       emitList "" body
-      indent $ out "break;" >> endl
+      line $ out "break;"
 
   emit (Def body) = do
-    indent $ out "default:" >> endl
+    line $ out "default:"
     indentFurther $ do
       emitList "" body
 
@@ -140,7 +138,7 @@ instance PrettyJS JSExp where
     out "T(function(){" >> endl
     indentFurther $ do
       emitList "" stmts
-      indent $ emit (Ret ex)
+      emit (Ret ex)
     indent $ out "})"
 
   emit (Eval ex) =
@@ -207,8 +205,6 @@ instance PrettyJS JSLit where
   emit (Str s) = out s
   emit (Chr c) = out [c]
 
--- emitList :: PrettyJS a => Int -> Output -> [a] -> Bag Output
--- emitList ind x xs = unionManyBags $ intersperse (out x) (map (pretty ind) xs)
 emitList :: PrettyJS a => Output -> [a] -> PrettyM ()
 emitList between xs = do
   sequence_ $ intersperse (out between) (map emit xs)
