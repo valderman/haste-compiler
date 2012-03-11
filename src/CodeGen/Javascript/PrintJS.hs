@@ -59,7 +59,7 @@ instance PrettyJS (M.Map JSVar JSExp) where
       insTopDef a name (Fun args body) =
         a +> out "function " +> pretty ind name +> out "(" +>
           prettyList ind "," args +> out "){" +> endl +>
-          prettyList ind "\n" body +> endl +>
+          indent (ind+1) +> prettyList ind "\n\t" body +>
           out "}" +> endl
       
       insTopDef a name exp =
