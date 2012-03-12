@@ -67,9 +67,9 @@ instance PrettyJS JSStmt where
     line $ out "}" >> endl
   
   emit (Case ex alts) = do
-    line $ out "switch(C(" >> emit ex >> out ")){" >> endl
+    line $ out "switch(C(" >> emit ex >> out ")){"
     indentFurther $ mapM_ emit alts
-    line $ out "}" >> endl
+    line $ out "}"
 
   emit (NewVar lhs rhs) = do
     line $ out "var " >> emit lhs >> out " = " >> emit rhs >> out ";"
