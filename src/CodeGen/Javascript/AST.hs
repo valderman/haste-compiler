@@ -7,7 +7,7 @@
 module CodeGen.Javascript.AST (
   JSVar (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
   JSOp (..), JSMod (..), JSLabel, opPrec, expPrec, lit, litN, defTag,
-  defState) where
+  defState, foreignModule) where
 import Prelude hiding (LT, GT)
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -23,6 +23,14 @@ data JSMod = JSMod {
     name :: !ModuleName,
     deps :: !(M.Map JSVar (S.Set JSVar)),
     code :: !(M.Map JSVar JSExp)
+  }
+
+-- | The imaginary module where all foreign functions live.
+foreignModule :: JSMod
+foreignModule = JSMod {
+    name = mkModuleName "The Outside",
+    deps = M.empty,
+    code = M.empty
   }
 
 instance Serialize JSMod where

@@ -1,7 +1,3 @@
-* Implement link step, stitching all compiled modules together and dumping
-  the code to a .js file.
-  [important/easy]
-
 * Add user dirs for compiled libraries, and a compiler flag to install code
   into those dirs, as unlinked files, rather than link and dump to the current
   working dir.

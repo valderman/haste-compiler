@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
 -- | jsplink - link together a set of modules to form a JS blob.
 module Main where
 import System.Environment (getArgs)
@@ -6,37 +7,88 @@ import CodeGen.Javascript.AST
 import Bag
 import qualified Data.Map as M
 import qualified Data.Set as S
+import Control.Monad.State
+import Control.Applicative
+import Module
+
+-- | File extension for files housing JSMods.
+moduleExtension :: String
+moduleExtension = ".jsmod"
 
 main = do
-  as <- getArgs
-  if null as
-     then putStrLn "Usage: jsplink Main.jsmod"
-     else addMain (head as) >>= putStrLn . prettyJS pretty . bagToList
+  putStrLn =<< prettyJS pretty . bagToList <$> getAllDefs
 
-addMain :: FilePath -> IO (Bag JSStmt)
-addMain path = do
-  mod <- readModule path
-  let mainId = External "Main.main"
-  case M.lookup mainId (code mod) of
-    Just mainFun -> do
-      return $ addFun emptyBag mod (NewVar (Var mainId) mainFun)
-    _ ->
-      fail "Module doesn't have a main!"
+-- | Generate a Bag of all functions needed to run Main.main.
+getAllDefs :: IO (Bag JSStmt)
+getAllDefs = do
+  runDep $ addDef (External "Main.main")
 
-addFun :: Bag JSStmt -> JSMod -> JSStmt -> Bag JSStmt
-addFun ds mod fun@(NewVar (Var funName) body) =
-  (myDeps `snocBag` fun) `unionBags` ds
-  where
-    myDeps =
-      case M.lookup funName (deps mod) of
-        Just depSet -> depsFromSet depSet
-        _           -> emptyBag
+data DepState = DepState {
+    defs        :: Bag JSStmt,
+    alreadySeen :: S.Set JSVar,
+    modules     :: M.Map String JSMod
+  }
 
-    depsFromSet :: S.Set JSVar -> Bag JSStmt
-    depsFromSet s =
-      S.foldl' addFromSet emptyBag s
-    
-    addFromSet acc fn =
-      case M.lookup fn (code mod) of
-        Just body -> addFun acc mod (NewVar (Var fn) body)
-        _         -> acc
+newtype DepM a = DepM (StateT DepState IO a)
+  deriving (Monad, MonadIO)
+
+initState = DepState {
+    defs        = emptyBag,
+    alreadySeen = S.empty,
+    modules     = M.empty
+  }
+
+-- | Run a dependency resolution computation.
+runDep :: DepM a -> IO (Bag JSStmt)
+runDep (DepM m) = defs . snd <$> runStateT m initState
+
+instance MonadState DepState DepM where
+  get = DepM $ get
+  put = DepM . put
+
+-- | Return the module the given variable resides in.
+getModuleOf :: JSVar -> DepM JSMod
+getModuleOf (External var) =
+  getModule
+    $ (++ moduleExtension)
+    $ moduleNameSlashes
+    $ mkModuleName
+    $ reverse
+    $ tail
+    $ dropWhile (/= '.')
+    $ reverse var
+getModuleOf (Internal int) =
+  getModule "Main.jsmod"
+getModuleOf (Foreign f) =
+  return foreignModule
+
+-- | Return the module at the given path, loading it into cache if it's not
+--   already there.
+getModule :: FilePath -> DepM JSMod
+getModule path = do
+  st <- get
+  case M.lookup path (modules st) of
+    Just m ->
+      return m
+    _      -> do
+      m <- liftIO $ readModule path
+      put st {modules = M.insert path m (modules st)}
+      return m
+
+-- | Add a new definition and its dependencies. If the given identifier has
+--   already been added, it's just ignored.
+addDef :: JSVar -> DepM ()
+addDef var = do
+  st <- get
+  when (not $ var `S.member` alreadySeen st) $ do
+    m <- getModuleOf var
+    let dependencies = maybe S.empty id (M.lookup var (deps m))
+    S.foldl' (\a x -> a >> addDef x) (return ()) dependencies
+
+    st <- get    
+    let defs' = maybe (defs st)
+                      (\body -> defs st `snocBag` NewVar (Var var) body)
+                      (M.lookup var (code m))
+
+    put st {defs        = defs',
+            alreadySeen = S.insert var (alreadySeen st)}
