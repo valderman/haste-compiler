@@ -259,8 +259,6 @@ genAlts v as = do
 --   Special care is taken to make sure any evaluation performed within the
 --   alternative's expression is actually confined to the alternative's
 --   generated code.
---
---   TODO: constructors are represented as strings. :(
 genAlt :: JSVar -> Alt P.Var -> JSGen JSAlt
 genAlt resultVar (con, binds, expr) = do
   con' <- case con of
