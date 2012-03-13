@@ -71,7 +71,7 @@ getModule path = do
     Just m ->
       return m
     _      -> do
-      m <- liftIO $ readModule path
+      m <- liftIO $ readModule "." path
       put st {modules = M.insert path m (modules st)}
       return m
 

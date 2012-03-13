@@ -21,5 +21,5 @@ genJS :: CoreToDo
 genJS = CoreDoPluginPass desc $ \mguts -> do
   env <- getHscEnv
   (cgguts, _) <- liftIO $ tidyProgram env mguts
-  liftIO . writeModule $ generate cgguts
+  liftIO . writeModule "." $ generate cgguts
   return mguts
