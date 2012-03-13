@@ -2,7 +2,6 @@
 -- | Module to generate Javascript from a ModGuts structure
 module CodeGen.Javascript.Generate (generate) where
 import GhcPlugins as P
-import Class
 import ForeignCall
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -14,8 +13,6 @@ import qualified CodeGen.Javascript.AST as AST (name, deps, code)
 import Bag
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
-
-import Debug.Trace
 
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: CgGuts -> JSMod
