@@ -2,6 +2,7 @@
 -- | Module to generate Javascript from a ModGuts structure
 module CodeGen.Javascript.Generate (generate) where
 import GhcPlugins as P
+import Class
 import ForeignCall
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -14,16 +15,29 @@ import Bag
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
 
+import Debug.Trace
+
 -- | Turn a pile of Core into our intermediate JS AST.
-generate :: ModGuts -> JSMod
-generate mg =
+generate :: CgGuts -> JSMod
+generate guts =
   JSMod {
-      AST.name = moduleName $ mg_module mg,
+      AST.name = moduleName $ cg_module guts,
       AST.deps = foldl' insDep M.empty theMod,
       AST.code = foldl' insFun M.empty theMod
     }
   where
-    theMod = genAST mg
+    -- With the switch to CgGuts, we often get code like:
+    -- foo = \a b -> ...
+    -- foo = foo
+    -- Just filtering these assignments out seems to fix the issue, but I'm not
+    -- quite sure why we get this.
+    theMod = filter notSelfAssign (genAST guts)
+
+    notSelfAssign (_, NewVar (AST.Var v) (AST.Var v')) =
+      not (v == v')
+    notSelfAssign _ =
+      True
+
     insFun m (_, NewVar (AST.Var name) fun) =
       M.insert name fun m
     insFun _ ex =
@@ -34,10 +48,21 @@ generate mg =
     insDep _ ex =
       error $ "Non-NewVar top binding to insDep: " ++ show ex
 
-genAST :: ModGuts -> [(S.Set JSVar, JSStmt)]
-genAST =
-  map (depsAndCode . genJS . genBind) . concatMap unRec . mg_binds
+-- | Generate JS AST for bindings and class method stubs.
+--   The method stubs are just functions that take a class dictionary as their
+--   sole inputs, and return the appropriate function from that dictionary.
+--   For instance, the stub for the second method of a class C would look like
+--   this:
+--     function C.secondMethod(dict) {
+--       return dict[2];
+--     }
+genAST :: CgGuts -> [(S.Set JSVar, JSStmt)]
+genAST guts =
+  binds
   where
+    binds =
+      map (depsAndCode . genJS . genBind) . concatMap unRec $ cg_binds guts
+
     depsAndCode (_, deps, code) =
       case bagToList code of
         [code'] ->
@@ -292,10 +317,11 @@ toJSVar v =
   case idDetails v of
     FCallId fc ->
         Foreign (foreignName fc)
-    _ | isExternalName name ->
-        External external
-      | otherwise ->
+    _
+      | isLocalId v && not (isExportedId v) ->
         Internal unique
+      | otherwise ->
+        External external
   where
     name     = P.varName v
     unique   = showPpr $ nameUnique name

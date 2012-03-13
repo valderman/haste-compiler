@@ -1,5 +1,7 @@
 module Plugin.GenJS (plugin) where
 import GhcPlugins
+import TidyPgm
+import GHC
 import CodeGen.Javascript
 
 plugin :: Plugin
@@ -16,6 +18,8 @@ desc :: String
 desc = "Generate Javascript code as a side effect"
 
 genJS :: CoreToDo
-genJS = CoreDoPluginPass desc $ \x -> do
-  liftIO . writeModule $ generate x
-  return x
+genJS = CoreDoPluginPass desc $ \mguts -> do
+  env <- getHscEnv
+  (cgguts, _) <- liftIO $ tidyProgram env mguts
+  liftIO . writeModule $ generate cgguts
+  return mguts

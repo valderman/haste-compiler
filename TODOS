@@ -3,9 +3,6 @@
   working dir.
   [nice to have/easy]
 
-* Add stubs for class methods; don't forget default methods!
-  [critical/walk in the park]
-
 * Look into rewriting as much of the base libraries as possible in pure JS;
   huge space savings are likely!
   [nice to have/hard work]
