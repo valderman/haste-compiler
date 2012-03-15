@@ -11,6 +11,7 @@ import Control.Monad.Writer
 import Control.Monad.State
 import Control.Applicative
 import Bag
+import Data.Array
 
 type Output = String
 
@@ -129,10 +130,22 @@ genUnique var = PM $ do
   VarStore nextID labels <- get
   case M.lookup var labels of
     Just n ->
-      return $ '_' : show n
+      return $ idToLabel n
     _      -> do
       put $ VarStore (nextID+1) (M.insert var nextID labels)
-      return ('_' : show nextID)
+      return $ idToLabel nextID
+
+-- | Turn a var ID into a label.
+idToLabel :: Int -> JSLabel
+idToLabel 0     = "_0"
+idToLabel varId = '_' : go varId ""
+  where
+    arrLen = 62
+    chars = listArray (0,arrLen-1)
+              $ "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    go 0 acc = acc
+    go n acc = let (rest, ix) = n `quotRem` arrLen 
+               in go rest ((chars ! ix) : acc)
 
 -- | Emit a code fragment
 out :: Output -> PrettyM ()

@@ -26,7 +26,8 @@ Library
         containers,
         bytestring,
         filepath,
-        directory
+        directory,
+        array
     Exposed-Modules:
         Plugin.GenJS
         CodeGen.Javascript
@@ -53,7 +54,8 @@ Executable jspcat
         filepath,
         directory,
         bytestring,
-        mtl
+        mtl,
+        array
     default-language: Haskell98
 
 Executable jsplink
@@ -69,5 +71,6 @@ Executable jsplink
         filepath,
         directory,
         bytestring,
-        mtl
+        mtl,
+        array
     default-language: Haskell98
