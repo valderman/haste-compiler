@@ -193,12 +193,21 @@ foldUpApp (Call f as) =
 foldUpApp expr =
   expr
 
+-- | Generate the tag for a data constructor. This lives in its own function
+--   as we want to generate true/false for True/False, and "real" tags for
+--   everything else.
+genDataConTag :: DataCon -> JSGen JSExp
+genDataConTag d = do
+  case occNameString $ nameOccName $ dataConName d of
+    "True"  -> return $ lit True
+    "False" -> return $ lit False
+    _       -> return $ lit $ (fromIntegral $ dataConTag d :: Double)
+
 -- | Generate code for the given data constructor
 genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
-  return $ NativeCall "D" [
-    lit $ (fromIntegral $ dataConTag dc :: Double),
-    Array $ map strict (dataConRepStrictness dc)]
+  t <- genDataConTag dc
+  return $ NativeCall "D" [t, Array $ map strict (dataConRepStrictness dc)]
   where
     strict MarkedStrict = lit (1 :: Double)
     strict _            = lit (0 :: Double)
@@ -293,7 +302,7 @@ genAlt resultVar (con, binds, expr) = do
   con' <- case con of
     DEFAULT   -> return Def
     LitAlt l  -> genLit l >>= return . Cond
-    DataAlt c -> return . Cons $ dataConTag c
+    DataAlt c -> genDataConTag c >>= return . Cond
   (retEx, deps, body) <- genJS <$> getModName
                                <*> pure (genBinds binds >> genEx expr)
   dependOn deps

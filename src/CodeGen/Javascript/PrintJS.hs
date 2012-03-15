@@ -198,6 +198,7 @@ instance PrettyJS JSLit where
             else show d
   emit (Str s) = out s
   emit (Chr c) = out [c]
+  emit (Boolean b) = out $ if b then "true" else "false"
 
 emitList :: PrettyJS a => Output -> [a] -> PrettyM ()
 emitList between xs = do

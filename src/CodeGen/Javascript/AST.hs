@@ -117,6 +117,7 @@ data JSLit
   = Num Double
   | Str String
   | Chr Char
+  | Boolean Bool
     deriving (Show, Generic)
 
 instance Serialize JSLit where
@@ -136,6 +137,9 @@ defState = litN 0
 
 class Lit a where
   lit :: a -> JSExp
+
+instance Lit Bool where
+  lit = Lit . Boolean
 
 instance Lit Double where
   lit = Lit . Num
