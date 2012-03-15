@@ -282,14 +282,34 @@ genAlts v [a] = do
   where
     getStmts (Cond _ ss) = ss
     getStmts (Def ss)    = ss
-    getStmts (Cons _ ss) = ss
 genAlts v as = do
-  -- Core requires DEFAULT alts to come first, but we want them last in our JS.
   as' <- mapM (genAlt v) as
-  case as' of
-    (a''@(Def _)):as'' -> emit $ AST.Case (AST.Var v) $ as'' ++ [a'']
-    _                  -> emit $ AST.Case (AST.Var v) as'
+  case simplifyAlts v as' of
+    Left stmt  -> emit stmt
+    Right alts -> emit $ AST.Case (AST.Var v) alts
   return $ AST.Var v
+
+-- | Turn a few common switch statements into smaller code constructs.
+simplifyAlts :: JSVar -> [JSAlt] -> Either JSStmt [JSAlt]
+simplifyAlts v as =
+  case as of
+    -- Turn any false/anything comparisons into if statements.
+    -- As case alts are ordered by ascending tag, false will always come first.
+    [Cond (AST.Lit (Boolean False)) false,
+     Cond (AST.Lit (Boolean True)) true] ->
+      Left $ If (AST.Var v) true false
+    [Cond (AST.Lit (Boolean False)) thenDo, elseDo] ->
+      Left $ If (Not $ AST.Var v) thenDo (getStmts elseDo)
+    [Cond (AST.Lit (Num 0)) thenDo, elseDo] ->
+      Left $ If (Not $ AST.Var v) thenDo (getStmts elseDo)
+    -- Core requires DEFAULT alts to come first, but we want them last in JS.
+    (a'@(Def _):as') ->
+      Right $ as' ++ [a']
+    _ ->
+      Right as
+  where
+    getStmts (Def ss) = ss
+    getStmts (Cond _ ss) = ss
 
 -- | Generate a case alternative. Each alternative is responsible for binding
 --   any constructor fields and generating any code needed to produce the alt's
@@ -306,7 +326,10 @@ genAlt resultVar (con, binds, expr) = do
   (retEx, deps, body) <- genJS <$> getModName
                                <*> pure (genBinds binds >> genEx expr)
   dependOn deps
-  return . con' . bagToList $ body `snocBag` NewVar (AST.Var resultVar) retEx
+  return
+    . con'
+    . bagToList
+    $ body `snocBag` (ExpStmt $ Assign (AST.Var resultVar) retEx)
   where
     -- Generate variables for all data constructor arguments, then bind the
     -- actual arguments to them. Only call wrapped in genJS, or these bindings

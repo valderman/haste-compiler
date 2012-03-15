@@ -71,6 +71,13 @@ instance PrettyJS JSStmt where
     indentFurther $ mapM_ emit alts
     line $ out "}"
 
+  emit (If ex thenDo elseDo) = do
+    line $ out "if(C(" >> emit ex >> out ")){"
+    indentFurther $ emit thenDo
+    line $ out "}else{"
+    indentFurther $ emit elseDo
+    line $ out "}"
+
   emit (NewVar lhs rhs) = do
     line $ out "var " >> emit lhs >> out " = " >> emit rhs >> out ";"
 
@@ -80,6 +87,13 @@ instance PrettyJS JSStmt where
       emitList "" body
     line $ out "}"
 
+  -- Special case for assign statement, as it's so common.
+  emit (ExpStmt (Assign lhs rhs)) = do
+    line $ emit lhs >> out "=" >> emit rhs >> out ";"
+
+  emit (ExpStmt expr) = do
+    line $ emit expr >> out ";"
+
 instance PrettyJS JSAlt where
   emit (Cond ex body) = do
     line $ out "case " >> emit ex >> out ":"
@@ -87,12 +101,6 @@ instance PrettyJS JSAlt where
       emitList "" body
       line $ out "break;"
   
-  emit (Cons con body) = do
-    line $ out "case " >> out (show con) >> out ":"
-    indentFurther $ do
-      emitList "" body
-      line $ out "break;"
-
   emit (Def body) = do
     line $ out "default:"
     indentFurther $ do

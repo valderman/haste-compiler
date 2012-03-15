@@ -73,8 +73,10 @@ data JSStmt
   | While JSExp JSStmt -- Unused; use for CSE
   | Block [JSStmt]
   | Case JSExp [JSAlt]
+  | If JSExp [JSStmt] [JSStmt]
   | NewVar JSExp JSExp
   | NamedFun String [JSVar] [JSStmt] -- Unused; turn top level defs into tihs
+  | ExpStmt JSExp
     deriving (Show, Generic)
 
 instance Serialize JSStmt where
@@ -84,7 +86,6 @@ instance Serialize JSStmt where
 data JSAlt
   = Cond JSExp [JSStmt]
   | Def        [JSStmt]
-  | Cons Int   [JSStmt]
     deriving (Show, Generic)
 
 instance Serialize JSAlt where
