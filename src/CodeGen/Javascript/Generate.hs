@@ -14,6 +14,8 @@ import Bag
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
 
+import Debug.Trace
+
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: CgGuts -> JSMod
 generate guts =
@@ -277,8 +279,16 @@ genCase expr v _ alts = do
 --   entirely, as we're obviously just picking data apart.
 genAlts :: JSVar -> [Alt P.Var] -> JSGen JSExp
 genAlts v [a] = do
-  genAlt v a >>= mapM_ emit . getStmts
-  return $ AST.Var v
+  altStmts <- getStmts <$> genAlt v a
+  -- As this alternative is the only one in this case expression, it's OK to
+  -- eliminate var -> var assigns at the end of it.
+  case last altStmts of
+    ExpStmt (Assign lhs rhs@(AST.Var _)) | lhs == AST.Var v -> do
+      mapM_ emit (init altStmts)
+      return rhs
+    _ -> do
+      mapM_ emit altStmts
+      return $ AST.Var v
   where
     getStmts (Cond _ ss) = ss
     getStmts (Def ss)    = ss

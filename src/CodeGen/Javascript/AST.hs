@@ -77,7 +77,7 @@ data JSStmt
   | NewVar JSExp JSExp
   | NamedFun String [JSVar] [JSStmt] -- Unused; turn top level defs into tihs
   | ExpStmt JSExp
-    deriving (Show, Generic)
+    deriving (Show, Eq, Generic)
 
 instance Serialize JSStmt where
   get = deriveGet
@@ -86,7 +86,7 @@ instance Serialize JSStmt where
 data JSAlt
   = Cond JSExp [JSStmt]
   | Def        [JSStmt]
-    deriving (Show, Generic)
+    deriving (Show, Eq, Generic)
 
 instance Serialize JSAlt where
   get = deriveGet
@@ -108,7 +108,7 @@ data JSExp
   | Array [JSExp]
   | Assign JSExp JSExp
   | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
-    deriving (Show, Generic)
+    deriving (Show, Eq, Generic)
 
 instance Serialize JSExp where
   get = deriveGet
@@ -119,7 +119,7 @@ data JSLit
   | Str String
   | Chr Char
   | Boolean Bool
-    deriving (Show, Generic)
+    deriving (Show, Eq, Generic)
 
 instance Serialize JSLit where
   get = deriveGet
@@ -174,7 +174,7 @@ data JSOp
   | BitAnd
   | BitOr
   | BitXor
-    deriving (Show, Generic)
+    deriving (Show, Eq, Generic)
 
 instance Serialize JSOp where
   get = deriveGet
