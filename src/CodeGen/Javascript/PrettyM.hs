@@ -54,7 +54,7 @@ defaultOpts = PrettyOpts {
     indentStr   = "    ",
     useNewline  = True,
     printHeader = True,
-    extName     = return . unique
+    extName     = return . qualifiedName
   }
 
 -- | Print code using readable, but syntaxly incorrect, names, indentation,
@@ -71,7 +71,7 @@ pseudo = defaultOpts
 --   at least minimally readable, unlike `compact`.
 pretty :: PrettyOpts
 pretty = defaultOpts {
-    extName     = uniqueExternal,
+    extName     = genUnique,
     indentStr   = "\t",
     printHeader = False
   }
@@ -83,7 +83,7 @@ compact = defaultOpts {
     indentStep  = 0,
     indentStr   = "",
     useNewline  = False,
-    extName     = uniqueExternal,
+    extName     = genUnique,
     printHeader = False
   }
 
@@ -123,9 +123,9 @@ instance MonadWriter (Bag Output) PrettyM where
 class PrettyJS a where
   emit :: a -> PrettyM ()
 
--- | Generate a unique ID for an external var.
-uniqueExternal :: JSVar -> PrettyM JSLabel
-uniqueExternal var = PM $ do
+-- | Generate a unique ID for a var.
+genUnique :: JSVar -> PrettyM JSLabel
+genUnique var = PM $ do
   VarStore nextID labels <- get
   case M.lookup var labels of
     Just n ->

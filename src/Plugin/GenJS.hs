@@ -1,8 +1,10 @@
 module Plugin.GenJS (plugin) where
 import GhcPlugins
 import TidyPgm
-import GHC
 import CodeGen.Javascript
+import System.Directory
+import System.FilePath (combine)
+import Control.Applicative
 
 plugin :: Plugin
 plugin = defaultPlugin {
@@ -10,16 +12,27 @@ plugin = defaultPlugin {
   }
 
 install :: [CommandLineOption] -> [CoreToDo] -> CoreM [CoreToDo]
-install _ passes = do
+install opts passes = do
   reinitializeGlobals
-  return $ passes ++ [genJS]
+  return $ passes ++ [genJS opts]
 
 desc :: String
 desc = "Generate Javascript code as a side effect"
 
-genJS :: CoreToDo
-genJS = CoreDoPluginPass desc $ \mguts -> do
+genJS :: [CommandLineOption] -> CoreToDo
+genJS opts = CoreDoPluginPass desc $ \mguts -> do
   env <- getHscEnv
+  targetdir <- getTargetDir opts
   (cgguts, _) <- liftIO $ tidyProgram env mguts
-  liftIO . writeModule "." $ generate cgguts
+  liftIO . writeModule targetdir $ generate cgguts
   return mguts
+
+getTargetDir :: [CommandLineOption] -> CoreM FilePath
+getTargetDir xs
+  | any (== "libinstall") xs =
+    append "lib" <$> liftIO (getAppUserDataDirectory "jsplug")
+  | otherwise =
+    return "."
+
+append :: FilePath -> FilePath -> FilePath
+append = flip combine

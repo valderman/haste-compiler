@@ -183,15 +183,13 @@ instance PrettyJS JSOp where
     BitXor -> "^"
     BitOr  -> "|"
 
-
 instance PrettyJS JSVar where
-  emit (Foreign foreignName) =
-    out foreignName
-  emit theName@(External _) = do
-    getName <- extName <$> ask
-    getName theName >>= out
-  emit (Internal intName) =
-    out intName
+  emit var =
+    case jsname var of
+      Foreign n -> out n
+      _         -> do
+        getName <- extName <$> ask 
+        getName var >>= out
 
 instance PrettyJS JSLit where
   emit (Num d) = let n = round d :: Int in

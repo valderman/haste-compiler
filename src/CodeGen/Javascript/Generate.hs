@@ -6,7 +6,7 @@ import ForeignCall
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.List (foldl')
-
+import Control.Applicative
 import CodeGen.Javascript.Monad
 import CodeGen.Javascript.AST as AST hiding (unique,name,deps,code)
 import qualified CodeGen.Javascript.AST as AST (name, deps, code)
@@ -58,7 +58,12 @@ genAST guts =
   binds
   where
     binds =
-      map (depsAndCode . genJS . genBind) . concatMap unRec $ cg_binds guts
+      map (depsAndCode . genJS myModName . genBind)
+      $ concatMap unRec
+      $ cg_binds guts
+
+    myModName =
+      moduleNameString $ moduleName $ cg_module guts
 
     depsAndCode (_, deps, code) =
       case bagToList code of
@@ -125,7 +130,7 @@ genThunk ex
   | exprIsHNF ex = do
     genEx ex
   | otherwise = do
-    let (ex', deps, supportStmts) = genJS $ genEx ex
+    (ex', deps, supportStmts) <- genJS <$> getModName <*> pure (genEx ex)
     dependOn deps
     return $ Thunk (bagToList supportStmts) ex'
 
@@ -234,7 +239,7 @@ genFun [v] body | isTyVar v =
   genEx body
 genFun vs body = do
   vs' <- mapM genVar vs
-  let (retExp, deps, body') = genJS (genEx body)
+  (retExp, deps, body') <- genJS <$> getModName <*> pure (genEx body)
   dependOn deps
   return $ Fun vs' (bagToList $ body' `snocBag` Ret retExp)
 
@@ -289,7 +294,8 @@ genAlt resultVar (con, binds, expr) = do
     DEFAULT   -> return Def
     LitAlt l  -> genLit l >>= return . Cond
     DataAlt c -> return . Cons $ dataConTag c
-  let (retEx, deps, body) = genJS (genBinds binds >> genEx expr)
+  (retEx, deps, body) <- genJS <$> getModName
+                               <*> pure (genBinds binds >> genEx expr)
   dependOn deps
   return . con' . bagToList $ body `snocBag` NewVar (AST.Var resultVar) retEx
   where
@@ -309,25 +315,37 @@ foreignName (CCall (CCallSpec (StaticTarget str _) _ _)) =
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 
-toJSVar :: Var -> JSVar
-toJSVar v =
+toJSVar :: JSLabel ->Var -> JSVar
+toJSVar thisMod v =
   case idDetails v of
     FCallId fc ->
-        Foreign (foreignName fc)
+        JSVar {
+            jsname = Foreign (foreignName fc),
+            jsmod  = moduleNameString $ AST.name foreignModule
+          }
     _
       | isLocalId v && not (isExportedId v) ->
-        Internal unique
+        JSVar {
+            jsname = Internal unique,
+            jsmod  = myMod
+          }
       | otherwise ->
-        External external
+        JSVar {
+            jsname = External external,
+            jsmod  = myMod
+          }
   where
     name     = P.varName v
+    myMod    =
+      maybe thisMod (moduleNameString . moduleName) (nameModule_maybe name)
+    external = occNameString $ nameOccName name
     unique   = showPpr $ nameUnique name
-    external = showPpr name
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
 genVar :: Var -> JSGen JSVar
 genVar var = do
-  let var' = toJSVar var
+  thisMod <- getModName
+  let var' = toJSVar thisMod var
   dependOn var'
   return var'

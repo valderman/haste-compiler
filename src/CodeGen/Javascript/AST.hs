@@ -5,9 +5,9 @@
 -- | Abstract syntax for the Javascript constructs needed to generate JS from
 --   Core.
 module CodeGen.Javascript.AST (
-  JSVar (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
+  JSVar (..), JSName (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
   JSOp (..), JSMod (..), JSLabel, opPrec, expPrec, lit, litN, defTag,
-  defState, foreignModule) where
+  defState, foreignModule, qualifiedName) where
 import Prelude hiding (LT, GT)
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -28,7 +28,7 @@ data JSMod = JSMod {
 -- | The imaginary module where all foreign functions live.
 foreignModule :: JSMod
 foreignModule = JSMod {
-    name = mkModuleName "The Outside",
+    name = mkModuleName "",
     deps = M.empty,
     code = M.empty
   }
@@ -42,13 +42,28 @@ instance Serialize JSMod where
   get =
     JSMod <$> (mkModuleName <$> get) <*> get <*> get
 
-data JSVar
+data JSVar = JSVar {
+    jsmod  :: JSLabel,
+    jsname :: JSName
+  } deriving (Show, Ord, Eq, Generic)
+
+qualifiedName :: JSVar -> JSLabel
+qualifiedName var =
+  case jsmod var of 
+    "" -> unique (jsname var)
+    m  -> m ++ "." ++ unique (jsname var)
+
+instance Serialize JSVar where
+  get = deriveGet
+  put = derivePut
+
+data JSName
   = Foreign  {unique :: JSLabel}
   | External {unique :: JSLabel}
   | Internal {unique :: JSLabel}
     deriving (Show, Ord, Eq, Generic)
 
-instance Serialize JSVar where
+instance Serialize JSName where
   get = deriveGet
   put = derivePut
 

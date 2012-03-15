@@ -11,6 +11,8 @@ import Control.Monad.State
 import Control.Applicative
 import Module
 
+import Debug.Trace
+
 -- | File extension for files housing JSMods.
 moduleExtension :: String
 moduleExtension = ".jsmod"
@@ -21,7 +23,7 @@ main = do
 -- | Generate a Bag of all functions needed to run Main.main.
 getAllDefs :: IO (Bag JSStmt)
 getAllDefs = do
-  runDep $ addDef (External "Main.main")
+  runDep $ addDef $ (JSVar "Main" $ External "main")
 
 data DepState = DepState {
     defs        :: Bag JSStmt,
@@ -48,19 +50,10 @@ instance MonadState DepState DepM where
 
 -- | Return the module the given variable resides in.
 getModuleOf :: JSVar -> DepM JSMod
-getModuleOf (External var) =
-  getModule
-    $ (++ moduleExtension)
-    $ moduleNameSlashes
-    $ mkModuleName
-    $ reverse
-    $ tail
-    $ dropWhile (/= '.')
-    $ reverse var
-getModuleOf (Internal int) =
-  getModule "Main.jsmod"
-getModuleOf (Foreign f) =
-  return foreignModule
+getModuleOf var =
+  case jsmod var of
+    "" -> return foreignModule
+    m  -> getModule $ (++ moduleExtension) $ moduleNameSlashes $ mkModuleName m
 
 -- | Return the module at the given path, loading it into cache if it's not
 --   already there.
