@@ -13,6 +13,12 @@ Homepage:       http://ekblad.cc
 Bug-reports:    http://ekblad.cc
 Stability:      Experimental
 
+Data-Dir:
+    lib
+
+Data-Files:
+    rts.js
+
 Library
     Hs-Source-Dirs: src
     GHC-Options: -Wall

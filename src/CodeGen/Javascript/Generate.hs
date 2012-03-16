@@ -14,8 +14,6 @@ import Bag
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
 
-import Debug.Trace
-
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: CgGuts -> JSMod
 generate guts =
@@ -73,7 +71,7 @@ genAST guts =
           (deps, code')
         lotsOfCode ->
           error $  "Single top level exp generated several assignments!\n"
-                ++ prettyJS pseudo lotsOfCode
+                ++ fst (prettyJS pseudo lotsOfCode)
 
 -- | Turn a recursive binding into a list of non-recursive ones.
 unRec :: CoreBind -> [CoreBind]

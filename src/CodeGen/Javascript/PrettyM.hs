@@ -124,7 +124,8 @@ instance MonadWriter (Bag Output) PrettyM where
 class PrettyJS a where
   emit :: a -> PrettyM ()
 
--- | Generate a unique ID for a var.
+-- | Generate a unique ID for a var. If the var already exists, the ID it's
+--   already got is returned.
 genUnique :: JSVar -> PrettyM JSLabel
 genUnique var = PM $ do
   VarStore nextID labels <- get

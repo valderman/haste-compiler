@@ -15,8 +15,12 @@ import Control.Monad.Reader
 
 -- | Pretty print the given JS construct using the specified options.
 --   For now, only the presets `pseudo`, `pretty` and `compact` are exported.
-prettyJS :: PrettyJS a => PrettyOpts -> a -> Output
-prettyJS opts = concat . bagToList . snd . runPretty opts . emit
+prettyJS :: PrettyJS a => PrettyOpts -> a -> (Output, JSLabel)
+prettyJS opts prog = (concat $ bagToList prog', mainSym)
+  where
+    ((mainSym,_), prog') = runPretty opts $ do
+      emit prog
+      genUnique (JSVar "Main" (External "main"))
 
 instance PrettyJS a => PrettyJS [a] where
   emit = emitList ""

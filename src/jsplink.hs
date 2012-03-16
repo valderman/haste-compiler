@@ -10,20 +10,26 @@ import qualified Data.Set as S
 import Control.Monad.State
 import Control.Applicative
 import Module
-
-import Debug.Trace
+import Paths_jsplug
 
 -- | File extension for files housing JSMods.
 moduleExtension :: String
 moduleExtension = ".jsmod"
 
 main = do
-  putStrLn =<< prettyJS pretty . bagToList <$> getAllDefs
+  defs <- getAllDefs
+  rts <- getDataFileName "rts.js" >>= readFile
+  let (progText, mainSym) = prettyJS pretty $ bagToList defs
+      callMain = mainSym ++ "(0);"
+  putStrLn $ unlines [
+    rts,
+    progText,
+    callMain]
 
 -- | Generate a Bag of all functions needed to run Main.main.
 getAllDefs :: IO (Bag JSStmt)
-getAllDefs = do
-  runDep $ addDef $ (JSVar "Main" $ External "main")
+getAllDefs =
+  runDep $ addDef (JSVar "Main" $ External "main")
 
 data DepState = DepState {
     defs        :: Bag JSStmt,
