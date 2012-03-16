@@ -92,12 +92,11 @@ addDef var = do
   when (not $ var `S.member` alreadySeen st) $ do
     m <- getModuleOf var
     let dependencies = maybe S.empty id (M.lookup var (deps m))
+    put st {alreadySeen = S.insert var (alreadySeen st)}
     S.foldl' (\a x -> a >> addDef x) (return ()) dependencies
 
     st <- get    
     let defs' = maybe (defs st)
                       (\body -> defs st `snocBag` NewVar (Var var) body)
                       (M.lookup var (code m))
-
-    put st {defs        = defs',
-            alreadySeen = S.insert var (alreadySeen st)}
+    put st {defs = defs'}
