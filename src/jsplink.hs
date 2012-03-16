@@ -17,12 +17,22 @@ moduleExtension :: String
 moduleExtension = ".jsmod"
 
 main = do
-  defs <- getAllDefs
+  args <- getArgs
+  let debugOutput = any (== "debug") args
+      printMode   = if debugOutput then pretty else compact
+
+  debug <- if debugOutput
+              then getDataFileName "debug.js" >>= readFile
+              else return ""
   rts <- getDataFileName "rts.js" >>= readFile
-  let (progText, mainSym) = prettyJS pretty $ bagToList defs
+  
+  defs <- getAllDefs
+  let (progText, mainSym) = prettyJS printMode $ bagToList defs
       callMain = mainSym ++ "(0);"
+  
   putStrLn $ unlines [
     rts,
+    debug,
     progText,
     callMain]
 

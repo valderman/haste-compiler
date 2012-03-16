@@ -18,6 +18,7 @@ Data-Dir:
 
 Data-Files:
     rts.js
+    debug.js
 
 Library
     Hs-Source-Dirs: src
