@@ -27,12 +27,12 @@ append = flip combine
 -- | Execute the program as soon as it's loaded into memory.
 startASAP :: AppStart
 startASAP mainSym =
-  mainSym ++ "(0);"
+  "E(" ++ mainSym ++ ")(0);"
 
 -- | Execute the program when the document has finished loading.
 startOnDocumentLoad :: AppStart
 startOnDocumentLoad mainSym =
-  "document.onload = function() {" ++ mainSym ++ "(0);};"
+  "document.onload = function() {" ++ startASAP mainSym ++ "};"
 
 sysLibPath :: FilePath
 sysLibPath = unsafePerformIO $ do
