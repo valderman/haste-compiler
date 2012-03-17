@@ -59,8 +59,12 @@ genAST modname binds =
         [code'] ->
           (deps, code')
         lotsOfCode ->
-          error $  "Single top level exp generated several assignments!\n"
-                ++ fst (prettyJS pseudo bogusJSVar lotsOfCode)
+          case last lotsOfCode of
+            NewVar v ex ->
+              (deps, NewVar v $ Fun [] (init lotsOfCode ++ [Ret ex]))
+            _ ->
+              error $ "Totally weird code generated for symbol: " ++
+                      fst (prettyJS pseudo bogusJSVar lotsOfCode)
 
 -- | Turn a recursive binding into a list of non-recursive ones.
 unRec :: CoreBind -> [CoreBind]
@@ -141,15 +145,16 @@ exprNeedsThunk expr
   | otherwise =
     return True
     where
-      check m v (P.Var v')  = v == toJSVar m v'
-      check m v (App f a)   = check m v f || check m v a
-      check _ _ (Lam _ _)   = False
-      check _ _ (P.Lit _)   = False
-      check m v (Let _ ex)  = check m v ex
-      check m v (Cast ex _) = check m v ex
-      check m v (Tick _ ex) = check m v ex
-      check _ _ (Type _)    = False
-      check _ _ ex          = error $ "Non-HNF expr said to be HNF!"++showPpr ex
+      check m v (P.Var v')   = v == toJSVar m v'
+      check m v (App f a)    = check m v f || check m v a
+      check _ _ (Lam _ _)    = False
+      check _ _ (P.Lit _)    = False
+      check m v (Let _ ex)   = check m v ex
+      check m v (Cast ex _)  = check m v ex
+      check m v (Tick _ ex)  = check m v ex
+      check _ _ (Type _)     = False
+      check _ _ (Coercion _) = False
+      check _ _ ex           = error $ "Non-HNF expr said to be HNF!"++showPpr ex
       -- Case will never occur in a HNF expression
 
 -- | Generate an eval expression, where needed. Unlifted types don't need it.
@@ -247,16 +252,17 @@ genPrimOp _ _ =
 genLit :: Literal -> JSGen JSExp
 genLit l = do
   return $ AST.Lit $ case l of
-    MachStr s      -> Str $ show s
-    MachInt n      -> Num $ fromIntegral n
-    MachFloat f    -> Num $ fromRational f
-    MachDouble d   -> Num $ fromRational d
-    MachChar c     -> Chr c
-    MachWord w     -> Num $ fromIntegral w
-    MachWord64 w   -> Num $ fromIntegral w
-    MachNullAddr   -> Num 0
-    LitInteger i _ -> Num $ fromIntegral i
-    x              -> error $ "Literal: " ++ show x
+    MachStr s       -> Str $ show s
+    MachInt n       -> Num $ fromIntegral n
+    MachFloat f     -> Num $ fromRational f
+    MachDouble d    -> Num $ fromRational d
+    MachChar c      -> Chr c
+    MachWord w      -> Num $ fromIntegral w
+    MachWord64 w    -> Num $ fromIntegral w
+    MachNullAddr    -> Num 0
+    MachInt64 n     -> Num $ fromIntegral n
+    LitInteger i _  -> Num $ fromIntegral i
+    MachLabel _ _ _ -> Num 0 -- Labels point to machine code - ignore!
 
 -- | Generate code for a lambda and return it. Care is taken to ensure any and
 --   all evaluation takes place within the function where it's actually
