@@ -49,27 +49,11 @@ Executable jsplug
         CodeGen.Javascript.PrettyM
         CodeGen.Javascript.PrimOps
         CodeGen.Javascript.Module
+        CodeGen.Javascript.Linker
     default-language: Haskell98
 
 Executable jspcat
     Main-Is: jspcat.hs
-    Hs-Source-Dirs: src
-    Build-Depends:
-        base,
-        cereal,
-        cereal-derive,
-        ghc-prim,
-        ghc,
-        containers,
-        filepath,
-        directory,
-        bytestring,
-        mtl,
-        array
-    default-language: Haskell98
-
-Executable jsplink
-    Main-Is: jsplink.hs
     Hs-Source-Dirs: src
     Build-Depends:
         base,

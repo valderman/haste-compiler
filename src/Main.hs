@@ -15,6 +15,7 @@ import System.Environment (getArgs)
 import Data.List (partition)
 import CodeGen.Javascript
 import CodeGen.Javascript.Config
+import CodeGen.Javascript.Linker
 import Args
 
 argSpecs :: [ArgSpec Config]
@@ -48,6 +49,7 @@ main = do
         _ <- load LoadAllTargets
         deps <- depanal [] False
         mapM_ (compile flags') deps
+        liftIO $ mapM_ (link cfg) files'
 
 compile :: (GhcMonad m) => DynFlags -> ModSummary -> m ()
 compile flags mod = do
