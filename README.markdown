@@ -42,7 +42,7 @@ replacement for GHC that generates relatively lean code.
 Known issues
 ------------
 
-* Doesn't yet do tail tall elimination.
+* Doesn't yet do tail call elimination.
 * Same-named modules in different packages overwrite each other when compiling
   with --libinstall.
 * Not all GHC primops are implemented; if you encounter an implemented primop,
