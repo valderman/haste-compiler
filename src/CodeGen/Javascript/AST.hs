@@ -44,16 +44,13 @@ instance Serialize JSMod where
 
 data JSVar = JSVar {
     jsmod  :: JSLabel,
-    jstype :: JSLabel,
     jsname :: JSName
   } deriving (Show, Ord, Eq, Generic)
     
 bogusJSVar :: JSVar
-bogusJSVar = JSVar "" "" (Internal "")
+bogusJSVar = JSVar "" (Internal "")
 
 qualifiedName :: JSVar -> JSLabel
-qualifiedName (JSVar m t (External _ ext)) =
-  qualifiedName (JSVar m t (Internal ext))
 qualifiedName var =
   case jsmod var of 
     "" -> unique (jsname var)
@@ -65,7 +62,7 @@ instance Serialize JSVar where
 
 data JSName
   = Foreign  {unique :: JSLabel}
-  | External {unique :: JSLabel, external :: JSLabel}
+  | External {unique :: JSLabel}
   | Internal {unique :: JSLabel}
     deriving (Show, Ord, Eq, Generic)
 

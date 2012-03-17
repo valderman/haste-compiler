@@ -378,31 +378,27 @@ toJSVar thisMod v =
     FCallId fc ->
         JSVar {
             jsname = Foreign (foreignName fc),
-            jstype = myType,
             jsmod  = moduleNameString $ AST.name foreignModule
           }
     _
       | isLocalId v ->
         JSVar {
             jsname = Internal unique,
-            jstype = myType,
             jsmod  = myMod
           }
       | isGlobalId v ->
         JSVar {
-            jsname = External extern extern,
-            jstype = myType,
+            jsname = External extern,
             jsmod  = myMod
           }
       | otherwise ->
           error $ "Var is neither foreign, local or global: " ++ show v
   where
-    name     = P.varName v
-    myType   = showSDoc $ ppr $ varType v
-    myMod    =
+    name   = P.varName v
+    myMod  =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe name)
-    extern   = occNameString $ nameOccName name
-    unique   = showPpr $ nameUnique name
+    extern = occNameString $ nameOccName name
+    unique = showPpr $ nameUnique name
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.

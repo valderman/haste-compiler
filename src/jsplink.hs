@@ -16,6 +16,12 @@ import Paths_jsplug
 modExt :: String
 modExt = ".jsmod"
 
+mainSym :: JSVar
+mainSym = JSVar {
+    jsmod  = "Main",
+    jsname = External "main"
+  }
+
 main = do
   args <- getArgs
   let debugOutput = any (== "debug") args
@@ -26,7 +32,6 @@ main = do
               else return ""
   rts <- getDataFileName "rts.js" >>= readFile
   
-  mainSym <- findMain
   defs <- bagToList <$> getAllDefs mainSym
   let (progText, mainSym') = prettyJS printMode mainSym defs
       callMain = mainSym' ++ "(0);"
@@ -36,19 +41,6 @@ main = do
     debug,
     progText,
     callMain]
-
-findMain :: IO JSVar
-findMain = do
-  m <- readModule "." "Main.jsmod"
-  return $ fst $ head $ filter (isMain . fst) (M.toList $ code m)
-
-isMain :: JSVar -> Bool
-isMain v =
-  case jsname v of
-    External _ "main" ->
-      jsmod v == "Main" && jstype v == "GHC.Types.IO ()"
-    _ ->
-      False
 
 -- | Generate a Bag of all functions needed to run Main.main.
 getAllDefs :: JSVar -> IO (Bag JSStmt)
