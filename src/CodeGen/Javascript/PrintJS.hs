@@ -162,6 +162,9 @@ instance PrettyJS JSExp where
   emit (Index arr ix) =
     emit arr >> out "[" >> emit ix >> out "]"
 
+  emit NoOp =
+    return ()
+
   emit (Assign lhs rhs) =
     out "(" >> emit lhs >> out "=" >> emit rhs >> out ")"
 

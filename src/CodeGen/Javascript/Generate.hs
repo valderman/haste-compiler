@@ -184,7 +184,7 @@ genEx (Tick _ ex) =
 genEx (Type _) =
   error "Type annotation encountered where it shouldn't be!"
 genEx (Coercion _) =
-  error "Don't know what to do with a coercion!"
+  return NoOp
 
 -- | Generate code for funcion application
 genApp :: Expr Var -> Arg Var -> JSGen JSExp

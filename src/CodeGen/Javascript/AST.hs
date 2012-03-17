@@ -111,6 +111,7 @@ data JSExp
   | Array [JSExp]
   | Assign JSExp JSExp
   | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
+  | NoOp
     deriving (Show, Eq, Generic)
 
 instance Serialize JSExp where
