@@ -15,25 +15,15 @@ import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
 
 -- | Turn a pile of Core into our intermediate JS AST.
-generate :: CgGuts -> JSMod
-generate guts =
+generate :: ModuleName -> CoreProgram -> JSMod
+generate modname binds =
   JSMod {
-      AST.name = moduleName $ cg_module guts,
+      AST.name = modname,
       AST.deps = foldl' insDep M.empty theMod,
       AST.code = foldl' insFun M.empty theMod
     }
   where
-    -- With the switch to CgGuts, we often get code like:
-    -- foo = \a b -> ...
-    -- foo = foo
-    -- Just filtering these assignments out seems to fix the issue, but I'm not
-    -- quite sure why we get this.
-    theMod = filter notSelfAssign (genAST guts)
-
-    notSelfAssign (_, NewVar (AST.Var v) (AST.Var v')) =
-      not (v == v')
-    notSelfAssign _ =
-      True
+    theMod = genAST modname binds
 
     insFun m (_, NewVar (AST.Var name) fun) =
       M.insert name fun m
@@ -53,17 +43,16 @@ generate guts =
 --     function C.secondMethod(dict) {
 --       return dict[2];
 --     }
-genAST :: CgGuts -> [(S.Set JSVar, JSStmt)]
-genAST guts =
-  binds
+genAST :: ModuleName -> CoreProgram -> [(S.Set JSVar, JSStmt)]
+genAST modname binds =
+  binds'
   where
-    binds =
+    binds' =
       map (depsAndCode . genJS myModName . genBind)
       $ concatMap unRec
-      $ cg_binds guts
+      $ binds
 
-    myModName =
-      moduleNameString $ moduleName $ cg_module guts
+    myModName = moduleNameString modname
 
     depsAndCode (_, deps, code) =
       case bagToList code of
@@ -71,7 +60,7 @@ genAST guts =
           (deps, code')
         lotsOfCode ->
           error $  "Single top level exp generated several assignments!\n"
-                ++ fst (prettyJS pseudo lotsOfCode)
+                ++ fst (prettyJS pseudo bogusJSVar lotsOfCode)
 
 -- | Turn a recursive binding into a list of non-recursive ones.
 unRec :: CoreBind -> [CoreBind]
@@ -86,9 +75,11 @@ unRec b        = [b]
 --   as their dependencies get merged into their parent's anyway.
 genBind :: CoreBind -> JSGen ()
 genBind (NonRec v ex) = do
+  pushBinding v
   v' <- genVar v
   ex' <- genThunk ex
   emit $ NewVar (AST.Var v') ex'
+  popBinding
 genBind (Rec bs) =
   error $  "genBind got recursive bindings: "
         ++ showPpr bs
@@ -127,12 +118,39 @@ genThunk ex
     genEx ex
   | isTyVarTy $ exprType ex = do
     genEx ex
-  | exprIsHNF ex = do
-    genEx ex
   | otherwise = do
-    (ex', deps, supportStmts) <- genJS <$> getModName <*> pure (genEx ex)
-    dependOn deps
-    return $ Thunk (bagToList supportStmts) ex'
+    needsThunk <- exprNeedsThunk ex
+    if needsThunk
+      then do
+        (ex', deps, supportStmts) <- isolate $ genEx ex
+        dependOn deps
+        return $ Thunk (bagToList supportStmts) ex'
+      else do
+        genEx ex
+
+-- | Returns whether the expression needs to be thunked or not.
+--   We don't want to generate thunks for HNF expressions if we can avoid it,
+--   but if an expression refers to itself outside the body of a thunk or a
+--   lambda, we have to.
+exprNeedsThunk :: Expr Var -> JSGen Bool
+exprNeedsThunk expr
+  | exprIsHNF expr = do
+    myMod <- getModName
+    var <- toJSVar myMod <$> getCurrentBinding
+    return $ check myMod var expr
+  | otherwise =
+    return True
+    where
+      check m v (P.Var v')  = v == toJSVar m v'
+      check m v (App f a)   = check m v f || check m v a
+      check _ _ (Lam _ _)   = False
+      check _ _ (P.Lit _)   = False
+      check m v (Let _ ex)  = check m v ex
+      check m v (Cast ex _) = check m v ex
+      check m v (Tick _ ex) = check m v ex
+      check _ _ (Type _)    = False
+      check _ _ ex          = error $ "Non-HNF expr said to be HNF!"++showPpr ex
+      -- Case will never occur in a HNF expression
 
 -- | Generate an eval expression, where needed. Unlifted types don't need it.
 genEval :: Expr Var -> JSGen JSExp
@@ -248,7 +266,7 @@ genFun [v] body | isTyVar v =
   genEx body
 genFun vs body = do
   vs' <- mapM genVar vs
-  (retExp, deps, body') <- genJS <$> getModName <*> pure (genEx body)
+  (retExp, deps, body') <- isolate $ genEx body
   dependOn deps
   return $ Fun vs' (bagToList $ body' `snocBag` Ret retExp)
 
@@ -331,8 +349,7 @@ genAlt resultVar (con, binds, expr) = do
     DEFAULT   -> return Def
     LitAlt l  -> genLit l >>= return . Cond
     DataAlt c -> genDataConTag c >>= return . Cond
-  (retEx, deps, body) <- genJS <$> getModName
-                               <*> pure (genBinds binds >> genEx expr)
+  (retEx, deps, body) <- isolate $ genBinds binds >> genEx expr
   dependOn deps
   return
     . con'
@@ -340,7 +357,7 @@ genAlt resultVar (con, binds, expr) = do
     $ body `snocBag` (ExpStmt $ Assign (AST.Var resultVar) retEx)
   where
     -- Generate variables for all data constructor arguments, then bind the
-    -- actual arguments to them. Only call wrapped in genJS, or these bindings
+    -- actual arguments to them. Only call wrapped in isolate or these bindings
     -- will end up outside its respective case alternative, likely crashing the
     -- program.
     genBinds = sequence_ . zipWith genArgBind [1..] . filter (not . isTyVar)
@@ -361,24 +378,30 @@ toJSVar thisMod v =
     FCallId fc ->
         JSVar {
             jsname = Foreign (foreignName fc),
+            jstype = myType,
             jsmod  = moduleNameString $ AST.name foreignModule
           }
     _
-      | isLocalId v && not (isExportedId v) ->
+      | isLocalId v ->
         JSVar {
             jsname = Internal unique,
+            jstype = myType,
+            jsmod  = myMod
+          }
+      | isGlobalId v ->
+        JSVar {
+            jsname = External extern extern,
+            jstype = myType,
             jsmod  = myMod
           }
       | otherwise ->
-        JSVar {
-            jsname = External external,
-            jsmod  = myMod
-          }
+          error $ "Var is neither foreign, local or global: " ++ show v
   where
     name     = P.varName v
+    myType   = showSDoc $ ppr $ varType v
     myMod    =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe name)
-    external = occNameString $ nameOccName name
+    extern   = occNameString $ nameOccName name
     unique   = showPpr $ nameUnique name
 
 -- | Generate a new variable and add a dependency on it to the function

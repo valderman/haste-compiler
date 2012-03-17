@@ -13,8 +13,8 @@ import Module
 import Paths_jsplug
 
 -- | File extension for files housing JSMods.
-moduleExtension :: String
-moduleExtension = ".jsmod"
+modExt :: String
+modExt = ".jsmod"
 
 main = do
   args <- getArgs
@@ -26,9 +26,10 @@ main = do
               else return ""
   rts <- getDataFileName "rts.js" >>= readFile
   
-  defs <- getAllDefs
-  let (progText, mainSym) = prettyJS printMode $ bagToList defs
-      callMain = mainSym ++ "(0);"
+  mainSym <- findMain
+  defs <- bagToList <$> getAllDefs mainSym
+  let (progText, mainSym') = prettyJS printMode mainSym defs
+      callMain = mainSym' ++ "(0);"
   
   putStrLn $ unlines [
     rts,
@@ -36,10 +37,23 @@ main = do
     progText,
     callMain]
 
+findMain :: IO JSVar
+findMain = do
+  m <- readModule "." "Main.jsmod"
+  return $ fst $ head $ filter (isMain . fst) (M.toList $ code m)
+
+isMain :: JSVar -> Bool
+isMain v =
+  case jsname v of
+    External _ "main" ->
+      jsmod v == "Main" && jstype v == "GHC.Types.IO ()"
+    _ ->
+      False
+
 -- | Generate a Bag of all functions needed to run Main.main.
-getAllDefs :: IO (Bag JSStmt)
-getAllDefs =
-  runDep $ addDef (JSVar "Main" $ External "main")
+getAllDefs :: JSVar -> IO (Bag JSStmt)
+getAllDefs mainSym =
+  runDep $ addDef mainSym
 
 data DepState = DepState {
     defs        :: Bag JSStmt,
@@ -68,8 +82,8 @@ instance MonadState DepState DepM where
 getModuleOf :: JSVar -> DepM JSMod
 getModuleOf var =
   case jsmod var of
-    "" -> return foreignModule
-    m  -> getModule $ (++ moduleExtension) $ moduleNameSlashes $ mkModuleName m
+    ""    -> return foreignModule
+    m     -> getModule $ (++ modExt) $ moduleNameSlashes $ mkModuleName m
 
 -- | Return the module at the given path, loading it into cache if it's not
 --   already there.

@@ -7,7 +7,7 @@
 module CodeGen.Javascript.AST (
   JSVar (..), JSName (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
   JSOp (..), JSMod (..), JSLabel, opPrec, expPrec, lit, litN, defTag,
-  defState, foreignModule, qualifiedName) where
+  defState, foreignModule, qualifiedName, bogusJSVar) where
 import Prelude hiding (LT, GT)
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -44,10 +44,16 @@ instance Serialize JSMod where
 
 data JSVar = JSVar {
     jsmod  :: JSLabel,
+    jstype :: JSLabel,
     jsname :: JSName
   } deriving (Show, Ord, Eq, Generic)
+    
+bogusJSVar :: JSVar
+bogusJSVar = JSVar "" "" (Internal "")
 
 qualifiedName :: JSVar -> JSLabel
+qualifiedName (JSVar m t (External _ ext)) =
+  qualifiedName (JSVar m t (Internal ext))
 qualifiedName var =
   case jsmod var of 
     "" -> unique (jsname var)
@@ -59,7 +65,7 @@ instance Serialize JSVar where
 
 data JSName
   = Foreign  {unique :: JSLabel}
-  | External {unique :: JSLabel}
+  | External {unique :: JSLabel, external :: JSLabel}
   | Internal {unique :: JSLabel}
     deriving (Show, Ord, Eq, Generic)
 

@@ -20,9 +20,9 @@ Data-Files:
     rts.js
     debug.js
 
-Library
+Executable jsplug
     Hs-Source-Dirs: src
-    GHC-Options: -Wall
+    GHC-Options: -Wall -O2
     Build-Depends:
         base,
         ghc-prim,
@@ -34,11 +34,12 @@ Library
         bytestring,
         filepath,
         directory,
-        array
-    Exposed-Modules:
-        Plugin.GenJS
-        CodeGen.Javascript
+        array,
+        ghc-paths
+    Main-Is:
+        Main.hs
     Other-Modules:
+        CodeGen.Javascript
         CodeGen.Javascript.AST
         CodeGen.Javascript.Monad
         CodeGen.Javascript.Generate

@@ -2,6 +2,7 @@
 module Main where
 import System.Environment (getArgs)
 import CodeGen.Javascript
+import CodeGen.Javascript.AST (bogusJSVar)
 
 main = do
   as <- getArgs
@@ -10,4 +11,4 @@ main = do
      else mapM_ catMod as
   where
     catMod m =
-      readModule "." m >>= putStrLn . fst . prettyJS pseudo
+      readModule "." m >>= putStrLn . fst . prettyJS pseudo bogusJSVar
