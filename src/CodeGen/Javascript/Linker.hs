@@ -26,7 +26,7 @@ mainSym = JSVar {
 -- | Link a program using the given config and input file name.
 link :: Config -> FilePath -> IO ()
 link cfg target = do
-  myDefs <- bagToList <$> getAllDefs mainSym
+  myDefs <- bagToList <$> getAllDefs (libPath cfg) mainSym
   let (progText, mainSym') = prettyJS (ppOpts cfg) mainSym myDefs
       callMain = appStart cfg mainSym'
   
@@ -37,9 +37,9 @@ link cfg target = do
 
 
 -- | Generate a Bag of all functions needed to run Main.main.
-getAllDefs :: JSVar -> IO (Bag JSStmt)
-getAllDefs mainsym =
-  runDep $ addDef mainsym
+getAllDefs :: FilePath -> JSVar -> IO (Bag JSStmt)
+getAllDefs libpath mainsym =
+  runDep $ addDef libpath mainsym
 
 data DepState = DepState {
     defs        :: Bag JSStmt,
@@ -66,35 +66,38 @@ instance MonadState DepState DepM where
   put = DepM . put
 
 -- | Return the module the given variable resides in.
-getModuleOf :: JSVar -> DepM JSMod
-getModuleOf var =
+getModuleOf :: FilePath -> JSVar -> DepM JSMod
+getModuleOf libpath var =
   case jsmod var of
     ""    -> return foreignModule
-    m     -> getModule $ (++ modExt) $ moduleNameSlashes $ mkModuleName m
+    m     -> getModule libpath
+               $ (++ modExt)
+               $ moduleNameSlashes
+               $ mkModuleName m
 
 -- | Return the module at the given path, loading it into cache if it's not
 --   already there.
-getModule :: FilePath -> DepM JSMod
-getModule path = do
+getModule :: FilePath -> FilePath -> DepM JSMod
+getModule libpath modpath = do
   st <- get
-  case M.lookup path (modules st) of
+  case M.lookup modpath (modules st) of
     Just m ->
       return m
     _      -> do
-      m <- liftIO $ readModule "." path
-      put st {modules = M.insert path m (modules st)}
+      m <- liftIO $ readModule libpath modpath
+      put st {modules = M.insert modpath m (modules st)}
       return m
 
 -- | Add a new definition and its dependencies. If the given identifier has
 --   already been added, it's just ignored.
-addDef :: JSVar -> DepM ()
-addDef var = do
+addDef :: FilePath -> JSVar -> DepM ()
+addDef libpath var = do
   st <- get
   when (not $ var `S.member` alreadySeen st) $ do
-    m <- getModuleOf var
+    m <- getModuleOf libpath var
     let dependencies = maybe S.empty id (M.lookup var (deps m))
     put st {alreadySeen = S.insert var (alreadySeen st)}
-    S.foldl' (\a x -> a >> addDef x) (return ()) dependencies
+    S.foldl' (\a x -> a >> addDef libpath x) (return ()) dependencies
 
     st' <- get    
     let defs' = maybe (defs st')
