@@ -7,7 +7,7 @@ import CodeGen.Javascript.Module
 import Bag
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Applicative
 import Module
 
@@ -42,9 +42,9 @@ getAllDefs libpath mainsym =
   runDep $ addDef libpath mainsym
 
 data DepState = DepState {
-    defs        :: Bag JSStmt,
-    alreadySeen :: S.Set JSVar,
-    modules     :: M.Map String JSMod
+    defs        :: !(Bag JSStmt),
+    alreadySeen :: !(S.Set JSVar),
+    modules     :: !(M.Map String JSMod)
   }
 
 newtype DepM a = DepM (StateT DepState IO a)
