@@ -14,7 +14,7 @@ import Control.Applicative
 import System.Environment (getArgs)
 import Data.List (partition)
 import CodeGen.Javascript
-import Config
+import CodeGen.Javascript.Config
 import Args
 
 argSpecs :: [ArgSpec Config]

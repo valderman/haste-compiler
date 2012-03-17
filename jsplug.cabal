@@ -40,8 +40,8 @@ Executable jsplug
         Main.hs
     Other-Modules:
         Args
-        Config
         CodeGen.Javascript
+        CodeGen.Javascript.Config
         CodeGen.Javascript.AST
         CodeGen.Javascript.Monad
         CodeGen.Javascript.Generate

@@ -1,6 +1,7 @@
-module Config (Config (..), AppStart, defConfig, stdRtsLib, debugRtsLib,
-               startASAP, startOnDocumentLoad) where
-import CodeGen.Javascript (PrettyOpts, compact)
+module CodeGen.Javascript.Config (
+  Config (..), AppStart, defConfig, stdRtsLib, debugRtsLib, startASAP,
+  startOnDocumentLoad) where
+import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Directory
 import System.FilePath (combine, replaceExtension)
