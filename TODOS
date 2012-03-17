@@ -1,8 +1,3 @@
-* Add user dirs for compiled libraries, and a compiler flag to install code
-  into those dirs, as unlinked files, rather than link and dump to the current
-  working dir.
-  [nice to have/easy]
-
 * Look into rewriting as much of the base libraries as possible in pure JS;
   huge space savings are likely!
   [nice to have/hard work]

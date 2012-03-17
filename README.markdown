@@ -7,21 +7,21 @@ Building
 --------
 
 Use cabal:
-    $ runghc Setup.hs --user configure
-    $ runghc Setup.hs build
-    $ runghc Setup.hs install
+        $ runghc Setup.hs --user configure
+        $ runghc Setup.hs build
+        $ runghc Setup.hs install
 
 Usage
 -----
 
 To compile your Haskell program to a Javascript ready to be included in a HTML
 document or run using a command line interpreter:
-    $ hastec myprog.hs
+        $ hastec myprog.hs
 This is equivalent to calling ghc --make myprog.hs; Main.main will be called
 as soon as the JS blob has finished loading.
 
 You can pass the same flags to hastec as you'd normally pass to GHC:
-    $ hastec -O2 -fglasgow-exts myprog.hs
+        $ hastec -O2 -fglasgow-exts myprog.hs
 
 haste also has its own set of command line arguments. Invoke it with --help to
 read more about them.
