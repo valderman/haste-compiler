@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Code for generating actual JS from the JS AST.
-module CodeGen.Javascript.PrintJS (prettyJS, pseudo, pretty, compact) where
+module CodeGen.Javascript.PrintJS (prettyJS, pseudo, pretty, compact,
+                                   PrettyOpts) where
 import CodeGen.Javascript.AST as AST
 import qualified Data.Map as M
 import qualified Data.Set as S

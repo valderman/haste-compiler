@@ -1,4 +1,4 @@
-module Main where
+module Main (main) where
 import GHC
 import GHC.Paths (libdir)
 import HscMain
@@ -8,26 +8,46 @@ import CorePrep
 import CoreSyn
 import HscTypes
 import GhcMonad
-import CodeGen.Javascript
 import System.Directory
 import System.FilePath (combine)
 import Control.Applicative
 import System.Environment (getArgs)
+import Data.List (partition)
+import CodeGen.Javascript
+import Config
+import Args
+
+argSpecs :: [ArgSpec Config]
+argSpecs = [
+    ArgSpec { optName = "debug",
+              updateCfg = \cfg _ -> cfg {rtsLibs = debugRtsLib : rtsLibs cfg,
+                                         ppOpts  = pretty},
+              info = "Link in the debug library and output readable code."},
+    ArgSpec { optName = "start=onload",
+              updateCfg = \cfg _ -> cfg {appStart = startOnDocumentLoad},
+              info = "Start program on document load instead of immediately."},
+    ArgSpec { optName = "out=",
+              updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
+              info = "Write the JS blob to <arg>."}
+  ]
 
 main :: IO ()
 main = do
-  args <- getArgs
-  defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
-    flags <- getSessionDynFlags
-    (flags', files, _) <- parseDynamicFlags flags (map noLoc args)
-    _ <- setSessionDynFlags flags' {ghcLink = NoLink}
-    let files' = map unLoc files
+  argRes <- handleArgs defConfig argSpecs <$> getArgs
+  case argRes of
+    Left help -> putStrLn help
+    Right (cfg, ghcargs) ->
+      defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
+        flags <- getSessionDynFlags
+        (flags', files, _) <- parseDynamicFlags flags (map noLoc ghcargs)
+        _ <- setSessionDynFlags flags' {ghcLink = NoLink}
+        let files' = map unLoc files
 
-    ts <- mapM (flip guessTarget Nothing) files'
-    setTargets ts
-    _ <- load LoadAllTargets
-    deps <- depanal [] False
-    mapM_ (compile flags') deps
+        ts <- mapM (flip guessTarget Nothing) files'
+        setTargets ts
+        _ <- load LoadAllTargets
+        deps <- depanal [] False
+        mapM_ (compile flags') deps
 
 compile :: (GhcMonad m) => DynFlags -> ModSummary -> m ()
 compile flags mod = do

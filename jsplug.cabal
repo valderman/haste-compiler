@@ -39,6 +39,8 @@ Executable jsplug
     Main-Is:
         Main.hs
     Other-Modules:
+        Args
+        Config
         CodeGen.Javascript
         CodeGen.Javascript.AST
         CodeGen.Javascript.Monad
