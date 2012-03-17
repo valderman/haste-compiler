@@ -251,18 +251,18 @@ genPrimOp _ _ =
 
 genLit :: Literal -> JSGen JSExp
 genLit l = do
-  return $ AST.Lit $ case l of
-    MachStr s       -> Str $ show s
-    MachInt n       -> Num $ fromIntegral n
-    MachFloat f     -> Num $ fromRational f
-    MachDouble d    -> Num $ fromRational d
-    MachChar c      -> Chr c
-    MachWord w      -> Num $ fromIntegral w
-    MachWord64 w    -> Num $ fromIntegral w
-    MachNullAddr    -> Num 0
-    MachInt64 n     -> Num $ fromIntegral n
-    LitInteger i _  -> Num $ fromIntegral i
-    MachLabel _ _ _ -> Num 0 -- Labels point to machine code - ignore!
+  case l of
+    MachStr s       -> return . lit $ show s
+    MachInt n       -> return . litN $ fromIntegral n
+    MachFloat f     -> return . litN $ fromRational f
+    MachDouble d    -> return . litN $ fromRational d
+    MachChar c      -> return $ lit c
+    MachWord w      -> return . litN $ fromIntegral w
+    MachWord64 w    -> return . litN $ fromIntegral w
+    MachNullAddr    -> return $ litN 0
+    MachInt64 n     -> return . litN $ fromIntegral n
+    LitInteger _ n  -> AST.Var <$> genVar n
+    MachLabel _ _ _ -> return $ litN 0 -- Labels point to machine code - ignore!
 
 -- | Generate code for a lambda and return it. Care is taken to ensure any and
 --   all evaluation takes place within the function where it's actually
