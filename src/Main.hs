@@ -8,12 +8,24 @@ import CorePrep
 import CoreSyn
 import HscTypes
 import GhcMonad
+import System.IO.Unsafe
 import System.Directory
 import System.FilePath (combine)
 import Control.Applicative
 import System.Environment (getArgs)
+import Control.Monad (when)
 import CodeGen.Javascript
 import Args
+
+appName :: String
+appName = "jsplug"
+
+sysLibPath :: FilePath
+sysLibPath = unsafePerformIO $ do
+  append "lib" <$> getAppUserDataDirectory appName
+
+append :: FilePath -> FilePath -> FilePath
+append = flip combine
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [
@@ -26,7 +38,13 @@ argSpecs = [
               info = "Start program on document load instead of immediately."},
     ArgSpec { optName = "out=",
               updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
-              info = "Write the JS blob to <arg>."}
+              info = "Write the JS blob to <arg>."},
+    ArgSpec { optName = "libinstall",
+              updateCfg = \cfg _ -> cfg {targetLibPath = sysLibPath,
+                                         performLink   = False},
+              info = "Install all compiled modules into the user's jsmod "
+                     ++ "library\nrather than linking them together into a JS"
+                     ++ "blob."}
   ]
 
 main :: IO ()
@@ -45,15 +63,20 @@ main = do
         setTargets ts
         _ <- load LoadAllTargets
         deps <- depanal [] False
-        mapM_ (compile dynflags') deps
-        liftIO $ mapM_ (link cfg) files'
+        mapM_ (compile cfg dynflags') deps
+        when (performLink cfg) $ liftIO $ do
+          flip mapM_ files' $ \file -> do
+            putStrLn $ "Linking " ++ outFile cfg file
+            link cfg file
 
-compile :: (GhcMonad m) => DynFlags -> ModSummary -> m ()
-compile dynflags modSummary = do
+compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
+compile cfg dynflags modSummary = do
   (pgm, name) <- prepare dynflags modSummary
-  targetdir <- getTargetDir []
-  let theCode = generate name pgm
-  liftIO $ writeModule targetdir theCode
+  let theCode    = generate name pgm
+      targetpath = (targetLibPath cfg)
+  liftIO $ putStrLn $ "Compiling " ++ moduleNameString name ++ " into "
+                                   ++ targetpath
+  liftIO $ writeModule targetpath theCode
 
 prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m (CoreProgram, ModuleName)
 prepare dynflags theMod = do
@@ -70,13 +93,3 @@ prepare dynflags theMod = do
     prepPgm tidy = liftIO $ do
       prepd <- corePrepPgm dynflags (cg_binds tidy) (cg_tycons tidy)
       return prepd
-
-getTargetDir :: GhcMonad m => [String] -> m FilePath
-getTargetDir xs
-  | any (== "libinstall") xs =
-    liftIO $ append "lib" <$> getAppUserDataDirectory "jsplug"
-  | otherwise =
-    return "."
-
-append :: FilePath -> FilePath -> FilePath
-append = flip combine

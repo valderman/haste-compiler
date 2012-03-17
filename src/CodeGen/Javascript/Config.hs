@@ -34,8 +34,10 @@ defaultLibPath = unsafePerformIO $ do
 data Config = Config {
     -- | Runtime files to dump into the JS blob.
     rtsLibs :: [FilePath],
-    -- | Path to directory where system libraries can be loaded or installed.
+    -- | Path to directory where system libraries are located.
     libPath :: FilePath,
+    -- | Write all modules to this path.
+    targetLibPath :: FilePath,
     -- | A function that takes the main symbol as its input and outputs the
     --   code that starts the program.
     appStart :: AppStart,
@@ -43,15 +45,19 @@ data Config = Config {
     ppOpts :: PrettyOpts,
     -- | A function that takes the name of the a target as its input and
     --   outputs the name of the file its JS blob should be written to.
-    outFile :: String -> String
+    outFile :: String -> String,
+    -- | Link the program?
+    performLink :: Bool
   }
 
 -- | Default compiler configuration.
 defConfig :: Config
 defConfig = Config {
-    rtsLibs  = [stdRtsLib],
-    libPath  = defaultLibPath,
-    appStart = startASAP,
-    ppOpts   = compact,
-    outFile  = flip replaceExtension "js"
+    rtsLibs       = [stdRtsLib],
+    libPath       = defaultLibPath,
+    targetLibPath = ".",
+    appStart      = startASAP,
+    ppOpts        = compact,
+    outFile       = flip replaceExtension "js",
+    performLink   = True
   }
