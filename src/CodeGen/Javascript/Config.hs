@@ -1,11 +1,12 @@
 module CodeGen.Javascript.Config (
   Config (..), AppStart, defConfig, stdRtsLib, debugRtsLib, startASAP,
-  startOnDocumentLoad) where
+  startOnDocumentLoad, appName, sysLibPath) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Directory
 import System.FilePath (combine, replaceExtension)
-import Paths_jsplug (getDataFileName)
+import Control.Applicative
+import Paths_haste_compiler (getDataFileName)
 
 type AppStart = String -> String
 
@@ -14,6 +15,14 @@ stdRtsLib = unsafePerformIO $ getDataFileName "rts.js"
 
 debugRtsLib :: FilePath
 debugRtsLib = unsafePerformIO $ getDataFileName "debug.js"
+
+-- | Name of the application; decides which directories to keep app specific
+--   data in.
+appName :: String
+appName = "haste"
+
+append :: FilePath -> FilePath -> FilePath
+append = flip combine
 
 -- | Execute the program as soon as it's loaded into memory.
 startASAP :: AppStart
@@ -25,10 +34,9 @@ startOnDocumentLoad :: AppStart
 startOnDocumentLoad mainSym =
   "document.onload = function() {" ++ mainSym ++ "(0);};"
 
-defaultLibPath :: FilePath
-defaultLibPath = unsafePerformIO $ do
-  appdir <- getAppUserDataDirectory "jsplug"
-  return $ combine appdir "lib"
+sysLibPath :: FilePath
+sysLibPath = unsafePerformIO $ do
+  append "lib" <$> getAppUserDataDirectory appName
 
 -- | Compiler configuration.
 data Config = Config {
@@ -54,7 +62,7 @@ data Config = Config {
 defConfig :: Config
 defConfig = Config {
     rtsLibs       = [stdRtsLib],
-    libPath       = defaultLibPath,
+    libPath       = sysLibPath,
     targetLibPath = ".",
     appStart      = startASAP,
     ppOpts        = compact,

@@ -1,9 +1,9 @@
-Name:           jsplug
+Name:           haste-compiler
 Version:        0.1
 License:        GPL-3
 License-File:   LICENSE
-Synopsis:       Generate Javascript from Haskell by way of a GHC plugin
-Description:    Generate Javascript from Haskell by way of a GHC plugin
+Synopsis:       HASkell To Ecmascript compiler
+Description:    HASkell To Ecmascript compiler
 Cabal-Version:  >= 1.10
 Build-Type:     Simple
 Author:         Anton Ekblad <anton@ekblad.cc>
@@ -20,7 +20,7 @@ Data-Files:
     rts.js
     debug.js
 
-Executable jsplug
+Executable hastec
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     Build-Depends:
@@ -52,7 +52,7 @@ Executable jsplug
         CodeGen.Javascript.Linker
     default-language: Haskell98
 
-Executable jspcat
+Executable hastecat
     Main-Is: jspcat.hs
     Hs-Source-Dirs: src
     Build-Depends:

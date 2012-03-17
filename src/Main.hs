@@ -8,24 +8,11 @@ import CorePrep
 import CoreSyn
 import HscTypes
 import GhcMonad
-import System.IO.Unsafe
-import System.Directory
-import System.FilePath (combine)
 import Control.Applicative
 import System.Environment (getArgs)
 import Control.Monad (when)
 import CodeGen.Javascript
 import Args
-
-appName :: String
-appName = "jsplug"
-
-sysLibPath :: FilePath
-sysLibPath = unsafePerformIO $ do
-  append "lib" <$> getAppUserDataDirectory appName
-
-append :: FilePath -> FilePath -> FilePath
-append = flip combine
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [
