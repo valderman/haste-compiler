@@ -12,10 +12,7 @@ import System.Directory
 import System.FilePath (combine)
 import Control.Applicative
 import System.Environment (getArgs)
-import Data.List (partition)
 import CodeGen.Javascript
-import CodeGen.Javascript.Config
-import CodeGen.Javascript.Linker
 import Args
 
 argSpecs :: [ArgSpec Config]
@@ -39,27 +36,27 @@ main = do
     Left help -> putStrLn help
     Right (cfg, ghcargs) ->
       defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
-        flags <- getSessionDynFlags
-        (flags', files, _) <- parseDynamicFlags flags (map noLoc ghcargs)
-        _ <- setSessionDynFlags flags' {ghcLink = NoLink}
+        dynflags <- getSessionDynFlags
+        (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc ghcargs)
+        _ <- setSessionDynFlags dynflags' {ghcLink = NoLink}
         let files' = map unLoc files
 
         ts <- mapM (flip guessTarget Nothing) files'
         setTargets ts
         _ <- load LoadAllTargets
         deps <- depanal [] False
-        mapM_ (compile flags') deps
+        mapM_ (compile dynflags') deps
         liftIO $ mapM_ (link cfg) files'
 
 compile :: (GhcMonad m) => DynFlags -> ModSummary -> m ()
-compile flags mod = do
-  (pgm, name) <- prepare flags mod
+compile dynflags modSummary = do
+  (pgm, name) <- prepare dynflags modSummary
   targetdir <- getTargetDir []
   let theCode = generate name pgm
   liftIO $ writeModule targetdir theCode
 
 prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m (CoreProgram, ModuleName)
-prepare flags theMod = do
+prepare dynflags theMod = do
   env <- getSession
   let name = moduleName $ ms_mod theMod
   pgm <- parseModule theMod
@@ -71,7 +68,7 @@ prepare flags theMod = do
   return (pgm, name)
   where
     prepPgm tidy = liftIO $ do
-      prepd <- corePrepPgm flags (cg_binds tidy) (cg_tycons tidy)
+      prepd <- corePrepPgm dynflags (cg_binds tidy) (cg_tycons tidy)
       return prepd
 
 getTargetDir :: GhcMonad m => [String] -> m FilePath
