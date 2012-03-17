@@ -19,7 +19,7 @@ fileExt = "jsmod"
 --   exist, it gets created.
 writeModule :: FilePath -> JSMod -> IO ()
 writeModule basepath m@(JSMod modName _ _) = do
-  createDirectoryIfMissing True path
+  createDirectoryIfMissing True (takeDirectory path)
   B.writeFile (addExtension path fileExt) (encode m)
   where
     path = combine basepath $ moduleNameSlashes modName
