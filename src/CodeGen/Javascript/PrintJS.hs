@@ -207,17 +207,14 @@ instance PrettyJS JSVar where
         getName <- extName <$> ask 
         getName var >>= out
 
+-- | Note that string literals INCLUDE double quotes when they come from Core;
+--   remember to bring your own if you're creating your own string literals!
 instance PrettyJS JSLit where
   emit (Num d) = let n = round d :: Int in
     out $ if fromIntegral n == d
             then show n
             else show d
-  emit (Str s) = out ('\'':replaceQuotes s) >> out "'"
-    where
-      replaceQuotes ('\'':cs) = '\\' : '\'' : replaceQuotes cs
-      replaceQuotes (c:cs)    = c : replaceQuotes cs
-      replaceQuotes _         = []
-
+  emit (Str s) = out s
   emit (Chr c) = out $ if c == '\'' 
                           then ['"',c,'"']
                           else ['\'',c,'\'']
