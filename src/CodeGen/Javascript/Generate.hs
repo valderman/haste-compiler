@@ -129,7 +129,7 @@ genThunk ex
     needsThunk <- exprNeedsThunk ex
     if needsThunk
       then do
-        (ex', supportStmts) <- isolate $ genEx ex
+        (ex', supportStmts, _) <- isolate $ genEx ex
         return $ Thunk (bagToList supportStmts) ex'
       else do
         genEx ex
@@ -284,7 +284,7 @@ genFun [v] body | isTyVar v =
   genEx body
 genFun vs body = do
   vs' <- mapM genVar vs
-  (retExp, body') <- isolate $ genEx body
+  (retExp, body', _) <- isolate $ genEx body
   return $ Fun vs' (bagToList $ body' `snocBag` Ret retExp)
 
 -- | Fold up nested lambdas into a single function as far as possible.
@@ -376,20 +376,27 @@ genAlt resultVar (con, binds, expr) = do
     DataAlt c -> case genDataConTag c of 
       Right tag -> return $ Cond tag
       _         -> error "Integer literal in case alt!"
-  (retEx, body) <- isolate $ genBinds binds >> genEx expr
+  (retEx, body, touched) <- isolate $ genEx expr
+  (_, binds', _) <- isolate $ genBinds touched binds
   return
     . con'
     . bagToList
-    $ body `snocBag` (ExpStmt $ Assign (AST.Var resultVar) retEx)
-  where
+    $ binds' `unionBags`
+      body `snocBag` (ExpStmt $ Assign (AST.Var resultVar) retEx)
+  where    
     -- Generate variables for all data constructor arguments, then bind the
     -- actual arguments to them. Only call wrapped in isolate or these bindings
     -- will end up outside its respective case alternative, likely crashing the
     -- program.
-    genBinds = sequence_ . zipWith genArgBind [1..] . filter (not . isTyVar)
-    genArgBind num var = do
+    genBinds touched =
+      sequence_ . zipWith (genArgBind touched) [1..] . filter (not . isTyVar)
+
+    -- Only generate bindings for vars marked as touched; the others will never
+    -- be used anyway.
+    genArgBind touched num var = do
       var' <- genVar var
-      emit $ (NewVar (AST.Var var') (GetDataArg (AST.Var resultVar) num))
+      when (var' `S.member` touched) $ do
+        emit $ (NewVar (AST.Var var') (GetDataArg (AST.Var resultVar) num))
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String
