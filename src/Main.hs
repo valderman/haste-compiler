@@ -58,12 +58,16 @@ main = do
 
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
-  (pgm, name) <- prepare dynflags modSummary
-  let theCode    = generate name pgm
-      targetpath = (targetLibPath cfg)
-  liftIO $ putStrLn $ "Compiling " ++ moduleNameString name ++ " into "
-                                   ++ targetpath
-  liftIO $ writeModule targetpath theCode
+  case ms_hsc_src modSummary of
+    HsBootFile -> liftIO $ putStrLn $ "Skipping boot " ++ myName
+    _          -> do
+      (pgm, name) <- prepare dynflags modSummary
+      let theCode    = generate name pgm
+          targetpath = (targetLibPath cfg)
+      liftIO $ putStrLn $ "Compiling " ++ myName ++ " into " ++ targetpath
+      liftIO $ writeModule targetpath theCode
+  where
+    myName = moduleNameString $ moduleName $ ms_mod modSummary
 
 prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m (CoreProgram, ModuleName)
 prepare dynflags theMod = do
