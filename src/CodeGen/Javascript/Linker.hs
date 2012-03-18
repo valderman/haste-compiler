@@ -95,12 +95,16 @@ addDef libpath var = do
   st <- get
   when (not $ var `S.member` alreadySeen st) $ do
     m <- getModuleOf libpath var
+
+    -- getModuleOf may update the state, so we need to refresh it
+    st' <- get
     let dependencies = maybe S.empty id (M.lookup var (deps m))
-    put st {alreadySeen = S.insert var (alreadySeen st)}
+    put st' {alreadySeen = S.insert var (alreadySeen st')}
     S.foldl' (\a x -> a >> addDef libpath x) (return ()) dependencies
 
-    st' <- get    
-    let defs' = maybe (defs st')
-                      (\body -> defs st' `snocBag` NewVar (Var var) body)
+    -- addDef _definitely_ updates the state, so refresh once again
+    st'' <- get    
+    let defs' = maybe (defs st'')
+                      (\body -> defs st'' `snocBag` NewVar (Var var) body)
                       (M.lookup var (code m))
-    put st' {defs = defs'}
+    put st'' {defs = defs'}
