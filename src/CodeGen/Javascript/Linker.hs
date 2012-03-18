@@ -85,6 +85,7 @@ getModule libpath modpath = do
     Just m ->
       return m
     _      -> do
+      liftIO $ putStrLn $ "Linking " ++ modpath
       m <- liftIO $ readModule libpath modpath
       put st {modules = M.insert modpath m (modules st)}
       return m
