@@ -163,7 +163,7 @@ instance PrettyJS JSExp where
     emit arr >> out "[" >> emit ix >> out "]"
 
   emit NoOp =
-    return ()
+    out "TUT" >> return ()
 
   emit (IfExp cond thenDo elseDo) =
     emit cond >> out "?" >> emit thenDo >> out ":" >> emit elseDo
@@ -213,10 +213,16 @@ instance PrettyJS JSVar where
 -- | Note that string literals INCLUDE double quotes when they come from Core;
 --   remember to bring your own if you're creating your own string literals!
 instance PrettyJS JSLit where
-  emit (Num d) = let n = round d :: Int in
-    out $ if fromIntegral n == d
-            then show n
-            else show d
+  emit (Num d) =
+    emitNum
+    where
+      n       = round d :: Int
+      n'      = if fromIntegral n == d
+                   then show n
+                   else show d
+      emitNum = if d < 0
+                   then out ('(':n') >> out ")"
+                   else out n'
   emit (Str s) = out s
   emit (Chr c) = out $ if c == '\'' 
                           then ['"',c,'"']
