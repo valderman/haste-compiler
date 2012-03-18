@@ -212,8 +212,15 @@ instance PrettyJS JSLit where
     out $ if fromIntegral n == d
             then show n
             else show d
-  emit (Str s) = out s
-  emit (Chr c) = out [c]
+  emit (Str s) = out ('\'':replaceQuotes s) >> out "'"
+    where
+      replaceQuotes ('\'':cs) = '\\' : '\'' : replaceQuotes cs
+      replaceQuotes (c:cs)    = c : replaceQuotes cs
+      replaceQuotes _         = []
+
+  emit (Chr c) = out $ if c == '\'' 
+                          then ['"',c,'"']
+                          else ['\'',c,'\'']
   emit (Boolean b) = out $ if b then "true" else "false"
 
 emitList :: PrettyJS a => Output -> [a] -> PrettyM ()
