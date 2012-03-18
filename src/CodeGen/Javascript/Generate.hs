@@ -333,21 +333,29 @@ genAlts v as = do
   return $ AST.Var v
 
 -- | Turn a few common switch statements into smaller code constructs.
+--   These transformations rely on the fact that a Core case expression must
+--   always be complete and that its alternatives may not overlap.
+--   This means that if we have two alternatives, if the first one does not
+--   match, the second one will.
 simplifyAlts :: JSVar -> [JSAlt] -> Either JSStmt [JSAlt]
 simplifyAlts v as =
   case as of
-    -- Turn any false/anything comparisons into if statements.
-    -- As case alts are ordered by ascending tag, false will always come first.
-    [Cond (AST.Lit (Boolean False)) false,
-     Cond (AST.Lit (Boolean True)) true] ->
-      Left $ If (AST.Var v) true false
-    [Cond (AST.Lit (Boolean False)) thenDo, elseDo] ->
-      Left $ If (Not $ AST.Var v) thenDo (getStmts elseDo)
-    [Cond (AST.Lit (Num 0)) thenDo, elseDo] ->
-      Left $ If (Not $ AST.Var v) thenDo (getStmts elseDo)
     -- Core requires DEFAULT alts to come first, but we want them last in JS.
-    (a'@(Def _):as') ->
-      Right $ as' ++ [a']
+    (a'@(Def _):as'@(_:_)) ->
+      simplifyAlts v (as' ++ [a'])
+
+    -- Turn any false/anything comparisons into if statements.
+    -- As case alts are ordered ascending, false will always come first.
+    [Cond (AST.Lit (Boolean False)) ifFalseDo, ifTrueDo] ->
+      Left $ If (AST.Var v) (getStmts ifTrueDo) ifFalseDo
+    [Cond (AST.Lit (Num 0)) ifFalseDo, ifTrueDo] ->
+      Left $ If (AST.Var v) (getStmts ifTrueDo) ifFalseDo
+    
+    -- Turn any two-alt switch statements into if/then/else.
+    [Cond cond thenDo, elseDo] ->
+      Left $ If (BinOp Eq (AST.Var v) cond) thenDo (getStmts elseDo)
+
+    -- No interesting transformations to make
     _ ->
       Right as
   where
