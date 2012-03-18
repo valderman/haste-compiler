@@ -13,6 +13,7 @@ import qualified CodeGen.Javascript.AST as AST (name, deps, code)
 import Bag
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
+import Control.Monad
 
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: ModuleName -> CoreProgram -> JSMod
@@ -48,16 +49,16 @@ genAST modname binds =
   binds'
   where
     binds' =
-      map (depsAndCode . genJS myModName . genBind)
+      map (depsAndCode . genJS myModName . genBind True)
       $ concatMap unRec
       $ binds
 
     myModName = moduleNameString modname
 
-    depsAndCode (_, deps, code) =
+    depsAndCode (_, deps, locs, code) =
       case bagToList code of
         [code'] ->
-          (deps, code')
+          (deps S.\\ locs, code')
         lotsOfCode ->
           case last lotsOfCode of
             NewVar v ex ->
@@ -77,22 +78,23 @@ unRec b        = [b]
 --   single function being generated.
 --   Use `genBindRec` to generate code for local potentially recursive bindings 
 --   as their dependencies get merged into their parent's anyway.
-genBind :: CoreBind -> JSGen ()
-genBind (NonRec v ex) = do
+genBind :: Bool -> CoreBind -> JSGen ()
+genBind onTopLevel (NonRec v ex) = do
   pushBinding v
   v' <- genVar v
+  when (not onTopLevel) (addLocal v')
   ex' <- genThunk ex
   emit $ NewVar (AST.Var v') ex'
   popBinding
-genBind (Rec bs) =
+genBind _ (Rec bs) =
   error $  "genBind got recursive bindings: "
         ++ showPpr bs
 
 -- | Generate code for a potentially recursive binding. Only use this for local
 --   functions; use `genBind` for top level bindings instead.
 genBindRec :: CoreBind -> JSGen ()
-genBindRec bs@(Rec _) = mapM_ genBind (unRec bs)
-genBindRec b          = genBind b
+genBindRec bs@(Rec _) = mapM_ (genBind False) (unRec bs)
+genBindRec b          = genBind False b
 
 isUnliftedExp :: Expr Var -> Bool
 isUnliftedExp = isStrictType . exprType
@@ -126,8 +128,7 @@ genThunk ex
     needsThunk <- exprNeedsThunk ex
     if needsThunk
       then do
-        (ex', deps, supportStmts) <- isolate $ genEx ex
-        dependOn deps
+        (ex', supportStmts) <- isolate $ genEx ex
         return $ Thunk (bagToList supportStmts) ex'
       else do
         genEx ex
@@ -282,8 +283,7 @@ genFun [v] body | isTyVar v =
   genEx body
 genFun vs body = do
   vs' <- mapM genVar vs
-  (retExp, deps, body') <- isolate $ genEx body
-  dependOn deps
+  (retExp, body') <- isolate $ genEx body
   return $ Fun vs' (bagToList $ body' `snocBag` Ret retExp)
 
 -- | Fold up nested lambdas into a single function as far as possible.
@@ -367,8 +367,7 @@ genAlt resultVar (con, binds, expr) = do
     DataAlt c -> case genDataConTag c of 
       Right tag -> return $ Cond tag
       _         -> error "Integer literal in case alt!"
-  (retEx, deps, body) <- isolate $ genBinds binds >> genEx expr
-  dependOn deps
+  (retEx, body) <- isolate $ genBinds binds >> genEx expr
   return
     . con'
     . bagToList
@@ -399,12 +398,12 @@ toJSVar thisMod v =
             jsmod  = moduleNameString $ AST.name foreignModule
           }
     _
-      | isLocalId v ->
+      | isLocalId v && not hasMod ->
         JSVar {
             jsname = Internal unique,
             jsmod  = myMod
           }
-      | isGlobalId v ->
+      | isGlobalId v || hasMod ->
         JSVar {
             jsname = External extern,
             jsmod  = myMod
@@ -413,6 +412,9 @@ toJSVar thisMod v =
           error $ "Var is neither foreign, local or global: " ++ show v
   where
     name   = P.varName v
+    hasMod = case nameModule_maybe name of
+               Nothing -> False
+               _       -> True
     myMod  =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe name)
     extern = occNameString $ nameOccName name
