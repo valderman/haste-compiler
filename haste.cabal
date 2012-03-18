@@ -50,6 +50,7 @@ Executable hastec
         CodeGen.Javascript.PrimOps
         CodeGen.Javascript.Module
         CodeGen.Javascript.Linker
+        CodeGen.Javascript.Builtins
     default-language: Haskell98
 
 Executable hastecat

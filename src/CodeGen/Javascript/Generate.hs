@@ -6,14 +6,15 @@ import ForeignCall
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.List (foldl')
+import Bag
+import Control.Monad
 import Control.Applicative
 import CodeGen.Javascript.Monad
 import CodeGen.Javascript.AST as AST hiding (unique,name,deps,code)
 import qualified CodeGen.Javascript.AST as AST (name, deps, code)
-import Bag
 import CodeGen.Javascript.PrimOps
+import CodeGen.Javascript.Builtins
 import CodeGen.Javascript.PrintJS (prettyJS, pseudo)
-import Control.Monad
 
 -- | Turn a pile of Core into our intermediate JS AST.
 generate :: ModuleName -> CoreProgram -> JSMod
@@ -425,6 +426,9 @@ toJSVar thisMod v =
 genVar :: Var -> JSGen JSVar
 genVar var = do
   thisMod <- getModName
-  let var' = toJSVar thisMod var
-  dependOn var'
-  return var'
+  case toBuiltin var of
+    Just var' -> return var'
+    _         -> do
+      let var' = toJSVar thisMod var
+      dependOn var'
+      return var'
