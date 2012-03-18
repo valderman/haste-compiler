@@ -69,11 +69,12 @@ instance MonadState DepState DepM where
 getModuleOf :: FilePath -> JSVar -> DepM JSMod
 getModuleOf libpath var =
   case jsmod var of
-    ""    -> return foreignModule
-    m     -> getModule libpath
-               $ (++ modExt)
-               $ moduleNameSlashes
-               $ mkModuleName m
+    "GHC.Prim" -> return foreignModule
+    ""         -> return foreignModule
+    m          -> getModule libpath
+                    $ (++ modExt)
+                    $ moduleNameSlashes
+                    $ mkModuleName m
 
 -- | Return the module at the given path, loading it into cache if it's not
 --   already there.
