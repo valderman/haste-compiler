@@ -328,9 +328,26 @@ genAlts v [a] = do
 genAlts v as = do
   as' <- mapM (genAlt v) as
   case simplifyAlts v as' of
-    Left stmt  -> emit stmt
-    Right alts -> emit $ AST.Case (AST.Var v) alts
-  return $ AST.Var v
+    Left stmt -> do
+      case ifToTernary stmt of
+        Just tExp -> return tExp
+        _         -> emit stmt >> return (AST.Var v)
+    Right alts -> do
+      emit $ AST.Case (AST.Var v) alts
+      return $ AST.Var v
+
+-- | Turn if statements with single expression branches into expressions using
+--   the ternary operator.
+ifToTernary :: JSStmt -> Maybe JSExp
+ifToTernary (If cond thenDo elseDo) = do
+  then' <- getOkExpr thenDo
+  else' <- getOkExpr elseDo
+  return $ IfExp cond then' else'
+  where
+    getOkExpr [ExpStmt (Assign _ ex)] = Just ex
+    getOkExpr _                       = Nothing
+ifToTernary _ =
+  Nothing
 
 -- | Turn a few common switch statements into smaller code constructs.
 --   These transformations rely on the fact that a Core case expression must
@@ -382,6 +399,7 @@ genAlt resultVar (con, binds, expr) = do
     . con'
     . bagToList
     $ binds' `unionBags`
+      -- NOTE: remember to update ifToTernary if this last line changes!
       body `snocBag` (ExpStmt $ Assign (AST.Var resultVar) retEx)
   where    
     -- Generate variables for all data constructor arguments, then bind the

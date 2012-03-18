@@ -165,6 +165,9 @@ instance PrettyJS JSExp where
   emit NoOp =
     return ()
 
+  emit (IfExp cond thenDo elseDo) =
+    emit cond >> out "?" >> emit thenDo >> out ":" >> emit elseDo
+
   emit (Assign lhs rhs) =
     out "(" >> emit lhs >> out "=" >> emit rhs >> out ")"
 

@@ -111,6 +111,7 @@ data JSExp
   | Array [JSExp]
   | Assign JSExp JSExp
   | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
+  | IfExp JSExp JSExp JSExp
   | NoOp
     deriving (Show, Eq, Generic)
 
