@@ -224,10 +224,12 @@ foldUpApp expr =
 --              constructor tag values!
 genDataConTag :: DataCon -> Either JSLabel JSExp
 genDataConTag d = do
-  case occNameString $ nameOccName $ dataConName d of
-    "True"  -> Right $ lit True
-    "False" -> Right $ lit False
-    "S#"    -> Left "I"
+  let n = occNameString $ nameOccName $ dataConName d
+      m = moduleNameString $ moduleName $ nameModule $ dataConName d
+  case (n, m) of
+    ("True", "GHC.Types")      -> Right $ lit True
+    ("False", "GHC.Types")     -> Right $ lit False
+    ("S#", "GHC.Integer.Type") -> Left "I"
     _       -> Right $ lit $ (fromIntegral $ dataConTag d :: Double)
 
 -- | Generate code for the given data constructor
