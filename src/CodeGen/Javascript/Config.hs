@@ -1,5 +1,5 @@
 module CodeGen.Javascript.Config (
-  Config (..), AppStart, defConfig, stdRtsLib, debugRtsLib, startASAP,
+  Config (..), AppStart, defConfig, stdRtsLib, stdJSLib, startASAP,
   startOnDocumentLoad, appName, sysLibPath) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import System.IO.Unsafe (unsafePerformIO)
@@ -13,8 +13,8 @@ type AppStart = String -> String
 stdRtsLib :: FilePath
 stdRtsLib = unsafePerformIO $ getDataFileName "rts.js"
 
-debugRtsLib :: FilePath
-debugRtsLib = unsafePerformIO $ getDataFileName "debug.js"
+stdJSLib :: FilePath
+stdJSLib = unsafePerformIO $ getDataFileName "stdlib.js"
 
 -- | Name of the application; decides which directories to keep app specific
 --   data in.
@@ -61,7 +61,7 @@ data Config = Config {
 -- | Default compiler configuration.
 defConfig :: Config
 defConfig = Config {
-    rtsLibs       = [stdRtsLib],
+    rtsLibs       = [stdRtsLib,stdJSLib],
     libPath       = sysLibPath,
     targetLibPath = ".",
     appStart      = startASAP,

@@ -10,9 +10,21 @@ toBuiltin v =
     (Just "GHC.CString", "unpackCString#") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "unCStr"}
+    (Just "GHC.CString", "unpackCStringUtf8#") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "unCStr"}
+    (Just "GHC.CString", "unpackAppendCString#") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "unAppCStr"}
+    (Just "Haste.Prim", "toJSStr") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "toJSStr"}
+    (Just "Haste.Prim", "fromJSStr") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "fromJSStr"}
     (Just "GHC.Err", "error") ->
       Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "die"}
+                    jsname = Foreign "err"}
     _ | otherwise ->
       Nothing
   where

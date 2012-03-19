@@ -17,9 +17,8 @@ import Args
 argSpecs :: [ArgSpec Config]
 argSpecs = [
     ArgSpec { optName = "debug",
-              updateCfg = \cfg _ -> cfg {rtsLibs = debugRtsLib : rtsLibs cfg,
-                                         ppOpts  = pretty},
-              info = "Link in the debug library and output readable code."},
+              updateCfg = \cfg _ -> cfg {ppOpts  = pretty},
+              info = "Output indented, fairly readable code."},
     ArgSpec { optName = "start=onload",
               updateCfg = \cfg _ -> cfg {appStart = startOnDocumentLoad},
               info = "Start program on document load instead of immediately."},

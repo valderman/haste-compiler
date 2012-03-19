@@ -18,7 +18,18 @@ Data-Dir:
 
 Data-Files:
     rts.js
-    debug.js
+    stdlib.js
+
+Library
+    Hs-Source-Dirs: src
+    GHC-Options: -Wall -O2
+    Exposed-Modules:
+        Haste
+    Other-Modules:
+        Haste.Prim
+    Build-Depends:
+        base
+    Default-Language: Haskell98
 
 Executable hastec
     Hs-Source-Dirs: src
