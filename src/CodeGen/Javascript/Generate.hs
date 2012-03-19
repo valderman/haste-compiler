@@ -176,7 +176,7 @@ genEx (P.Var v) = do
 genEx (P.Lit l) =
   genLit l
 genEx (App f arg) = do
-  genApp f arg >>= return . foldUpApp
+  genApp f arg >>= return . tryFastCall f . foldUpApp
 genEx (Lam v ex) =
   genFun [v] ex >>= return . foldUpFun
 genEx (Let bind ex) = do
@@ -192,6 +192,17 @@ genEx (Type _) =
   error "Type annotation encountered where it shouldn't be!"
 genEx (Coercion _) =
   return NoOp
+
+-- | Try to perform a fast call; that is, getting rid of the expensive
+--   eval/apply machinery.
+tryFastCall :: Expr Var -> JSExp -> JSExp
+tryFastCall (P.Var var) app@(Call f as)
+  | arityInfo (idInfo var) == length as =
+    FastCall f as
+  | otherwise =
+    app
+tryFastCall _ app =
+  app
 
 -- | Generate code for funcion application
 genApp :: Expr Var -> Arg Var -> JSGen JSExp

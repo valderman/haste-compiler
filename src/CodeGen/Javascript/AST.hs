@@ -97,6 +97,7 @@ instance Serialize JSAlt where
 
 data JSExp
   = Call JSExp [JSExp]
+  | FastCall JSExp [JSExp]
   | NativeCall String [JSExp]
   | NativeMethCall JSExp String [JSExp]
   | Fun [JSVar] [JSStmt]

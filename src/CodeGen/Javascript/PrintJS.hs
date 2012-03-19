@@ -114,6 +114,8 @@ instance PrettyJS JSAlt where
 instance PrettyJS JSExp where
   emit (Call f as) =
     out "A(" >> emitList "," [f, Array as] >> out ")"
+  emit (FastCall f as) =
+    emit f >> out "(" >> emitList "," as >> out ")"
   emit (NativeCall f as) =
     out f >> out "(" >> emitList "," as >> out ")"
   emit (NativeMethCall obj f as) =
