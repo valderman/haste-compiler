@@ -127,6 +127,12 @@ instance PrettyJS JSExp where
       emitList "" body
     indent $ out "}"
 
+  emit (DataCon tag stricts) = do
+    emit $ NativeCall "D" [tag, Array $ map b2n stricts]
+    where
+      b2n True  = litN 1
+      b2n False = litN 0
+
   emit (BinOp op a b) =
     emitParens op a b
 

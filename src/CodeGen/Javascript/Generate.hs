@@ -176,7 +176,7 @@ genEx (P.Var v) = do
 genEx (P.Lit l) =
   genLit l
 genEx (App f arg) = do
-  genApp f arg >>= return . tryFastCall f . foldUpApp
+  genApp f arg >>= return . tryFastCall f . tryShrinkConstrs . foldUpApp
 genEx (Lam v ex) =
   genFun [v] ex >>= return . foldUpFun
 genEx (Let bind ex) = do
@@ -193,14 +193,24 @@ genEx (Type _) =
 genEx (Coercion _) =
   return NoOp
 
+-- | Turn saturated application of constructors without strict fields into
+--   constant values.
+tryShrinkConstrs :: JSExp -> JSExp
+tryShrinkConstrs (Call (DataCon tag stricts) as)
+  | length stricts == length as =
+    Array (tag : zipWith strictify as stricts)
+  where
+    strictify val False = val
+    strictify val _     = Eval val
+tryShrinkConstrs app =
+  app
+
 -- | Try to perform a fast call; that is, getting rid of the expensive
 --   eval/apply machinery.
 tryFastCall :: Expr Var -> JSExp -> JSExp
-tryFastCall (P.Var var) app@(Call f as)
+tryFastCall (P.Var var) (Call f as)
   | arityInfo (idInfo var) == length as =
     FastCall f as
-  | otherwise =
-    app
 tryFastCall _ app =
   app
 
@@ -250,13 +260,13 @@ genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
   case genDataConTag dc of
     Right t ->
-      return $ NativeCall "D" [t, Array $ map strict (dataConRepStrictness dc)]
+      return $ DataCon t (map strict (dataConRepStrictness dc))
     Left var ->
       return $ AST.Var $ JSVar {jsmod=moduleNameString$AST.name$foreignModule,
                                 jsname = Foreign var}
   where
-    strict MarkedStrict = lit (1 :: Double)
-    strict _            = lit (0 :: Double)
+    strict MarkedStrict = True
+    strict _            = False
 
 -- | Generate an expression for the given primitive operation. If the given
 --   expression isn't a primitive operation, return Nothing.

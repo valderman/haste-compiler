@@ -113,6 +113,7 @@ data JSExp
   | Assign JSExp JSExp
   | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
   | IfExp JSExp JSExp JSExp
+  | DataCon JSExp [Bool]
   | NoOp
     deriving (Show, Eq, Generic)
 
