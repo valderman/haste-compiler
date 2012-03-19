@@ -236,9 +236,7 @@ instance PrettyJS JSLit where
                    then out ('(':n') >> out ")"
                    else out n'
   emit (Str s) = out s
-  emit (Chr c) = out $ if c == '\'' 
-                          then ['"',c,'"']
-                          else ['\'',c,'\'']
+  emit (Chr c) = out $ show c
   emit (Boolean b) = out $ if b then "true" else "false"
 
 emitList :: PrettyJS a => Output -> [a] -> PrettyM ()
