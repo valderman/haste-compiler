@@ -1,7 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash #-}
 module Haste.Prim (JSString, toJSStr, fromJSStr, round_, NumberRep) where
 import Foreign.Ptr
-import Unsafe.Coerce
 import GHC.Types
 import GHC.Prim
 
