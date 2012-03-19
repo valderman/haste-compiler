@@ -10,6 +10,12 @@ toBuiltin v =
     (Just "GHC.Prim", "realWorld#") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "realWorld"}
+    (Just "GHC.Err", "error") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "err"}
+    
+-- Everything to do with unpacking had better be built in for compactness,
+    -- efficiency and space reasons.
     (Just "GHC.CString", "unpackCString#") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "unCStr"}
@@ -19,15 +25,17 @@ toBuiltin v =
     (Just "GHC.CString", "unpackAppendCString#") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "unAppCStr"}
+    
+    -- Primitive needs of the Haste standard library
     (Just "Haste.Prim", "toJSStr") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "toJSStr"}
     (Just "Haste.Prim", "fromJSStr") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "fromJSStr"}
-    (Just "GHC.Err", "error") ->
+    (Just "Haste.Prim", "jsRound") ->
       Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "err"}
+                    jsname = Foreign "Math.round"}
     _ | otherwise ->
       Nothing
   where

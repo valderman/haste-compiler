@@ -27,8 +27,11 @@ Library
         Haste
     Other-Modules:
         Haste.Prim
+        Haste.Readable
+        Haste.Showable
     Build-Depends:
-        base
+        base,
+        ghc-prim
     Default-Language: Haskell98
 
 Executable hastec

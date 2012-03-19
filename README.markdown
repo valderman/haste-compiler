@@ -43,11 +43,20 @@ Known issues
 ------------
 
 * Doesn't yet do tail call elimination.
+
 * Same-named modules in different packages overwrite each other when compiling
   with --libinstall.
-* Not all GHC primops are implemented; if you encounter an implemented primop,
-  I'd be happy if you'd report it together with a small test case that
+
+* Not all GHC primops are implemented; if you encounter an unimplemented
+  primop, I'd be happy if you'd report it together with a small test case that
   demonstrates the problem.
-* There may be issues with Ints and Integers larger than 2^31, as Ints are
-  represented by the JS Number type. Int64 is also unlikely to work well if
-  your program or the base libraries are built on a 64 bit machine.
+
+* There may be issues with Ints and Integers larger than 2^31 with libraries
+  built on a 64 bit machine, as Ints are represented by the JS Number type.
+  Int64 is also unlikely to work well if your program or the base libraries
+  are built on a 64 bit machine.
+
+* The Read class and conversions (show and round, mainly) for floating point
+  types depend on lots of low level pointer arithmetic magic and other tricks
+  that make just as little sense in a Javascript setting, and so are broken.
+  Primitive substitutes are provided in the form of round_, show_ and read_.

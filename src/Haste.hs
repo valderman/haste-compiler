@@ -1,6 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module Haste (alert, prompt, eval) where
+module Haste (alert, prompt, eval, round_, module Haste.Readable,
+              module Haste.Showable) where
 import Haste.Prim
+import Haste.Readable
+import Haste.Showable
 
 foreign import ccall jsAlert  :: JSString -> IO ()
 foreign import ccall jsPrompt :: JSString -> IO JSString
