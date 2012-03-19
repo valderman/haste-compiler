@@ -60,3 +60,6 @@ Known issues
   types depend on lots of low level pointer arithmetic magic and other tricks
   that make just as little sense in a Javascript setting, and so are broken.
   Primitive substitutes are provided in the form of round_, show_ and read_.
+
+* A program that has the value of _|_ may not always give a nice error
+  message.
