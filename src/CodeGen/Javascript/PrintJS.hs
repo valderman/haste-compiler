@@ -77,7 +77,7 @@ instance PrettyJS JSStmt where
     line $ out "}"
 
   emit (If ex thenDo elseDo) = do
-    line $ out "if(C(" >> emit ex >> out ")){"
+    line $ out "if(" >> emit ex >> out "){"
     indentFurther $ emit thenDo
     line $ out "}else{"
     indentFurther $ emit elseDo

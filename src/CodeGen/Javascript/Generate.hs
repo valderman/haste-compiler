@@ -385,13 +385,15 @@ simplifyAlts v as =
     -- Turn any false/anything comparisons into if statements.
     -- As case alts are ordered ascending, false will always come first.
     [Cond (AST.Lit (Boolean False)) ifFalseDo, ifTrueDo] ->
-      Left $ If (AST.Var v) (getStmts ifTrueDo) ifFalseDo
+      Left $ If (NativeCall "C" [AST.Var v]) (getStmts ifTrueDo) ifFalseDo
     [Cond (AST.Lit (Num 0)) ifFalseDo, ifTrueDo] ->
-      Left $ If (AST.Var v) (getStmts ifTrueDo) ifFalseDo
+      Left $ If (NativeCall "C" [AST.Var v]) (getStmts ifTrueDo) ifFalseDo
     
     -- Turn any two-alt switch statements into if/then/else.
     [Cond cond thenDo, elseDo] ->
-      Left $ If (BinOp Eq (AST.Var v) cond) thenDo (getStmts elseDo)
+      Left $ If (BinOp Eq (NativeCall "C" [AST.Var v]) cond)
+                thenDo
+                (getStmts elseDo)
 
     -- No interesting transformations to make
     _ ->
