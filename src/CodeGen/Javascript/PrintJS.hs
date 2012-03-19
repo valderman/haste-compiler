@@ -127,6 +127,10 @@ instance PrettyJS JSExp where
       emitList "" body
     indent $ out "}"
 
+  -- A nullary data constructor will never be applied to anything, so it's
+  -- perfectly safe to generate it as a value right away.
+  emit (DataCon tag []) = do
+    out "[" >> emit tag >> out "]"
   emit (DataCon tag stricts) = do
     emit $ NativeCall "D" [tag, Array $ map b2n stricts]
     where
