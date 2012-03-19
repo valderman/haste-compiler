@@ -7,6 +7,9 @@ import Control.Applicative
 toBuiltin :: P.Var -> Maybe JSVar
 toBuiltin v =
   case (modname, varname) of
+    (Just "GHC.Prim", "realWorld#") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "realWorld"}
     (Just "GHC.CString", "unpackCString#") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "unCStr"}

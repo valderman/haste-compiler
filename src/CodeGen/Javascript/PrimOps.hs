@@ -151,7 +151,31 @@ genOp op xs =
     UnsafeFreezeArrayOp -> Array [defTag, defState, (head xs)]
     UnsafeThawArrayOp -> Array [defTag, defState, (head xs)]
     -- TODO: copy, clone, freeze, thaw
-                                       
+    
+    -- Mutable variables
+    NewMutVarOp -> call "nMV"
+    ReadMutVarOp -> call "rMV"
+    WriteMutVarOp -> call "wMV"
+    
+    -- OffAddr ops
+    ReadOffAddrOp_Char -> Index (xs !! 0) (xs !! 1)
+    ReadOffAddrOp_Int8 -> Index (xs !! 0) (xs !! 1)
+    ReadOffAddrOp_Word8 -> Index (xs !! 0) (xs !! 1)
+    ReadOffAddrOp_WideChar -> Index (xs !! 0) (xs !! 1)
+    WriteOffAddrOp_WideChar -> call "wOffAddr"
+    WriteOffAddrOp_Int8 -> call "wOffAddr"
+
+    -- ByteArray ops
+    NewAlignedPinnedByteArrayOp_Char -> NativeCall "newBA" [xs!!0, xs!!2]
+    UnsafeFreezeByteArrayOp -> Array $ [litN 1,xs!!1,xs!!0]
+    ByteArrayContents_Char -> head xs
+
+    -- Misc. opts
+    -- noDuplicate is only relevant in a threaded environment.
+    TouchOp        -> xs !! 1
+    RaiseOp        -> call "die"
+    RaiseIOOp      -> call "die"
+    NoDuplicateOp  -> head xs
     x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
   where
     call f = NativeCall f xs
