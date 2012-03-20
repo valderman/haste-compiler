@@ -3,7 +3,7 @@ import PrimOp
 import CodeGen.Javascript.AST as AST
 
 runtimeError :: String -> JSExp
-runtimeError s = NativeCall "die" [lit $ "\"" ++ s ++ "\""]
+runtimeError s = NativeCall "die" [lit s]
 
 -- | Generate primops.
 --   Many of these ops return lifted Bool values; however, no thunk is

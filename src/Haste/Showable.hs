@@ -26,7 +26,7 @@ instance Showable String where
   show_ xs = '"' : xs ++ "\""
 
 instance Showable Bool where
-  show_ True = "True"
+  show_ True  = "True"
   show_ False = "False"
 
 instance Showable a => Showable (Maybe a) where

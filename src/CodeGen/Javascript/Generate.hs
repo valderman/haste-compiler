@@ -285,7 +285,7 @@ genPrimOp _ _ =
 genLit :: Literal -> JSGen JSExp
 genLit l = do
   case l of
-    MachStr s       -> return . lit $ show s
+    MachStr s       -> return . lit  $ unpackFS s
     MachInt n       -> return . litN $ fromIntegral n
     MachFloat f     -> return . litN $ fromRational f
     MachDouble d    -> return . litN $ fromRational d
