@@ -18,7 +18,7 @@ argSpecs :: [ArgSpec Config]
 argSpecs = [
     ArgSpec { optName = "debug",
               updateCfg = \cfg _ -> cfg {ppOpts  = pretty},
-              info = "Output indented, fairly readable code, with all "
+              info = "Output indented, fairly readable code, with all " ++
                      "external names included in comments."},
     ArgSpec { optName = "start=asap",
               updateCfg = \cfg _ -> cfg {appStart = startASAP},
