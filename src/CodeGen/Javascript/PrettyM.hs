@@ -55,7 +55,7 @@ defaultOpts = PrettyOpts {
     indentStr   = "    ",
     useNewline  = True,
     printHeader = True,
-    extName     = return . qualifiedName
+    extName     = realName
   }
 
 -- | Print code using readable, but syntaxly incorrect, names, indentation,
@@ -72,7 +72,7 @@ pseudo = defaultOpts
 --   at least minimally readable, unlike `compact`.
 pretty :: PrettyOpts
 pretty = defaultOpts {
-    extName     = genUnique,
+    extName     = append (commentExternal realName) genUnique,
     indentStr   = "\t",
     printHeader = False
   }
@@ -87,6 +87,34 @@ compact = defaultOpts {
     extName     = genUnique,
     printHeader = False
   }
+
+append :: (JSVar -> PrettyM JSLabel)
+       -> (JSVar -> PrettyM JSLabel)
+       -> JSVar
+       -> PrettyM JSLabel
+append back front var = do
+  f <- front var
+  b <- back var
+  return $ f ++ b
+
+comment :: (JSVar -> PrettyM JSLabel) -> JSVar -> PrettyM JSLabel
+comment f var = do
+  varName <- f var
+  return $ "/*" ++ varName ++ "*/"
+
+commentExternal :: (JSVar -> PrettyM JSLabel) -> JSVar -> PrettyM JSLabel
+commentExternal f var = do
+  varName <- f var
+  case jsname var of
+    External _ -> return $ "/*" ++ varName ++ "*/"
+    _          -> return ""
+
+realName :: JSVar -> PrettyM JSLabel
+realName var =
+  case jsname var of
+    External n -> return $ jsmod var ++ "." ++ n
+    Internal n -> return n
+    Foreign n  -> return n
 
 data VarStore = VarStore {
     next :: Int,
