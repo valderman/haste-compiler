@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 module Tests.Take where
 
 runTest :: IO String
