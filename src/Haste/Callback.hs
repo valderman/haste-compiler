@@ -2,19 +2,16 @@
 module Haste.Callback (Callback, mkCallback, ElemID, Event (..),
                        setCallback) where
 import Haste.Prim
-import Unsafe.Coerce
 import Foreign.Ptr (Ptr)
 
-type Callback = Ptr JSFun
-data FakePtr a = FakePtr a
-data JSFun
+newtype Callback = Callback (Ptr (IO ()))
 
 foreign import ccall jsSetCB :: JSString -> JSString -> Callback -> IO Bool
 
 -- | Turn an IO computation into a callback that can be passed to a JS
 --   function.
 mkCallback :: IO () -> Callback
-mkCallback f = unsafeCoerce (FakePtr f)
+mkCallback = Callback . mkPtr
 
 type ElemID = String
 

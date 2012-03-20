@@ -5,7 +5,6 @@ import Haste.Prim
 import Haste.Readable
 import Haste.Showable
 import Haste.Callback
-import Foreign.Ptr
 
 foreign import ccall jsAlert  :: JSString -> IO ()
 foreign import ccall jsPrompt :: JSString -> IO JSString
