@@ -32,7 +32,7 @@ startASAP mainSym =
 -- | Execute the program when the document has finished loading.
 startOnDocumentLoad :: AppStart
 startOnDocumentLoad mainSym =
-  "document.onload = function() {" ++ startASAP mainSym ++ "};"
+  "window.onload = function() {" ++ startASAP mainSym ++ "};"
 
 sysLibPath :: FilePath
 sysLibPath = unsafePerformIO $ do
