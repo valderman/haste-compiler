@@ -1,6 +1,6 @@
 module CodeGen.Javascript.Config (
   Config (..), AppStart, defConfig, stdRtsLib, stdJSLib, startASAP,
-  startOnDocumentLoad, appName, sysLibPath) where
+  startOnLoadComplete, appName, sysLibPath) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import System.IO.Unsafe (unsafePerformIO)
 import System.Directory
@@ -30,8 +30,8 @@ startASAP mainSym =
   "E(" ++ mainSym ++ ")(0);"
 
 -- | Execute the program when the document has finished loading.
-startOnDocumentLoad :: AppStart
-startOnDocumentLoad mainSym =
+startOnLoadComplete :: AppStart
+startOnLoadComplete mainSym =
   "window.onload = function() {" ++ startASAP mainSym ++ "};"
 
 sysLibPath :: FilePath
@@ -64,7 +64,7 @@ defConfig = Config {
     rtsLibs       = [stdRtsLib,stdJSLib],
     libPath       = sysLibPath,
     targetLibPath = ".",
-    appStart      = startASAP,
+    appStart      = startOnLoadComplete,
     ppOpts        = compact,
     outFile       = flip replaceExtension "js",
     performLink   = True
