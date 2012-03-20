@@ -30,5 +30,6 @@ instance NumberRep Int where
   round_ = id
 
 {-# NOINLINE jsRound #-}
+-- | Defined in lib/rts.js
 jsRound :: Double# -> Int#
 jsRound x = unsafeCoerce# x

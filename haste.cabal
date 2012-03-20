@@ -25,6 +25,7 @@ Library
     GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
+        Haste.Callback
     Other-Modules:
         Haste.Prim
         Haste.Readable
