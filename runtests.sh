@@ -5,6 +5,7 @@ let tests=0
 
 for file in Tests/*.hs; do
     let tests=$tests+1
+    thistest="success"
 
     module=`echo $file | sed -e s/Tests\\\/// | sed -e s/\.hs//`
 
