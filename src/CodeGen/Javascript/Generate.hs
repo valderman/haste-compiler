@@ -142,12 +142,12 @@ exprNeedsThunk :: Expr Var -> JSGen Bool
 exprNeedsThunk expr
   | exprIsHNF expr = do
     myMod <- getModName
-    var <- toJSVar myMod <$> getCurrentBinding
+    var <- toJSVar myMod <$> getCurrentBinding <*> pure Nothing
     return $ check myMod var expr
   | otherwise =
     return True
     where
-      check m v (P.Var v')   = v == toJSVar m v'
+      check m v (P.Var v')   = v == toJSVar m v' Nothing
       check m v (App f a)    = check m v f || check m v a
       check _ _ (Lam _ _)    = False
       check _ _ (P.Lit _)    = False
@@ -317,10 +317,11 @@ foldUpFun expr =
 
 genCase :: Expr Var -> Var -> Type -> [Alt P.Var] -> JSGen JSExp
 genCase expr v _ alts = do
-  v' <- genVar v
+  scrutinee <- genVar v
   expr' <- genEval expr
-  emit $ NewVar (AST.Var v') expr'
-  genAlts v' alts
+  emit $ NewVar (AST.Var scrutinee) expr'
+  result <- genResultVar v
+  genAlts scrutinee result alts
 
 
 -- | Generate all case alternatives for a given case expression. After 
@@ -331,31 +332,31 @@ genCase expr v _ alts = do
 --   the JS AST.
 --   If the case expression only has one alternative, omit the case part
 --   entirely, as we're obviously just picking data apart.
-genAlts :: JSVar -> [Alt P.Var] -> JSGen JSExp
-genAlts v [a] = do
-  altStmts <- getStmts <$> genAlt v a
+genAlts :: JSVar -> JSVar -> [Alt P.Var] -> JSGen JSExp
+genAlts scrutinee result [a] = do
+  altStmts <- getStmts <$> genAlt scrutinee result a
   -- As this alternative is the only one in this case expression, it's OK to
   -- eliminate var -> var assigns at the end of it.
   case last altStmts of
-    ExpStmt (Assign lhs rhs@(AST.Var _)) | lhs == AST.Var v -> do
+    NewVar lhs rhs@(AST.Var _) | lhs == AST.Var result -> do
       mapM_ emit (init altStmts)
       return rhs
     _ -> do
       mapM_ emit altStmts
-      return $ AST.Var v
+      return $ AST.Var result
   where
     getStmts (Cond _ ss) = ss
     getStmts (Def ss)    = ss
-genAlts v as = do
-  as' <- mapM (genAlt v) as
-  case simplifyAlts v as' of
+genAlts scrutinee result as = do
+  as' <- mapM (genAlt scrutinee result) as
+  case simplifyAlts scrutinee as' of
     Left stmt -> do
       case ifToTernary stmt of
         Just tExp -> return tExp
-        _         -> emit stmt >> return (AST.Var v)
+        _         -> emit stmt >> return (AST.Var result)
     Right alts -> do
-      emit $ AST.Case (AST.Var v) alts
-      return $ AST.Var v
+      emit $ AST.Case (AST.Var scrutinee) alts
+      return $ AST.Var result
 
 -- | Turn if statements with single expression branches into expressions using
 --   the ternary operator.
@@ -365,8 +366,8 @@ ifToTernary (If cond thenDo elseDo) = do
   else' <- getOkExpr elseDo
   return $ IfExp cond then' else'
   where
-    getOkExpr [ExpStmt (Assign _ ex)] = Just ex
-    getOkExpr _                       = Nothing
+    getOkExpr [NewVar _ ex] = Just ex
+    getOkExpr _             = Nothing
 ifToTernary _ =
   Nothing
 
@@ -376,22 +377,22 @@ ifToTernary _ =
 --   This means that if we have two alternatives, if the first one does not
 --   match, the second one will.
 simplifyAlts :: JSVar -> [JSAlt] -> Either JSStmt [JSAlt]
-simplifyAlts v as =
+simplifyAlts scrut as =
   case as of
     -- Core requires DEFAULT alts to come first, but we want them last in JS.
     (a'@(Def _):as'@(_:_)) ->
-      simplifyAlts v (as' ++ [a'])
+      simplifyAlts scrut (as' ++ [a'])
 
     -- Turn any false/anything comparisons into if statements.
     -- As case alts are ordered ascending, false will always come first.
     [Cond (AST.Lit (Boolean False)) ifFalseDo, ifTrueDo] ->
-      Left $ If (NativeCall "C" [AST.Var v]) (getStmts ifTrueDo) ifFalseDo
+      Left $ If (NativeCall "C" [AST.Var scrut]) (getStmts ifTrueDo) ifFalseDo
     [Cond (AST.Lit (Num 0)) ifFalseDo, ifTrueDo] ->
-      Left $ If (NativeCall "C" [AST.Var v]) (getStmts ifTrueDo) ifFalseDo
+      Left $ If (NativeCall "C" [AST.Var scrut]) (getStmts ifTrueDo) ifFalseDo
     
     -- Turn any two-alt switch statements into if/then/else.
     [Cond cond thenDo, elseDo] ->
-      Left $ If (BinOp Eq (NativeCall "C" [AST.Var v]) cond)
+      Left $ If (BinOp Eq (NativeCall "C" [AST.Var scrut]) cond)
                 thenDo
                 (getStmts elseDo)
 
@@ -404,12 +405,12 @@ simplifyAlts v as =
 
 -- | Generate a case alternative. Each alternative is responsible for binding
 --   any constructor fields and generating any code needed to produce the alt's
---   result. That result is then bound to the AST.Var given.
+--   result. That result is then bound to the JSVar given.
 --   Special care is taken to make sure any evaluation performed within the
 --   alternative's expression is actually confined to the alternative's
 --   generated code.
-genAlt :: JSVar -> Alt P.Var -> JSGen JSAlt
-genAlt resultVar (con, binds, expr) = do
+genAlt :: JSVar -> JSVar -> Alt P.Var -> JSGen JSAlt
+genAlt scrutinee resultVar (con, binds, expr) = do
   con' <- case con of
     DEFAULT   -> return Def
     LitAlt l  -> genLit l >>= return . Cond
@@ -423,7 +424,7 @@ genAlt resultVar (con, binds, expr) = do
     . bagToList
     $ binds' `unionBags`
       -- NOTE: remember to update ifToTernary if this last line changes!
-      body `snocBag` (ExpStmt $ Assign (AST.Var resultVar) retEx)
+      body `snocBag` (NewVar (AST.Var resultVar) retEx)
   where    
     -- Generate variables for all data constructor arguments, then bind the
     -- actual arguments to them. Only call wrapped in isolate or these bindings
@@ -437,7 +438,7 @@ genAlt resultVar (con, binds, expr) = do
     genArgBind touched num var = do
       var' <- genVar var
       when (var' `S.member` touched) $ do
-        emit $ (NewVar (AST.Var var') (GetDataArg (AST.Var resultVar) num))
+        emit $ (NewVar (AST.Var var') (GetDataArg (AST.Var scrutinee) num))
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String
@@ -446,8 +447,8 @@ foreignName (CCall (CCallSpec (StaticTarget str _) _ _)) =
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 
-toJSVar :: JSLabel -> Var -> JSVar
-toJSVar thisMod v =
+toJSVar :: JSLabel -> Var -> Maybe String -> JSVar
+toJSVar thisMod v msuffix =
   case idDetails v of
     FCallId fc ->
         JSVar {
@@ -457,17 +458,20 @@ toJSVar thisMod v =
     _
       | isLocalId v && not hasMod ->
         JSVar {
-            jsname = Internal unique,
+            jsname = Internal $ unique ++ suffix,
             jsmod  = myMod
           }
       | isGlobalId v || hasMod ->
         JSVar {
-            jsname = External extern,
+            jsname = External $ extern ++ suffix,
             jsmod  = myMod
           }
       | otherwise ->
           error $ "Var is neither foreign, local or global: " ++ show v
   where
+    suffix = case msuffix of
+               Just s -> s
+               _      -> ""
     name   = P.varName v
     hasMod = case nameModule_maybe name of
                Nothing -> False
@@ -485,6 +489,18 @@ genVar var = do
   case toBuiltin var of
     Just var' -> return var'
     _         -> do
-      let var' = toJSVar thisMod var
+      let var' = toJSVar thisMod var Nothing
       dependOn var'
-      return var'
+      return $! var'
+
+-- | Generate a result variable for the given scrutinee variable.
+--   Each scrutinee has exactly one result variable; previously, we used the
+--   scrutinee as the result, but that was a horrible idea as that meant lazy
+--   code accidentally used scrutinees that had already been overwritten with
+--   results, so we need a new one.
+--   By keeping strictly to SSA, we ensure that this sort of lazy sharing is
+--   perfectly OK.
+genResultVar :: Var -> JSGen JSVar
+genResultVar var = do
+  thisMod <- getModName
+  return $! toJSVar thisMod var (Just "::|RESULT|")
