@@ -22,3 +22,8 @@ pushd .
 cd $libpath/base
 hastec --libinstall $FLAGS -hide-package base -package-name base -I./include -i./dist-install/build -XMagicHash -XExistentialQuantification -XRank2Types -XScopedTypeVariables -XUnboxedTuples -XForeignFunctionInterface -XUnliftedFFITypes -XDeriveDataTypeable -XGeneralizedNewtypeDeriving -XFlexibleInstances -XStandaloneDeriving -XPatternGuards -XEmptyDataDecls -XNoImplicitPrelude -XCPP Prelude
 popd
+
+pushd .
+cd $libpath/containers
+hastec --libinstall $FLAGS -cpp -fglasgow-exts -package-name containers Data.Graph Data.IntMap Data.IntSet Data.Map Data.Sequence Data.Set Data.Tree
+popd
