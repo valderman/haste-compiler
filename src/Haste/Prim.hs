@@ -3,6 +3,7 @@ module Haste.Prim (JSString, toJSStr, fromJSStr, round_, NumberRep,
                    JSAny, mkPtr) where
 import Foreign.Ptr
 import Unsafe.Coerce
+import GHC.CString
 import GHC.Types
 import GHC.Prim
 
@@ -22,6 +23,11 @@ data FakePtr a = FakePtr a
 --   to a pointer.
 mkPtr :: a -> Ptr a
 mkPtr = unsafeCoerce . FakePtr
+
+{-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
+{-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
+{-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) = mkPtr (unsafeCoerce# s) #-}
+{-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) = mkPtr (unsafeCoerce# s) #-}
 
 {-# NOINLINE toJSStr #-}
 -- | Defined in lib/rts.js
