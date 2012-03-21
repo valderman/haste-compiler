@@ -47,8 +47,7 @@ use, or GHC will have a great time inlining symbols that don't exist into
 your programs.
 
 Finally, many library features make use of native functionality that is hard
-or impossible to implement on top of Javascript; Read instances are a prime
-example.
+or impossible to implement on top of Javascript.
 
 With these restrictions, building the standard libraries is quite cumbersome;
 the proper solution in the long run is probably to reimplement the parts of
@@ -103,10 +102,13 @@ Known issues
 
 * Base libraries built on a 64 bit machine won't work. Don't even bother.
 
-* The Read class and conversions (show and round, mainly) for floating point
-  types depend on lots of low level pointer arithmetic magic and other tricks
-  that make just as little sense in a Javascript setting, and so are broken.
-  Primitive substitutes are provided in the form of round_, show_ and read_.
+* Read and Show are currently broken for Float and Double. JS-native
+  substitutes are available in the form of show_ and read_ for all types which
+  have an underlying Number representation with Haste (Int, Float and Double.)
+  Apart from actually working for Float and Double, they're also quite a lot
+  faster for Ints. Additionally, round is broken for Float and Double as well,
+  and there's a round_ for those types that not only works but which is also
+  much faster than Prelude's round would have been had it worked.
 
 * A program that has the value of _|_ may not always give a nice error
   message.
