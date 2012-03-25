@@ -85,8 +85,18 @@ genBind onTopLevel (NonRec v ex) = do
   v' <- genVar v
   when (not onTopLevel) (addLocal v')
   ex' <- genThunk ex
-  emit $ NewVar (AST.Var v') ex'
+  expr <- case ex' of
+    Thunk [] ex''@(Array _)                     -> return ex''
+    Thunk [] ex''@(DataCon _ _)                 -> return ex''
+    Thunk [] ex''@(FastCall f _) | integerLit f -> return ex''
+    _                                           -> return ex'
+  emit $ NewVar (AST.Var v') expr
   popBinding
+  where
+    integerLit (AST.Var var) | Foreign "I" <- jsname var =
+      jsmod var == moduleNameString (AST.name foreignModule)
+    integerLit _ =
+      False
 genBind _ (Rec bs) =
   error $  "genBind got recursive bindings: "
         ++ showPpr bs
@@ -109,13 +119,11 @@ isVar _         = False
 --   * has an unlifted type;
 --   * has a lifted type but is a variable, which is then obviously a thunk;
 --   * is a function;
---   * is a type class dictionary;
---   * is already in HNF.
---   Not generating a thunk for expressions already in HNF but otherwise
---   subject to thunking is only OK as long as the eval operation is able to
---   cope with getting passed non-thunks; if this were to change, we must
---   generate thunks even for HNF expressions!
+--   * is a type class dictionary.
 genThunk :: Expr Var -> JSGen JSExp
+genThunk ex@(App _ _) = do
+  (ex', supportStmts, _) <- isolate $ genEx ex
+  return $ Thunk (bagToList supportStmts) ex'
 genThunk ex
   | isUnliftedExp ex = do
     genEx ex
@@ -148,7 +156,7 @@ exprNeedsThunk expr
     return True
     where
       check m v (P.Var v')   = v == toJSVar m v' Nothing
-      check m v (App f a)    = check m v f || check m v a
+      check _ _ (App _ _)    = True
       check _ _ (Lam _ _)    = False
       check _ _ (P.Lit _)    = False
       check m v (Let _ ex)   = check m v ex
