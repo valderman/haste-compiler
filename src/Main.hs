@@ -5,6 +5,8 @@ import HscMain
 import DynFlags hiding (flags)
 import TidyPgm
 import CorePrep
+import CoreToStg
+import StgSyn (StgBinding)
 import CoreSyn
 import HscTypes
 import GhcMonad
@@ -69,7 +71,7 @@ compile cfg dynflags modSummary = do
   where
     myName = moduleNameString $ moduleName $ ms_mod modSummary
 
-prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m (CoreProgram, ModuleName)
+prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName)
 prepare dynflags theMod = do
   env <- getSession
   let name = moduleName $ ms_mod theMod
@@ -79,6 +81,7 @@ prepare dynflags theMod = do
     >>= liftIO . hscSimplify env . coreModule
     >>= liftIO . tidyProgram env
     >>= prepPgm . fst
+    >>= liftIO . coreToStg dynflags
   return (pgm, name)
   where
     prepPgm tidy = liftIO $ do
