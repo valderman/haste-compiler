@@ -1,6 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module Haste (Callback, alert, prompt, eval, round_, mkCallback,
-              module Haste.Readable, module Haste.Showable) where
+module Haste (alert, prompt, eval, round_,
+              module Haste.Readable, module Haste.Showable,
+              module Haste.Callback) where
 import Haste.Prim
 import Haste.Readable
 import Haste.Showable

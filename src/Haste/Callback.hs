@@ -1,12 +1,16 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
 module Haste.Callback (Callback, mkCallback, ElemID, Event (..),
-                       setCallback) where
+                       setCallback, getProp, setProp) where
 import Haste.Prim
 import Foreign.Ptr (Ptr)
+import Control.Applicative
 
 newtype Callback = Callback (Ptr (IO ()))
 
 foreign import ccall jsSetCB :: JSString -> JSString -> Callback -> IO Bool
+foreign import ccall jsFind :: JSString -> IO Bool
+foreign import ccall jsGet :: JSString -> JSString  -> IO JSString
+foreign import ccall jsSet :: JSString -> JSString -> JSString -> IO ()
 
 -- | Turn an IO computation into a callback that can be passed to a JS
 --   function.
@@ -14,6 +18,7 @@ mkCallback :: IO () -> Callback
 mkCallback = Callback . mkPtr
 
 type ElemID = String
+type PropID = String
 
 data Event
   = OnLoad
@@ -55,3 +60,19 @@ setCallback elemId evt f =
         OnChange    -> "onchange"
         OnFocus     -> "onfocus"
         OnBlur      -> "onblur"
+
+withElem :: ElemID -> (JSString -> IO a) -> IO a
+withElem e act = do
+  let e' = toJSStr e
+  exists <- jsFind e'
+  case exists of
+    False -> error $ "No element with ID " ++ e ++ " could be found!"
+    _     -> act e'
+
+-- | Get a property from a JS object. Panics if the object doesn't exist.
+getProp :: ElemID -> PropID -> IO String
+getProp e p = withElem e $ \e' -> fromJSStr <$> jsGet e' (toJSStr p)
+
+-- | Set a property in a JS object. Panics if the object doesn't exist.
+setProp :: ElemID -> PropID -> String -> IO ()
+setProp e p v = withElem e $ \e' -> jsSet e' (toJSStr p) (toJSStr v)
