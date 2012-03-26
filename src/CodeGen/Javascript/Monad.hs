@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module CodeGen.Javascript.Monad (
   JSGen, genJS, emit, dependOn, getModName, pushBinding, popBinding,
-  getCurrentBinding, isolate, addLocal) where
+  getCurrentBinding, isolate, addLocal, allowUnthunk, disallowUnthunk,
+  unthunkOK) where
 import Control.Monad.State
 import Bag
 import CodeGen.Javascript.AST hiding (code, deps)
@@ -14,7 +15,8 @@ data GenState = GenState {
     deps         :: !(S.Set JSVar),
     locals       :: !(S.Set JSVar),
     modName      :: JSLabel,
-    bindingStack :: [Var]
+    bindingStack :: [Var],
+    unthunk      :: Int
   }
 
 initialState :: GenState
@@ -23,7 +25,8 @@ initialState = GenState {
     deps         = S.empty,
     locals       = S.empty,
     modName      = undefined,
-    bindingStack = []
+    bindingStack = [],
+    unthunk      = 0
   }
 
 newtype JSGen a =
@@ -59,7 +62,7 @@ genJS :: JSLabel     -- ^ Name of the module being compiled.
       -> (a, S.Set JSVar, S.Set JSVar, Bag JSStmt)
 genJS myModName (JSGen gen) =
   case runState gen initialState {modName = myModName} of
-    (a, GenState stmts dependencies loc _ _) -> (a, dependencies, loc, stmts)
+    (a, GenState stmts dependencies loc _ _ _) -> (a, dependencies, loc, stmts)
 
 -- | Emit a JS statement to the code stream
 emit :: JSStmt -> JSGen ()
@@ -102,3 +105,18 @@ isolate gen = do
   dependOn dep
   addLocal loc
   return (x, stmts, dep)
+
+unthunkOK :: JSGen Bool
+unthunkOK = JSGen $ do
+  st <- get
+  return $ unthunk st == 0
+
+allowUnthunk :: JSGen ()
+allowUnthunk = JSGen $ do
+  st <- get
+  put st {unthunk = unthunk st - 1}
+
+disallowUnthunk :: JSGen ()
+disallowUnthunk = JSGen $ do
+  st <- get
+  put st {unthunk = unthunk st + 1}

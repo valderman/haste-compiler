@@ -103,8 +103,12 @@ genBind _ (Rec bs) =
 
 -- | Generate code for a potentially recursive binding. Only use this for local
 --   functions; use `genBind` for top level bindings instead.
+--   Recursive bindings can't use sloppy thunk omission, as they can refer to each other.
 genBindRec :: CoreBind -> JSGen ()
-genBindRec bs@(Rec _) = mapM_ (genBind False) (unRec bs)
+genBindRec bs@(Rec _) = do
+  disallowUnthunk
+  mapM_ (genBind False) (unRec bs)
+  allowUnthunk
 genBindRec b          = genBind False b
 
 isUnliftedExp :: Expr Var -> Bool
@@ -121,26 +125,35 @@ isVar _         = False
 --   * is a function;
 --   * is a type class dictionary.
 genThunk :: Expr Var -> JSGen JSExp
-genThunk ex@(App _ _) = do
-  (ex', supportStmts, _) <- isolate $ genEx ex
-  return $ Thunk (bagToList supportStmts) ex'
-genThunk ex
-  | isUnliftedExp ex = do
-    genEx ex
-  | isVar ex = do
-    genEx ex
-  | isFunTy . dropForAlls $ exprType ex = do
-    genEx ex
-  | isTyVarTy $ exprType ex = do
-    genEx ex
-  | otherwise = do
-    needsThunk <- exprNeedsThunk ex
-    if needsThunk
-      then do
-        (ex', supportStmts, _) <- isolate $ genEx ex
-        return $ Thunk (bagToList supportStmts) ex'
-      else do
+genThunk expr
+  | isUnliftedExp expr = do
+    genEx expr
+  | isFunTy . dropForAlls $ exprType expr = do
+    genEx expr
+genThunk expr = do
+  sloppyUnthunk <- unthunkOK
+  if sloppyUnthunk
+     then genThunk' expr
+     else do
+       (ex', supportStmts, _) <- isolate $ genEx expr
+       return $ Thunk (bagToList supportStmts) ex'
+  where
+    genThunk' ex@(App _ _) = do
+      (ex', supportStmts, _) <- isolate $ genEx ex
+      return $ Thunk (bagToList supportStmts) ex'
+    genThunk' ex
+      | isVar ex = do
         genEx ex
+      | isTyVarTy $ exprType ex = do
+        genEx ex
+      | otherwise = do
+        needsThunk <- exprNeedsThunk ex
+        if needsThunk
+          then do
+            (ex', supportStmts, _) <- isolate $ genEx ex
+            return $ Thunk (bagToList supportStmts) ex'
+          else do
+            genEx ex
 
 -- | Returns whether the expression needs to be thunked or not.
 --   We don't want to generate thunks for HNF expressions if we can avoid it,
