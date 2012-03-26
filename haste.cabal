@@ -22,7 +22,7 @@ Data-Files:
 
 Library
     Hs-Source-Dirs: src
-    GHC-Options: -Wall -O2
+    GHC-Options: -Wall -O0
     Exposed-Modules:
         Haste
         Haste.Reactive
@@ -34,7 +34,8 @@ Library
         Haste.Reactive.Signal
     Build-Depends:
         base,
-        ghc-prim
+        ghc-prim,
+        containers
     Default-Language: Haskell98
 
 Executable hastec

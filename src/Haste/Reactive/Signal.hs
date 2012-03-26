@@ -77,10 +77,10 @@ instance SigLike (Signal a) where
   setFire s f = do
     writeIORef (shouldFire s) f
 
-  mark n sig = do
-    writeIORef (order sig) n
+  mark num sig = do
+    writeIORef (order sig) num
     ls <- readIORef (listeners sig)
-    markAll (n+1) ls
+    markAll (num+1) ls
     where
       markAll n (x:xs) = do
         n' <- mark n x
@@ -145,7 +145,7 @@ instance SigLike (Signal a) where
 --  next poke," to get ready for the next event.
 activate :: SigLike a => a -> IO ()
 activate sig = do
-  mark 0 sig
+  _ <- mark 0 sig
   sigs <- collect M.empty sig
   setFire sig True
   mapM_ (poke . snd) $ M.toAscList sigs
@@ -297,7 +297,7 @@ newRefIO :: a -> IO b -> IORef b
 newRefIO _ val = unsafePerformIO $! val >>= newIORef
 
 alwaysPropagate :: a -> a -> Bool
-alwaysPropagate a b = True
+alwaysPropagate _ _ = True
 
 neverPropagate :: a -> a -> Bool
-neverPropagate a b = False
+neverPropagate _ _ = False
