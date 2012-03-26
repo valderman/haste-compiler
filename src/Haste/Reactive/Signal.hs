@@ -6,17 +6,26 @@ import Data.IORef
 import Control.Applicative
 import Control.Monad
 import System.IO.Unsafe
+import qualified Data.IntMap as M
 
 data AnySignal where
   AnySignal :: SigLike a => a -> AnySignal
 
 class SigLike a where
-  -- | Activate the signal, notifying all listeners.
-  activate     :: a -> IO ()
+  -- | Determine in which order this signal, and all its listeners, are
+  --   supposed to fire.
+  mark         :: Int -> a -> IO Int
+  -- | Activate signals in the order determined by the last call to mark.
+  collect      :: M.IntMap AnySignal -> a -> IO (M.IntMap AnySignal)
   -- | Add b as a listener of a.
   listensTo    :: AnySignal -> a -> IO ()
   -- | Get all signals listening to this signal.
   getListeners :: a -> IO [AnySignal]
+  -- | Evaluate the signal, update its output and mark all listeners as either
+  --   "should fire" or "should not fire" the next time it's poked.
+  poke         :: a -> IO ()
+  -- | Set whether the signal should fire on next poke or not.
+  setFire      :: a -> Bool -> IO ()
 
 newtype Source a = Source (Signal a)
 
@@ -41,30 +50,106 @@ data Signal a = Signal {
     -- | All signals currently listening to this signal.
     listeners    :: IORef [AnySignal],
     -- | All signal listener relationships needed for this signal to function.
-    dependencies :: [(Listener, AnySignal)]
+    dependencies :: [(Listener, AnySignal)],
+    -- | The last place in the trigger order where this signal will trigger.
+    --   This is used internally to ensure signals are only triggered once,
+    --   after all of their dependencies have been met.
+    order        :: IORef Int,
+    -- | Should I fire the next time I'm poked?
+    shouldFire   :: IORef Bool
   }
 
 instance SigLike AnySignal where
-  activate  (AnySignal s) =
-    activate s
+  setFire (AnySignal s) f =
+    setFire s f
+  poke (AnySignal s) =
+    poke s
+  collect m (AnySignal s) =
+    collect m s
+  mark n (AnySignal s) =
+    mark n s
   listensTo listener (AnySignal speaker) =
     listener `listensTo` speaker
   getListeners (AnySignal s) =
     getListeners s
 
 instance SigLike (Signal a) where
-  activate sig = do
-    old <- readIORef out
-    new <- trigger sig
-    writeIORef out new
-    when (propagate sig old new) $ do
-      ls <- readIORef (listeners sig)
-      mapM_ activate ls
+  setFire s f = do
+    writeIORef (shouldFire s) f
+
+  mark n sig = do
+    writeIORef (order sig) n
+    ls <- readIORef (listeners sig)
+    markAll (n+1) ls
     where
-      out = output sig
+      markAll n (x:xs) = do
+        n' <- mark n x
+        markAll n' xs
+      markAll n _ =
+        return n
   
+  collect m sig = do
+    m' <- M.insert <$> readIORef (order sig) <*> pure (AnySignal sig) <*> pure m
+    ls <- getListeners sig
+    foldM collect m' ls
+
+  poke sig = do
+    firingIsAppropriate <- readIORef (shouldFire sig)
+    writeIORef (shouldFire sig) False
+    when firingIsAppropriate $ do
+      let out = output sig
+      old <- readIORef out
+      new <- trigger sig
+      writeIORef out new
+      ls <- getListeners sig
+      when (propagate sig old new) $ do
+        mapM_ (\l -> setFire l True) ls
+
   listensTo l sig = modifyIORef (listeners sig) $ \ls -> l : ls
   getListeners    = readIORef . listeners
+
+-- | Activate a signal, recursively notifying all listeners.
+--   The algorithm for the cascaded update is a bit tricky; as signals,
+--   particularly at the end of a chain, may contain side effects, we don't
+--   want them to fire more than at most once per event. Thus, we can't just
+--   recursively activate all of a signal's listeners, because a signal down
+--   the line may depend on this signal through more than one path.
+--   For instance:
+-- @
+--   (input1, sig1) <- source 0
+--   (input2, sig2) <- source 0
+--   let multi = (*) <$> sig1 <*> sig2
+--   start $ perform $ (\a b -> print (a + b)) <$> sig1 <*> multi
+--   push 10 input1
+-- @
+--  If we were to just recursively propagate signals we would call print twice;
+--  once when triggered by sig1, and once when triggered by multi, which is
+--  also triggered by sig1.
+--
+--  To avoid this, we recursively traverse all listeners of the originating
+--  signal, marking each one with an ever increasing ordering value. If a
+--  signal is encountered more than once, its old ordering value is overwritten
+--  with the new, higher, one.
+--
+--  Then, we collect all the signals into an IntMap, keyed on their ordering
+--  value. This ensures that no signal will appear in the firing list more than
+--  once, and it will always fire after all of its dependencies.
+--
+--  Finally, we mark the originating signal for firing on next poke, and poke
+--  it. It will update, and will mark all of its listeners for firing iff its
+--  propagation function determines that the signal should be propagated.
+--  We then proceed to poke all of the other signals in the firing list, and
+--  the once that have had their "fire on next poke" status set by another
+--  signal will fire.
+--  After being poked, all signals immediately reset to "no, don't fire on
+--  next poke," to get ready for the next event.
+activate :: SigLike a => a -> IO ()
+activate sig = do
+  mark 0 sig
+  sigs <- collect M.empty sig
+  setFire sig True
+  mapM_ (poke . snd) $ M.toAscList sigs
+  return ()
 
 -- | Evaluate a signal, and save and return its output, but don't notify any
 --   listeners.
@@ -80,10 +165,12 @@ unSelf _ x             = x
 
 instance Functor Signal where
   fmap f sig = Signal {
-      trigger       = trigger sig >>= return . f,
-      output        = newRef sig undefined,
-      listeners     = newRef sig [],
-      propagate     = alwaysPropagate,
+      trigger      = trigger sig >>= return . f,
+      output       = newRef sig undefined,
+      listeners    = newRef sig [],
+      propagate    = alwaysPropagate,
+      order        = newRef sig 0,
+      shouldFire   = newRef sig False,
       dependencies = (Self, AnySignal sig) : map (unSelf sig) (dependencies sig)
     }
 
@@ -96,6 +183,8 @@ instance Applicative Signal where
       propagate    = alwaysPropagate,
       output       = newRef x x,
       listeners    = newRef x [],
+      order        = newRef x 0,
+      shouldFire   = newRef x False,
       dependencies = []
     }
 
@@ -104,6 +193,8 @@ instance Applicative Signal where
       output       = newRefIO x app,
       listeners    = newRef x [],
       propagate    = alwaysPropagate,
+      order        = newRef x 0,
+      shouldFire   = newRef x False,
       dependencies =
         (Self, AnySignal x) : dependencies sig ++ map (unSelf x) (dependencies x)
     }
@@ -140,6 +231,8 @@ perform sig = self
                    output       = newRefIO sig (return undefined),
                    listeners    = listeners sig,
                    propagate    = neverPropagate,
+                   order        = newRef sig 0,
+                   shouldFire   = newRef sig False,
                    dependencies = dependencies sig}
 
 -- | A buffered signal never activates its listeners.
@@ -150,6 +243,8 @@ buffered sig = self
                    output       = newRefIO sig (readIORef $ output sig),
                    listeners    = newRef sig [],
                    propagate    = neverPropagate,
+                   order        = newRef sig 0,
+                   shouldFire   = newRef sig False,
                    dependencies =
                      (Other$AnySignal self, AnySignal sig) : map (unSelf sig) (dependencies sig)}
 
@@ -163,6 +258,8 @@ lazy sig = initial `seq` self
                    output       = initial,
                    listeners    = newRef sig [],
                    propagate    = (/=),
+                   order        = newRef sig 0,
+                   shouldFire   = newRef sig False,
                    dependencies =
                      (Other$AnySignal self, AnySignal sig) : map (unSelf sig) (dependencies sig)}
 
@@ -172,11 +269,15 @@ source :: a -> IO (Source a, Signal a)
 source initial = do
   out <- newIORef initial
   ls <- newIORef []
+  l <- newIORef 0
+  fire <- newIORef False
   let self = Signal {
           trigger      = readIORef out,
           output       = out,
           listeners    = ls,
           propagate    = alwaysPropagate,
+          order        = l,
+          shouldFire   = fire,
           dependencies = []
         }
   return (Source self, self)
