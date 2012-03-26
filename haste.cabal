@@ -25,11 +25,13 @@ Library
     GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
-        Haste.Callback
+        Haste.Reactive
     Other-Modules:
         Haste.Prim
         Haste.Readable
         Haste.Showable
+        Haste.Callback
+        Haste.Reactive.Signal
     Build-Depends:
         base,
         ghc-prim
