@@ -61,7 +61,7 @@ genAST modname binds =
   binds'
   where
     binds' =
-      map (depsAndCode . genJS myModName . genBind True)
+      map (depsAndCode . genJS myModName . uncurry (genBind True))
       $ concatMap unRec
       $ binds
 
@@ -85,35 +85,38 @@ genAST modname binds =
 --   single function being generated.
 --   Use `genBindRec` to generate code for local potentially recursive bindings 
 --   as their dependencies get merged into their parent's anyway.
-genBind :: Bool -> StgBinding -> JSGen ()
-genBind onTopLevel (StgNonRec v rhs) = do
+genBind :: Bool -> Bool -> StgBinding -> JSGen ()
+genBind onTopLevel partOfRecGroup (StgNonRec v rhs) = do
   pushBinding v
   v' <- genVar v
   when (not onTopLevel) (addLocal v')
-  expr <- genRhs rhs
+  expr <- genRhs partOfRecGroup rhs
   emit $ NewVar (AST.Var v') expr
   popBinding
-genBind _ (StgRec _) =
+genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 
 genBindRec :: StgBinding -> JSGen ()
 genBindRec bs@(StgRec _) =
-  mapM_ (genBind False) (unRec bs)
+  mapM_ (genBind False True . snd) (unRec bs)
 genBindRec b =
-  genBind False b
+  genBind False False b
 
--- | Turn a recursive binding into a list of non-recursive ones.
-unRec :: StgBinding -> [StgBinding]
-unRec (StgRec bs) = map (uncurry StgNonRec) bs
-unRec b           = [b]
+-- | Turn a recursive binding into a list of non-recursive ones, together with
+--   information about whether they came from a recursive group or not.
+unRec :: StgBinding -> [(Bool, StgBinding)]
+unRec (StgRec bs) = zip (repeat True) (map (uncurry StgNonRec) bs)
+unRec b           = [(False, b)]
 
 -- | Generate the RHS of a binding.
-genRhs :: StgRhs -> JSGen JSExp
-genRhs (StgRhsCon _ con args) = do
-  if length args == dataConRepArity con
-     then genEx (StgConApp con args)
-     else genDataCon con
-genRhs (StgRhsClosure _ _ _ upd _ args body) = do
+genRhs :: Bool -> StgRhs -> JSGen JSExp
+genRhs recursive (StgRhsCon _ con args) = do
+  -- Constructors are never partially applied, and we have arguments, so this
+  -- is obviously a full application.
+  if recursive
+     then Thunk [] <$> genEx (StgConApp con args)
+     else genEx (StgConApp con args)
+genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
   args' <- mapM genVar args
   (retExp, body', _) <- isolate $ genEx body
   if isUpdatable upd && null args
