@@ -26,6 +26,7 @@ import CodeGen.Javascript.Monad
 import CodeGen.Javascript.PrintJS
 import CodeGen.Javascript.Builtins
 import CodeGen.Javascript.PrimOps
+import CodeGen.Javascript.Optimize
 
 generate :: ModuleName -> [StgBinding] -> JSMod
 generate modname binds =
@@ -122,9 +123,8 @@ genRhs (StgRhsClosure _ _ _ upd _ args body) = do
     thunk [] l@(Lit _) = l
     thunk stmts expr   = Thunk stmts expr
 
--- | Generate the tag for a data constructor. This lives in its own function
---   as we want to generate true/false for True/False, a function call for
---   Integer literals, and "real" tags for everything else.
+-- | Generate the tag for a data constructor. This is used both by genDataCon
+--   and directly by genCase to generate constructors for matching.
 --
 --   IMPORTANT: remember to update the RTS if any changes are made to the
 --              constructor tag values!
@@ -138,10 +138,12 @@ genDataConTag d = do
     ("S#", "GHC.Integer.Type") -> Left "I"
     _                          -> Right $ lit (fromIntegral $ dataConTag d :: Double)
 
--- | Generate code for the given data constructor.
+-- | Generate code for data constructor creation.
 genDataCon :: DataCon -> JSGen JSExp
 genDataCon dc = do
   case genDataConTag dc of
+    Right t@(Lit (Boolean _)) ->
+      return t
     Right t ->
       return $ DataCon t (map strict (dataConRepStrictness dc))
     Left var ->
@@ -158,20 +160,20 @@ genEx (StgApp f xs) = do
   xs' <- mapM genArg xs
   if null xs
      then return $ Eval $ AST.Var f'
-     else return $ Call (AST.Var f') xs'
+     else return $ optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
 genEx (StgLit l) = do
   genLit l
 genEx (StgConApp con args) = do
   con' <- genDataCon con
   args' <- mapM genArg args
   case con' of
-    DataCon tag@(Lit (Boolean _)) [] -> do
-      return tag
     DataCon tag stricts -> do
       return $ Array (tag : zipWith evaluate stricts args')
     AST.Var v | jsname v == Foreign "I" && 
                 jsmod v == moduleNameString (AST.name foreignModule) -> do
       return $ NativeCall "I" args'
+    constr@(Lit _) | null args' ->
+      return constr
     _ ->
       error $ "Data constructor generated crazy code: " ++ show con'
   where
@@ -228,16 +230,10 @@ genAlts _ scrut res [alt] = do
     getStmts (Def ss)    = ss
 genAlts t scrut res alts = do
   alts' <- mapM (genAlt scrut res) alts
-  case simplifyAlts cmp scrut alts' of
-    Left stmt -> do
-      case ifToTernary stmt of
-        Just tExp -> return tExp
-        _         -> emit stmt >> return (AST.Var res)
-    Right alts'' -> do
-      emit $ Case (cmp $ AST.Var scrut) alts''
-      return $ AST.Var res
+  optCase cmp scrut res alts'
   where
     getTag = \s -> Index s (litN 0)
+    -- We want all our booleans unpacked!
     cmp = case t of
       PrimAlt _ -> id
       AlgAlt tc -> if tyConIsBoolean tc then id else getTag
@@ -269,52 +265,6 @@ genAlt scrut res (con, args, used, body) = do
          $ listToBag binds `unionBags` body' `snocBag` NewVar (AST.Var res) ret
   where
     bindVar var ix = NewVar (AST.Var var) (Index (AST.Var scrut) (litN ix))
-
-
--- | Turn if statements with single expression branches into expressions using
---   the ternary operator.
-ifToTernary :: JSStmt -> Maybe JSExp
-ifToTernary (If cond thenDo elseDo) = do
-  then' <- getOkExpr thenDo
-  else' <- getOkExpr elseDo
-  return $ IfExp cond then' else'
-  where
-    getOkExpr [NewVar _ ex] = Just ex
-    getOkExpr _             = Nothing
-ifToTernary _ =
-  Nothing
-
--- | Turn a few common switch statements into smaller code constructs.
---   These transformations rely on the fact that a Core case expression must
---   always be complete and that its alternatives may not overlap.
---   This means that if we have two alternatives, if the first one does not
---   match, the second one will.
-simplifyAlts :: (JSExp -> JSExp) -> JSVar -> [JSAlt] -> Either JSStmt [JSAlt]
-simplifyAlts cmp scrut as =
-  case as of
-    -- Core requires DEFAULT alts to come first, but we want them last in JS.
-    (a'@(Def _):as'@(_:_)) ->
-      simplifyAlts cmp scrut (as' ++ [a'])
-
-    -- Turn any false/anything comparisons into if statements.
-    -- As case alts are ordered ascending, false will always come first.
-    [Cond (AST.Lit (Boolean False)) ifFalseDo, ifTrueDo] ->
-      Left $ If (cmp (AST.Var scrut)) (getStmts ifTrueDo) ifFalseDo
-    [Cond (AST.Lit (Num 0)) ifFalseDo, ifTrueDo] ->
-      Left $ If (cmp $ AST.Var scrut) (getStmts ifTrueDo) ifFalseDo
-    
-    -- Turn any two-alt switch statements into if/then/else.
-    [Cond cond thenDo, elseDo] ->
-      Left $ If (BinOp Eq (cmp $ AST.Var scrut) cond)
-                thenDo
-                (getStmts elseDo)
-
-    -- No interesting transformations to make
-    _ ->
-      Right as
-  where
-    getStmts (Def ss) = ss
-    getStmts (Cond _ ss) = ss
 
 genArg :: StgArg -> JSGen JSExp
 genArg (StgVarArg v)  = AST.Var <$> genVar v

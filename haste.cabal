@@ -59,7 +59,8 @@ Executable hastec
         CodeGen.Javascript.Config
         CodeGen.Javascript.AST
         CodeGen.Javascript.Monad
-        CodeGen.Javascript.Generate
+        CodeGen.Javascript.StgGen
+        CodeGen.Javascript.Optimize
         CodeGen.Javascript.PrintJS
         CodeGen.Javascript.PrettyM
         CodeGen.Javascript.PrimOps

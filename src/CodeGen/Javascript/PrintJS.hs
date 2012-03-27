@@ -128,8 +128,12 @@ instance PrettyJS JSExp where
     indent $ out "}"
 
   -- A nullary data constructor will never be applied to anything, so it's
-  -- perfectly safe to generate it as a value right away. It's also safe to
-  -- unpack it.
+  -- perfectly safe to generate it as a value right away.
+  -- Booleans are always unpacked.
+  emit (DataCon (Lit (Boolean True)) []) = do
+    out "true"
+  emit (DataCon (Lit (Boolean False)) []) = do
+    out "false"
   emit (DataCon tag []) = do
     out "[" >> emit tag >> out "]"
   emit (DataCon tag stricts) = do
