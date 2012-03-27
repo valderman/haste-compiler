@@ -7,7 +7,6 @@ import TidyPgm
 import CorePrep
 import CoreToStg
 import StgSyn (StgBinding)
-import CoreSyn
 import HscTypes
 import GhcMonad
 import Control.Applicative
