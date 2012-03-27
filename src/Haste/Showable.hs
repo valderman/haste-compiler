@@ -8,7 +8,14 @@ foreign import ccall "jsShow" jsShowF :: Float -> JSString
 foreign import ccall jsShowI :: Int -> JSString
 
 class Showable a where
+  -- | Equivalent to show; should satisfy id == show . read
   show_ :: a -> String
+  
+  -- | Equivalent to show_, except it should prioritize nice looking output;
+  --   the identity id == show . read need not hold for instances.
+  --   Implementing it in your instances is nearly always unnecessary.
+  toStr :: a -> String
+  toStr = show_
 
 instance Showable Double where
   show_ = fromJSStr . jsShowD
@@ -24,6 +31,7 @@ instance Showable Integer where
 
 instance Showable String where
   show_ xs = '"' : xs ++ "\""
+  toStr    = id
 
 instance Showable Bool where
   show_ True  = "True"

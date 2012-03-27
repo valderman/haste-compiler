@@ -26,6 +26,7 @@ Library
     Exposed-Modules:
         Haste
         Haste.Reactive
+        Haste.Reactive.DOM
     Other-Modules:
         Haste.Prim
         Haste.Readable

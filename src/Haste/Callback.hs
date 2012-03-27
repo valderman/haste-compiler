@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module Haste.Callback (Callback, mkCallback, ElemID, Event (..),
+module Haste.Callback (Callback, mkCallback, ElemID, PropID, Event (..),
                        setCallback, getProp, setProp) where
 import Haste.Prim
 import Foreign.Ptr (Ptr)
