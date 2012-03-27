@@ -72,7 +72,7 @@ instance PrettyJS JSStmt where
     line $ out "}" >> endl
   
   emit (Case ex alts) = do
-    line $ out "switch(C(" >> emit ex >> out ")){"
+    line $ out "switch(" >> emit ex >> out "){"
     indentFurther $ mapM_ emit alts
     line $ out "}"
 
@@ -128,7 +128,8 @@ instance PrettyJS JSExp where
     indent $ out "}"
 
   -- A nullary data constructor will never be applied to anything, so it's
-  -- perfectly safe to generate it as a value right away.
+  -- perfectly safe to generate it as a value right away. It's also safe to
+  -- unpack it.
   emit (DataCon tag []) = do
     out "[" >> emit tag >> out "]"
   emit (DataCon tag stricts) = do
