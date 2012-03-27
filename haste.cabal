@@ -26,13 +26,13 @@ Library
     Exposed-Modules:
         Haste
         Haste.Reactive
-        Haste.Reactive.DOM
+        Haste.Reactive.Signal
     Other-Modules:
         Haste.Prim
         Haste.Readable
         Haste.Showable
         Haste.Callback
-        Haste.Reactive.Signal
+        Haste.Reactive.DOM
     Build-Depends:
         base,
         ghc-prim,

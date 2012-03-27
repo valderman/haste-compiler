@@ -1,7 +1,7 @@
 -- | DOM events and utilities for the Haste reactive library.
 module Haste.Reactive.DOM (valueOf, valueAt, bind, (=:)) where
 import Haste
-import Haste.Reactive
+import Haste.Reactive.Signal
 
 -- | The value property of the given element, updated whenever an onchange
 --   event is raised.
@@ -32,3 +32,4 @@ bind el pr = sink $ \x -> setProp el pr (toStr x)
 -- | Infix version of 'bind'.
 (=:) :: Showable a => (ElemID, PropID) -> Signal a -> IO ()
 (el, pr) =: x = bind el pr x
+infixl 0 =:
