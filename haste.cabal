@@ -32,6 +32,7 @@ Library
         Haste.Readable
         Haste.Showable
         Haste.Callback
+        Haste.Random
         Haste.Reactive.DOM
     Build-Depends:
         base,

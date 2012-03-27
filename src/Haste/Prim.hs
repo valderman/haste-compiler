@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash #-}
-module Haste.Prim (JSString, toJSStr, fromJSStr, round_, NumberRep,
-                   JSAny, mkPtr) where
+module Haste.Prim (JSString, toJSStr, fromJSStr, NumberRep (..), JSAny,
+                   mkPtr) where
 import Foreign.Ptr
 import Unsafe.Coerce
 import GHC.CString
@@ -40,7 +40,9 @@ fromJSStr :: JSString -> String
 fromJSStr s = s `seq` []
 
 class NumberRep a where
-  round_ :: a -> Int
+  round_     :: a -> Int
+  fromInt :: Int -> a
+  fromInt = unsafeCoerce#
   
 instance NumberRep Double where
   round_ (D# d) = I# (jsRound d)
