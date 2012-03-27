@@ -15,7 +15,8 @@ buildHasteStdLib _ _ _ _ = do
 buildWith (hastec:hs) = do
   putStrLn $ "Attempting build with " ++ hastec
   build <- runProcess hastec
-                      ["-O2", "--libinstall", "Haste", "Haste.Reactive"]
+                      ["-O2", "-Wall", "--libinstall", "Haste",
+                       "Haste.Reactive"]
                       (Just "./src")
                       Nothing
                       Nothing
