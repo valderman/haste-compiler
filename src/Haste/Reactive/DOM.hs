@@ -12,13 +12,15 @@ valueOf e = e `valueAt` OnChange
 valueAt :: Readable a => ElemID -> Event -> IO (Signal a)
 valueAt e evt = do
   str <- getProp e "value"
-  let Just x = fromStr str
-  (src,sig) <- source x
+  (src, sig) <- case fromStr str of
+                  Just x -> source x
+                  _      -> error $ "Bad initial value in valueAt: " ++ str
   
   success <- setCallback e evt $ do
     str' <- getProp e "value"
-    let Just x' = fromStr str'
-    push x' src
+    case fromStr str' of
+      Just x' -> push x' src
+      _       -> return ()
 
   if (not success) 
      then error $ "Not found: " ++ e
