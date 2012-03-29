@@ -17,8 +17,8 @@ Use cabal:
 Usage
 -----
 
-To compile your Haskell program to a Javascript ready to be included in a HTML
-document or run using a command line interpreter:
+To compile your Haskell program to a Javascript blob ready to be included in an
+HTML document or run using a command line interpreter:
 
     $ hastec myprog.hs
 
@@ -31,6 +31,13 @@ You can pass the same flags to hastec as you'd normally pass to GHC:
 
 haste also has its own set of command line arguments. Invoke it with --help to
 read more about them.
+
+Reactive web EDSL
+-----------------
+
+Haste comes with an (as of yet) incomplete, very basic, environment for writing
+client side web applications in a reactive fashion. See the included modules
+Haste.Reactive and Haste.Reactive.DOM for more details.
 
 
 Libraries
