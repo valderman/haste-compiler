@@ -9,10 +9,13 @@ import Data.IORef
 import qualified Data.IntMap as M
 
 data Signal a where
+  -- Applicative primitives; functor instance is also expressed in these.
   Pure      :: a -> Signal a
-  Join      :: Signal (IO a) -> Signal a
-  New       :: IO (Signal a) -> Signal a
   App       :: Signal (a -> b) -> Signal a -> Signal b
+  -- Perform rather than return the result of a signal returning IO.
+  Join      :: Signal (IO a) -> Signal a
+  -- These all have corresponding exported functions, with explanations.
+  New       :: IO (Signal a) -> Signal a
   Pipe      :: IORef (Maybe a) -> IORef [AnySig] -> Signal a
   Lazy      :: Eq a => Signal a -> Signal a
   Buffered  :: Signal a -> Signal a
@@ -169,7 +172,7 @@ new = New
 perform :: Signal (IO a) -> Signal a
 perform = Join
 
--- | Create a pipe.
+-- | Create a 'Pipe'.
 pipe :: a -> IO (Pipe a, Signal a)
 pipe = pipeWhen (\_ _ -> True)
 
@@ -180,7 +183,7 @@ pipeWhen pushwhen initial = do
   ls <- newIORef []
   return (P out ls pushwhen, Pipe out ls)
 
--- | Push data into a pipe.
+-- | Push data into a 'Pipe'.
 push :: a -> Pipe a -> IO ()
 push val (P ref ls pushwhen) = do
   old <- readIORef ref
@@ -214,7 +217,7 @@ start sig = do
   mapM_ (addLstnr (AnySig s)) (deps s)
 
 -- | Compile a signal. Some hooking up of signals happens within compile, with
---   the final ones happen in 'actuate'.
+--   the final ones happen in 'start'.
 compile :: Signal a -> IO (Sig a)
 compile (Pure x) = do
   mkSig (return x) (Just x)
