@@ -40,7 +40,7 @@ instance Readable Int where
 instance Readable Integer where
   readm str =
     case readm str :: Maybe Double of
-      Just d -> Just $ round d
+      Just d -> Just $ fromIntegral $ round_ d
       _      -> Nothing
 
 instance Readable Bool where
