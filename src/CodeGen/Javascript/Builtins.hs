@@ -7,6 +7,9 @@ import Control.Applicative
 toBuiltin :: P.Var -> Maybe JSVar
 toBuiltin v =
   case (modname, varname) of
+    (Just "GHC.Prim", "coercionToken#") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "coercionToken"}    
     (Just "GHC.Prim", "realWorld#") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "realWorld"}
@@ -14,7 +17,7 @@ toBuiltin v =
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "err"}
     
--- Everything to do with unpacking had better be built in for compactness,
+    -- Everything to do with unpacking had better be built in for compactness,
     -- efficiency and space reasons.
     (Just "GHC.CString", "unpackCString#") ->
       Just $ JSVar {jsmod  = foreignModName,
