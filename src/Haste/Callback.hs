@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
 module Haste.Callback (Callback, mkCallback, ElemID, PropID, Event (..),
-                       setCallback, getProp, setProp) where
+                       setCallback, setTimeout, getProp, setProp) where
 import Haste.Prim
 import Foreign.Ptr (Ptr)
 import Control.Applicative
@@ -8,6 +8,7 @@ import Control.Applicative
 newtype Callback = Callback (Ptr (IO ()))
 
 foreign import ccall jsSetCB :: JSString -> JSString -> Callback -> IO Bool
+foreign import ccall jsSetTimeout :: Int -> Callback -> IO ()
 foreign import ccall jsFind :: JSString -> IO Bool
 foreign import ccall jsGet :: JSString -> JSString  -> IO JSString
 foreign import ccall jsSet :: JSString -> JSString -> JSString -> IO ()
@@ -36,6 +37,12 @@ data Event
   | OnChange
   | OnFocus
   | OnBlur
+
+-- | Wrapper for window.setTimeout; execute the given computation after a delay
+--   given in milliseconds.
+setTimeout :: Int -> IO () -> IO ()
+setTimeout delay cb =
+  jsSetTimeout delay (mkCallback $! cb)
 
 -- | Set a callback on an event of an element.
 --   Returns False if the given element could not be found.

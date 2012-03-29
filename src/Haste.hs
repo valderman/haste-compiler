@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module Haste (alert, prompt, eval, round_, fromInt,
+module Haste (alert, prompt, eval, round_, fromInt, writeLog,
               module Haste.Readable, module Haste.Showable,
               module Haste.Callback, module Haste.Random) where
 import Haste.Prim
@@ -9,6 +9,7 @@ import Haste.Callback
 import Haste.Random
 
 foreign import ccall jsAlert  :: JSString -> IO ()
+foreign import ccall jsLog  :: JSString -> IO ()
 foreign import ccall jsPrompt :: JSString -> IO JSString
 foreign import ccall jsEval   :: JSString -> IO JSString
 
@@ -25,3 +26,7 @@ prompt q = do
 -- | Javascript eval() function.
 eval :: String -> IO String
 eval js = jsEval (toJSStr js) >>= return . fromJSStr
+
+-- | Use console.log to write a message.
+writeLog :: String -> IO ()
+writeLog = jsLog . toJSStr
