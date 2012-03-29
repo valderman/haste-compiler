@@ -1,7 +1,8 @@
 {-# LANGUAGE GADTs #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 module Haste.Reactive.Signal (
-  Signal, start, lazy, buffered, new, perform, pipe, pipeWhen, push) where
+  Signal, start, lazy, buffered, new, perform, async,
+  pipe, pipeWhen, push) where
 import Control.Applicative
 import Control.Monad
 import Data.IORef
@@ -15,6 +16,7 @@ data Signal a where
   Pipe     :: IORef (Maybe a) -> IORef [AnySig] -> Signal a
   Lazy     :: Eq a => Signal a -> Signal a
   Buffered :: Signal a -> Signal a
+  Async    :: Signal (Pipe a -> IO ()) -> Signal a
 
 instance Functor Signal where
   fmap f s = App (Pure f) s
@@ -136,6 +138,12 @@ data Pipe a = P {
     pipepush  :: Maybe a -> Maybe a -> Bool
   }
 
+-- | Create an asynchronous signal. The computation returned by the incoming
+--   signal must set up a callback (or something else) that pushes a value
+--   into the provided pipe when it's time for the signal to continue.
+async :: Signal (Pipe a -> IO ()) -> Signal a
+async = Async
+
 -- | Turn a signal lazy. A lazy signal only propagates when its input actually
 --   changes.
 lazy :: Eq a => Signal a -> Signal a
@@ -206,7 +214,7 @@ compile (Pure x) = do
   mkSig (return x) (Just x)
 compile (Join sigm) = do
   sigm' <- compile sigm
-  sig <- mkSig (join $ action sigm') undefined
+  sig <- mkSig (join $ action sigm') Nothing
   return sig {deps = deps sigm'}
 compile (New create) = do
   create >>= compile
@@ -234,6 +242,13 @@ compile (Lazy sig) = do
               deps     = AnySig sig' : deps sig'}
 compile (Buffered sig) = do
   sig' <- compile sig
-  bfd <- mkSig (action sig') undefined
+  bfd <- mkSig (action sig') Nothing
   return bfd {pushWhen = \_ _ -> False,
               deps     = AnySig sig' : deps sig'}
+compile (Async setup) = do
+  -- Async is less tricky than you'd think; we set up the incoming signal as
+  -- an independent signal chain, which is responsible for setting a callback
+  -- or similar that pushes a value into the provided pipe when appropriate.
+  (p,s) <- pipe undefined
+  start $ perform $ setup <*> pure p
+  compile s
