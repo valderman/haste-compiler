@@ -1,114 +1,29 @@
-{-# LANGUAGE GADTs, FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 module Haste.Reactive.Signal (
-    Signal, Source, buffered, lazy, source, push, perform, start, sink, evaluate
-  ) where
-import Data.IORef
+  Signal, start, lazy, buffered, new, perform, pipe, pipeWhen, push) where
 import Control.Applicative
 import Control.Monad
-import System.IO.Unsafe
+import Data.IORef
 import qualified Data.IntMap as M
 
-data AnySignal where
-  AnySignal :: SigLike a => a -> AnySignal
+data Signal a where
+  Pure     :: a -> Signal a
+  Join     :: Signal (IO a) -> Signal a
+  New      :: IO (Signal a) -> Signal a
+  App      :: Signal (a -> b) -> Signal a -> Signal b
+  Pipe     :: IORef (Maybe a) -> IORef [AnySig] -> Signal a
+  Lazy     :: Eq a => Signal a -> Signal a
+  Buffered :: Signal a -> Signal a
 
-class SigLike a where
-  -- | Determine in which order this signal, and all its listeners, are
-  --   supposed to fire.
-  mark         :: Int -> a -> IO Int
-  -- | Activate signals in the order determined by the last call to mark.
-  collect      :: M.IntMap AnySignal -> a -> IO (M.IntMap AnySignal)
-  -- | Add b as a listener of a.
-  listensTo    :: AnySignal -> a -> IO ()
-  -- | Get all signals listening to this signal.
-  getListeners :: a -> IO [AnySignal]
-  -- | Evaluate the signal, update its output and mark all listeners as either
-  --   "should fire" or "should not fire" the next time it's poked.
-  poke         :: a -> IO ()
-  -- | Set whether the signal should fire on next poke or not.
-  setFire      :: a -> Bool -> IO ()
+instance Functor Signal where
+  fmap f s = App (Pure f) s
 
-newtype Source a = Source (Signal a)
+instance Applicative Signal where
+  pure  = Pure
+  (<*>) = App
 
--- | Represents a signal for listener dependency purposes. The Self value is
---   special in that it represents the final version of the Signal being built.
---   If we didn't do this, foo :: Signal a -> Signal b -> Signal c would
---   generate dependencies for the indermediate Signal a -> Signal (b -> c) 
---   values too!
---   We must, however, convert every instance of Self into Other whenever a
---   signal is used as an argument to another!
-data Listener = Self | Other AnySignal
-
-data Signal a = Signal {
-    -- | The action that produces the signal's output.
-    trigger      :: IO a,
-    -- | A function that, given the previous and the new output values of the
-    --   signal determines whether to trigger the signal's listeners or not.
-    propagate    :: a -> a -> Bool,
-    -- | The signal's output is written here, so it can be read by other
-    --   signals.
-    output       :: IORef a,
-    -- | All signals currently listening to this signal.
-    listeners    :: IORef [AnySignal],
-    -- | All signal listener relationships needed for this signal to function.
-    dependencies :: [(Listener, AnySignal)],
-    -- | The last place in the trigger order where this signal will trigger.
-    --   This is used internally to ensure signals are only triggered once,
-    --   after all of their dependencies have been met.
-    order        :: IORef Int,
-    -- | Should I fire the next time I'm poked?
-    shouldFire   :: IORef Bool
-  }
-
-instance SigLike AnySignal where
-  setFire (AnySignal s) f =
-    setFire s f
-  poke (AnySignal s) =
-    poke s
-  collect m (AnySignal s) =
-    collect m s
-  mark n (AnySignal s) =
-    mark n s
-  listensTo listener (AnySignal speaker) =
-    listener `listensTo` speaker
-  getListeners (AnySignal s) =
-    getListeners s
-
-instance SigLike (Signal a) where
-  setFire s f = do
-    writeIORef (shouldFire s) f
-
-  mark num sig = do
-    writeIORef (order sig) num
-    ls <- readIORef (listeners sig)
-    markAll (num+1) ls
-    where
-      markAll n (x:xs) = do
-        n' <- mark n x
-        markAll n' xs
-      markAll n _ =
-        return n
-  
-  collect m sig = do
-    m' <- M.insert <$> readIORef (order sig) <*> pure (AnySignal sig) <*> pure m
-    ls <- getListeners sig
-    foldM collect m' ls
-
-  poke sig = do
-    firingIsAppropriate <- readIORef (shouldFire sig)
-    writeIORef (shouldFire sig) False
-    when firingIsAppropriate $ do
-      let out = output sig
-      old <- readIORef out
-      new <- trigger sig
-      writeIORef out new
-      ls <- getListeners sig
-      when (propagate sig old new) $ do
-        mapM_ (\l -> setFire l True) ls
-
-  listensTo l sig = modifyIORef (listeners sig) $ \ls -> l : ls
-  getListeners    = readIORef . listeners
-
--- | Activate a signal, recursively notifying all listeners.
+-- | Most of the methods in SigLike deal with updating signals.
 --   The algorithm for the cascaded update is a bit tricky; as signals,
 --   particularly at the end of a chain, may contain side effects, we don't
 --   want them to fire more than at most once per event. Thus, we can't just
@@ -143,161 +58,182 @@ instance SigLike (Signal a) where
 --  signal will fire.
 --  After being poked, all signals immediately reset to "no, don't fire on
 --  next poke," to get ready for the next event.
-activate :: SigLike a => a -> IO ()
-activate sig = do
-  _ <- mark 0 sig
-  sigs <- collect M.empty sig
-  setFire sig True
-  mapM_ (poke . snd) $ M.toAscList sigs
-  return ()
+class SigLike a where
+  mark     :: Int -> a -> IO Int
+  collect  :: M.IntMap AnySig -> a -> IO (M.IntMap AnySig)
+  poke     :: a -> IO ()
+  setFire  :: a -> Bool -> IO ()
+  getLstns :: a -> IO [AnySig]
+  addLstnr :: AnySig -> a -> IO ()
 
--- | Evaluate a signal, and save and return its output, but don't notify any
---   listeners.
-evaluate :: Signal a -> IO a
-evaluate sig = do
-  res <- trigger sig
-  writeIORef (output sig) res
-  return res
+instance SigLike (Sig a) where
+  setFire sig f = do
+    writeIORef (shouldFire sig) f
 
-unSelf :: Signal a -> (Listener, AnySignal) -> (Listener, AnySignal)
-unSelf sig (Self, dep) = (Other $ AnySignal sig, dep)
-unSelf _ x             = x
-
-instance Functor Signal where
-  fmap f sig = Signal {
-      trigger      = trigger sig >>= return . f,
-      output       = newRef sig undefined,
-      listeners    = newRef sig [],
-      propagate    = alwaysPropagate,
-      order        = newRef sig 0,
-      shouldFire   = newRef sig False,
-      dependencies = (Self, AnySignal sig) : map (unSelf sig) (dependencies sig)
-    }
-
--- | Applicative is the main interface for composing signals. Note that the
---   <*> operation will reset the propagation control function of its left hand
---   operand; thus, lazy foo <*> bar <==> foo <*> bar.
-instance Applicative Signal where
-  pure x = Signal {
-      trigger      = pure x,
-      propagate    = alwaysPropagate,
-      output       = newRef x x,
-      listeners    = newRef x [],
-      order        = newRef x 0,
-      shouldFire   = newRef x False,
-      dependencies = []
-    }
-
-  sig <*> x = Signal {
-      trigger      = app,
-      output       = newRefIO x app,
-      listeners    = newRef x [],
-      propagate    = alwaysPropagate,
-      order        = newRef x 0,
-      shouldFire   = newRef x False,
-      dependencies =
-        (Self, AnySignal x) : dependencies sig ++ map (unSelf x) (dependencies x)
-    }
+  mark num sig = do
+    writeIORef (order sig) num
+    ls <- readIORef (listeners sig)
+    markAll (num+1) ls
     where
-      app = do
-        x' <- readIORef (output x)
-        f <- evaluate sig
-        return $ f x'
+      markAll n (x:xs) = do
+        n' <- mark n x
+        markAll n' xs
+      markAll n _ =
+        return n
+  
+  collect m sig = do
+    m' <- M.insert <$> readIORef (order sig) <*> pure (AnySig sig) <*> pure m
+    ls <- getLstns sig
+    foldM collect m' ls
 
--- | Set upp all connections for a given signal and make it respond to inputs.
---   An IORef always pointing to the latest output from the signal is returned.
-start :: Signal a -> IO (IORef a)
-start sig = do
-  sequence_ $ map addDep (dependencies sig)
-  return $ output sig
-  where
-    addDep (Self, dep)    = AnySignal sig `listensTo` dep
-    addDep (Other s, dep) = s `listensTo` dep
+  poke sig = do
+    firingIsAppropriate <- readIORef (shouldFire sig)
+    writeIORef (shouldFire sig) False
+    when firingIsAppropriate $ do
+      oldVal <- readIORef (output sig)
+      newVal <- action sig
+      writeIORef (output sig) (Just newVal)
+      ls <- getLstns sig
+      when (pushWhen sig oldVal (Just newVal)) $ do
+        mapM_ (\l -> setFire l True) ls
 
--- | Attach a "sink" to the end of a signal. The sink is an IO action that gets
---   executed whenever the signal is triggered.
-sink :: (a -> IO ()) -> Signal a-> IO ()
-sink act sig = do
-  _ <- start $ perform $ act <$> sig
-  return ()
+  addLstnr l s = do
+    ls <- readIORef (listeners s)
+    writeIORef (listeners s) (l:ls)
+  
+  getLstns = readIORef . listeners
 
--- | Turn a signal that would output an IO computation into one which will
---   perform the computation and output its result when activated.
---   Before the signal has been activated once, its output is undefined.
-perform :: Signal (IO a) -> Signal a
-perform sig = self
-  where
-    self = Signal {trigger      = join $ trigger sig,
-                   output       = newRefIO sig (return undefined),
-                   listeners    = listeners sig,
-                   propagate    = neverPropagate,
-                   order        = newRef sig 0,
-                   shouldFire   = newRef sig False,
-                   dependencies = dependencies sig}
+instance SigLike AnySig where
+  mark n (AnySig s)     = mark n s
+  collect m (AnySig s)  = collect m s
+  poke (AnySig s)       = poke s
+  setFire (AnySig s) f  = setFire s f
+  addLstnr l (AnySig s) = addLstnr l s
+  getLstns (AnySig s)   = getLstns s
 
--- | A buffered signal never activates its listeners.
+data AnySig where
+  AnySig :: SigLike a => a -> AnySig
+
+-- | The role of the Sig data type is to keep track of values associated with
+--   various signals internally.
+data Sig a = Sig {
+    action     :: IO a,
+    listeners  :: IORef [AnySig],
+    output     :: IORef (Maybe a),
+    pushWhen   :: Maybe a -> Maybe a -> Bool,
+    shouldFire :: IORef Bool,
+    order      :: IORef Int,
+    deps       :: [AnySig]
+  }
+
+-- | A pipe is an event generating communications channel. If data is 'push'ed
+--   into it, it appears at the output of the corresponding signal, which also
+--   triggers. Pushing data into a pipe is the only way to trigger a chain of
+--   events.
+data Pipe a = P {
+    pipeout   :: IORef (Maybe a),
+    pipelstns :: IORef [AnySig],
+    pipepush  :: Maybe a -> Maybe a -> Bool
+  }
+
+-- | Turn a signal lazy. A lazy signal only propagates when its input actually
+--   changes.
+lazy :: Eq a => Signal a -> Signal a
+lazy = Lazy
+
+-- | Buffer a signal. A buffered signal never triggers its listeners.
 buffered :: Signal a -> Signal a
-buffered sig = self
-  where
-    self = Signal {trigger      = readIORef (output sig),
-                   output       = newRefIO sig (readIORef $ output sig),
-                   listeners    = newRef sig [],
-                   propagate    = neverPropagate,
-                   order        = newRef sig 0,
-                   shouldFire   = newRef sig False,
-                   dependencies =
-                     (Other$AnySignal self, AnySignal sig) : map (unSelf sig) (dependencies sig)}
+buffered = Buffered
 
--- | A lazy signal only activates its listeners whenever its output changes.
-lazy :: (Show a, Eq a) => Signal a -> Signal a
-lazy sig = initial `seq` self
-  where
-    act = readIORef $ output sig
-    initial = newRefIO sig $ evaluate sig
-    self = Signal {trigger      = act,
-                   output       = initial,
-                   listeners    = newRef sig [],
-                   propagate    = (/=),
-                   order        = newRef sig 0,
-                   shouldFire   = newRef sig False,
-                   dependencies =
-                     (Other$AnySignal self, AnySignal sig) : map (unSelf sig) (dependencies sig)}
+-- | Create a new signal using a signal generator.
+new :: IO (Signal a) -> Signal a
+new = New
 
--- | Create a signal source. A source lets you raise signals by 'push'ing
---   values into it. Each pushed value will trigger the corresponding signal.
-source :: a -> IO (Source a, Signal a)
-source initial = do
+-- | If a signal returns an IO action, perform it rather than return it.
+--   This might go away in the future in favour of Signal instances of Monad
+--   and MonadIO.
+perform :: Signal (IO a) -> Signal a
+perform = Join
+
+-- | Create a pipe.
+pipe :: a -> IO (Pipe a, Signal a)
+pipe = pipeWhen (\_ _ -> True)
+
+-- | Create a pipe with a custom policy for when the push should propagate.
+pipeWhen :: (Maybe a -> Maybe a -> Bool) -> a -> IO (Pipe a, Signal a)
+pipeWhen pushwhen initial = do
+  out <- newIORef (Just initial)
+  ls <- newIORef []
+  return (P out ls pushwhen, Pipe out ls)
+
+-- | Push data into a pipe.
+push :: a -> Pipe a -> IO ()
+push val (P ref ls pushwhen) = do
+  old <- readIORef ref
+  writeIORef ref (Just val)
+  when (pushwhen old (Just val)) $ do
+    lstns <- readIORef ls
+    foldM_ mark 0 lstns
+    sigs <- foldM collect M.empty lstns
+    mapM_ (flip setFire True) lstns
+    mapM_ (poke . snd) $ M.toAscList sigs
+
+-- | Create a new internal signal builder structure thingy.
+mkSig :: IO a -> Maybe a -> IO (Sig a)
+mkSig act initial = do
   out <- newIORef initial
   ls <- newIORef []
-  l <- newIORef 0
+  ord <- newIORef 0
   fire <- newIORef False
-  let self = Signal {
-          trigger      = readIORef out,
-          output       = out,
-          listeners    = ls,
-          propagate    = alwaysPropagate,
-          order        = l,
-          shouldFire   = fire,
-          dependencies = []
-        }
-  return (Source self, self)
+  return $ Sig {action     = act,
+                listeners  = ls,
+                output     = out,
+                deps       = [],
+                order      = ord,
+                shouldFire = fire,
+                pushWhen   = \_ _ -> True}
 
--- | Push a value into an event source.
-push :: a -> Source a -> IO ()
-push x (Source sig) = do
-  writeIORef (output sig) x
-  activate sig
+-- | Compile a signal, hook up all its dependencies and activate it.
+start :: Signal a -> IO ()
+start sig = do
+  s <- compile sig
+  mapM_ (addLstnr (AnySig s)) (deps s)
 
-{-# NOINLINE newRef #-}
-newRef :: a -> b -> IORef b
-newRef _ val = unsafePerformIO $ newIORef val
-
-{-# NOINLINE newRefIO #-}
-newRefIO :: a -> IO b -> IORef b
-newRefIO _ val = unsafePerformIO $! val >>= newIORef
-
-alwaysPropagate :: a -> a -> Bool
-alwaysPropagate _ _ = True
-
-neverPropagate :: a -> a -> Bool
-neverPropagate _ _ = False
+-- | Compile a signal. Some hooking up of signals happens within compile, with
+--   the final ones happen in 'actuate'.
+compile :: Signal a -> IO (Sig a)
+compile (Pure x) = do
+  mkSig (return x) (Just x)
+compile (Join sigm) = do
+  sigm' <- compile sigm
+  sig <- mkSig (join $ action sigm') undefined
+  return sig {deps = deps sigm'}
+compile (New create) = do
+  create >>= compile
+compile (Pipe out ls) = do
+  p <- mkSig (readIORef out >>= \(Just x) -> return x) Nothing
+  return p {listeners = ls,
+            output    = out}
+compile (App f x) = do
+  f' <- compile f
+  x' <- compile x
+  -- x is "done" - register all its dependencies
+  mapM_ (addLstnr (AnySig x')) (deps x')
+  
+  s <- mkSig (act f' x') Nothing
+  return s {deps = AnySig x' : deps f'}
+  where
+    act f' x' = do
+      f'' <- action f'
+      Just x'' <- readIORef $ output x'
+      return $ f'' x''
+compile (Lazy sig) = do
+  sig' <- compile sig
+  lzy <- mkSig (action sig') Nothing
+  return lzy {pushWhen = (/=),
+              deps     = AnySig sig' : deps sig'}
+compile (Buffered sig) = do
+  sig' <- compile sig
+  bfd <- mkSig (action sig') undefined
+  return bfd {pushWhen = \_ _ -> False,
+              deps     = AnySig sig' : deps sig'}

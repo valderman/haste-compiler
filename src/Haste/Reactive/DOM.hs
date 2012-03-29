@@ -2,6 +2,7 @@
 module Haste.Reactive.DOM (valueOf, valueAt, bind, (=:)) where
 import Haste
 import Haste.Reactive.Signal
+import Control.Applicative
 
 -- | The value property of the given element, updated whenever an onchange
 --   event is raised.
@@ -13,7 +14,7 @@ valueAt :: Readable a => ElemID -> Event -> IO (Signal a)
 valueAt e evt = do
   str <- getProp e "value"
   (src, sig) <- case fromStr str of
-                  Just x -> source x
+                  Just x -> pipe x
                   _      -> error $ "Bad initial value in valueAt: " ++ str
   
   success <- setCallback e evt $ do
@@ -35,3 +36,7 @@ bind el pr = sink $ \x -> setProp el pr (toStr x)
 (=:) :: Showable a => (ElemID, PropID) -> Signal a -> IO ()
 (el, pr) =: x = bind el pr x
 infixl 0 =:
+
+sink :: (a -> IO ()) -> Signal a -> IO ()
+sink act sig = do
+  start $ perform $ act <$> sig
