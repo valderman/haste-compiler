@@ -45,21 +45,21 @@ setCallback elemId evt f =
   where
     evtName =
       case evt of
-        OnLoad      -> "onload"
-        OnUnload    -> "onunload"
-        OnClick     -> "onclick"
-        OnDblClick  -> "ondblclick"
-        OnMouseDown -> "onmousedown"
-        OnMouseUp   -> "onmouseup"
-        OnMouseMove -> "onmousemove"
-        OnMouseOver -> "onmouseover"
-        OnMouseOut  -> "onmouseout"
-        OnKeyPress  -> "onkeypress"
-        OnKeyUp     -> "onkeyup"
-        OnKeyDown   -> "onkeydown"
-        OnChange    -> "onchange"
-        OnFocus     -> "onfocus"
-        OnBlur      -> "onblur"
+        OnLoad      -> "load"
+        OnUnload    -> "unload"
+        OnClick     -> "click"
+        OnDblClick  -> "dblclick"
+        OnMouseDown -> "mousedown"
+        OnMouseUp   -> "mouseup"
+        OnMouseMove -> "mousemove"
+        OnMouseOver -> "mouseover"
+        OnMouseOut  -> "mouseout"
+        OnKeyPress  -> "keypress"
+        OnKeyUp     -> "keyup"
+        OnKeyDown   -> "keydown"
+        OnChange    -> "change"
+        OnFocus     -> "focus"
+        OnBlur      -> "blur"
 
 withElem :: ElemID -> (JSString -> IO a) -> IO a
 withElem e act = do
