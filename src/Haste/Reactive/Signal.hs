@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 module Haste.Reactive.Signal (
-  Signal, start, lazy, buffered, new, perform, async,
+  Signal, start, lazy, buffered, new, perform, async, initially,
   pipe, pipeWhen, push) where
 import Control.Applicative
 import Control.Monad
@@ -9,14 +9,15 @@ import Data.IORef
 import qualified Data.IntMap as M
 
 data Signal a where
-  Pure     :: a -> Signal a
-  Join     :: Signal (IO a) -> Signal a
-  New      :: IO (Signal a) -> Signal a
-  App      :: Signal (a -> b) -> Signal a -> Signal b
-  Pipe     :: IORef (Maybe a) -> IORef [AnySig] -> Signal a
-  Lazy     :: Eq a => Signal a -> Signal a
-  Buffered :: Signal a -> Signal a
-  Async    :: Signal (Pipe a -> IO ()) -> Signal a
+  Pure      :: a -> Signal a
+  Join      :: Signal (IO a) -> Signal a
+  New       :: IO (Signal a) -> Signal a
+  App       :: Signal (a -> b) -> Signal a -> Signal b
+  Pipe      :: IORef (Maybe a) -> IORef [AnySig] -> Signal a
+  Lazy      :: Eq a => Signal a -> Signal a
+  Buffered  :: Signal a -> Signal a
+  Async     :: Signal (Pipe a -> IO ()) -> Signal a
+  Initially :: a -> Signal a -> Signal a
 
 instance Functor Signal where
   fmap f s = App (Pure f) s
@@ -138,6 +139,11 @@ data Pipe a = P {
     pipepush  :: Maybe a -> Maybe a -> Bool
   }
 
+-- | Set an initial value for a signal. This is the value that will be read
+--   by others before the signal has triggered.
+initially :: a -> Signal a -> Signal a
+initially = Initially
+
 -- | Create an asynchronous signal. The computation returned by the incoming
 --   signal must set up a callback (or something else) that pushes a value
 --   into the provided pipe when it's time for the signal to continue.
@@ -252,3 +258,7 @@ compile (Async setup) = do
   (p,s) <- pipe undefined
   start $ perform $ setup <*> pure p
   compile s
+compile (Initially x sig) = do
+  sig' <- compile sig
+  writeIORef (output sig') (Just x)
+  return sig'
