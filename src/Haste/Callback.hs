@@ -41,7 +41,7 @@ data Event
 --   Returns False if the given element could not be found.
 setCallback :: ElemID -> Event -> IO () -> IO Bool
 setCallback elemId evt f =
-  jsSetCB (toJSStr elemId) (toJSStr evtName) (mkCallback f)
+  jsSetCB (toJSStr elemId) (toJSStr evtName) (mkCallback $! f)
   where
     evtName =
       case evt of
