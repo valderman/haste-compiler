@@ -25,6 +25,7 @@ Library
     GHC-Options: -Wall -O0
     Exposed-Modules:
         Haste
+        Haste.JSON
         Haste.Reactive
         Haste.Reactive.Signal
     Other-Modules:

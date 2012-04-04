@@ -16,7 +16,7 @@ buildWith (hastec:hs) = do
   putStrLn $ "Attempting build with " ++ hastec
   build <- runProcess hastec
                       ["-O2", "-Wall", "--libinstall", "Haste",
-                       "Haste.Reactive"]
+                       "Haste.Reactive", "Haste.JSON"]
                       (Just "./src")
                       Nothing
                       Nothing

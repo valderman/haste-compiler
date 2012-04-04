@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
 module Haste (alert, prompt, eval, round_, fromInt, writeLog, JSString,
-              catJSStr,
+              catJSStr, toJSStr, fromJSStr,
               module Haste.Readable, module Haste.Showable,
               module Haste.Callback, module Haste.Random) where
 import Haste.Prim

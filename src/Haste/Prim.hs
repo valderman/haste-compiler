@@ -1,7 +1,7 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
     TypeSynonymInstances, FlexibleInstances#-}
 module Haste.Prim (JSString, toJSStr, fromJSStr, NumberRep (..), JSAny,
-                   mkPtr) where
+                   mkPtr, unsafeUnPtr) where
 import Foreign.Ptr
 import Unsafe.Coerce
 import GHC.CString
@@ -25,6 +25,13 @@ data FakePtr a = FakePtr a
 --   to a pointer.
 mkPtr :: a -> Ptr a
 mkPtr = unsafeCoerce . FakePtr
+
+-- | Unsafely read a value from a pointer. This is only safe if the value
+--   pointed to is immutable; even then, please don't do it.
+unsafeUnPtr :: Ptr a -> a
+unsafeUnPtr p =
+  case unsafeCoerce p of
+    FakePtr x -> x
 
 {-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
 {-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
