@@ -44,7 +44,7 @@ instance Num JSON where
 
 foreign import ccall "jsShow" jsShowD :: Double -> JSString
 foreign import ccall "jsUnquote" jsUnquote :: JSString -> JSString
-foreign import ccall "jsParseJSON" jsParseJSON :: JSString -> Ptr JSON
+foreign import ccall "jsParseJSON" jsParseJSON :: JSString -> Ptr (Maybe JSON)
 
 -- | Look up a JSON object from a JSON dictionary. Panics if the dictionary
 --   isn't a dictionary, or if it doesn't contain the given key.
@@ -99,7 +99,7 @@ encode = catJSStr . enc []
       | otherwise =
         opencu : closecu : acc
 
-decode :: JSString -> JSON
+decode :: JSString -> Maybe JSON
 decode = unsafeUnPtr . jsParseJSON
 
 instance Showable JSON where
