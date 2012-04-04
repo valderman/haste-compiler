@@ -1,4 +1,5 @@
-{-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash #-}
+{-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
+    TypeSynonymInstances, FlexibleInstances#-}
 module Haste.Prim (JSString, toJSStr, fromJSStr, NumberRep (..), JSAny,
                    mkPtr) where
 import Foreign.Ptr
@@ -6,6 +7,7 @@ import Unsafe.Coerce
 import GHC.CString
 import GHC.Types
 import GHC.Prim
+import Data.String
 
 foreign import ccall _str :: JSString
 
@@ -33,6 +35,9 @@ mkPtr = unsafeCoerce . FakePtr
 -- | Defined in lib/rts.js
 toJSStr :: String -> JSString
 toJSStr s = s `seq` _str
+
+instance IsString JSString where
+  fromString = toJSStr
 
 {-# NOINLINE fromJSStr #-}
 -- | Defined in lib/rts.js

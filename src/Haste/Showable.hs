@@ -33,6 +33,10 @@ instance Showable String where
   show_ xs = '"' : xs ++ "\""
   toStr    = id
 
+instance Showable JSString where
+  show_ = show_ . fromJSStr
+  toStr = toStr . fromJSStr
+
 instance Showable Bool where
   show_ True  = "True"
   show_ False = "False"
