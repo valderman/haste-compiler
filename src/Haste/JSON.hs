@@ -1,10 +1,11 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, PatternGuards #-}
+{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, PatternGuards, 
+             FlexibleInstances #-}
 -- | Haste-specific JSON library. JSON is common enough that it's a good idea
 --   to create as fast and small an implementation as possible. To that end,
 --   the parser is implemented entirely in Javascript, and works with any
 --   browser that supports JSON.parse; IE does this from version 8 and up, and
 --   everyone else has done it since just about forever.
-module Haste.JSON (JSON (..), encode, decode) where
+module Haste.JSON (JSON (..), encode, decode, (!), (~>)) where
 import Haste
 import Haste.Prim
 import Foreign.Ptr
@@ -45,6 +46,29 @@ foreign import ccall "jsShow" jsShowD :: Double -> JSString
 foreign import ccall "jsUnquote" jsUnquote :: JSString -> JSString
 foreign import ccall "jsParseJSON" jsParseJSON :: JSString -> Ptr JSON
 
+-- | Look up a JSON object from a JSON dictionary. Panics if the dictionary
+--   isn't a dictionary, or if it doesn't contain the given key.
+(!) :: JSON -> JSString -> JSON
+dict ! k =
+  case dict ~> k of
+    Just x -> x
+    _      -> error $ "Haste.JSON.!: unable to look up key " ++ fromJSStr k
+infixl 5 !
+
+class JSONLookup a where
+  -- | Look up a key in a JSON dictionary. Return Nothing if the key can't be
+  --   found for some reason.
+  (~>) :: a -> JSString -> Maybe JSON  
+infixl 5 ~>
+
+instance JSONLookup JSON where
+  (Dict m) ~> key = lookup key m
+  _        ~> _   = Nothing
+
+instance JSONLookup (Maybe JSON) where
+  (Just (Dict m)) ~> key = lookup key m
+  _               ~> _   = Nothing
+
 encode :: JSON -> JSString
 encode = catJSStr . enc []
   where
@@ -77,3 +101,6 @@ encode = catJSStr . enc []
 
 decode :: JSString -> JSON
 decode = unsafeUnPtr . jsParseJSON
+
+instance Showable JSON where
+  show_ = fromJSStr . encode
