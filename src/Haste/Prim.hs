@@ -1,5 +1,5 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
-    TypeSynonymInstances, FlexibleInstances#-}
+    TypeSynonymInstances, FlexibleInstances, OverlappingInstances #-}
 module Haste.Prim (JSString, toJSStr, fromJSStr, NumberRep (..), JSAny,
                    mkPtr, unsafeUnPtr) where
 import Foreign.Ptr
@@ -10,11 +10,19 @@ import GHC.Prim
 import Data.String
 
 foreign import ccall _str :: JSString
+foreign import ccall strEq :: JSString -> JSString -> Bool
+foreign import ccall strOrd :: JSString -> JSString -> Ptr Ordering
 
 type JSAny = Ptr Haste.Prim.Any
 data Any
 type JSString = Ptr JSChr
 data JSChr
+
+instance Eq JSString where
+  (==) = strEq
+
+instance Ord JSString where
+  compare a b = unsafeUnPtr (strOrd a b)
 
 -- | We need to fake the same representation as Ptr a; FakePtr does this.
 data FakePtr a = FakePtr a
