@@ -150,6 +150,17 @@ initially = Initially
 -- | Create an asynchronous signal. The computation returned by the incoming
 --   signal must set up a callback (or something else) that pushes a value
 --   into the provided pipe when it's time for the signal to continue.
+--   It's primarily meant as a building block for more high level signals.
+--   This example creates and starts a signal that reacts to input by throwing
+--   up a dialog box after two seconds.
+-- @
+--   main = do
+--     (p, sig) <- pipe ""
+--     sink alert later
+--     push "Two seconds later!" p
+--     where
+--       later = async $ (\str pipe -> setTimeout 2000 (push str pipe)) <$> sig
+-- @
 async :: Signal (Pipe a -> IO ()) -> Signal a
 async = Async
 
