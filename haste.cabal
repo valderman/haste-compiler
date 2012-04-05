@@ -26,6 +26,7 @@ Library
     Exposed-Modules:
         Haste
         Haste.JSON
+        Haste.Ajax
         Haste.Reactive
         Haste.Reactive.Signal
     Other-Modules:
