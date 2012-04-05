@@ -100,6 +100,6 @@ function jspure(val, _state_of_the_world) {
 
 // jscallme :: (JSString -> IO ()) -> IO ()
 function jsalert(callback, _state_of_the_world) {
-    callback('Hi, Haskell!');
-    return [1, 'it's this present state of grace i offer thee'];
+    callback('Hi, Haskell!', 0);
+    return [1, "it's this present state of grace i offer thee"];
 }
