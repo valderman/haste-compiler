@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 module Haste.Reactive.Signal (
   Signal, start, lazy, buffered, new, perform, async, initially,
-  pipe, pipeWhen, push) where
+  pipe, pipeWhen, push, triggers) where
 import Control.Applicative
 import Control.Monad
 import Data.IORef
@@ -21,6 +21,7 @@ data Signal a where
   Buffered  :: Signal a -> Signal a
   Async     :: Signal (Pipe a -> IO ()) -> Signal a
   Initially :: a -> Signal a -> Signal a
+  Trigger   :: Signal a -> Signal b -> Signal b
 
 instance Functor Signal where
   fmap f s = App (Pure f) s
@@ -142,6 +143,13 @@ data Pipe a = P {
     pipepush  :: Maybe a -> Maybe a -> Bool
   }
 
+-- | Cause signal B to trigger whenever signal A does. Sometimes, the only
+--   thing of value a signal does is to cause a side effect to happen, one
+--   which does not depend on any inputs except for setting the signal in
+--   motion. That is the need triggers fills.
+triggers :: Signal a -> Signal b -> Signal b
+triggers = Trigger
+
 -- | Set an initial value for a signal. This is the value that will be read
 --   by others before the signal has triggered.
 initially :: a -> Signal a -> Signal a
@@ -255,6 +263,12 @@ compile (App f x) = do
       f'' <- action f'
       Just x'' <- readIORef $ output x'
       return $ f'' x''
+compile (Trigger x sig) = do
+  x' <- compile x
+  sig' <- compile sig
+  -- x is done, register dependencies
+  mapM_ (addLstnr (AnySig x')) (deps x')
+  return sig' {deps = AnySig x' : deps sig'}
 compile (Lazy sig) = do
   sig' <- compile sig
   lzy <- mkSig (action sig') Nothing
