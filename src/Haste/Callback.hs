@@ -5,17 +5,17 @@ import Haste.Prim
 import Foreign.Ptr (Ptr)
 import Control.Applicative
 
-newtype Callback = Callback (Ptr (IO ()))
+newtype Callback a = Callback (Ptr a)
 
-foreign import ccall jsSetCB :: JSString -> JSString -> Callback -> IO Bool
-foreign import ccall jsSetTimeout :: Int -> Callback -> IO ()
+foreign import ccall jsSetCB :: JSString -> JSString -> Callback a -> IO Bool
+foreign import ccall jsSetTimeout :: Int -> Callback a -> IO ()
 foreign import ccall jsFind :: JSString -> IO Bool
 foreign import ccall jsGet :: JSString -> JSString  -> IO JSString
 foreign import ccall jsSet :: JSString -> JSString -> JSString -> IO ()
 
--- | Turn an IO computation into a callback that can be passed to a JS
+-- | Turn a computation into a callback that can be passed to a JS
 --   function.
-mkCallback :: IO () -> Callback
+mkCallback :: a -> Callback a
 mkCallback = Callback . mkPtr
 
 type ElemID = String
