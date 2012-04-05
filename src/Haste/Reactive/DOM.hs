@@ -51,4 +51,4 @@ valueAt e evt = do
      else return sig
 
 instance Showable a => Sink DOMObject a where
-  (D obj attr) << val = sink (setProp obj attr . show_) val
+  (D obj attr) << val = sink (setProp obj attr . toStr) val
