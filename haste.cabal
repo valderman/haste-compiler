@@ -29,6 +29,7 @@ Library
         Haste.Ajax
         Haste.Reactive
         Haste.Reactive.Signal
+        Haste.Reactive.Ajax
     Other-Modules:
         Haste.Prim
         Haste.Readable
