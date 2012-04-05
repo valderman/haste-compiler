@@ -70,7 +70,7 @@ instance JSONLookup (Maybe JSON) where
   _               ~> _   = Nothing
 
 encode :: JSON -> JSString
-encode = catJSStr . enc []
+encode = catJSStr "" . enc []
   where
     comma   = ","
     openbr  = "["

@@ -14,7 +14,7 @@ foreign import ccall jsAlert  :: JSString -> IO ()
 foreign import ccall jsLog    :: JSString -> IO ()
 foreign import ccall jsPrompt :: JSString -> IO JSString
 foreign import ccall jsEval   :: JSString -> IO JSString
-foreign import ccall jsCat    :: Ptr [JSString] -> JSString
+foreign import ccall jsCat    :: Ptr [JSString] -> JSString -> JSString
 
 -- | Javascript alert() function.
 alert :: String -> IO ()
@@ -34,6 +34,6 @@ eval js = jsEval (toJSStr js) >>= return . fromJSStr
 writeLog :: String -> IO ()
 writeLog = jsLog . toJSStr
 
--- | Concatenate a series of JSStrings.
-catJSStr :: [JSString] -> JSString
-catJSStr = jsCat . mkPtr
+-- | Concatenate a series of JSStrings using the specified separator.
+catJSStr :: JSString -> [JSString] -> JSString
+catJSStr sep strs = jsCat (mkPtr strs) sep
