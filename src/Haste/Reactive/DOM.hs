@@ -1,8 +1,31 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 -- | DOM events and utilities for the Haste reactive library.
-module Haste.Reactive.DOM (valueOf, valueAt, bind, (=:)) where
+module Haste.Reactive.DOM (valueOf, valueAt, DOMObject, domObj) where
 import Haste
 import Haste.Reactive.Signal
-import Control.Applicative
+import Haste.Reactive.Sink
+import Data.String
+
+-- | Represents a DOM object; a DOM object consists of an object ID,
+--   corresponding to the object's ID attribute in the HTML, and an attribute.
+data DOMObject = D {
+    d_object :: String,
+    d_attr   :: String
+  }
+
+-- | Create a 'DOMObject' from a string describing the object. For example,
+--   domObj "myobject.value" corresponds to the value attribute of the object
+--   with the ID "myobject".
+domObj :: String -> DOMObject
+domObj str =
+  case span (/= '.') str of
+    ([], _)     -> error "domObj: No object ID given!"
+    (_, [])     -> error "domObj: No object attribute given!"
+    (obj, attr) -> D obj (tail attr)
+
+instance IsString DOMObject where
+  fromString = domObj
 
 -- | The value property of the given element, updated whenever an onchange
 --   event is raised.
@@ -27,16 +50,5 @@ valueAt e evt = do
      then error $ "Not found: " ++ e
      else return sig
 
--- | When the given signal fires, write its result to the given property of
---   the given element.
-bind :: Showable a => ElemID -> PropID -> Signal a -> IO ()
-bind el pr = sink $ \x -> setProp el pr (toStr x)
-
--- | Infix version of 'bind'.
-(=:) :: Showable a => (ElemID, PropID) -> Signal a -> IO ()
-(el, pr) =: x = bind el pr x
-infixl 0 =:
-
-sink :: (a -> IO ()) -> Signal a -> IO ()
-sink act sig = do
-  start $ perform $ act <$> sig
+instance Showable a => Sink DOMObject a where
+  (D obj attr) << val = sink (setProp obj attr . show_) val

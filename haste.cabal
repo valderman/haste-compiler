@@ -36,6 +36,7 @@ Library
         Haste.Callback
         Haste.Random
         Haste.Reactive.DOM
+        Haste.Reactive.Sink
     Build-Depends:
         base,
         ghc-prim,
