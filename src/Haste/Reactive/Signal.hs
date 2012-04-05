@@ -264,11 +264,17 @@ compile (App f x) = do
       Just x'' <- readIORef $ output x'
       return $ f'' x''
 compile (Trigger x sig) = do
-  x' <- compile x
-  sig' <- compile sig
-  -- x is done, register dependencies
-  mapM_ (addLstnr (AnySig x')) (deps x')
-  return sig' {deps = AnySig x' : deps sig'}
+  case sig of
+    -- Async actually has two signals; input and output. If we want to trigger
+    -- an async signal, we must kick the input signal, not the returned output!
+    Async s ->
+      compile (Async (Trigger x s))
+    _ -> do
+      x' <- compile x
+      sig' <- compile sig
+      -- x is done, register dependencies
+      mapM_ (addLstnr (AnySig x')) (deps x')
+      return sig' {deps = AnySig x' : deps sig'}
 compile (Lazy sig) = do
   sig' <- compile sig
   lzy <- mkSig (action sig') Nothing
