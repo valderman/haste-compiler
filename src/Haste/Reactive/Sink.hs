@@ -12,6 +12,9 @@ class Sink s a | s -> a where
   (<<) :: s -> (Signal a) -> IO ()
 infixl 0 <<
 
+instance Sink (Pipe a) a where
+  p << sig = sink (\s -> push s p) sig
+
 class Snk a where
   type S a
   snk :: a -> S a

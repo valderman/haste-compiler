@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 module Haste.Reactive.Signal (
-  Signal, start, lazy, buffered, new, perform, async, initially,
+  Pipe, Signal, start, lazy, buffered, new, perform, async, initially,
   pipe, pipeWhen, push, triggers) where
 import Control.Applicative
 import Control.Monad
