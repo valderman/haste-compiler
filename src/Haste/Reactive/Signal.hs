@@ -148,7 +148,8 @@ data Pipe a = P {
 --   which does not depend on any inputs except for setting the signal in
 --   motion. That is the need triggers fills.
 triggers :: Signal a -> Signal b -> Signal b
-triggers = Trigger
+triggers t (Async sig) = Async (Trigger t sig)
+triggers t sig         = Trigger t sig
 
 -- | Set an initial value for a signal. This is the value that will be read
 --   by others before the signal has triggered.
@@ -264,17 +265,11 @@ compile (App f x) = do
       Just x'' <- readIORef $ output x'
       return $ f'' x''
 compile (Trigger x sig) = do
-  case sig of
-    -- Async actually has two signals; input and output. If we want to trigger
-    -- an async signal, we must kick the input signal, not the returned output!
-    Async s ->
-      compile (Async (Trigger x s))
-    _ -> do
-      x' <- compile x
-      sig' <- compile sig
-      -- x is done, register dependencies
-      mapM_ (addLstnr (AnySig x')) (deps x')
-      return sig' {deps = AnySig x' : deps sig'}
+  x' <- compile x
+  sig' <- compile sig
+  -- x is done, register dependencies
+  mapM_ (addLstnr (AnySig x')) (deps x')
+  return sig' {deps = AnySig x' : deps sig'}
 compile (Lazy sig) = do
   sig' <- compile sig
   lzy <- mkSig (action sig') Nothing
