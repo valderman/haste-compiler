@@ -30,7 +30,9 @@ textRequest m url kv cb = do
   where
     cb' = mkCallback $ cb . fromJSStr
     kv' = map (\(k,v) -> (toJSStr k, toJSStr v)) kv
-    url' = catJSStr "?" [toJSStr url, toQueryString kv']
+    url' = if null kv
+             then toJSStr url
+             else catJSStr "?" [toJSStr url, toQueryString kv']
 
 -- | Same as 'textRequest' but deals with JSStrings instead of Strings.
 textRequest_ :: Method
@@ -42,7 +44,7 @@ textRequest_ m url kv cb = do
   _ <- ajaxReq (toJSStr $ show_ m) url' True "" (mkCallback cb)
   return ()
   where
-    url' = catJSStr "?" [url, toQueryString kv]
+    url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
 
 -- | Make an AJAX request to a URL, interpreting the response as JSON.
 jsonRequest :: Method -> URL -> [(Key, Val)] -> (Maybe JSON -> IO ()) -> IO ()
@@ -61,7 +63,7 @@ jsonRequest_ m url kv cb = do
   return ()
   where
     cb' = mkCallback $ cb . decode
-    url' = catJSStr "?" [url, toQueryString kv]
+    url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
       
 toQueryString :: [(JSString, JSString)] -> JSString
 toQueryString = catJSStr "&" . map (\(k,v) -> catJSStr "=" [k,v])
