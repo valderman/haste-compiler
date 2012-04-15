@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Haste.Reactive.Ajax (jsonSig, ajaxSig) where
-import Haste.Reactive.Signal
+import FRP.Fursuit
+import FRP.Fursuit.Async
 import Haste.Ajax
 import Haste.JSON
 import Control.Applicative
@@ -11,20 +12,20 @@ import Control.Applicative
 --   returns.
 --   If no data was received, or if the data wasn't JSON, don't notify
 --   listeners.
-jsonSig :: Signal URL -> Signal [(Key, Val)] -> Signal JSON
+jsonSig :: Signal URL -> Signal [(Key, Val)] -> IO (Signal JSON)
 jsonSig requrl kvs = async (ajax <$> requrl <*> kvs)
   where
     ajax url kv p = do
       jsonRequest GET url kv $ \mjson ->
         case mjson of
-          Just json -> push json p
+          Just json -> write p json
           _         -> return ()
 
 -- | Create a signal for a generic AJAX request. It works just like 'jsonSig',
 --   but returns its output as plain text rather than JSON.
-ajaxSig :: Signal URL -> Signal [(Key, Val)] -> Signal String
+ajaxSig :: Signal URL -> Signal [(Key, Val)] -> IO (Signal String)
 ajaxSig requrl kvs = async (ajax <$> requrl <*> kvs)
   where
     ajax url kv p = do
       textRequest GET url kv $ \text -> do
-        push text p
+        write p text

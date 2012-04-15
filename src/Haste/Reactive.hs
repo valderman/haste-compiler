@@ -1,4 +1,3 @@
-module Haste.Reactive (module Signal, module DOM, module Sink) where
-import Haste.Reactive.Signal as Signal
+module Haste.Reactive (module DOM, module Ajax) where
 import Haste.Reactive.DOM as DOM
-import Haste.Reactive.Sink as Sink
+import Haste.Reactive.Ajax as Ajax

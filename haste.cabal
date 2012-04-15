@@ -22,14 +22,12 @@ Data-Files:
 
 Library
     Hs-Source-Dirs: src
-    GHC-Options: -Wall -O0
+    GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
         Haste.JSON
         Haste.Ajax
         Haste.Reactive
-        Haste.Reactive.Signal
-        Haste.Reactive.Ajax
     Other-Modules:
         Haste.Prim
         Haste.Readable
@@ -37,11 +35,11 @@ Library
         Haste.Callback
         Haste.Random
         Haste.Reactive.DOM
-        Haste.Reactive.Sink
+        Haste.Reactive.Ajax
     Build-Depends:
         base,
         ghc-prim,
-        containers
+        fursuit
     Default-Language: Haskell98
 
 Executable hastec

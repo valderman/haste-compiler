@@ -2,9 +2,8 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 -- | DOM events and utilities for the Haste reactive library.
 module Haste.Reactive.DOM (valueOf, valueAt, DOMObject, domObj) where
+import FRP.Fursuit
 import Haste
-import Haste.Reactive.Signal
-import Haste.Reactive.Sink
 import Data.String
 
 -- | Represents a DOM object; a DOM object consists of an object ID,
@@ -43,7 +42,7 @@ valueAt e evt = do
   success <- setCallback e evt $ do
     str' <- getProp e "value"
     case fromStr str' of
-      Just x' -> push x' src
+      Just x' -> write src x'
       _       -> return ()
 
   if (not success) 
