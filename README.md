@@ -7,12 +7,22 @@ A compiler to generate Javascript code from Haskell.
 Building
 --------
 
-Use cabal:
+Haste now depends on the Fursuit reactive library (http://ekblad.cc/fursuit)
+which you will have to install first. Then, use cabal (obviously, this is how
+you build Fursuit as well):
 
     $ runghc Setup.hs --user configure
     $ runghc Setup.hs build
     $ runghc Setup.hs install
 
+Next step,, get the base libraries from http://ekblad.cc/haste-libs.tar.bz2
+and untar them into your home directory; they unpack to ./.haste/ so
+everything will end up in its proper place.
+
+Finally, reinstall Fursuit after installing Haste, to ensure Haste generates
+intermediate code for it.
+
+Sorry about this annoying installation procedure!
 
 Usage
 -----
@@ -29,7 +39,7 @@ You can pass the same flags to hastec as you'd normally pass to GHC:
 
     $ hastec -O2 -fglasgow-exts myprog.hs
 
-haste also has its own set of command line arguments. Invoke it with --help to
+Haste also has its own set of command line arguments. Invoke it with --help to
 read more about them.
 
 Reactive web EDSL
@@ -95,7 +105,7 @@ Why yet another Haskell to Javascript compiler?
 -----------------------------------------------
 
 Existing implementations either produce huge code, require a fair amount of
-work to get going, or both. With haste, the idea is to give you a drop-in
+work to get going, or both. With Haste, the idea is to give you a drop-in
 replacement for GHC that generates relatively lean code.
 
 
@@ -121,5 +131,5 @@ Known issues
   and there's a round_ for those types that not only works but which is also
   much faster than Prelude's round would have been had it worked.
 
-* A program that has the value of _|_ may not always give a nice error
+* A program that has the value of bottom may not always give a nice error
   message.
