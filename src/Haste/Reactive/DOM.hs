@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs, FlexibleInstances, MultiParamTypeClasses #-}
 -- | DOM events and utilities for the Haste reactive library.
-module Haste.Reactive.DOM (valueOf, valueAt, DOMObject, domObj) where
+module Haste.Reactive.DOM (clicked, valueOf, valueAt, DOMObject, domObj) where
 import FRP.Fursuit
 import Haste
 import Data.String
@@ -22,6 +22,14 @@ domObj str =
 
 instance (Showable a, Readable a) => IsString (DOMObject a) where
   fromString = domObj
+
+-- | An event that gets raised whenever the element with the specified ID is
+--   clicked.
+clicked :: ElemID -> IO (Signal ())
+clicked e = do
+  (p,s) <- pipe ()
+  _ <- setCallback e OnClick (write p ())
+  return s
 
 -- | The value property of the given element, updated whenever an onchange
 --   event is raised.
