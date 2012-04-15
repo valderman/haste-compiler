@@ -39,6 +39,10 @@ Haste comes with an (as of yet) incomplete, very basic, environment for writing
 client side web applications in a reactive fashion. See the included modules
 Haste.Reactive and Haste.Reactive.DOM for more details.
 
+As the reactive library relies heavily on Applicative, you may find the idiom
+brackets of the Strathclyde Haskell Enhancement
+(https://personal.cis.strath.ac.uk/~conor/pub/she/) quite useful.
+
 
 Libraries
 ---------
