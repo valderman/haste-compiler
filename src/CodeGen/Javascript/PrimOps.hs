@@ -176,6 +176,7 @@ genOp op xs =
     RaiseOp        -> call "die"
     RaiseIOOp      -> call "die"
     NoDuplicateOp  -> head xs
+    CatchOp        -> call "jsCatch"
     x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
   where
     call f = NativeCall f xs
