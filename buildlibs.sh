@@ -20,7 +20,12 @@ popd
 
 pushd .
 cd $libpath/base
-hastec --libinstall $FLAGS -hide-package base -package-name base -I./include -i./dist-install/build -XMagicHash -XExistentialQuantification -XRank2Types -XScopedTypeVariables -XUnboxedTuples -XForeignFunctionInterface -XUnliftedFFITypes -XDeriveDataTypeable -XGeneralizedNewtypeDeriving -XFlexibleInstances -XStandaloneDeriving -XPatternGuards -XEmptyDataDecls -XNoImplicitPrelude -XCPP Data.Word Prelude Control.Applicative Data.Bits Data.Char Data.Either Data.Functor Data.HashTable Data.IORef Data.Maybe Data.Monoid Data.Ord Data.STRef.Lazy Data.STRef.Strict Data.STRef Control.Monad.Instances
+hastec --libinstall $FLAGS -hide-package base -package-name base -I./include -i./dist-install/build -XMagicHash -XExistentialQuantification -XRank2Types -XScopedTypeVariables -XUnboxedTuples -XForeignFunctionInterface -XUnliftedFFITypes -XDeriveDataTypeable -XGeneralizedNewtypeDeriving -XFlexibleInstances -XStandaloneDeriving -XPatternGuards -XEmptyDataDecls -XNoImplicitPrelude -XCPP Data.Word Prelude Control.Applicative Data.Bits Data.Char Data.Either Data.Functor Data.HashTable Data.IORef Data.Maybe Data.Monoid Data.Ord Data.STRef.Lazy Data.STRef.Strict Data.STRef Control.Monad.Instances Data.Fixed System.CPUTime
+popd
+
+pushd .
+cd $libpath/time
+hastec --libinstall $FLAGS -package-name time -cpp -fglasgow-exts -I./include Data.Time
 popd
 
 pushd .
