@@ -27,6 +27,7 @@ import CodeGen.Javascript.PrintJS
 import CodeGen.Javascript.Builtins
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.Optimize
+import CodeGen.Javascript.Errors
 
 generate :: ModuleName -> [StgBinding] -> JSMod
 generate modname binds =
@@ -277,17 +278,30 @@ genArg (StgTypeArg _) = error "Type argument remained in STG!"
 genLit :: Literal -> JSGen JSExp
 genLit l = do
   case l of
-    MachStr s       -> return . lit  $ unpackFS s
-    MachInt n       -> return . litN $ fromIntegral n
-    MachFloat f     -> return . litN $ fromRational f
-    MachDouble d    -> return . litN $ fromRational d
-    MachChar c      -> return $ lit c
-    MachWord w      -> return . litN $ fromIntegral w
-    MachWord64 w    -> return . litN $ fromIntegral w
-    MachNullAddr    -> return $ litN 0
-    MachInt64 n     -> return . litN $ fromIntegral n
-    LitInteger _ n  -> AST.Var <$> genVar n
-    MachLabel _ _ _ -> return $ lit ":(" -- Labels point to machine code - ignore!
+    MachStr s           -> return . lit  $ unpackFS s
+    MachInt n
+      | n > 2147483647 ||
+        n < -2147483648 -> do warn (largeConst "Int" n)
+                              return (runtimeError (constFail "Int" n))
+      | otherwise       -> return . litN $ fromIntegral n
+    MachFloat f         -> return . litN $ fromRational f
+    MachDouble d        -> return . litN $ fromRational d
+    MachChar c          -> return $ lit c
+    MachWord w          
+      | w > 0xffffffff  -> do warn (largeConst "Word" w)
+                              return (runtimeError (constFail "Word" w))
+      | otherwise       -> return . litN $ fromIntegral w
+    MachWord64 w        -> return . litN $ fromIntegral w
+    MachNullAddr        -> return $ litN 0
+    MachInt64 n         -> return . litN $ fromIntegral n
+    LitInteger _ n      -> AST.Var <$> genVar n
+    MachLabel _ _ _     -> return $ lit ":(" -- Labels point to machine code - ignore!
+  where
+    constFail t n = t ++ " constant " ++ show n ++ " doesn't fit in 32 bits!"
+    largeConst t n =
+      constFail t n ++ "\n" ++
+      "Your program will die with a friendly error message if this constant " ++
+      "is ever evaluated, to prevent data corruption!"
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String

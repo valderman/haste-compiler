@@ -1,9 +1,7 @@
 module CodeGen.Javascript.PrimOps (genOp) where
 import PrimOp
 import CodeGen.Javascript.AST as AST
-
-runtimeError :: String -> JSExp
-runtimeError s = NativeCall "die" [lit s]
+import CodeGen.Javascript.Errors
 
 -- | Generate primops.
 --   Many of these ops return lifted Bool values; however, no thunk is

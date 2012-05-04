@@ -74,6 +74,7 @@ Executable hastec
         CodeGen.Javascript.Module
         CodeGen.Javascript.Linker
         CodeGen.Javascript.Builtins
+        CodeGen.Javascript.Errors
     default-language: Haskell98
 
 Executable hastecat
