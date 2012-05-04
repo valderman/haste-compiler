@@ -192,11 +192,8 @@ instance PrettyJS JSExp where
 --   make the signed binary operators work for our unsigned words where
 --   necessary.
 emitParens :: JSOp -> JSExp -> JSExp -> PrettyM ()
-emitParens op a b
-  | isSignedBinOp op =
-    out "((" >> emit a >> emit op >> emit b >> out ")>>>0)"
-  | otherwise =
-    parens a >> emit op >> parens b
+emitParens op a b =
+  parens a >> emit op >> parens b
   where
     parens x = if expPrec x < opPrec op
                  then out "(" >> emit x >> out ")"
@@ -223,15 +220,6 @@ instance PrettyJS JSOp where
     BitAnd -> "&"
     BitXor -> "^"
     BitOr  -> "|"
-
-isSignedBinOp :: JSOp -> Bool
-isSignedBinOp BitAnd = True
-isSignedBinOp BitOr  = True
-isSignedBinOp BitXor = True
-isSignedBinOp Shl    = True
-isSignedBinOp ShrA   = True
-isSignedBinOp ShrL   = False -- >>> is unsigned; weird!
-isSignedBinOp _      = False
 
 instance PrettyJS JSVar where
   emit var =

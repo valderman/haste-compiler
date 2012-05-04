@@ -23,8 +23,8 @@ genOp op xs =
     -- Conversions
     ChrOp          -> NativeCall "String.fromCharCode" xs
     OrdOp          -> NativeMethCall (head xs) "charCodeAt" [lit (0::Double)]
-    Word2IntOp     -> head xs
-    Int2WordOp     -> head xs
+    Word2IntOp     -> BinOp BitAnd (head xs) (litN 0xffffffff)
+    Int2WordOp     -> BinOp ShrL (head xs) (litN 0)
     Int2FloatOp    -> head xs
     Int2DoubleOp   -> head xs
     Double2IntOp   -> head xs
@@ -33,12 +33,12 @@ genOp op xs =
     Float2DoubleOp -> head xs
     
     -- Narrowing ops
-    Narrow8IntOp   -> BinOp And (head xs) (lit (0xff :: Double))
-    Narrow16IntOp  -> BinOp And (head xs) (lit (0xffff :: Double))
-    Narrow32IntOp  -> BinOp And (head xs) (lit (0xffffffff :: Double))
-    Narrow8WordOp  -> BinOp And (head xs) (lit (0xff :: Double))
-    Narrow16WordOp -> BinOp And (head xs) (lit (0xffff :: Double))
-    Narrow32WordOp -> BinOp And (head xs) (lit (0xffffffff :: Double))
+    Narrow8IntOp   -> BinOp BitAnd (head xs) (lit (0xff :: Double))
+    Narrow16IntOp  -> BinOp BitAnd (head xs) (lit (0xffff :: Double))
+    Narrow32IntOp  -> BinOp BitAnd (head xs) (lit (0xffffffff :: Double))
+    Narrow8WordOp  -> BinOp BitAnd (head xs) (lit (0xff :: Double))
+    Narrow16WordOp -> BinOp BitAnd (head xs) (lit (0xffff :: Double))
+    Narrow32WordOp -> BinOp ShrL (BinOp BitAnd (head xs) (lit (0xffffffff :: Double))) (litN 0)
 
     -- Char ops
     CharGtOp -> binOp AST.GT
@@ -73,10 +73,10 @@ genOp op xs =
     WordMulOp -> binOp Mul
     WordQuotOp -> call "quot"
     WordRemOp -> binOp Mod
-    AndOp -> binOp BitAnd
-    OrOp -> binOp BitOr
-    XorOp -> binOp BitXor
-    SllOp -> binOp Shl
+    AndOp -> unsignedBinOp BitAnd
+    OrOp -> unsignedBinOp BitOr
+    XorOp -> unsignedBinOp BitXor
+    SllOp -> unsignedBinOp Shl
     SrlOp -> binOp ShrL
     WordGtOp -> binOp AST.GT
     WordGeOp -> binOp GTE
@@ -181,3 +181,6 @@ genOp op xs =
   where
     call f = NativeCall f xs
     binOp bop = let [x, y] = xs in BinOp bop x y
+    
+    -- Bitwise ops on words need to be unsigned; exploit the fact that >>> is!
+    unsignedBinOp bop = let [x,y] = xs in BinOp ShrL (BinOp bop x y) (litN 0)
