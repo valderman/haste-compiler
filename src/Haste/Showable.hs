@@ -2,9 +2,14 @@
              UndecidableInstances #-}
 module Haste.Showable (Showable (..)) where
 import Haste.Prim
+import Data.Word (Word, Word32)
+import Data.Int (Int32)
 
 foreign import ccall "jsShow" jsShowD :: Double -> JSString
 foreign import ccall "jsShow" jsShowF :: Float -> JSString
+foreign import ccall "jsShowI" jsShowI32 :: Int32 -> JSString
+foreign import ccall "jsShowI" jsShowW32 :: Word32 -> JSString
+foreign import ccall "jsShowI" jsShowW :: Word -> JSString
 foreign import ccall jsShowI :: Int -> JSString
 
 class Showable a where
@@ -25,6 +30,15 @@ instance Showable Float where
 
 instance Showable Int where
   show_ = fromJSStr . jsShowI
+
+instance Showable Int32 where
+  show_ = fromJSStr . jsShowI32
+
+instance Showable Word32 where
+  show_ = fromJSStr . jsShowW32
+
+instance Showable Word where
+  show_ = fromJSStr . jsShowW
 
 instance Showable Integer where
   show_ n = show n
