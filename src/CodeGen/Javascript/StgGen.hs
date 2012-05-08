@@ -29,6 +29,8 @@ import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.Optimize
 import CodeGen.Javascript.Errors
 import CodeGen.Javascript.Config
+import Data.Int
+import Data.Word
 
 generate :: Config -> ModuleName -> [StgBinding] -> JSMod
 generate cfg modname binds =
@@ -284,14 +286,14 @@ genLit l = do
     MachInt n
       | n > 2147483647 ||
         n < -2147483648 -> do warn (constFail "Int" n)
-                              return . litN $ fromIntegral n
+                              return $ truncInt n
       | otherwise       -> return . litN $ fromIntegral n
     MachFloat f         -> return . litN $ fromRational f
     MachDouble d        -> return . litN $ fromRational d
     MachChar c          -> return $ lit c
     MachWord w          
       | w > 0xffffffff  -> do warn (constFail "Word" w)
-                              return . litN $ fromIntegral w
+                              return $ truncWord w
       | otherwise       -> return . litN $ fromIntegral w
     MachWord64 w        -> return . litN $ fromIntegral w
     MachNullAddr        -> return $ litN 0
@@ -299,7 +301,10 @@ genLit l = do
     LitInteger _ n      -> AST.Var <$> genVar n
     MachLabel _ _ _     -> return $ lit ":(" -- Labels point to machine code - ignore!
   where
-    constFail t n = t ++ " constant " ++ show n ++ " doesn't fit in 32 bits!"
+    constFail t n = t ++ " literal " ++ show n ++ " doesn't fit in 32 bits;"
+                    ++ " truncating!"
+    truncInt n  = litN . fromIntegral $ (fromIntegral n :: Int32)
+    truncWord w = litN . fromIntegral $ (fromIntegral w :: Word32)
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String
