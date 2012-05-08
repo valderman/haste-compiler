@@ -28,16 +28,17 @@ import CodeGen.Javascript.Builtins
 import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.Optimize
 import CodeGen.Javascript.Errors
+import CodeGen.Javascript.Config
 
-generate :: ModuleName -> [StgBinding] -> JSMod
-generate modname binds =
+generate :: Config -> ModuleName -> [StgBinding] -> JSMod
+generate cfg modname binds =
   JSMod {
       AST.name = modname,
       AST.deps = foldl' insDep M.empty theMod,
       AST.code = foldl' insFun M.empty theMod
     }
   where
-    theMod = genAST modname binds
+    theMod = genAST cfg modname binds
 
     insFun m (_, NewVar (AST.Var name) fun) =
       M.insert name fun m
@@ -57,12 +58,12 @@ generate modname binds =
 --     function C.secondMethod(dict) {
 --       return dict[2];
 --     }
-genAST :: ModuleName -> [StgBinding] -> [(S.Set JSVar, JSStmt)]
-genAST modname binds =
+genAST :: Config -> ModuleName -> [StgBinding] -> [(S.Set JSVar, JSStmt)]
+genAST cfg modname binds =
   binds'
   where
     binds' =
-      map (depsAndCode . genJS myModName . uncurry (genBind True))
+      map (depsAndCode . genJS cfg myModName . uncurry (genBind True))
       $ concatMap unRec
       $ binds
 
@@ -86,7 +87,7 @@ genAST modname binds =
 --   single function being generated.
 --   Use `genBindRec` to generate code for local potentially recursive bindings 
 --   as their dependencies get merged into their parent's anyway.
-genBind :: Bool -> Bool -> StgBinding -> JSGen ()
+genBind :: Bool -> Bool -> StgBinding -> JSGen Config ()
 genBind onTopLevel partOfRecGroup (StgNonRec v rhs) = do
   pushBinding v
   v' <- genVar v
@@ -97,7 +98,7 @@ genBind onTopLevel partOfRecGroup (StgNonRec v rhs) = do
 genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 
-genBindRec :: StgBinding -> JSGen ()
+genBindRec :: StgBinding -> JSGen Config ()
 genBindRec bs@(StgRec _) =
   mapM_ (genBind False True . snd) (unRec bs)
 genBindRec b =
@@ -110,7 +111,7 @@ unRec (StgRec bs) = zip (repeat True) (map (uncurry StgNonRec) bs)
 unRec b           = [(False, b)]
 
 -- | Generate the RHS of a binding.
-genRhs :: Bool -> StgRhs -> JSGen JSExp
+genRhs :: Bool -> StgRhs -> JSGen Config JSExp
 genRhs recursive (StgRhsCon _ con args) = do
   -- Constructors are never partially applied, and we have arguments, so this
   -- is obviously a full application.
@@ -143,7 +144,7 @@ genDataConTag d = do
     _                          -> Right $ lit (fromIntegral $ dataConTag d :: Double)
 
 -- | Generate code for data constructor creation.
-genDataCon :: DataCon -> JSGen JSExp
+genDataCon :: DataCon -> JSGen Config JSExp
 genDataCon dc = do
   case genDataConTag dc of
     Right t@(Lit (Boolean _)) ->
@@ -158,7 +159,7 @@ genDataCon dc = do
     strict _            = False
 
 -- | Generate code for an STG expression.  
-genEx :: StgExpr -> JSGen JSExp
+genEx :: StgExpr -> JSGen Config JSExp
 genEx (StgApp f xs) = do
   f' <- genVar f
   xs' <- mapM genArg xs
@@ -185,9 +186,10 @@ genEx (StgConApp con args) = do
     evaluate _ arg    = arg
 genEx (StgOpApp op args _type) = do
   args' <- mapM genArg args
+  cfg <- getCfg
   return $ case op of
     StgPrimOp op' ->
-      genOp op' args'
+      genOp cfg op' args'
     StgPrimCallOp (PrimCall f _) ->
       NativeCall (unpackFS f) args'
     StgFCallOp (CCall (CCallSpec (StaticTarget f _) _ _)) _t ->
@@ -209,7 +211,7 @@ genEx (StgTick _ _ ex) = do
 genEx (StgLam _ _ _) =
   error "StgLam shouldn't happen during CG!"
 
-genCase :: StgExpr -> Id -> AltType -> [StgAlt] -> JSGen JSExp
+genCase :: StgExpr -> Id -> AltType -> [StgAlt] -> JSGen Config JSExp
 genCase ex scrut t alts = do
   ex' <- genEx ex
   scrut' <- genVar scrut
@@ -217,7 +219,7 @@ genCase ex scrut t alts = do
   emit $ NewVar (AST.Var scrut') ex'
   genAlts t scrut' res alts
 
-genAlts :: AltType -> JSVar -> JSVar -> [StgAlt] -> JSGen JSExp
+genAlts :: AltType -> JSVar -> JSVar -> [StgAlt] -> JSGen Config JSExp
 genAlts _ scrut res [alt] = do
   altStmts <- getStmts <$> genAlt scrut res alt
   -- As this alternative is the only one in this case expression, it's OK to
@@ -253,7 +255,7 @@ tyConIsBoolean tc =
     m = moduleNameString $ moduleName $ nameModule $ tyConName tc
 
 
-genAlt :: JSVar -> JSVar -> StgAlt -> JSGen JSAlt
+genAlt :: JSVar -> JSVar -> StgAlt -> JSGen Config JSAlt
 genAlt scrut res (con, args, used, body) = do
   construct <- case con of
     DEFAULT                                  -> return Def
@@ -270,26 +272,26 @@ genAlt scrut res (con, args, used, body) = do
   where
     bindVar var ix = NewVar (AST.Var var) (Index (AST.Var scrut) (litN ix))
 
-genArg :: StgArg -> JSGen JSExp
+genArg :: StgArg -> JSGen Config JSExp
 genArg (StgVarArg v)  = AST.Var <$> genVar v
 genArg (StgLitArg l)  = genLit l
 genArg (StgTypeArg _) = error "Type argument remained in STG!"
 
-genLit :: Literal -> JSGen JSExp
+genLit :: Literal -> JSGen Config JSExp
 genLit l = do
   case l of
     MachStr s           -> return . lit  $ unpackFS s
     MachInt n
       | n > 2147483647 ||
-        n < -2147483648 -> do warn (largeConst "Int" n)
-                              return (runtimeError (constFail "Int" n))
+        n < -2147483648 -> do warn (constFail "Int" n)
+                              return . litN $ fromIntegral n
       | otherwise       -> return . litN $ fromIntegral n
     MachFloat f         -> return . litN $ fromRational f
     MachDouble d        -> return . litN $ fromRational d
     MachChar c          -> return $ lit c
     MachWord w          
-      | w > 0xffffffff  -> do warn (largeConst "Word" w)
-                              return (runtimeError (constFail "Word" w))
+      | w > 0xffffffff  -> do warn (constFail "Word" w)
+                              return . litN $ fromIntegral w
       | otherwise       -> return . litN $ fromIntegral w
     MachWord64 w        -> return . litN $ fromIntegral w
     MachNullAddr        -> return $ litN 0
@@ -298,10 +300,6 @@ genLit l = do
     MachLabel _ _ _     -> return $ lit ":(" -- Labels point to machine code - ignore!
   where
     constFail t n = t ++ " constant " ++ show n ++ " doesn't fit in 32 bits!"
-    largeConst t n =
-      constFail t n ++ "\n" ++
-      "Your program will die with a friendly error message if this constant " ++
-      "is ever evaluated, to prevent data corruption!"
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String
@@ -340,7 +338,7 @@ toJSVar thisMod v msuffix =
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
-genVar :: Var -> JSGen JSVar
+genVar :: Var -> JSGen Config JSVar
 genVar var = do
   thisMod <- getModName
   case toBuiltin var of
@@ -357,7 +355,7 @@ genVar var = do
 --   results, so we need a new one.
 --   By keeping strictly to SSA, we ensure that this sort of lazy sharing is
 --   perfectly OK.
-genResultVar :: Var -> JSGen JSVar
+genResultVar :: Var -> JSGen Config JSVar
 genResultVar var = do
   thisMod <- getModName
   return $! toJSVar thisMod var (Just "::|RESULT|")

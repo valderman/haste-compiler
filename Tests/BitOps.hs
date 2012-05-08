@@ -8,7 +8,7 @@ num = 0xffffffff
 
 {-# NOINLINE int #-}
 int :: Int
-int = 0xffffffff
+int = -1
 
 runTest :: IO [String]
 runTest = return [

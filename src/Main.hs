@@ -32,7 +32,15 @@ argSpecs = [
                                          performLink   = False},
               info = "Install all compiled modules into the user's jsmod "
                      ++ "library\nrather than linking them together into a JS"
-                     ++ "blob."}
+                     ++ "blob."},
+    ArgSpec { optName = "opt-vague-ints",
+              updateCfg = \cfg _ -> cfg {wrapIntMath = id},
+              info = "Int math has 53 bits of precision, but gives incorrect "
+                     ++ "results rather than properly wrapping around when "
+                     ++ "those 53 bits are exceeded. Bitwise operations still "
+                     ++ "only work on the lowest 32 bits. This option should "
+                     ++ "give a substantial performance boost for Int math "
+                     ++ "heavy code."}
   ]
 
 main :: IO ()
@@ -63,7 +71,7 @@ compile cfg dynflags modSummary = do
     HsBootFile -> liftIO $ putStrLn $ "Skipping boot " ++ myName
     _          -> do
       (pgm, name) <- prepare dynflags modSummary
-      let theCode    = generate name pgm
+      let theCode    = generate cfg name pgm
           targetpath = (targetLibPath cfg)
       liftIO $ putStrLn $ "Compiling " ++ myName ++ " into " ++ targetpath
       liftIO $ writeModule targetpath theCode

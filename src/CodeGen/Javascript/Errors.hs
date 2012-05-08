@@ -11,6 +11,6 @@ runtimeError s = NativeCall "die" [lit s]
 
 -- | Produce a warning message. This function is horrible and should be
 --   replaced with some proper handling for warnings.
-warn :: String -> JSGen ()
+warn :: String -> JSGen cfg ()
 warn msg = return $! unsafePerformIO $ do
   hPutStrLn stderr $ "WARNING: " ++ msg

@@ -10,7 +10,7 @@ import CodeGen.Javascript.Monad
 --   statement, as PolyAlt alttypes and the like will only work when the
 --   comparison is eliminated (there can be only one alt when there are
 --   polyalts involved.)
-optCase :: (JSExp -> JSExp) -> JSVar -> JSVar -> [JSAlt] -> JSGen JSExp
+optCase :: (JSExp -> JSExp) -> JSVar -> JSVar -> [JSAlt] -> JSGen cfg JSExp
 optCase cmp scrut result alts = do
   case simplifyAlts cmp scrut alts of
     Left stmt -> do

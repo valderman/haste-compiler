@@ -2,7 +2,7 @@
 module CodeGen.Javascript.Monad (
   JSGen, genJS, emit, dependOn, getModName, pushBinding, popBinding,
   getCurrentBinding, isolate, addLocal, allowUnthunk, disallowUnthunk,
-  unthunkOK) where
+  unthunkOK, getCfg) where
 import Control.Monad.State
 import Bag
 import CodeGen.Javascript.AST hiding (code, deps)
@@ -10,34 +10,36 @@ import qualified Data.Set as S
 import Control.Applicative
 import GhcPlugins (Var)
 
-data GenState = GenState {
+data GenState cfg = GenState {
     code         :: !(Bag JSStmt),
     deps         :: !(S.Set JSVar),
     locals       :: !(S.Set JSVar),
     modName      :: JSLabel,
     bindingStack :: [Var],
-    unthunk      :: Int
+    unthunk      :: Int,
+    config       :: cfg
   }
 
-initialState :: GenState
+initialState :: GenState cfg
 initialState = GenState {
     code         = emptyBag,
     deps         = S.empty,
     locals       = S.empty,
     modName      = undefined,
     bindingStack = [],
-    unthunk      = 0
+    unthunk      = 0,
+    config       = undefined
   }
 
-newtype JSGen a =
-  JSGen (State GenState a)
+newtype JSGen cfg a =
+  JSGen (State (GenState cfg) a)
   deriving (Monad, Functor, Applicative)
 
 class Dependency a where
   -- | Add a dependency to the function currently being generated.
-  dependOn :: a -> JSGen ()
+  dependOn :: a -> JSGen cfg ()
   -- | Mark a symbol as local, excluding it from the dependency graph.
-  addLocal :: a -> JSGen ()
+  addLocal :: a -> JSGen cfg ()
 
 instance Dependency JSVar where
   dependOn var = JSGen $ do
@@ -57,36 +59,38 @@ instance Dependency (S.Set JSVar) where
     st <- get
     put st {locals = S.union vars (locals st)}
 
-genJS :: JSLabel     -- ^ Name of the module being compiled.
-      -> JSGen a     -- ^ The code generation computation.
+genJS :: cfg         -- ^ Config to use for code generation.
+      -> JSLabel     -- ^ Name of the module being compiled.
+      -> JSGen cfg a -- ^ The code generation computation.
       -> (a, S.Set JSVar, S.Set JSVar, Bag JSStmt)
-genJS myModName (JSGen gen) =
-  case runState gen initialState {modName = myModName} of
-    (a, GenState stmts dependencies loc _ _ _) -> (a, dependencies, loc, stmts)
+genJS cfg myModName (JSGen gen) =
+  case runState gen initialState {modName = myModName, config = cfg} of
+    (a, GenState stmts dependencies loc _ _ _ _) ->
+      (a, dependencies, loc, stmts)
 
 -- | Emit a JS statement to the code stream
-emit :: JSStmt -> JSGen ()
+emit :: JSStmt -> JSGen cfg ()
 emit stmt = JSGen $ do
   st <- get
   put st {code = code st `snocBag` stmt}
 
-getModName :: JSGen JSLabel
+getModName :: JSGen cfg JSLabel
 getModName = JSGen $ modName <$> get
 
 -- | Get the Var for the binding currently being generated.
-getCurrentBinding :: JSGen Var
+getCurrentBinding :: JSGen cfg Var
 getCurrentBinding = JSGen $ (head . bindingStack) <$> get
 
 -- | Push a new var onto the stack, indicating that we're generating code
 --   for a new binding.
-pushBinding :: Var -> JSGen ()
+pushBinding :: Var -> JSGen cfg ()
 pushBinding var = JSGen $ do
   st <- get
   put st {bindingStack = var : bindingStack st}
 
 -- | Pop a var from the stack, indicating that we're done generating code
 --   for that binding.
-popBinding :: JSGen ()
+popBinding :: JSGen cfg ()
 popBinding = JSGen $ do
   st <- get
   put st {bindingStack = tail $ bindingStack st}
@@ -96,27 +100,31 @@ popBinding = JSGen $ do
 --   updated, however.
 --   In addition to the return value and the code, all variables accessed
 --   within the computation are returned.
-isolate :: JSGen a -> JSGen (a, Bag JSStmt, S.Set JSVar)
+isolate :: JSGen cfg a -> JSGen cfg (a, Bag JSStmt, S.Set JSVar)
 isolate gen = do
   myMod <- getModName
   myBnd <- getCurrentBinding
-  let (x, dep, loc, stmts) = genJS myMod $ do
+  cfg <- getCfg
+  let (x, dep, loc, stmts) = genJS cfg myMod $ do
         pushBinding myBnd >> gen
   dependOn dep
   addLocal loc
   return (x, stmts, dep)
 
-unthunkOK :: JSGen Bool
+unthunkOK :: JSGen cfg Bool
 unthunkOK = JSGen $ do
   st <- get
   return $ unthunk st == 0
 
-allowUnthunk :: JSGen ()
+getCfg :: JSGen cfg cfg
+getCfg = JSGen $ fmap config get
+
+allowUnthunk :: JSGen cfg ()
 allowUnthunk = JSGen $ do
   st <- get
   put st {unthunk = unthunk st - 1}
 
-disallowUnthunk :: JSGen ()
+disallowUnthunk :: JSGen cfg ()
 disallowUnthunk = JSGen $ do
   st <- get
   put st {unthunk = unthunk st + 1}

@@ -2,6 +2,7 @@ module CodeGen.Javascript.PrimOps (genOp) where
 import PrimOp
 import CodeGen.Javascript.AST as AST
 import CodeGen.Javascript.Errors
+import CodeGen.Javascript.Config
 
 -- | Generate primops.
 --   Many of these ops return lifted Bool values; however, no thunk is
@@ -9,8 +10,8 @@ import CodeGen.Javascript.Errors
 --   on the evaluation operation in the RTS being able to handle plain values
 --   as though they were thunks. If this were to change, all those ops MUST
 --   be changed to return thunks!
-genOp :: PrimOp -> [JSExp] -> JSExp
-genOp op xs =
+genOp :: Config -> PrimOp -> [JSExp] -> JSExp
+genOp cfg op xs =
   case op of
     -- Negations
     IntNegOp       -> Neg (head xs)
@@ -47,10 +48,10 @@ genOp op xs =
     CharLeOp -> binOp LTE
 
     -- Int ops
-    IntAddOp -> binOp Add
-    IntSubOp -> binOp Sub
-    IntMulOp -> binOp Mul
-    IntMulMayOfloOp -> binOp Mul -- This is correct, but slow!
+    IntAddOp -> intMath $ binOp Add
+    IntSubOp -> intMath $ binOp Sub
+    IntMulOp -> intMath $ binOp Mul
+    IntMulMayOfloOp -> intMath $ binOp Mul -- This is correct, but slow!
     IntQuotOp -> call "quot"
     IntRemOp -> binOp Mod -- Javascript % operator is actually rem, not mod!
     IntAddCOp -> call "addC"
@@ -182,3 +183,4 @@ genOp op xs =
     
     -- Bitwise ops on words need to be unsigned; exploit the fact that >>> is!
     unsignedBinOp bop = let [x,y] = xs in BinOp ShrL (BinOp bop x y) (litN 0)
+    intMath = wrapIntMath cfg

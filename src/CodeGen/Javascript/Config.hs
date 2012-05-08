@@ -2,6 +2,7 @@ module CodeGen.Javascript.Config (
   Config (..), AppStart, defConfig, stdRtsLib, stdJSLib, startASAP,
   startOnLoadComplete, appName, sysLibPath) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
+import CodeGen.Javascript.AST
 import System.IO.Unsafe (unsafePerformIO)
 import System.Directory
 import System.FilePath (combine, replaceExtension)
@@ -38,6 +39,9 @@ sysLibPath :: FilePath
 sysLibPath = unsafePerformIO $ do
   append "lib" <$> getAppUserDataDirectory appName
 
+strictly32Bits :: JSExp -> JSExp
+strictly32Bits = flip (BinOp BitOr) (litN 0)
+
 -- | Compiler configuration.
 data Config = Config {
     -- | Runtime files to dump into the JS blob.
@@ -55,7 +59,9 @@ data Config = Config {
     --   outputs the name of the file its JS blob should be written to.
     outFile :: String -> String,
     -- | Link the program?
-    performLink :: Bool
+    performLink :: Bool,
+    -- | A function to call on each Int arithmetic primop.
+    wrapIntMath :: JSExp -> JSExp
   }
 
 -- | Default compiler configuration.
@@ -67,5 +73,6 @@ defConfig = Config {
     appStart      = startOnLoadComplete,
     ppOpts        = compact,
     outFile       = flip replaceExtension "js",
-    performLink   = True
+    performLink   = True,
+    wrapIntMath   = strictly32Bits
   }
