@@ -7,3 +7,5 @@
 
 * Implement tail recursion as loops.
   [nice to have/easy after general tail calls]
+
+* Allow Integer literals larger than +/-2^31
