@@ -7,7 +7,9 @@ import Unsafe.Coerce
 import GHC.CString
 import GHC.Types
 import GHC.Prim
+import GHC.Word
 import Data.String
+import Data.Int (Int32)
 
 foreign import ccall _str :: JSString
 foreign import ccall strEq :: JSString -> JSString -> Bool
@@ -60,7 +62,7 @@ fromJSStr :: JSString -> String
 fromJSStr s = s `seq` []
 
 class NumberRep a where
-  round_     :: a -> Int
+  round_  :: a -> Int
   fromInt :: Int -> a
   fromInt = unsafeCoerce#
   
@@ -70,6 +72,14 @@ instance NumberRep Float where
   round_ (F# f) = I# (unsafeCoerce# (jsRound (unsafeCoerce# f)))
 instance NumberRep Int where
   round_ = id
+instance NumberRep Int32 where
+  round_ = unsafeCoerce#
+instance NumberRep Word where
+  round_ (W# w) = I# (word2Int# w)
+  fromInt (I# i) = W# (int2Word# i)
+instance NumberRep Word32 where
+  round_ (W32# w) = I# (word2Int# (unsafeCoerce# w))
+  fromInt (I# i) = W32# (int2Word# i)
 
 {-# NOINLINE jsRound #-}
 -- | Defined in lib/rts.js
