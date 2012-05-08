@@ -61,7 +61,9 @@ data Config = Config {
     -- | Link the program?
     performLink :: Bool,
     -- | A function to call on each Int arithmetic primop.
-    wrapIntMath :: JSExp -> JSExp
+    wrapIntMath :: JSExp -> JSExp,
+    -- | Be verbose about warnings, etc.?
+    verbose :: Bool
   }
 
 -- | Default compiler configuration.
@@ -74,5 +76,6 @@ defConfig = Config {
     ppOpts        = compact,
     outFile       = flip replaceExtension "js",
     performLink   = True,
-    wrapIntMath   = strictly32Bits
+    wrapIntMath   = strictly32Bits,
+    verbose       = False
   }

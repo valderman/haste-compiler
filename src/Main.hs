@@ -40,7 +40,10 @@ argSpecs = [
                      ++ "those 53 bits are exceeded. Bitwise operations still "
                      ++ "only work on the lowest 32 bits. This option should "
                      ++ "give a substantial performance boost for Int math "
-                     ++ "heavy code."}
+                     ++ "heavy code."},
+    ArgSpec { optName = "verbose",
+              updateCfg = \cfg _ -> cfg {verbose = True},
+              info = "Display even the most obnoxious warnings."}
   ]
 
 main :: IO ()
