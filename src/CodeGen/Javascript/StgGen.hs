@@ -165,9 +165,13 @@ genEx :: StgExpr -> JSGen Config JSExp
 genEx (StgApp f xs) = do
   f' <- genVar f
   xs' <- mapM genArg xs
-  if null xs
-     then return $ Eval $ AST.Var f'
-     else return $ optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
+  performTCE <- doTCE <$> getCfg
+  let nonNullaryFunApp = optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
+  case null xs of
+    True  | performTCE -> return $ AST.Var f'
+          | otherwise  -> return $ Eval (AST.Var f')
+    False | performTCE -> return $ Thunk [] nonNullaryFunApp
+          | otherwise  -> return nonNullaryFunApp
 genEx (StgLit l) = do
   genLit l
 genEx (StgConApp con args) = do
@@ -218,7 +222,11 @@ genCase ex scrut t alts = do
   ex' <- genEx ex
   scrut' <- genVar scrut
   res <- genResultVar scrut
-  emit $ NewVar (AST.Var scrut') ex'
+  performTCE <- doTCE <$> getCfg
+  let expr = if performTCE
+               then (Eval ex')
+               else ex'
+  emit $ NewVar (AST.Var scrut') expr
   genAlts t scrut' res alts
 
 genAlts :: AltType -> JSVar -> JSVar -> [StgAlt] -> JSGen Config JSExp

@@ -26,9 +26,12 @@ append :: FilePath -> FilePath -> FilePath
 append = flip combine
 
 -- | Execute the program as soon as it's loaded into memory.
+--   Evaluate the result of applying main, as we might get a thunk back if
+--   we're doing TCE. This is so cheap, small and non-intrusive we might
+--   as well always do it this way, to simplify the config a bit.
 startASAP :: AppStart
 startASAP mainSym =
-  "E(" ++ mainSym ++ ")(0);"
+  "E(E(" ++ mainSym ++ ")(0));"
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart
@@ -63,7 +66,9 @@ data Config = Config {
     -- | A function to call on each Int arithmetic primop.
     wrapIntMath :: JSExp -> JSExp,
     -- | Be verbose about warnings, etc.?
-    verbose :: Bool
+    verbose :: Bool,
+    -- | Perform tail call elimination?
+    doTCE :: Bool
   }
 
 -- | Default compiler configuration.
@@ -77,5 +82,6 @@ defConfig = Config {
     outFile       = flip replaceExtension "js",
     performLink   = True,
     wrapIntMath   = strictly32Bits,
-    verbose       = False
+    verbose       = False,
+    doTCE         = False
   }

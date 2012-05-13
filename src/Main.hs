@@ -41,6 +41,9 @@ argSpecs = [
                      ++ "only work on the lowest 32 bits. This option should "
                      ++ "give a substantial performance boost for Int math "
                      ++ "heavy code."},
+    ArgSpec { optName = "opt-tce",
+              updateCfg = \cfg _ -> cfg {doTCE = True},
+              info = "Perform tail call elimination."},
     ArgSpec { optName = "verbose",
               updateCfg = \cfg _ -> cfg {verbose = True},
               info = "Display even the most obnoxious warnings."}
@@ -53,8 +56,11 @@ main = do
     Left help -> putStrLn help
     Right (cfg, ghcargs) ->
       defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
+        let ghcargs' = if doTCE cfg
+                          then "-DTCE" : ghcargs
+                          else ghcargs
         dynflags <- getSessionDynFlags
-        (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc ghcargs)
+        (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc ghcargs')
         _ <- setSessionDynFlags dynflags' {ghcLink = NoLink}
         let files' = map unLoc files
 

@@ -19,6 +19,9 @@ for file in Tests/*.hs; do
     hastec -O2 --start=asap -DHASTE -DTEST_MODULE=$module TestDriver.hs > /dev/null
     haste_opt_output=`js TestDriver.js`
 
+    hastec -O2 --opt-tce --start=asap -DHASTE -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    haste_tce_output=`js TestDriver.js`
+
     if [[ "$ghc_output" != "$haste_output" ]] ; then
         thistest="failed"
         echo "  GHC disagrees with hastec output!"
@@ -29,6 +32,12 @@ for file in Tests/*.hs; do
         thistest="failed"
         echo "  GHC disagrees with hastec -O2 output!"
         echo "  GHC says '$ghc_output', but hastec says '$haste_opt_output'"
+    fi
+
+    if [[ "$ghc_output" != "$haste_tce_output" ]] ; then
+        thistest="failed"
+        echo "  GHC disagrees with hastec -O2 --opt-tce output!"
+        echo "  GHC says '$ghc_output', but hastec says '$haste_tce_output'"
     fi
 
     if [[ $thistest == "failed" ]] ; then
