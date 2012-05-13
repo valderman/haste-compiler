@@ -13,13 +13,13 @@ for file in Tests/*.hs; do
 
     ghc_output=`runghc -DTEST_MODULE=$module TestDriver.hs`
 
-    hastec --start=asap -DHASTE -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    hastec --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
     haste_output=`js TestDriver.js`
 
-    hastec -O2 --start=asap -DHASTE -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    hastec -O2 --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
     haste_opt_output=`js TestDriver.js`
 
-    hastec -O2 --opt-tce --start=asap -DHASTE -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    hastec -O2 --opt-tce --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
     haste_tce_output=`js TestDriver.js`
 
     if [[ "$ghc_output" != "$haste_output" ]] ; then

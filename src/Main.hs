@@ -56,11 +56,12 @@ main = do
     Left help -> putStrLn help
     Right (cfg, ghcargs) ->
       defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
-        let ghcargs' = if doTCE cfg
-                          then "-DTCE" : ghcargs
-                          else ghcargs
+        let ghcargs' = "-DHASTE" : ghcargs
+            args = if doTCE cfg
+                     then "-DTCE" : ghcargs'
+                     else ghcargs'
         dynflags <- getSessionDynFlags
-        (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc ghcargs')
+        (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)
         _ <- setSessionDynFlags dynflags' {ghcLink = NoLink}
         let files' = map unLoc files
 
