@@ -7,22 +7,41 @@ A compiler to generate Javascript code from Haskell.
 Building
 --------
 
-Haste now depends on the Fursuit reactive library (http://ekblad.cc/fursuit)
-which you will have to install first. Then, use cabal (obviously, this is how
-you build Fursuit as well):
+Clone Haste and Fursuit into the same directory, then cd to
+$THAT_DIRECTORY/haste-compiler and run ./buildall.sh. This should, hopefully,
+set everything up for you. If that didn't make sense to you, just run the
+following commands in your terminal of choice:
 
-    $ runghc Setup.hs --user configure
-    $ runghc Setup.hs build
-    $ runghc Setup.hs install
+    $ mkdir haste && cd haste
+    $ git clone git://github.com/valderman/haste-compiler.git
+    $ git clone git://github.com/valderman/fursuit.git
+    $ cd haste-compiler && ./buildall.sh
 
-Next step,, get the base libraries from http://ekblad.cc/haste-libs.tar.bz2
+This will check out the compiler and its dependencies, download pre-built
+standard libraries from ekblad.cc, and install everything locally, for your
+user only. The binaries will be in ~/.cabal/bin, the base libraries in
+~/.haste/lib and the supporting JS run time system in
+~/.cabal/share/haste-compiler-$VERSION.
+
+I'd strongly recommend adding ~/.cabal/bin to your $PATH, or you'll have to
+invoke Haste as ~/.cabal/bin/hastec, which is sort of awkward.
+
+
+Building manually
+-----------------
+
+First off, build Fursuit and Haste using cabal.
+
+Next step, get the base libraries from http://ekblad.cc/haste-libs.tar.bz2
 and untar them into your home directory; they unpack to ./.haste/ so
-everything will end up in its proper place.
+everything will end up in its proper place. If you want to build them yourself
+instead, download the source code of a recent version of GHC (7.4.1 is the
+only version tested so far) and run ./buildlibs $PATH_TO_GHC_SOURCE from within
+the Haste directory.
 
-Finally, reinstall Fursuit after installing Haste, to ensure Haste generates
-intermediate code for it.
+Finally, reinstall Fursuit and Haste after installing the base libraries,
+to ensure that proper code is generated for everything.
 
-Sorry about this annoying installation procedure!
 
 Usage
 -----
@@ -42,12 +61,12 @@ You can pass the same flags to hastec as you'd normally pass to GHC:
 Haste also has its own set of command line arguments. Invoke it with --help to
 read more about them.
 
+
 Reactive web EDSL
 -----------------
 
-Haste comes with an (as of yet) incomplete, very basic, environment for writing
-client side web applications in a reactive fashion. See the included modules
-Haste.Reactive and Haste.Reactive.DOM for more details.
+Haste comes with a basic, environment for writing client side web applications
+in a reactive fashion. See Fursuit for more information.
 
 As the reactive library relies heavily on Applicative, you may find the idiom
 brackets of the Strathclyde Haskell Enhancement
@@ -58,47 +77,13 @@ Libraries
 ---------
 
 Haste is able to use the standard Haskell libraries to a certain extent.
-However, there are a few caveats. The libraries need to be built on a 32 bit
-machine as Javascript stores everything as Double, which isn't enough for 64
-bit integers.
+However, there are a few caveats. The base libraries need to be built on a 32
+bit machine as Javascript stores everything as Double, which isn't enough for
+64 bit integers.
 
-The libraries also need to be built with the same options as
-the "normal" libraries you use when compiling your applications for desktop
-use, or GHC will have a great time inlining symbols that don't exist into
-your programs.
-
-Finally, many library features make use of native functionality that is hard
-or impossible to implement on top of Javascript.
-
-With these restrictions, building the standard libraries is quite cumbersome;
-the proper solution in the long run is probably to reimplement the parts of
-ghc-prim and base that make sense in a web context. In the meanwhile, however,
-here's how you build them on a *nix system:
-
-1. download the source for the GHC version you're currently running;
-
-2. unpack it, copy mk/build.mk.sample to mk/build.mk;
-
-3. at the top of mk/build.mk, add INTEGER_LIBRARY = integer-simple;
-
-4. uncomment the line that says BuildFlavour = quick;
-
-5. build the whole thing using ./configure && make as usual;
-
-6. run the buildlibs script in the root of the haste-compiler directory, with
-   the path to where you unpacked the GHC source as its only argument;
-
-7. You're hopefully done.
-
-If that's too much hassle, I've prepared a tarball containing the relevant
-bits of ghc-prim, integer-simple, base and containers. It's built with -O2
-using GHC 7.4.1 on a 32 bit Debian unstable box; the closer your GHC install
-is to that the greater the chance that they will work for you.
-
-The tarball unpacks to ./.haste, so if you unpack it in your home directory
-everything should turn up in its proper place.
-
-Get it from: http://ekblad.cc/haste-libs.tar.bz2
+Many library features also make use of native functionality that is hard or
+impossible to implement on top of Javascript; the Read type class, with its
+heavy use of iconv, is a prime example.
 
 
 Why yet another Haskell to Javascript compiler?
@@ -112,7 +97,8 @@ replacement for GHC that generates relatively lean code.
 Known issues
 ------------
 
-* Doesn't yet do tail call elimination.
+* No 64-bit math. Use Integer if you need large integers, use Double if you
+  want as fast math as possible (yes, even for integer math.)
 
 * Same-named modules in different packages overwrite each other when compiling
   with --libinstall.
@@ -123,13 +109,16 @@ Known issues
 
 * Base libraries built on a 64 bit machine won't work. Don't even bother.
 
-* Read and Show are currently broken for Float and Double. JS-native
-  substitutes are available in the form of show_ and read_ for all types which
-  have an underlying Number representation with Haste (Int, Float and Double.)
-  Apart from actually working for Float and Double, they're also quite a lot
-  faster for Ints. Additionally, round is broken for Float and Double as well,
-  and there's a round_ for those types that not only works but which is also
-  much faster than Prelude's round would have been had it worked.
+* Read is completely broken until a JS-native alternative can be written.
 
-* A program that has the value of bottom may not always give a nice error
+* Conversions between basic numeric types and strings work, but shouldn't
+  really be used since they're doing a lot of work for something that's
+  a primitive operation in JS. JS-native substitutes are available in the form
+  of show_, read_ and round_ for all types which have an underlying Number
+  representation with Haste (Int, Float and Double.)
+
+* A program that throws unhandled exceptions may not always give a nice error
   message.
+
+* Word32 produces funny results; use Word instead, which is guaranteed to be
+  32 bits.
