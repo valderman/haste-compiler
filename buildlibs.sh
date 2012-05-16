@@ -29,6 +29,11 @@ hastec --libinstall $FLAGS -package-name time -cpp -fglasgow-exts -I./include Da
 popd
 
 pushd .
+cd $libpath/array
+hastec --libinstall $FLAGS -package-name array -cpp -fglasgow-exts -I./include Data.Array Data.Array.MArray Data.Array.IArray Data.Array.IO Data.Array.ST Data.Array.Storable Data.Array.Unboxed Data.Array.Unsafe
+popd
+
+pushd .
 cd $libpath/containers
 hastec --libinstall $FLAGS -cpp -fglasgow-exts -package-name containers Data.Graph Data.IntMap Data.IntSet Data.Map Data.Sequence Data.Set Data.Tree
 popd
