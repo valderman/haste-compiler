@@ -3,6 +3,14 @@ runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs ins
 
 if [ "$1" != "" ] ; then
   ./buildlibs.sh $1
+else
+  TMPDIR=$(mktemp -d)
+  wget -O$TMPDIR/haste-libs.tar.bz2 http://ekblad.cc/haste-libs.tar.bz2
+  pushd .
+  cd
+  tar -xjf $TMPDIR/haste-libs.tar.bz2
+  popd
+  rm -r $TMPDIR
 fi
 
 pushd .
