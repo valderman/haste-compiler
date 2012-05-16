@@ -9,3 +9,6 @@ pushd .
 cd ../fursuit
 runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs install
 popd
+
+# Install Haste again, to rebuild the Haste libs with the updated base libs.
+runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs install
