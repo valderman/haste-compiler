@@ -27,13 +27,16 @@ if [ "$1" != "" ] ; then
     ./buildlibs.sh $1
 else
     echo "Downloading base libraries from ekblad.cc"
-    TMPDIR=$(mktemp -d)
-    wget -O$TMPDIR/haste-libs.tar.bz2 http://ekblad.cc/haste-libs.tar.bz2
     pushd .
+    mkdir -p ./libdl
+    cd ./libdl
+    TMPDIR=$(pwd)
+    wget -N http://ekblad.cc/haste-libs.tar.bz2
+
+    echo "Unpacking base libraries to ~/.haste"
     cd
     tar -xjf $TMPDIR/haste-libs.tar.bz2
     popd
-    rm -r $TMPDIR
 fi
 
 pushd .
