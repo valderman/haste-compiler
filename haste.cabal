@@ -51,7 +51,6 @@ Executable hastec
         ghc >= 7.2,
         mtl,
         cereal,
-        cereal-derive,
         containers,
         bytestring,
         filepath,
