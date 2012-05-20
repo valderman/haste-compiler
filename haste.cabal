@@ -84,7 +84,7 @@ Executable hastecat
         cereal,
         ghc-prim,
         ghc,
-        containers,
+        containers <= 0.4.2.1,
         filepath,
         directory,
         bytestring,
