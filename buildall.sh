@@ -1,5 +1,16 @@
 #!/bin/bash
 
+if [ -d ../fursuit ] ; then
+    pushd .
+    cd ../fursuit
+    runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs install
+    popd
+else
+    echo "You don't seem to have the Fursuit sources in ../fursuit."
+    echo "Fix that by running git clone git://github.com/valderman/fursuit.git in the parent directory."
+    exit 1
+fi
+
 runghc Setup.hs configure --user
 
 if [ "$?" != "0" ] ; then
@@ -39,10 +50,11 @@ else
     popd
 fi
 
+# Install Haste again, to rebuild the Haste libs with the updated base libs.
+runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs install
+
+# Install fursuit again, for the libs
 pushd .
 cd ../fursuit
 runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs install
 popd
-
-# Install Haste again, to rebuild the Haste libs with the updated base libs.
-runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs install
