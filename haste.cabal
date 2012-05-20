@@ -82,7 +82,6 @@ Executable hastecat
     Build-Depends:
         base,
         cereal,
-        cereal-derive,
         ghc-prim,
         ghc,
         containers,
