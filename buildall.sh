@@ -6,7 +6,7 @@ if [ "$?" != "0" ] ; then
     echo "Can't configure Haste; you seem to be missing a dependency or two."
     echo "Attempting to get them from Hackage..."
     cabal update
-    cabal install mtl cereal containers bytestring filepath directory array ghc-paths
+    cabal install mtl cereal containers-0.4.2.1 bytestring filepath directory array ghc-paths
 
     runghc Setup.hs configure --user
     if [ "$?" != "0" ] ; then

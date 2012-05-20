@@ -51,7 +51,7 @@ Executable hastec
         ghc >= 7.2,
         mtl,
         cereal,
-        containers,
+        containers <= 0.4.2.1,
         bytestring,
         filepath,
         directory,
