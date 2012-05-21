@@ -56,7 +56,8 @@ Executable hastec
         filepath,
         directory,
         array,
-        ghc-paths
+        ghc-paths,
+        process
     Main-Is:
         Main.hs
     Other-Modules:

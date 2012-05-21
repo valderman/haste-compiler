@@ -15,6 +15,11 @@ import Control.Monad (when)
 import CodeGen.Javascript
 import Args
 import ArgSpecs
+import System.FilePath (addExtension)
+import System.IO (openFile, hClose, IOMode (..))
+import System.Process (runProcess, waitForProcess)
+import System.Exit (ExitCode (..))
+import System.Directory (renameFile)
 
 main :: IO ()
 main = do
@@ -41,6 +46,31 @@ main = do
           flip mapM_ files' $ \file -> do
             putStrLn $ "Linking " ++ outFile cfg file
             link cfg file
+            case useGoogleClosure cfg of 
+              Just clopath -> closurize clopath $ outFile cfg file
+              _            -> return ()
+
+-- | Run Google Closure on a file.
+closurize :: FilePath -> FilePath -> IO ()
+closurize cloPath file = do
+  putStrLn $ "Running the Google Closure compiler on " ++ file ++ "..."
+  let cloFile = file `addExtension` ".clo"
+  cloOut <- openFile cloFile WriteMode
+  build <- runProcess "java"
+             ["-jar", cloPath, "--compilation_level", "ADVANCED_OPTIMIZATIONS",
+              file]
+             Nothing
+             Nothing
+             Nothing
+             (Just cloOut)
+             Nothing
+  hClose cloOut
+  res <- waitForProcess build
+  case res of
+    ExitFailure n ->
+      fail $ "Couldn't execute Google Closure compiler: " ++ show n
+    ExitSuccess ->
+      renameFile cloFile file
 
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do

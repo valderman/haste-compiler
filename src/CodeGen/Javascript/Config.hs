@@ -68,20 +68,23 @@ data Config = Config {
     -- | Be verbose about warnings, etc.?
     verbose :: Bool,
     -- | Perform tail call elimination?
-    doTCE :: Bool
+    doTCE :: Bool,
+    -- | Run the entire thing through Google Closure when done?
+    useGoogleClosure :: Maybe FilePath
   }
 
 -- | Default compiler configuration.
 defConfig :: Config
 defConfig = Config {
-    rtsLibs       = [stdRtsLib,stdJSLib],
-    libPath       = sysLibPath,
-    targetLibPath = ".",
-    appStart      = startOnLoadComplete,
-    ppOpts        = compact,
-    outFile       = flip replaceExtension "js",
-    performLink   = True,
-    wrapIntMath   = strictly32Bits,
-    verbose       = False,
-    doTCE         = False
+    rtsLibs          = [stdRtsLib,stdJSLib],
+    libPath          = sysLibPath,
+    targetLibPath    = ".",
+    appStart         = startOnLoadComplete,
+    ppOpts           = compact,
+    outFile          = flip replaceExtension "js",
+    performLink      = True,
+    wrapIntMath      = strictly32Bits,
+    verbose          = False,
+    doTCE            = False,
+    useGoogleClosure = Nothing
   }

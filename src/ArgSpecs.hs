@@ -33,7 +33,17 @@ argSpecs = [
     ArgSpec { optName = "opt-tce",
               updateCfg = \cfg _ -> cfg {doTCE = True},
               info = "Perform tail call elimination."},
+    ArgSpec { optName = "opt-google-closure",
+              updateCfg = updateClosureCfg,
+              info = "Run the Google Closure compiler on the output. "
+                   ++ "Use --opt-google-closure=foo.jar to hint that foo.jar "
+                   ++ "is the Closure compiler."},
     ArgSpec { optName = "verbose",
               updateCfg = \cfg _ -> cfg {verbose = True},
               info = "Display even the most obnoxious warnings."}
   ]
+
+updateClosureCfg cfg ['=':arg] =
+  cfg {useGoogleClosure = Just arg}
+updateClosureCfg cfg _ =
+  cfg {useGoogleClosure = Just $ sysLibPath ++ "/compiler.jar"}

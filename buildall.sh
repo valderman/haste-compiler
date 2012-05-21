@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# For some reason, HEAD requests to Google Code's servers always return 404,
+# so we can't just wget -N compiler-latest.zip.
+ALWAYS_REDOWNLOAD_CLOSURE=0
+
 if [ -d ../fursuit ] ; then
     pushd .
     cd ../fursuit
@@ -17,7 +21,7 @@ if [ "$?" != "0" ] ; then
     echo "Can't configure Haste; you seem to be missing a dependency or two."
     echo "Attempting to get them from Hackage..."
     cabal update
-    cabal install mtl cereal containers-0.4.2.1 bytestring filepath directory array ghc-paths
+    cabal install mtl cereal containers-0.4.2.1 bytestring filepath directory array ghc-paths process
 
     runghc Setup.hs configure --user
     if [ "$?" != "0" ] ; then
@@ -58,3 +62,22 @@ pushd .
 cd ../fursuit
 runghc Setup.hs configure --user && runghc Setup.hs build && runghc Setup.hs install
 popd
+
+# Get the Google Closure compiler
+if [[ ! -e ~/.haste/lib/compiler.jar || "$ALWAYS_REDOWNLOAD_CLOSURE" == "1" ]] ; then
+    echo "Closure compiler not found, or override specified. Downloading."
+    pushd .
+    cd ~/.haste/lib
+    wget http://closure-compiler.googlecode.com/files/compiler-latest.zip
+    unzip -o compiler-latest.zip
+    if [ "$?" != "0" ] ; then
+        echo "Unable to fetch the Google Closure compiler."
+        echo "You won't be able to compile with --opt-google-closure."
+        echo "Use --opt-google-closure=/path/to/closure/compiler.jar instead."
+    else
+        rm COPYING README compiler-latest.zip
+    fi
+    popd
+else
+    echo "Closure compiler already installed, not downloading."
+fi
