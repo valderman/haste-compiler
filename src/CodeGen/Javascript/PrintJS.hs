@@ -58,8 +58,8 @@ instance PrettyJS (M.Map JSVar JSExp) where
 instance PrettyJS JSStmt where
   emit (Ret ex) =
     line $ out "return " >> emit ex >> out ";"
-  emit (CallRet f as) =
-    emit (Ret (Call f as))
+  emit (Continue) =
+    line $ out "continue;"
 
   emit (While ex body) = do
     indent $ out "while(" >> emit ex >> out ")"
@@ -170,23 +170,21 @@ instance PrettyJS JSExp where
   emit (Eval ex) =
     out "E(" >> emit ex >> out ")"
   
-  emit (GetDataArg ex n) =
-    emit ex >> out "[" >> out (show n) >> out "]"
-  
   emit (Array arr) =
     out "[" >> emitList "," arr >> out "]"
   
   emit (Index arr ix) =
     emit arr >> out "[" >> emit ix >> out "]"
 
-  emit NoOp =
-    out "TUT" >> return ()
-
   emit (IfExp cond thenDo elseDo) =
     emit cond >> out "?" >> emit thenDo >> out ":" >> emit elseDo
 
   emit (Assign lhs rhs) =
     out "(" >> emit lhs >> out "=" >> emit rhs >> out ")"
+
+  emit (ConstClosure vs f) =
+    out "(function(" >> emitList "," vs >> out "){return " >>
+      emit f >> out "})(" >> emitList "," vs >> out ")"
 
 -- | Pretty-print operator expressions, exploiting the unsignedness of >>> to
 --   make the signed binary operators work for our unsigned words where

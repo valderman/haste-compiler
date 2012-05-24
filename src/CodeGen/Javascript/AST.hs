@@ -72,7 +72,6 @@ instance Serialize JSName where
 
 data JSStmt
   = Ret JSExp
-  | CallRet JSExp [JSExp] -- Unused; use for CSE
   | While JSExp JSStmt -- Unused; use for CSE
   | Block [JSStmt]
   | Case JSExp [JSAlt]
@@ -80,6 +79,7 @@ data JSStmt
   | NewVar JSExp JSExp
   | NamedFun String [JSVar] [JSStmt] -- Unused; turn top level defs into tihs
   | ExpStmt JSExp
+  | Continue
     deriving (Show, Eq, Generic)
 
 instance Serialize JSStmt where
@@ -101,6 +101,7 @@ data JSExp
   | NativeCall String [JSExp]
   | NativeMethCall JSExp String [JSExp]
   | Fun [JSVar] [JSStmt]
+  | ConstClosure [JSVar] JSExp
   | BinOp JSOp JSExp JSExp
   | Neg JSExp
   | Not JSExp -- Bitwise negation; JS ~ operator
@@ -108,13 +109,11 @@ data JSExp
   | Lit JSLit
   | Thunk [JSStmt] JSExp -- Statements + return expression = thunk
   | Eval JSExp
-  | GetDataArg JSExp Int
   | Array [JSExp]
   | Assign JSExp JSExp
   | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
   | IfExp JSExp JSExp JSExp
   | DataCon JSExp [Bool]
-  | NoOp
     deriving (Show, Eq, Generic)
 
 instance Serialize JSExp where

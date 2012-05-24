@@ -31,6 +31,7 @@ import CodeGen.Javascript.Errors
 import CodeGen.Javascript.Config
 import Data.Int
 import Data.Word
+import Data.Maybe (isJust)
 
 generate :: Config -> ModuleName -> [StgBinding] -> JSMod
 generate cfg modname binds =
@@ -65,10 +66,10 @@ genAST cfg modname binds =
   binds'
   where
     binds' =
-      map (depsAndCode . genJS cfg myModName . uncurry (genBind True))
+      map (depsAndCode . genJS cfg myModName . uncurry (genBind False True))
       $ concatMap unRec
       $ binds
-
+    
     myModName = moduleNameString modname
 
     depsAndCode (_, deps, locs, code) =
@@ -87,48 +88,94 @@ genAST cfg modname binds =
 --   a recursive binding; this is because it's quite a lot easier to keep track
 --   of which functions depend on each other if every genBind call results in a
 --   single function being generated.
+--   If the 'careful' parameter is True, the binding must take care that any
+--   closed-over vars are kept constant.
 --   Use `genBindRec` to generate code for local potentially recursive bindings 
 --   as their dependencies get merged into their parent's anyway.
-genBind :: Bool -> Bool -> StgBinding -> JSGen Config ()
-genBind onTopLevel partOfRecGroup (StgNonRec v rhs) = do
-  pushBinding v
+genBind :: Bool -> Bool -> Maybe Int -> StgBinding -> JSGen Config ()
+genBind careful onTopLevel funsInRecGroup (StgNonRec v rhs) = do
+  pushBinding v (argsOf rhs)
   v' <- genVar v
-  when (not onTopLevel) (addLocal v')
-  expr <- genRhs partOfRecGroup rhs
+  when (not onTopLevel) $ do
+    addLocal v'
+  let shouldTailLoop = maybe 1 id funsInRecGroup <= 1 && tailRecursive v rhs
+  expr <- genRhs careful shouldTailLoop (isJust funsInRecGroup) rhs
   emit $ NewVar (AST.Var v') expr
   popBinding
-genBind _ _ (StgRec _) =
+  where
+    argsOf (StgRhsClosure _ _ _ _ _ args _) = args
+    argsOf _                                = []
+genBind _ _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 
-genBindRec :: StgBinding -> JSGen Config ()
-genBindRec bs@(StgRec _) =
-  mapM_ (genBind False True . snd) (unRec bs)
-genBindRec b =
-  genBind False False b
+-- | Returns true if the given expression ever tail recurses on the given var.
+tailRecursive :: Var -> StgRhs -> Bool
+tailRecursive parent (StgRhsClosure _ _ _ _ _ _ body) =
+  tr body
+  where
+    tr (StgApp f _) =
+      parent == f
+    tr (StgLet _ ex) =
+      tr ex
+    tr (StgLetNoEscape _ _ _ ex) =
+      tr ex
+    tr (StgSCC _ _ _ ex) =
+      tr ex
+    tr (StgTick _ _ ex) =
+      tr ex
+    tr (StgCase _ _ _ _ _ _ alts) =
+      or [tr ex | (_, _, _, ex) <- alts]
+    tr _ =
+      False
+tailRecursive _ _ =
+  False
+
+genBindRec :: Bool -> StgBinding -> JSGen Config ()
+genBindRec careful bs@(StgRec _) =
+  mapM_ (genBind careful False (Just len) . snd) bs'
+  where
+    bs' = unRec bs
+    len = length bs'
+genBindRec careful b =
+  genBind careful False Nothing b
 
 -- | Turn a recursive binding into a list of non-recursive ones, together with
 --   information about whether they came from a recursive group or not.
-unRec :: StgBinding -> [(Bool, StgBinding)]
-unRec (StgRec bs) = zip (repeat True) (map (uncurry StgNonRec) bs)
-unRec b           = [(False, b)]
+unRec :: StgBinding -> [(Maybe Int, StgBinding)]
+unRec (StgRec bs) = zip (repeat len) (map (uncurry StgNonRec) bs)
+  where
+    len = Just $ length bs
+unRec b           = [(Nothing, b)]
 
--- | Generate the RHS of a binding.
-genRhs :: Bool -> StgRhs -> JSGen Config JSExp
-genRhs recursive (StgRhsCon _ con args) = do
+-- | Generate the RHS of a binding. Careful bindings don't close over any
+--   mutable vars.
+genRhs :: Bool -> Bool -> Bool -> StgRhs -> JSGen Config JSExp
+genRhs _ _ recursive (StgRhsCon _ con args) = do
   -- Constructors are never partially applied, and we have arguments, so this
   -- is obviously a full application.
   if recursive
-     then Thunk [] <$> genEx (StgConApp con args)
-     else genEx (StgConApp con args)
-genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
+     then Thunk [] <$> genEx False (StgConApp con args)
+     else genEx False (StgConApp con args)
+genRhs careful tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
   args' <- mapM genVar args
-  (retExp, body', _) <- isolate $ genEx body
-  if isUpdatable upd && null args
-     then return $ thunk (bagToList body') retExp
-     else return $ Fun args' (bagToList $ body' `snocBag` Ret retExp)
+  (retExp, body', deps, local) <- isolate $ do
+    mapM_ addLocal args'
+    genEx tailpos body
+  -- Constant-close over all dependencies
+  constify (deps S.\\ local) $
+    if isUpdatable upd && null args
+      then thunk (bagToList body') retExp
+      else Fun args' (loop $ bagToList $ body' `snocBag` Ret retExp)
   where
     thunk [] l@(Lit _) = l
     thunk stmts expr   = Thunk stmts expr
+    loop | tailpos   = (:[]) . While (litN 1) . Block
+         | otherwise = id
+    constify deps fun
+      | careful =
+        return $ ConstClosure (S.toList deps) fun
+      | otherwise =
+        return fun
 
 -- | Generate the tag for a data constructor. This is used both by genDataCon
 --   and directly by genCase to generate constructors for matching.
@@ -161,20 +208,32 @@ genDataCon dc = do
     strict _            = False
 
 -- | Generate code for an STG expression.  
-genEx :: StgExpr -> JSGen Config JSExp
-genEx (StgApp f xs) = do
-  f' <- genVar f
-  xs' <- mapM genArg xs
-  performTCE <- doTCE <$> getCfg
-  let nonNullaryFunApp = optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
-  case null xs of
-    True  | performTCE -> return $ AST.Var f'
-          | otherwise  -> return $ Eval (AST.Var f')
-    False | performTCE -> return $ Thunk [] nonNullaryFunApp
-          | otherwise  -> return nonNullaryFunApp
-genEx (StgLit l) = do
+genEx :: Bool -> StgExpr -> JSGen Config JSExp
+genEx tailpos (StgApp f xs) = do
+  parent <- getCurrentBinding
+  if tailpos && f == parent
+    then do
+      let mkVar v = genVar v >>= return . AST.Var
+      as <- getCurrentBindingArgs >>= mapM mkVar
+      bs <- mapM genArg xs
+      let assign = zipWith (\l r -> ExpStmt $ Assign l r) as bs
+      mapM_ emit assign
+      emit Continue
+      return $ runtimeError "Unreachable!"
+    else do
+      f' <- genVar f
+      xs' <- mapM genArg xs
+      performTCE <- doTCE <$> getCfg
+      let nonNullaryFunApp =
+            optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
+      case null xs of
+        True  | performTCE -> return $ AST.Var f'
+              | otherwise  -> return $ Eval (AST.Var f')
+        False | performTCE -> return $ Thunk [] nonNullaryFunApp
+              | otherwise  -> return nonNullaryFunApp
+genEx _ (StgLit l) = do
   genLit l
-genEx (StgConApp con args) = do
+genEx _ (StgConApp con args) = do
   con' <- genDataCon con
   args' <- mapM genArg args
   case con' of
@@ -190,7 +249,7 @@ genEx (StgConApp con args) = do
   where
     evaluate True arg = Eval arg
     evaluate _ arg    = arg
-genEx (StgOpApp op args _type) = do
+genEx _ (StgOpApp op args _type) = do
   args' <- mapM genArg args
   cfg <- getCfg
   return $ case op of
@@ -202,36 +261,37 @@ genEx (StgOpApp op args _type) = do
       NativeCall (unpackFS f) args'
     _ ->
       error "Unsupported primop encountered!"
-genEx (StgLet bind expr) = do
-  genBindRec bind
-  genEx expr
-genEx (StgLetNoEscape _ _ bind expr) = do
-  genBindRec bind
-  genEx expr
-genEx (StgCase ex _ _ bndr _ t alts) = do
-  genCase ex bndr t alts
-genEx (StgSCC _ _ _ ex) = do
-  genEx ex
-genEx (StgTick _ _ ex) = do
-  genEx ex
-genEx (StgLam _ _ _) =
+genEx tailpos (StgLet bind expr) = do
+  genBindRec tailpos bind
+  genEx tailpos expr
+genEx tailpos (StgLetNoEscape _ _ bind expr) = do
+  genBindRec tailpos bind
+  genEx tailpos expr
+genEx tailpos (StgCase ex _ _ bndr _ t alts) = do
+  genCase tailpos ex bndr t alts
+genEx tailpos (StgSCC _ _ _ ex) = do
+  genEx tailpos ex
+genEx tailpos (StgTick _ _ ex) = do
+  genEx tailpos ex
+genEx _ (StgLam _ _ _) =
   error "StgLam shouldn't happen during CG!"
 
-genCase :: StgExpr -> Id -> AltType -> [StgAlt] -> JSGen Config JSExp
-genCase ex scrut t alts = do
-  ex' <- genEx ex
+genCase :: Bool -> StgExpr -> Id -> AltType -> [StgAlt] -> JSGen Config JSExp
+genCase tailpos ex scrut t alts = do
+  ex' <- genEx False ex
   scrut' <- genVar scrut
   res <- genResultVar scrut
+  addLocal [scrut', res]
   performTCE <- doTCE <$> getCfg
   let expr = if performTCE
                then (Eval ex')
                else ex'
   emit $ NewVar (AST.Var scrut') expr
-  genAlts t scrut' res alts
+  genAlts tailpos t scrut' res alts
 
-genAlts :: AltType -> JSVar -> JSVar -> [StgAlt] -> JSGen Config JSExp
-genAlts _ scrut res [alt] = do
-  altStmts <- getStmts <$> genAlt scrut res alt
+genAlts :: Bool -> AltType -> JSVar -> JSVar -> [StgAlt] -> JSGen Config JSExp
+genAlts tailpos _ scrut res [alt] = do
+  altStmts <- getStmts <$> genAlt tailpos scrut res alt
   -- As this alternative is the only one in this case expression, it's OK to
   -- eliminate var -> var assigns at the end of it.
   case last altStmts of
@@ -244,8 +304,8 @@ genAlts _ scrut res [alt] = do
   where
     getStmts (Cond _ ss) = ss
     getStmts (Def ss)    = ss
-genAlts t scrut res alts = do
-  alts' <- mapM (genAlt scrut res) alts
+genAlts tailpos t scrut res alts = do
+  alts' <- mapM (genAlt tailpos scrut res) alts
   optCase cmp scrut res alts'
   where
     getTag = \s -> Index s (litN 0)
@@ -265,8 +325,8 @@ tyConIsBoolean tc =
     m = moduleNameString $ moduleName $ nameModule $ tyConName tc
 
 
-genAlt :: JSVar -> JSVar -> StgAlt -> JSGen Config JSAlt
-genAlt scrut res (con, args, used, body) = do
+genAlt :: Bool -> JSVar -> JSVar -> StgAlt -> JSGen Config JSAlt
+genAlt tailpos scrut res (con, args, used, body) = do
   construct <- case con of
     DEFAULT                                  -> return Def
     LitAlt l                                 -> Cond <$> genLit l
@@ -274,8 +334,9 @@ genAlt scrut res (con, args, used, body) = do
     _ -> error "Bad data constructor tag generated!"
 
   args' <- mapM genVar args
+  addLocal args'
   let binds = [bindVar v ix | (v, ix, True) <- zip3 args' [1..] used]
-  (ret, body', _) <- isolate $ genEx body
+  (ret, body', _, _) <- isolate $ genEx tailpos body
   return $ construct
          $ bagToList
          $ listToBag binds `unionBags` body' `snocBag` NewVar (AST.Var res) ret

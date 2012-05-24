@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module CodeGen.Javascript.Monad (
   JSGen, genJS, emit, dependOn, getModName, pushBinding, popBinding,
-  getCurrentBinding, isolate, addLocal, allowUnthunk, disallowUnthunk,
-  unthunkOK, getCfg) where
+  getCurrentBinding, getCurrentBindingArgs, isolate, addLocal, allowUnthunk,
+  disallowUnthunk, unthunkOK, getCfg) where
 import Control.Monad.State
 import Bag
 import CodeGen.Javascript.AST hiding (code, deps)
@@ -15,7 +15,7 @@ data GenState cfg = GenState {
     deps         :: !(S.Set JSVar),
     locals       :: !(S.Set JSVar),
     modName      :: JSLabel,
-    bindingStack :: [Var],
+    bindingStack :: [(Var, [Var])],
     unthunk      :: Int,
     config       :: cfg
   }
@@ -59,6 +59,15 @@ instance Dependency (S.Set JSVar) where
     st <- get
     put st {locals = S.union vars (locals st)}
 
+instance Dependency [JSVar] where
+  dependOn vars = JSGen $ do
+    st <- get
+    put st {deps = S.union (S.fromList vars) (deps st)}
+
+  addLocal vars = JSGen $ do
+    st <- get
+    put st {locals = S.union (S.fromList vars) (locals st)}
+
 genJS :: cfg         -- ^ Config to use for code generation.
       -> JSLabel     -- ^ Name of the module being compiled.
       -> JSGen cfg a -- ^ The code generation computation.
@@ -79,14 +88,18 @@ getModName = JSGen $ modName <$> get
 
 -- | Get the Var for the binding currently being generated.
 getCurrentBinding :: JSGen cfg Var
-getCurrentBinding = JSGen $ (head . bindingStack) <$> get
+getCurrentBinding = JSGen $ (fst . head . bindingStack) <$> get
+
+-- | Get the Var for the args of the binding currently being generated.
+getCurrentBindingArgs :: JSGen cfg [Var]
+getCurrentBindingArgs = JSGen $ (snd . head . bindingStack) <$> get
 
 -- | Push a new var onto the stack, indicating that we're generating code
 --   for a new binding.
-pushBinding :: Var -> JSGen cfg ()
-pushBinding var = JSGen $ do
+pushBinding :: Var -> [Var] -> JSGen cfg ()
+pushBinding var args = JSGen $ do
   st <- get
-  put st {bindingStack = var : bindingStack st}
+  put st {bindingStack = (var, args) : bindingStack st}
 
 -- | Pop a var from the stack, indicating that we're done generating code
 --   for that binding.
@@ -99,17 +112,19 @@ popBinding = JSGen $ do
 --   writing them to the output stream. Dependencies and locals are still
 --   updated, however.
 --   In addition to the return value and the code, all variables accessed
---   within the computation are returned.
-isolate :: JSGen cfg a -> JSGen cfg (a, Bag JSStmt, S.Set JSVar)
+--   within the computation are returned, as well as all variables declared
+--   within the computation, in that order.
+isolate :: JSGen cfg a -> JSGen cfg (a, Bag JSStmt, S.Set JSVar, S.Set JSVar)
 isolate gen = do
   myMod <- getModName
   myBnd <- getCurrentBinding
+  myArgs <- getCurrentBindingArgs
   cfg <- getCfg
   let (x, dep, loc, stmts) = genJS cfg myMod $ do
-        pushBinding myBnd >> gen
+        pushBinding myBnd myArgs >> gen
   dependOn dep
   addLocal loc
-  return (x, stmts, dep)
+  return (x, stmts, dep, loc)
 
 unthunkOK :: JSGen cfg Bool
 unthunkOK = JSGen $ do
