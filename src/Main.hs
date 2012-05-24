@@ -64,8 +64,8 @@ closurize cloPath file = do
              Nothing
              (Just cloOut)
              Nothing
-  hClose cloOut
   res <- waitForProcess build
+  hClose cloOut
   case res of
     ExitFailure n ->
       fail $ "Couldn't execute Google Closure compiler: " ++ show n
