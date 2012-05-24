@@ -12,10 +12,10 @@ num = 70711
 
 {-# NOINLINE test #-}
 test :: Integer
-#if !defined(TCE) && defined(HASTE)
-test = num^2+4479
-#else
+#if defined(O2) || defined(TCE)
 test = mysum 0 [1..100000]
+#else
+test = num^2+4479
 #endif
 
 runTest :: IO Integer

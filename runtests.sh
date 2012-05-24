@@ -16,7 +16,7 @@ for file in Tests/*.hs; do
     hastec --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
     haste_output=`js TestDriver.js`
 
-    hastec -O2 --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs > /dev/null
     haste_opt_output=`js TestDriver.js`
 
     hastec -O2 --opt-tce --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
