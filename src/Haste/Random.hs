@@ -1,9 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
-module Haste.Random (Random (..), Seed, split, mkSeed, newSeed) where
+module Haste.Random (Random (..), Seed, next, mkSeed, newSeed) where
 import Haste.Prim
 import Data.Int
 import Data.Word
-import Data.Bits (complement)
 import Data.List (unfoldr)
 
 foreign import ccall jsRand :: IO Double
@@ -22,10 +21,10 @@ newSeed = do
   let sign = if s > 0.5 then 1 else -1
   return . mkSeed . round_ $ x*sign*2147483647
 
--- | Split a seed in two.
-split :: Seed -> (Seed, Seed)
-split (Seed s) =
-  (Seed $ complement s'*s+c, Seed s')
+-- | Generate the next seed in the sequence.
+next :: Seed -> Seed
+next (Seed s) =
+  Seed s'
   where
     -- This is the same LCG that's used in older glibc versions.
     -- It was chosen because the untruncated product will never be larger than
@@ -42,10 +41,9 @@ class Random a where
   randomRs bounds seed = unfoldr (Just . randomR bounds) seed
 
 instance Random Int where
-  randomR (low, high) s =
-    (n' `mod` (high-low) + low, s')
+  randomR (low, high) s@(Seed n) =
+    (n' `mod` (high-low) + low, next s)
     where
-      (Seed n, s') = split s
       -- Use the LCG from MSVC here; less apparent relationship between seed
       -- and output.
       a  = 214013
