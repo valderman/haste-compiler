@@ -76,6 +76,28 @@ type IO (), you have to call it as cb(whatever), NOT just cb()!
 
 
 
+** Ptr and Haskell data structures
+
+If you need to do something to a Haskell data structure within a JS function:
+don't. It's ugly, and it's going to break if (when) Haste or GHC decides to do
+something different WRT data representation.
+
+If you still insist, remember the following:
+
+* A foreign function that takes a value of type Ptr a as an argument or
+  returns such a value will unwrap it for you; the value
+  toPtr (Just 42) :: Ptr (Maybe Int) will thus look like [2, [1,42]]
+  to JS under such circumstances - no extra data constructors anywhere.
+
+* Ptr values that are embedded within something else will NOT be unwrapped in
+  this manner.
+  Thus, the value toPtr (Just (toPtr 42)) :: Ptr (Maybe (Ptr Int)) will look
+  like this: [2, [1, [1, 42]]]
+  The outermost Just data constructor (2) is not wrapped, while the [1, 42]
+  that denotes 42 :: Int is wrapped in an extra data constructor signifying
+  the Ptr part.
+
+
 ** Examples
 
 For reference, here are a few functions to help you get started.
