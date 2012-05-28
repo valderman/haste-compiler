@@ -8,7 +8,6 @@ import Haste.Readable
 import Haste.Showable
 import Haste.Callback
 import Haste.Random
-import Foreign.Ptr (Ptr)
 
 foreign import ccall jsAlert  :: JSString -> IO ()
 foreign import ccall jsLog    :: JSString -> IO ()
@@ -36,4 +35,4 @@ writeLog = jsLog . toJSStr
 
 -- | Concatenate a series of JSStrings using the specified separator.
 catJSStr :: JSString -> [JSString] -> JSString
-catJSStr sep strs = jsCat (mkPtr strs) sep
+catJSStr sep strs = jsCat (toPtr strs) sep

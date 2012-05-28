@@ -3,6 +3,7 @@
 module Haste.Reactive.DOM (clicked, valueOf, valueAt, DOMObject, domObj) where
 import FRP.Fursuit
 import Haste
+import Haste.DOM
 import Data.String
 
 -- | Represents a DOM object; a DOM object consists of an object ID,
@@ -26,7 +27,7 @@ instance (Showable a, Readable a) => IsString (DOMObject a) where
 -- | An event that gets raised whenever the element with the specified ID is
 --   clicked.
 clicked :: ElemID -> IO (Signal ())
-clicked e = do
+clicked eid = withElem eid $ \e -> do
   (p,s) <- pipe ()
   _ <- setCallback e OnClick (write p ())
   return s
@@ -38,7 +39,7 @@ valueOf e = e `valueAt` OnChange
 
 -- | The value property of the given element, triggered on a custom event.
 valueAt :: Readable a => ElemID -> Event -> IO (Signal a)
-valueAt e evt = do
+valueAt eid evt = withElem eid $ \e -> do
   str <- getProp e "value"
   (src, sig) <- case fromStr str of
                   Just x -> pipe x
@@ -51,8 +52,8 @@ valueAt e evt = do
       _       -> return ()
 
   if (not success) 
-     then error $ "Not found: " ++ e
+     then error $ "Browser doesn't support sane event handlers!"
      else return sig
 
 instance Sink (DOMObject a) a where
-  (D obj attr) << val = sink (setProp obj attr . toStr) val
+  (D obj attr) << val = withElem obj $ \e -> sink (setProp e attr . toStr) val

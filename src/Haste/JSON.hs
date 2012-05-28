@@ -8,7 +8,6 @@
 module Haste.JSON (JSON (..), encode, decode, (!), (~>)) where
 import Haste
 import Haste.Prim
-import Foreign.Ptr
 import Data.String
 
 -- Remember to update jsParseJSON if this data type changes!
@@ -100,7 +99,7 @@ encode = catJSStr "" . enc []
         opencu : closecu : acc
 
 decode :: JSString -> Maybe JSON
-decode = unsafeUnPtr . jsParseJSON
+decode = fromPtr . jsParseJSON
 
 instance Showable JSON where
   show_ = fromJSStr . encode

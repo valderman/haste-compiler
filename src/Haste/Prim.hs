@@ -1,7 +1,7 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
     TypeSynonymInstances, FlexibleInstances, OverlappingInstances #-}
 module Haste.Prim (JSString, toJSStr, fromJSStr, NumberRep (..), JSAny,
-                   mkPtr, unsafeUnPtr) where
+                   Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
 import Unsafe.Coerce
 import GHC.CString
@@ -15,6 +15,9 @@ foreign import ccall _str :: JSString
 foreign import ccall strEq :: JSString -> JSString -> Bool
 foreign import ccall strOrd :: JSString -> JSString -> Ptr Ordering
 
+-- | "Pointers" need to be wrapped in a data constructor.
+data FakePtr a = FakePtr a
+
 type JSAny = Ptr Haste.Prim.Any
 data Any
 type JSString = Ptr JSChr
@@ -24,29 +27,24 @@ instance Eq JSString where
   (==) = strEq
 
 instance Ord JSString where
-  compare a b = unsafeUnPtr (strOrd a b)
-
--- | We need to fake the same representation as Ptr a; FakePtr does this.
-data FakePtr a = FakePtr a
+  compare a b = fromPtr (strOrd a b)
 
 -- | In normal Haskell, we use Storable for data that can be pointed to. When
 --   we compile to JS, however, anything can be "pointed" to and nothing needs
---   to be stored, so we just wrap a value in another constructor and cast it
---   to a pointer.
-mkPtr :: a -> Ptr a
-mkPtr = unsafeCoerce . FakePtr
+--   to be stored.
+toPtr :: a -> Ptr a
+toPtr = unsafeCoerce . FakePtr
 
--- | Unsafely read a value from a pointer. This is only safe if the value
---   pointed to is immutable; even then, please don't do it.
-unsafeUnPtr :: Ptr a -> a
-unsafeUnPtr p =
-  case unsafeCoerce p of
-    FakePtr x -> x
+-- | Unwrap a "pointer" to something.
+fromPtr :: Ptr a -> a
+fromPtr ptr =
+  case unsafeCoerce ptr of
+    FakePtr val -> val
 
 {-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
 {-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
-{-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) = mkPtr (unsafeCoerce# s) #-}
-{-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) = mkPtr (unsafeCoerce# s) #-}
+{-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) = toPtr (unsafeCoerce# s) #-}
+{-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) = toPtr (unsafeCoerce# s) #-}
 
 {-# NOINLINE toJSStr #-}
 -- | Defined in lib/rts.js

@@ -1,25 +1,18 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module Haste.Callback (Callback (..), mkCallback, ElemID, PropID, Event (..),
-                       setCallback, setTimeout, getProp, setProp) where
+module Haste.Callback (Callback (..), mkCallback, Event (..),
+                       setCallback, setTimeout) where
 import Haste.Prim
-import Foreign.Ptr (Ptr)
-import Control.Applicative
+import Haste.DOM
 
 newtype Callback a = Callback (Ptr a)
 
-foreign import ccall jsSetCB :: JSString -> JSString -> Callback a -> IO Bool
+foreign import ccall jsSetCB :: Elem -> JSString -> Callback a -> IO Bool
 foreign import ccall jsSetTimeout :: Int -> Callback a -> IO ()
-foreign import ccall jsFind :: JSString -> IO Bool
-foreign import ccall jsGet :: JSString -> JSString  -> IO JSString
-foreign import ccall jsSet :: JSString -> JSString -> JSString -> IO ()
 
 -- | Turn a computation into a callback that can be passed to a JS
 --   function.
 mkCallback :: a -> Callback a
-mkCallback = Callback . mkPtr
-
-type ElemID = String
-type PropID = String
+mkCallback = Callback . toPtr
 
 data Event
   = OnLoad
@@ -46,9 +39,9 @@ setTimeout delay cb =
 
 -- | Set a callback on an event of an element.
 --   Returns False if the given element could not be found.
-setCallback :: ElemID -> Event -> IO () -> IO Bool
-setCallback elemId evt f =
-  jsSetCB (toJSStr elemId) (toJSStr evtName) (mkCallback $! f)
+setCallback :: Elem -> Event -> IO () -> IO Bool
+setCallback e evt f =
+  jsSetCB e (toJSStr evtName) (mkCallback $! f)
   where
     evtName =
       case evt of
@@ -67,19 +60,3 @@ setCallback elemId evt f =
         OnChange    -> "change"
         OnFocus     -> "focus"
         OnBlur      -> "blur"
-
-withElem :: ElemID -> (JSString -> IO a) -> IO a
-withElem e act = do
-  let e' = toJSStr e
-  exists <- jsFind e'
-  case exists of
-    False -> error $ "No element with ID " ++ e ++ " could be found!"
-    _     -> act e'
-
--- | Get a property from a JS object. Panics if the object doesn't exist.
-getProp :: ElemID -> PropID -> IO String
-getProp e p = withElem e $ \e' -> fromJSStr <$> jsGet e' (toJSStr p)
-
--- | Set a property in a JS object. Panics if the object doesn't exist.
-setProp :: ElemID -> PropID -> String -> IO ()
-setProp e p v = withElem e $ \e' -> jsSet e' (toJSStr p) (toJSStr v)

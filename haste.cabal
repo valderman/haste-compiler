@@ -28,6 +28,7 @@ Library
         Haste.JSON
         Haste.Ajax
         Haste.Reactive
+        Haste.DOM
     Other-Modules:
         Haste.Prim
         Haste.Readable
