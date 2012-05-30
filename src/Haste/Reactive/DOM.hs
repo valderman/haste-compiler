@@ -1,28 +1,24 @@
 {-# LANGUAGE GADTs, FlexibleInstances, MultiParamTypeClasses #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | DOM events and utilities for the Haste reactive library.
-module Haste.Reactive.DOM (clicked, valueOf, valueAt, DOMObject, domObj) where
+module Haste.Reactive.DOM (clicked,valueOf,valueAt,ElemProp,elemProp) where
 import FRP.Fursuit
 import Haste
 import Haste.DOM
-import Data.String
 
--- | Represents a DOM object; a DOM object consists of an object ID,
---   corresponding to the object's ID attribute in the HTML, and an attribute.
-data DOMObject a where
-  D :: (Showable a, Readable a) => ElemID -> PropID -> DOMObject a
+-- | Represents a property of a DOM object.
+data ElemProp where
+  D :: ElemID -> PropID -> ElemProp
 
 -- | Create a 'DOMObject' from a string describing the object. For example,
 --   domObj "myobject.value" corresponds to the value attribute of the object
 --   with the ID "myobject".
-domObj :: (Showable a, Readable a) => String -> DOMObject a
-domObj str =
+elemProp :: String -> ElemProp
+elemProp str =
   case span (/= '.') str of
-    ([], _)     -> error "domObj: No object ID given!"
-    (_, [])     -> error "domObj: No object attribute given!"
+    ([], _)     -> error "elemProp: No object ID given!"
+    (_, [])     -> error "elemProp: No object attribute given!"
     (obj, attr) -> D obj (tail attr)
-
-instance (Showable a, Readable a) => IsString (DOMObject a) where
-  fromString = domObj
 
 -- | An event that gets raised whenever the element with the specified ID is
 --   clicked.
@@ -55,5 +51,19 @@ valueAt eid evt = withElem eid $ \e -> do
      then error $ "Browser doesn't support sane event handlers!"
      else return sig
 
-instance Sink (DOMObject a) a where
+instance Showable a => Sink ElemProp a where
   (D obj attr) << val = withElem obj $ \e -> sink (setProp e attr . toStr) val
+
+-- | Replace the sink element's list of child nodes whenever a new list of
+--   nodes comes down the pipe.
+instance Sink Elem [Elem] where
+  e << val = sink (setChildren e) val
+
+-- | Same as the instance for [Elem].
+instance Sink Elem [IO Elem] where
+  e << val = sink (\children -> sequence children >>= setChildren e) val
+
+-- | Set the sink element's innerHTML property whenever a new string comes down
+--   the pipe.
+instance Sink Elem String where
+  e << val = sink (setProp e "innerHTML") val
