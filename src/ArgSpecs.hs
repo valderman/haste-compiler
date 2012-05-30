@@ -31,7 +31,8 @@ argSpecs = [
                      ++ "give a substantial performance boost for Int math "
                      ++ "heavy code."},
     ArgSpec { optName = "opt-tce",
-              updateCfg = \cfg _ -> cfg {doTCE = True},
+              updateCfg = \cfg _ -> cfg {doTCE = True,
+                                         evalLib = evalTrampolining},
               info = "Perform tail call elimination."},
     ArgSpec { optName = "opt-google-closure",
               updateCfg = updateClosureCfg,
@@ -43,6 +44,7 @@ argSpecs = [
               info = "Display even the most obnoxious warnings."}
   ]
 
+updateClosureCfg :: Config -> [String] -> Config
 updateClosureCfg cfg ['=':arg] =
   cfg {useGoogleClosure = Just arg}
 updateClosureCfg cfg _ =

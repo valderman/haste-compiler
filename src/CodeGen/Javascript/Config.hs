@@ -1,6 +1,6 @@
 module CodeGen.Javascript.Config (
   Config (..), AppStart, defConfig, stdRtsLib, stdJSLib, startASAP,
-  startOnLoadComplete, appName, sysLibPath) where
+  startOnLoadComplete, appName, sysLibPath, evalTrampolining, eval) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import CodeGen.Javascript.AST
 import System.IO.Unsafe (unsafePerformIO)
@@ -45,10 +45,20 @@ sysLibPath = unsafePerformIO $ do
 strictly32Bits :: JSExp -> JSExp
 strictly32Bits = flip (BinOp BitOr) (litN 0)
 
+-- | Trampolining eval version.
+evalTrampolining :: FilePath
+evalTrampolining = unsafePerformIO $ getDataFileName "eval-trampoline.js"
+
+-- | Non-trampolining eval version.
+eval :: FilePath
+eval = unsafePerformIO $ getDataFileName "eval.js"
+
 -- | Compiler configuration.
 data Config = Config {
     -- | Runtime files to dump into the JS blob.
     rtsLibs :: [FilePath],
+    -- | Which eval version to use. (Will be trampolining or normal.)
+    evalLib :: FilePath,
     -- | Path to directory where system libraries are located.
     libPath :: FilePath,
     -- | Write all modules to this path.
@@ -77,6 +87,7 @@ data Config = Config {
 defConfig :: Config
 defConfig = Config {
     rtsLibs          = [stdRtsLib,stdJSLib],
+    evalLib          = eval,
     libPath          = sysLibPath,
     targetLibPath    = ".",
     appStart         = startOnLoadComplete,

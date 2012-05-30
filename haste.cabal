@@ -19,6 +19,8 @@ Data-Dir:
 Data-Files:
     rts.js
     stdlib.js
+    eval.js
+    eval-trampoline.js
 
 Library
     Hs-Source-Dirs: src
