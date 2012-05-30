@@ -66,10 +66,10 @@ instance PrettyJS JSStmt where
     emit body
 
   emit (Block stmts) = do
-    line $ out "{" >> endl
+    line $ out "{"
     indentFurther $ do
       mapM_ emit stmts
-    line $ out "}" >> endl
+    line $ out "}"
   
   emit (Case ex alts) = do
     line $ out "switch(" >> emit ex >> out "){"
