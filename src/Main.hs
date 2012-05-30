@@ -58,7 +58,8 @@ closurize cloPath file = do
   cloOut <- openFile cloFile WriteMode
   build <- runProcess "java"
              ["-jar", cloPath, "--compilation_level", "ADVANCED_OPTIMIZATIONS",
-              "--jscomp_off", "uselessCode", file]
+              "--jscomp_off", "uselessCode", "--jscomp_off", "globalThis",
+              file]
              Nothing
              Nothing
              Nothing
