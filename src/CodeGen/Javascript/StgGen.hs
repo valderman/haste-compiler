@@ -156,13 +156,14 @@ genRhs _ _ recursive (StgRhsCon _ con args) = do
   if recursive
      then Thunk [] <$> genEx False (StgConApp con args)
      else genEx False (StgConApp con args)
-genRhs careful tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
+genRhs careful tailpos _ (StgRhsClosure _ _ closureDeps upd _ args body) = do
   args' <- mapM genVar args
-  (retExp, body', deps, local) <- isolate $ do
+  (retExp, body') <- isolate $ do
     mapM_ addLocal args'
     genEx tailpos body
   -- Constant-close over all dependencies
-  constify (deps S.\\ local) $
+  deps <- mapM genVar closureDeps
+  constify deps $
     if isUpdatable upd && null args
       then thunk (bagToList body') retExp
       else Fun args' (loop $ bagToList $ body' `snocBag` Ret retExp)
@@ -173,7 +174,7 @@ genRhs careful tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
          | otherwise = id
     constify deps fun
       | careful =
-        return $ ConstClosure (S.toList deps) fun
+        return $ ConstClosure deps fun
       | otherwise =
         return fun
 
@@ -336,7 +337,7 @@ genAlt tailpos scrut res (con, args, used, body) = do
   args' <- mapM genVar args
   addLocal args'
   let binds = [bindVar v ix | (v, ix, True) <- zip3 args' [1..] used]
-  (ret, body', _, _) <- isolate $ genEx tailpos body
+  (ret, body') <- isolate $ genEx tailpos body
   return $ construct
          $ bagToList
          $ listToBag binds `unionBags` body' `snocBag` NewVar (AST.Var res) ret

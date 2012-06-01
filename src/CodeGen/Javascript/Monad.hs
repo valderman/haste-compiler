@@ -111,10 +111,7 @@ popBinding = JSGen $ do
 -- | Run a GenJS computation in isolation, returning its results rather than
 --   writing them to the output stream. Dependencies and locals are still
 --   updated, however.
---   In addition to the return value and the code, all variables accessed
---   within the computation are returned, as well as all variables declared
---   within the computation, in that order.
-isolate :: JSGen cfg a -> JSGen cfg (a, Bag JSStmt, S.Set JSVar, S.Set JSVar)
+isolate :: JSGen cfg a -> JSGen cfg (a, Bag JSStmt)
 isolate gen = do
   myMod <- getModName
   myBnd <- getCurrentBinding
@@ -124,7 +121,7 @@ isolate gen = do
         pushBinding myBnd myArgs >> gen
   dependOn dep
   addLocal loc
-  return (x, stmts, dep, loc)
+  return (x, stmts)
 
 unthunkOK :: JSGen cfg Bool
 unthunkOK = JSGen $ do
