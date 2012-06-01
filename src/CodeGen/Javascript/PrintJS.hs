@@ -130,17 +130,8 @@ instance PrettyJS JSExp where
   -- A nullary data constructor will never be applied to anything, so it's
   -- perfectly safe to generate it as a value right away.
   -- Booleans are always unpacked.
-  emit (DataCon (Lit (Boolean True)) []) = do
-    out "true"
-  emit (DataCon (Lit (Boolean False)) []) = do
-    out "false"
-  emit (DataCon tag []) = do
-    out "[" >> emit tag >> out "]"
-  emit (DataCon tag stricts) = do
-    emit $ NativeCall "D" [tag, Array $ map b2n stricts]
-    where
-      b2n True  = litN 1
-      b2n False = litN 0
+  emit (DataCon _ _) =
+    error "DataCon emitted into the code stream!"
 
   emit (BinOp op a b) =
     emitParens op a b
