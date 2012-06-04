@@ -1,8 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module CodeGen.Javascript.Monad (
   JSGen, genJS, emit, dependOn, getModName, pushBinding, popBinding,
-  getCurrentBinding, getCurrentBindingArgs, isolate, addLocal, allowUnthunk,
-  disallowUnthunk, unthunkOK, getCfg) where
+  getCurrentBinding, getCurrentBindingArgs, isolate, addLocal, getCfg) where
 import Control.Monad.State
 import Bag
 import CodeGen.Javascript.AST hiding (code, deps)
@@ -16,7 +15,6 @@ data GenState cfg = GenState {
     locals       :: !(S.Set JSVar),
     modName      :: JSLabel,
     bindingStack :: [(Var, [Var])],
-    unthunk      :: Int,
     config       :: cfg
   }
 
@@ -27,7 +25,6 @@ initialState = GenState {
     locals       = S.empty,
     modName      = undefined,
     bindingStack = [],
-    unthunk      = 0,
     config       = undefined
   }
 
@@ -74,7 +71,7 @@ genJS :: cfg         -- ^ Config to use for code generation.
       -> (a, S.Set JSVar, S.Set JSVar, Bag JSStmt)
 genJS cfg myModName (JSGen gen) =
   case runState gen initialState {modName = myModName, config = cfg} of
-    (a, GenState stmts dependencies loc _ _ _ _) ->
+    (a, GenState stmts dependencies loc _ _ _) ->
       (a, dependencies, loc, stmts)
 
 -- | Emit a JS statement to the code stream
@@ -123,20 +120,5 @@ isolate gen = do
   addLocal loc
   return (x, stmts)
 
-unthunkOK :: JSGen cfg Bool
-unthunkOK = JSGen $ do
-  st <- get
-  return $ unthunk st == 0
-
 getCfg :: JSGen cfg cfg
 getCfg = JSGen $ fmap config get
-
-allowUnthunk :: JSGen cfg ()
-allowUnthunk = JSGen $ do
-  st <- get
-  put st {unthunk = unthunk st - 1}
-
-disallowUnthunk :: JSGen cfg ()
-disallowUnthunk = JSGen $ do
-  st <- get
-  put st {unthunk = unthunk st + 1}
