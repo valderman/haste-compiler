@@ -60,7 +60,9 @@ fromJSStr :: JSString -> String
 fromJSStr s = s `seq` []
 
 class NumberRep a where
+  -- | Convert any type with a Number representation to a 32-bit signed integer.
   round_  :: a -> Int
+  -- | Create any type with a Number representation from a 32-bit signed integer.
   fromInt :: Int -> a
   fromInt = unsafeCoerce#
   
