@@ -9,7 +9,6 @@ import CoreToStg
 import StgSyn (StgBinding)
 import HscTypes
 import GhcMonad
-import Control.Applicative
 import System.Environment (getArgs)
 import Control.Monad (when)
 import CodeGen.Javascript
@@ -23,7 +22,11 @@ import System.Directory (renameFile)
 
 main :: IO ()
 main = do
-  argRes <- handleArgs defConfig argSpecs <$> getArgs
+  cmdargs <- getArgs
+  let cmdargs' | "--opt-all" `elem` cmdargs = "-O2" : cmdargs
+               | otherwise                  = cmdargs
+      argRes = handleArgs defConfig argSpecs cmdargs'
+
   case argRes of
     Left help -> putStrLn help
     Right (cfg, ghcargs) ->

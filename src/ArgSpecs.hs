@@ -39,6 +39,10 @@ argSpecs = [
               info = "Run the Google Closure compiler on the output. "
                    ++ "Use --opt-google-closure=foo.jar to hint that foo.jar "
                    ++ "is the Closure compiler."},
+    ArgSpec { optName = "opt-all",
+              updateCfg = updateClosureCfg,
+              info = "Enable all safe optimizations. "
+                     ++ "Equivalent to -O2 --opt-google-closure."},
     ArgSpec { optName = "verbose",
               updateCfg = \cfg _ -> cfg {verbose = True},
               info = "Display even the most obnoxious warnings."}
