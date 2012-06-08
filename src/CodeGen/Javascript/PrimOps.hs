@@ -169,11 +169,13 @@ genOp cfg op xs =
     UnsafeFreezeByteArrayOp -> Array $ [litN 1,xs!!1,xs!!0]
     ByteArrayContents_Char -> head xs
 
-    -- Misc. opts
-    -- noDuplicate is only relevant in a threaded environment.
+    -- Misc. ops
+    -- Get the data constructor tag from a value.
+    DataToTagOp    -> Index (head xs) (xs !! 0)
     TouchOp        -> xs !! 1
     RaiseOp        -> call "die"
     RaiseIOOp      -> call "die"
+    -- noDuplicate is only relevant in a threaded environment.
     NoDuplicateOp  -> head xs
     CatchOp        -> call "jsCatch"
     x              -> runtimeError $ "Unsupported PrimOp: " ++ show x
