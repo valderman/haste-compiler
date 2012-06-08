@@ -16,6 +16,10 @@ class Readable a where
   fromStr :: String -> Maybe a
   fromStr = readm
 
+instance Readable () where
+  readm "()" = Just ()
+  readm _    = Nothing
+
 instance Readable String where
   readm s = Just $ '"' : s ++ "\""
   fromStr = Just

@@ -30,6 +30,7 @@ data Event
   | OnChange
   | OnFocus
   | OnBlur
+    deriving (Eq, Ord, Show)
 
 -- | Wrapper for window.setTimeout; execute the given computation after a delay
 --   given in milliseconds.

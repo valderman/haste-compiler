@@ -42,7 +42,8 @@ Library
     Build-Depends:
         base,
         ghc-prim,
-        fursuit
+        fursuit,
+        containers
     Default-Language: Haskell98
 
 Executable hastec

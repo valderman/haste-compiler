@@ -5,6 +5,14 @@ module Haste.Reactive.DOM (clicked,valueOf,valueAt,ElemProp,elemProp) where
 import FRP.Fursuit
 import Haste
 import Haste.DOM
+import qualified Data.Map as M
+import System.IO.Unsafe (unsafePerformIO)
+import Data.IORef
+
+{-# NOINLINE eventHandlers #-}
+-- | Contains a list of all installed event handlers.
+eventHandlers :: Readable a => IORef (M.Map (ElemID, Event) (Signal a))
+eventHandlers = unsafePerformIO $ newIORef M.empty
 
 -- | Represents a property of a DOM object.
 data ElemProp where
@@ -20,36 +28,48 @@ elemProp str =
     (_, [])     -> error "elemProp: No object attribute given!"
     (obj, attr) -> D obj (tail attr)
 
+unlessExists :: Readable a => ElemID -> Event -> IO (Signal a) -> Signal a
+unlessExists eid evt create = new $ do
+  handlers <- readIORef eventHandlers
+  case M.lookup (eid, evt) handlers of
+    Just s -> return s
+    _      -> do
+      sig <- create
+      writeIORef eventHandlers (M.insert (eid, evt) sig handlers)
+      return sig
+
+
 -- | An event that gets raised whenever the element with the specified ID is
 --   clicked.
-clicked :: ElemID -> IO (Signal ())
-clicked eid = withElem eid $ \e -> do
-  (p,s) <- pipe ()
-  _ <- setCallback e OnClick (write p ())
-  return s
+clicked :: ElemID -> Signal ()
+clicked eid = unlessExists eid OnClick clickedIO
+  where
+    clickedIO = withElem eid $ \e -> do
+      (p,s) <- pipe ()
+      _ <- setCallback e OnClick (write p ())
+      return s
 
 -- | The value property of the given element, updated whenever an onchange
 --   event is raised.
-valueOf :: Readable a => ElemID -> IO (Signal a)
+valueOf :: Readable a => ElemID -> Signal a
 valueOf e = e `valueAt` OnChange
 
 -- | The value property of the given element, triggered on a custom event.
-valueAt :: Readable a => ElemID -> Event -> IO (Signal a)
-valueAt eid evt = withElem eid $ \e -> do
-  str <- getProp e "value"
-  (src, sig) <- case fromStr str of
-                  Just x -> pipe x
-                  _      -> error $ "Bad initial value in valueAt: " ++ str
+valueAt :: Readable a => ElemID -> Event -> Signal a
+valueAt eid evt = filterMapS fromStr $ unlessExists eid evt valueAtIO
+  where
+    valueAtIO = withElem eid $ \e -> do
+      str <- getProp e "value"
+      (src, sig) <- case fromStr str of
+        Just x -> pipe x
+        _      -> error $ "Bad initial value in valueAt: " ++ str
   
-  success <- setCallback e evt $ do
-    str' <- getProp e "value"
-    case fromStr str' of
-      Just x' -> write src x'
-      _       -> return ()
+      success <- setCallback e evt $ do
+        getProp e "value" >>= write src
 
-  if (not success) 
-     then error $ "Browser doesn't support sane event handlers!"
-     else return sig
+      if (not success) 
+        then error $ "Browser doesn't support sane event handlers!"
+        else return sig
 
 instance Showable a => Sink ElemProp a where
   (D obj attr) << val = withElem obj $ \e -> sink (setProp e attr . toStr) val
