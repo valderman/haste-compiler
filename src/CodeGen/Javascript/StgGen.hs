@@ -1,5 +1,6 @@
 {-# LANGUAGE PatternGuards #-}
 module CodeGen.Javascript.StgGen (generate) where
+import Prelude hiding (catch)
 import BasicTypes
 import StgSyn
 import CoreSyn (AltCon (..))
@@ -32,6 +33,7 @@ import CodeGen.Javascript.Config
 import Data.Int
 import Data.Word
 import Data.Maybe (isJust)
+import Control.Exception hiding (evaluate)
 
 generate :: Config -> ModuleName -> [StgBinding] -> JSMod
 generate cfg modname binds =
@@ -253,15 +255,18 @@ genEx _ (StgConApp con args) = do
 genEx _ (StgOpApp op args _type) = do
   args' <- mapM genArg args
   cfg <- getCfg
-  return $ case op of
-    StgPrimOp op' ->
-      genOp cfg op' args'
-    StgPrimCallOp (PrimCall f _) ->
-      NativeCall (unpackFS f) args'
-    StgFCallOp (CCall (CCallSpec (StaticTarget f _) _ _)) _t ->
-      NativeCall (unpackFS f) args'
-    _ ->
-      error "Unsupported primop encountered!"
+  let theOp = case op of
+        StgPrimOp op' ->
+          genOp cfg op' args'
+        StgPrimCallOp (PrimCall f _) ->
+          Right $ NativeCall (unpackFS f) args'
+        StgFCallOp (CCall (CCallSpec (StaticTarget f _) _ _)) _t ->
+          Right $ NativeCall (unpackFS f) args'
+        _ ->
+          Left "Unsupported primop encountered!"
+  case theOp of
+    Right x -> return x
+    Left e  -> warn Normal e >> return (runtimeError e)
 genEx tailpos (StgLet bind expr) = do
   genBindRec tailpos bind
   genEx tailpos expr
@@ -355,14 +360,14 @@ genLit l = do
     MachStr s           -> return . lit  $ unpackFS s
     MachInt n
       | n > 2147483647 ||
-        n < -2147483648 -> do warn (constFail "Int" n)
+        n < -2147483648 -> do warn Verbose (constFail "Int" n)
                               return $ truncInt n
       | otherwise       -> return . litN $ fromIntegral n
     MachFloat f         -> return . litN $ fromRational f
     MachDouble d        -> return . litN $ fromRational d
     MachChar c          -> return $ lit c
     MachWord w          
-      | w > 0xffffffff  -> do warn (constFail "Word" w)
+      | w > 0xffffffff  -> do warn Verbose (constFail "Word" w)
                               return $ truncWord w
       | otherwise       -> return . litN $ fromIntegral w
     MachWord64 w        -> return . litN $ fromIntegral w
