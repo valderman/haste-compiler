@@ -31,8 +31,8 @@ Library
         Haste.Ajax
         Haste.Reactive
         Haste.DOM
-    Other-Modules:
         Haste.Prim
+    Other-Modules:
         Haste.Readable
         Haste.Showable
         Haste.Callback
