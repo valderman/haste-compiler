@@ -7,40 +7,26 @@ A compiler to generate Javascript code from Haskell.
 Building
 --------
 
-Clone Haste and Fursuit into the same directory, then cd to
-$THAT_DIRECTORY/haste-compiler and run ./buildall.sh. This should, hopefully,
-set everything up for you. If that didn't make sense to you, just run the
-following commands in your terminal of choice:
-
-    $ mkdir haste && cd haste
-    $ git clone git://github.com/valderman/haste-compiler.git
-    $ git clone git://github.com/valderman/fursuit.git
-    $ cd haste-compiler && ./buildall.sh
-
-This will check out the compiler and its dependencies, download pre-built
-standard libraries from ekblad.cc, and install everything locally, for your
-user only. The binaries will be in ~/.cabal/bin, the base libraries in
-~/.haste/lib and the supporting JS run time system in
-~/.cabal/share/haste-compiler-$VERSION.
+Clone Fursuit and install it using `cabal install`, then do the same for
+haste-compiler and finally run `haste-boot` (or `~/.cabal/bin/haste-boot` if
+you don't have ~/.cabal/bin on your $PATH). That's it; you're now (hopefully)
+ready to build your first Haste application.
 
 I'd strongly recommend adding ~/.cabal/bin to your $PATH, or you'll have to
 invoke Haste as ~/.cabal/bin/hastec, which is sort of awkward.
 
 
-Building manually
------------------
+Building your own base libraries
+--------------------------------
 
 First off, build Fursuit and Haste using cabal.
 
-Next step, get the base libraries from http://ekblad.cc/haste-libs.tar.bz2
-and untar them into your home directory; they unpack to ./.haste/ so
-everything will end up in its proper place. If you want to build them yourself
-instead, download the source code of a recent version of GHC (7.4.1 is the
-only version tested so far) and run ./buildlibs $PATH_TO_GHC_SOURCE from within
-the Haste directory.
+Next step, download the source code of a recent version of GHC (7.4.1 is the
+only version tested so far) and run `./buildlibs.sh $PATH_TO_GHC_SOURCE` from
+within the Haste directory.
 
-Finally, reinstall Fursuit and Haste after installing the base libraries,
-to ensure that proper code is generated for everything.
+Finally, run `haste-boot --force --no-base` to install the Haste and Fursuit
+libraries on top of your custom base package.
 
 
 Usage
@@ -120,5 +106,5 @@ Known issues
 * A program that throws unhandled exceptions may not always give a nice error
   message.
 
-* Word32 produces funny results; use Word instead, which is guaranteed to be
-  32 bits.
+* Word32 produces funny results on some machines; use Word instead, which is
+  guaranteed to be 32 bits with Haste.
