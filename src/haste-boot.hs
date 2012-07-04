@@ -4,15 +4,27 @@ import System.Exit (ExitCode (..))
 import System.Process (waitForProcess, runProcess)
 import System.Directory
 import Network.Download
-import Data.ByteString.Lazy as BS hiding (putStrLn, unpack)
+import Data.ByteString.Lazy as BS hiding (putStrLn, unpack, elem)
 import Codec.Compression.BZip
 import Codec.Archive.Tar
 import System.Environment (getArgs)
 import Control.Monad
 import qualified Codec.Archive.Zip as Zip
 
+data Cfg = Cfg {
+    fetchBase :: Bool,
+    fetchClosure  :: Bool
+  }
+
 main = do
-  forceBoot <- fmap (== ["--force"]) getArgs
+  args <- getArgs
+  let forceBoot = elem "--force" args
+      base      = not $ elem "--no-base" args
+      closure   = not $ elem "--no-closure" args
+      cfg = Cfg {
+          fetchBase    = base,
+          fetchClosure = closure
+        }
   cabalDir <- getAppUserDataDirectory "cabal"
   hasteDir <- getAppUserDataDirectory "haste"
 
@@ -21,14 +33,14 @@ main = do
     mhastec <- locateCompiler ["hastec", localHastec]
     case mhastec of
       Nothing     -> return ()
-      Just hastec -> bootHaste hastec hasteDir
+      Just hastec -> bootHaste cfg hastec hasteDir
 
-bootHaste :: FilePath -> FilePath -> IO ()
-bootHaste hastec hasteDir = do
-  fetchStdLibs hasteDir
+bootHaste :: Cfg -> FilePath -> FilePath -> IO ()
+bootHaste cfg hastec hasteDir = do
+  when (fetchBase cfg) $ fetchStdLibs hasteDir
   buildFursuit hastec hasteDir
   buildStdLib hastec hasteDir
-  installClosure hasteDir
+  when (fetchClosure cfg) $ installClosure hasteDir
   Prelude.writeFile (hasteDir ++ "/booted") (show bootVer)
 
 locateCompiler :: [FilePath] -> IO (Maybe FilePath)
