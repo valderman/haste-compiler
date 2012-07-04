@@ -19,10 +19,22 @@ import System.IO (openFile, hClose, IOMode (..))
 import System.Process (runProcess, waitForProcess)
 import System.Exit (ExitCode (..))
 import System.Directory (renameFile)
+import HasteReboot
+
+rebootMsg :: String
+rebootMsg = "Haste needs to be rebooted; please run haste-boot"
 
 main :: IO ()
-main = do
-  cmdargs <- getArgs
+main | not needsReboot =
+       getArgs >>= compiler
+     | otherwise = do
+       cmdargs <- getArgs
+       if "--unbooted" `elem` cmdargs
+         then compiler (filter (/= "--unbooted") cmdargs)
+         else fail rebootMsg
+
+compiler :: [String] -> IO ()
+compiler cmdargs = do
   let cmdargs' | "--opt-all" `elem` cmdargs = "-O2" : cmdargs
                | otherwise                  = cmdargs
       argRes = handleArgs defConfig argSpecs cmdargs'

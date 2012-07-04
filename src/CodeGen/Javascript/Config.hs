@@ -1,6 +1,7 @@
 module CodeGen.Javascript.Config (
   Config (..), AppStart, defConfig, stdRtsLib, stdJSLib, startASAP,
-  startOnLoadComplete, appName, sysLibPath, evalTrampolining, eval) where
+  startOnLoadComplete, appName, sysLibPath, hastePath, evalTrampolining,
+  eval) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import CodeGen.Javascript.AST
 import System.IO.Unsafe (unsafePerformIO)
@@ -38,9 +39,11 @@ startOnLoadComplete :: AppStart
 startOnLoadComplete mainSym =
   "window.onload = function() {" ++ startASAP mainSym ++ "};"
 
+hastePath :: FilePath
+hastePath = unsafePerformIO $ getAppUserDataDirectory appName
+
 sysLibPath :: FilePath
-sysLibPath = unsafePerformIO $ do
-  append "lib" <$> getAppUserDataDirectory appName
+sysLibPath = append "lib" hastePath
 
 strictly32Bits :: JSExp -> JSExp
 strictly32Bits = flip (BinOp BitOr) (litN 0)

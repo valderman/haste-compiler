@@ -52,4 +52,4 @@ updateClosureCfg :: Config -> [String] -> Config
 updateClosureCfg cfg ['=':arg] =
   cfg {useGoogleClosure = Just arg}
 updateClosureCfg cfg _ =
-  cfg {useGoogleClosure = Just $ sysLibPath ++ "/compiler.jar"}
+  cfg {useGoogleClosure = Just $ hastePath ++ "/compiler.jar"}

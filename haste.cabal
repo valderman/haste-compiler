@@ -46,6 +46,23 @@ Library
         containers
     Default-Language: Haskell98
 
+Executable haste-boot
+    Main-Is: haste-boot.hs
+    Other-Modules:
+        HasteReboot
+    Hs-Source-Dirs: src
+    GHC-Options: -Wall -O2
+    Build-Depends:
+        base,
+        directory,
+        process,
+        bytestring,
+        tar,
+        bzlib,
+        zip-archive,
+        download
+    Default-Language: Haskell98
+
 Executable hastec
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
@@ -66,6 +83,8 @@ Executable hastec
         Main.hs
     Other-Modules:
         Args
+        ArgSpecs
+        HasteReboot
         CodeGen.Javascript
         CodeGen.Javascript.Config
         CodeGen.Javascript.AST
