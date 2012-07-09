@@ -1,6 +1,6 @@
 To interact with the world around us, we need to write some JS to call upon
 from our Haskell programs. This document allegedly contains everything you
-need to know to write such functions.
+need to know to write such functions. If it doesn't, please file a bug report.
 
 
 
@@ -65,6 +65,19 @@ your_return_value.
 Finally, you must make sure to cast your return value to the proper type; if
 you want to return an integer, you'd better make sure the last element of the
 tuple actually is a Number and not a string or array looking like one.
+
+
+
+** Complex arguments
+
+You can pass more complex data structures to your JS functions than just Int,
+Double and JSString, by wrapping them in a Ptr. To do this, use the toPtr and
+fromPtr functions from Haste.Prim rather than the "normal" FFI way.
+
+The FFI will unwrap the argument before passing it to your JS, so if you pass
+a value of type Ptr (Double -> IO ()) to your JS function, your function will
+see the function itself. You can use this to pass function pointers to JS,
+enabling your JS code to call back into Haskell.
 
 
 
