@@ -45,7 +45,11 @@ argSpecs = [
                      ++ "Equivalent to -O2 --opt-google-closure."},
     ArgSpec { optName = "verbose",
               updateCfg = \cfg _ -> cfg {verbose = True},
-              info = "Display even the most obnoxious warnings."}
+              info = "Display even the most obnoxious warnings."},
+    ArgSpec { optName = "with-js=",
+              updateCfg = \cfg args -> cfg {jsExternals = args},
+              info = "Comma-separated list of .js files to include in the "
+                   ++ "final JS bundle."}
   ]
 
 updateClosureCfg :: Config -> [String] -> Config

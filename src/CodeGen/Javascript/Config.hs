@@ -83,7 +83,9 @@ data Config = Config {
     -- | Perform tail call elimination?
     doTCE :: Bool,
     -- | Run the entire thing through Google Closure when done?
-    useGoogleClosure :: Maybe FilePath
+    useGoogleClosure :: Maybe FilePath,
+    -- | Any external Javascript to link into the JS bundle.
+    jsExternals :: [FilePath]
   }
 
 -- | Default compiler configuration.
@@ -100,5 +102,6 @@ defConfig = Config {
     wrapIntMath      = strictly32Bits,
     verbose          = False,
     doTCE            = False,
-    useGoogleClosure = Nothing
+    useGoogleClosure = Nothing,
+    jsExternals      = []
   }

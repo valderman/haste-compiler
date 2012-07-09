@@ -30,7 +30,7 @@ link cfg target = do
   let (progText, mainSym') = prettyJS (ppOpts cfg) mainSym myDefs
       callMain = appStart cfg mainSym'
   
-  rtslibs <- mapM readFile $ evalLib cfg : rtsLibs cfg
+  rtslibs <- mapM readFile $ evalLib cfg : rtsLibs cfg ++ jsExternals cfg
   writeFile (outFile cfg target)
     $ unlines
     $ rtslibs ++ [progText, callMain]
