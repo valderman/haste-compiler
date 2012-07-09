@@ -79,6 +79,12 @@ calling back into Haskell as well. You must always pass one extra parameter to
 any Haskell function you call from your JS, so if you have a callback cb of
 type IO (), you have to call it as A(cb, [whatever]), NOT just A(cb, [])!
 
+Finally, the FFI doesn't do any nice marshalling for us here, so if you want to
+pass a primitive value back into your function, you have to wrap it back up
+in a data constructor again. Thus, pass [1, 42] rather than 42, [1, "hi!"]
+rather than just "hi!" and so on. Assuming f :: Int -> JSString -> IO (), you
+would call f as A(f, [[1,42], [1,"Hi!"], 0]).
+
 
 
 ** Ptr and Haskell data structures
@@ -126,7 +132,7 @@ function jspure(val, _state_of_the_world) {
 }
 
 // jscallme :: (JSString -> IO ()) -> IO ()
-function jsalert(callback, _state_of_the_world) {
-    A(callback, ['Hi, Haskell!', 0]);
+function jscallme(callback, _state_of_the_world) {
+    A(callback, [[1,'Hi, Haskell!'], 0]); // Note the A() and wrapped argument
     return [1, "lookie, the world state can even be a string!"];
 }
