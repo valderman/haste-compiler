@@ -10,7 +10,8 @@ To import a foreign function, simply declare it with FFI as usual:
 
   foreign import ccall myFunction :: Int -> IO String
 
-Then write myFunction in JS taking the precautions outlined below.
+Then write myFunction in JS taking the precautions outlined below. Link against
+the file containing your JS function by passing --with-js=myFile.js to hastec.
 
 
 
@@ -69,10 +70,14 @@ tuple actually is a Number and not a string or array looking like one.
 
 ** Callbacks
 
-As you might expect, the world state parameter rears its ugly head when
+As functions may be curried whichever way, you must use the A() primitive to
+call back into your Haskell code from JS; instead of foo(bar, baz), you have to
+do A(foo, [bar,baz]).
+
+Also, as you might expect, the world state parameter rears its ugly head when
 calling back into Haskell as well. You must always pass one extra parameter to
 any Haskell function you call from your JS, so if you have a callback cb of
-type IO (), you have to call it as cb(whatever), NOT just cb()!
+type IO (), you have to call it as A(cb, [whatever]), NOT just A(cb, [])!
 
 
 
@@ -122,6 +127,6 @@ function jspure(val, _state_of_the_world) {
 
 // jscallme :: (JSString -> IO ()) -> IO ()
 function jsalert(callback, _state_of_the_world) {
-    callback('Hi, Haskell!', 0);
-    return [1, "it's this present state of grace i offer thee"];
+    A(callback, ['Hi, Haskell!', 0]);
+    return [1, "lookie, the world state can even be a string!"];
 }
