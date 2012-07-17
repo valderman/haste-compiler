@@ -55,7 +55,7 @@ valueOf :: Readable a => ElemID -> Signal a
 valueOf e = e `valueAt` OnChange
 
 -- | The value property of the given element, triggered on a custom event.
-valueAt :: Readable a => ElemID -> Event (IO ()) -> Signal a
+valueAt :: (Readable a, Callback e) => ElemID -> Event e -> Signal a
 valueAt eid evt = filterMapS fromStr $ unlessExists eid evt valueAtIO
   where
     valueAtIO = withElem eid $ \e -> do
@@ -64,7 +64,7 @@ valueAt eid evt = filterMapS fromStr $ unlessExists eid evt valueAtIO
         Just x -> pipe x
         _      -> error $ "Bad initial value in valueAt: " ++ str
   
-      success <- setCallback e evt $ do
+      success <- setCallback e evt $ constCallback $ do
         getProp e "value" >>= write src
 
       if (not success) 

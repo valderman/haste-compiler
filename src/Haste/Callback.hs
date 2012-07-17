@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, GADTs,
              FlexibleInstances, OverloadedStrings #-}
 module Haste.Callback (setCallback, JSFun (..), mkCallback, Event (..),
-                       setTimeout) where
+                       setTimeout, Callback (..)) where
 import Haste.Prim
 import Haste.DOM
 import Data.String
@@ -15,6 +15,15 @@ foreign import ccall jsSetTimeout :: Int -> JSFun a -> IO ()
 --   function.
 mkCallback :: a -> JSFun a
 mkCallback = JSFun . toPtr
+
+class Callback a where
+  constCallback :: IO () -> a
+
+instance Callback (IO ()) where
+  constCallback = id
+
+instance Callback (a -> IO ()) where
+  constCallback = const
 
 data Event a where
   OnLoad      :: Event (IO ())
