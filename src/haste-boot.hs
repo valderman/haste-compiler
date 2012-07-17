@@ -16,6 +16,7 @@ data Cfg = Cfg {
     fetchClosure  :: Bool
   }
 
+main :: IO ()
 main = do
   args <- getArgs
   let forceBoot = elem "--force" args
@@ -81,7 +82,7 @@ installClosure hasteDir = do
   putStrLn "Downloading Google Closure compiler..."
   closure <- openURI closureURI
   case closure of
-    Left err ->
+    Left _ ->
       putStrLn "Couldn't download Closure compiler; continuing without."
     Right closure' -> do
       let cloArch = Zip.toArchive $ fromChunks [closure']
