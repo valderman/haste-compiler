@@ -1,5 +1,5 @@
 import Prelude hiding (read)
-import HasteReboot
+import BootVer
 import System.Exit (ExitCode (..))
 import System.Process (waitForProcess, runProcess)
 import System.Directory

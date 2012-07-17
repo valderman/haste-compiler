@@ -19,7 +19,7 @@ import System.IO (openFile, hClose, IOMode (..))
 import System.Process (runProcess, waitForProcess)
 import System.Exit (ExitCode (..))
 import System.Directory (renameFile)
-import HasteReboot
+import BootVer
 
 rebootMsg :: String
 rebootMsg = "Haste needs to be rebooted; please run haste-boot"

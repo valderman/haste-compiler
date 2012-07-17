@@ -49,7 +49,7 @@ Library
 Executable haste-boot
     Main-Is: haste-boot.hs
     Other-Modules:
-        HasteReboot
+        BootVer
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     Build-Depends:
@@ -84,7 +84,7 @@ Executable hastec
     Other-Modules:
         Args
         ArgSpecs
-        HasteReboot
+        BootVer
         CodeGen.Javascript
         CodeGen.Javascript.Config
         CodeGen.Javascript.AST

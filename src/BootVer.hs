@@ -1,4 +1,4 @@
-module HasteReboot (bootVer, needsReboot, BootVer (..), RebuildInfo (..)) where
+module BootVer (bootVer, needsReboot, BootVer (..), RebuildInfo (..)) where
 import System.IO.Unsafe
 import Control.Applicative
 import System.Directory
