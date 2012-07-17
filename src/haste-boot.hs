@@ -19,8 +19,8 @@ data Cfg = Cfg {
 main = do
   args <- getArgs
   let forceBoot = elem "--force" args
-      base      = not $ elem "--no-base" args
-      closure   = not $ elem "--no-closure" args
+      base      = not $ elem "--no-base" args || needsReboot /= Everything
+      closure   = not $ elem "--no-closure" args || needsReboot /= Everything
       cfg = Cfg {
           fetchBase    = base,
           fetchClosure = closure
@@ -28,7 +28,7 @@ main = do
   cabalDir <- getAppUserDataDirectory "cabal"
   hasteDir <- getAppUserDataDirectory "haste"
 
-  when (needsReboot || forceBoot) $ do
+  when (needsReboot /= Dont || forceBoot) $ do
     let localHastec = cabalDir ++ "/bin/hastec"
     mhastec <- locateCompiler ["hastec", localHastec]
     case mhastec of

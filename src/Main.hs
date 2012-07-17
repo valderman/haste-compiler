@@ -25,7 +25,7 @@ rebootMsg :: String
 rebootMsg = "Haste needs to be rebooted; please run haste-boot"
 
 main :: IO ()
-main | not needsReboot =
+main | needsReboot == Dont =
        getArgs >>= compiler
      | otherwise = do
        cmdargs <- getArgs
