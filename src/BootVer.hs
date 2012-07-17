@@ -2,6 +2,7 @@ module BootVer (bootVer, needsReboot, BootVer (..), RebuildInfo (..)) where
 import System.IO.Unsafe
 import Control.Applicative
 import System.Directory
+import System.IO
 
 -- | Describes the boot version of the code generator and standard library
 --   respectively. When codegenVer changes, everything needs to be rebuilt
@@ -31,7 +32,9 @@ needsReboot = unsafePerformIO $ do
   exists <- doesFileExist bootfile
   if exists
     then do
-      bootedVerString <- readFile bootfile
+      fh <- openFile bootfile ReadMode
+      bootedVerString <- hGetLine fh
+      hClose fh
       case reads bootedVerString of
         [(BootVer bootedCG bootedLib, _)]
           | codegenVer (bootVer) > bootedCG -> return Everything
