@@ -51,6 +51,9 @@ instance Showable JSString where
   show_ = show_ . fromJSStr
   toStr = toStr . fromJSStr
 
+instance Showable Char where
+  show_ c = [c]
+
 instance Showable Bool where
   show_ True  = "True"
   show_ False = "False"
