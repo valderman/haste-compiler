@@ -9,7 +9,7 @@ foreign import ccall ajaxReq :: JSString    -- method
                              -> JSString    -- url
                              -> Bool        -- async?
                              -> JSString    -- POST data
-                             -> Callback (JSString -> IO ())
+                             -> JSFun (JSString -> IO ())
                              -> IO JSString -- result if sync,
                                             -- otherwise empty
 
