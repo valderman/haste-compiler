@@ -19,9 +19,15 @@ data Cfg = Cfg {
 main :: IO ()
 main = do
   args <- getArgs
+  -- Always get base and closure when forced unless explicitly asked not to;
+  -- if not forced, get base and closure when necessary, unless asked not to.
   let forceBoot = elem "--force" args
-      base      = not $ elem "--no-base" args || needsReboot /= Everything
-      closure   = not $ elem "--no-closure" args || needsReboot /= Everything
+      base      = if elem "--no-base" args
+                     then False
+                     else forceBoot || needsReboot == Everything
+      closure   = if elem "--no-closure" args
+                     then False
+                     else forceBoot || needsReboot == Everything
       cfg = Cfg {
           fetchBase    = base,
           fetchClosure = closure
