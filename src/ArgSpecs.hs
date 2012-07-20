@@ -37,6 +37,10 @@ argSpecs = [
                      ++ "only work on the lowest 32 bits. This option should "
                      ++ "give a substantial performance boost for Int math "
                      ++ "heavy code."},
+    ArgSpec { optName = "opt-unsafe-ints",
+              updateCfg = unsafeMath,
+              info = "Enable all unsafe Int math optimizations. Equivalent to "
+                     ++ "--opt-unsafe-mult --opt-vague-ints"},
     ArgSpec { optName = "opt-unsafe-mult",
               updateCfg = unsafeMul,
               info = "Use Javascript's built-in multiplication operator for "
@@ -59,6 +63,13 @@ argSpecs = [
                    ++ "final JS bundle."}
   ]
 
+-- | Compose two config update functions. Be careful about using any args with
+--   them though!
+(|||) :: (Config -> [String] -> Config)
+     -> (Config -> [String] -> Config)
+     -> (Config -> [String] -> Config)
+a ||| b = \cfg args -> b (a cfg args) args
+
 -- | Don't wrap Ints.
 vagueInts :: Config -> [String] -> Config
 vagueInts cfg _ = cfg {wrapIntMath = id}
@@ -66,6 +77,11 @@ vagueInts cfg _ = cfg {wrapIntMath = id}
 -- | Use fast but unsafe multiplication.
 unsafeMul :: Config -> [String] -> Config
 unsafeMul cfg _ = cfg {multiplyIntOp = fastMultiply}
+
+-- | Enable all unsafe math ops. Remember to update the info text when changing
+--   this!
+unsafeMath :: Config -> [String] -> Config
+unsafeMath = vagueInts ||| unsafeMul
 
 -- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> [String] -> Config
