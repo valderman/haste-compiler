@@ -1,26 +1,39 @@
 {-# LANGUAGE CPP #-}
 module Tests.Word where
 import Data.Word
+import Data.Int
+
 #ifdef HASTE
 import Haste
+type I = Int
+type W = Word
 i2w = fromInt
 w2i = round_
+showish = show_
 #else
+type I = Int32
+type W = Word32
 i2w = fromIntegral
 w2i = fromIntegral
+showish = show
 #endif
 
+i2w :: I -> W
+w2i :: W -> I
+
 {-# NOINLINE a #-}
-a :: Int
+a :: I
 a = -15
 
 {-# NOINLINE b #-}
-b :: Int
+b :: I
 b = 27
 
 {-# NOINLINE c #-}
-c :: Word32
+c :: W
 c = 97
 
-runTest :: IO [Word32]
-runTest = return [i2w a, i2w b, i2w $ w2i c]
+runTest :: IO [String]
+runTest = return [showish $ i2w a,
+                  showish $ i2w b,
+                  showish $ i2w $ w2i c]
