@@ -30,13 +30,20 @@ argSpecs = [
                                          evalLib = evalTrampolining},
               info = "Perform tail call elimination."},
     ArgSpec { optName = "opt-vague-ints",
-              updateCfg = \cfg _ -> cfg {wrapIntMath = id},
+              updateCfg = vagueInts,
               info = "Int math has 53 bits of precision, but gives incorrect "
                      ++ "results rather than properly wrapping around when "
                      ++ "those 53 bits are exceeded. Bitwise operations still "
                      ++ "only work on the lowest 32 bits. This option should "
                      ++ "give a substantial performance boost for Int math "
                      ++ "heavy code."},
+    ArgSpec { optName = "opt-unsafe-mult",
+              updateCfg = unsafeMul,
+              info = "Use Javascript's built-in multiplication operator for "
+                     ++ "fixed precision integer multiplication. This speeds "
+                     ++ "up Int multiplication by a factor of at least four, "
+                     ++ "but may give incorrect results when the product "
+                     ++ "falls outside the interval [-2^52, 2^52]."},
     ArgSpec { optName = "out=",
               updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
               info = "Write the JS blob to <arg>."},
@@ -52,6 +59,15 @@ argSpecs = [
                    ++ "final JS bundle."}
   ]
 
+-- | Don't wrap Ints.
+vagueInts :: Config -> [String] -> Config
+vagueInts cfg _ = cfg {wrapIntMath = id}
+
+-- | Use fast but unsafe multiplication.
+unsafeMul :: Config -> [String] -> Config
+unsafeMul cfg _ = cfg {multiplyIntOp = fastMultiply}
+
+-- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> [String] -> Config
 updateClosureCfg cfg ['=':arg] =
   cfg {useGoogleClosure = Just arg}

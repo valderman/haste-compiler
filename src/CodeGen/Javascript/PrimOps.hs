@@ -49,8 +49,9 @@ genOp cfg op xs =
     -- Int ops
     IntAddOp ->        intMath $ binOp Add
     IntSubOp ->        intMath $ binOp Sub
-    IntMulOp ->        intMath $ call "imul"
-    IntMulMayOfloOp -> intMath $ call "imul" -- This is correct, but slow!
+    IntMulOp ->        intMath $ Right $ multiplyIntOp cfg (xs !! 0) (xs !! 1)
+    -- FIXME: this is correct but slow!
+    IntMulMayOfloOp -> intMath $ Right $ multiplyIntOp cfg (xs !! 0) (xs !! 1)
     IntQuotOp ->       call "quot"
     IntRemOp ->        binOp Mod -- JS % operator is actually rem, not mod!
     IntAddCOp -> call "addC"

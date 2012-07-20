@@ -1,7 +1,7 @@
 module CodeGen.Javascript.Config (
   Config (..), AppStart, defConfig, stdRtsLib, stdJSLib, startASAP,
   startOnLoadComplete, appName, sysLibPath, hastePath, evalTrampolining,
-  eval) where
+  eval, fastMultiply, safeMultiply) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import CodeGen.Javascript.AST
 import System.IO.Unsafe (unsafePerformIO)
@@ -45,8 +45,17 @@ hastePath = unsafePerformIO $ getAppUserDataDirectory appName
 sysLibPath :: FilePath
 sysLibPath = append "lib" hastePath
 
+-- | Int op wrapper for strictly 32 bit (|0).
 strictly32Bits :: JSExp -> JSExp
 strictly32Bits = flip (BinOp BitOr) (litN 0)
+
+-- | Safe Int multiplication.
+safeMultiply :: JSExp -> JSExp -> JSExp
+safeMultiply a b = NativeCall "imul" [a, b]
+
+-- | Fast but unsafe Int multiplication.
+fastMultiply :: JSExp -> JSExp -> JSExp
+fastMultiply = BinOp Mul
 
 -- | Trampolining eval version.
 evalTrampolining :: FilePath
@@ -78,6 +87,8 @@ data Config = Config {
     performLink :: Bool,
     -- | A function to call on each Int arithmetic primop.
     wrapIntMath :: JSExp -> JSExp,
+    -- | Operation to use for Int multiplication.
+    multiplyIntOp :: JSExp -> JSExp -> JSExp,
     -- | Be verbose about warnings, etc.?
     verbose :: Bool,
     -- | Perform tail call elimination?
@@ -100,6 +111,7 @@ defConfig = Config {
     outFile          = flip replaceExtension "js",
     performLink      = True,
     wrapIntMath      = strictly32Bits,
+    multiplyIntOp    = safeMultiply,
     verbose          = False,
     doTCE            = False,
     useGoogleClosure = Nothing,
