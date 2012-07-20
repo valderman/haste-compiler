@@ -36,6 +36,7 @@ main | needsReboot == Dont =
 compiler :: [String] -> IO ()
 compiler cmdargs = do
   let cmdargs' | "--opt-all" `elem` cmdargs = "-O2" : cmdargs
+               | "--opt-all-unsafe" `elem` cmdargs = "-O2" : cmdargs
                | otherwise                  = cmdargs
       argRes = handleArgs defConfig argSpecs cmdargs'
 

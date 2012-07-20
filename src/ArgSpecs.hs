@@ -16,10 +16,16 @@ argSpecs = [
               info = "Install all compiled modules into the user's jsmod "
                      ++ "library\nrather than linking them together into a JS"
                      ++ "blob."},
+    -- The opt-all enabling -O2 thing is handled directly in main! :(
     ArgSpec { optName = "opt-all",
               updateCfg = updateClosureCfg,
               info = "Enable all safe optimizations. "
                      ++ "Equivalent to -O2 --opt-google-closure."},
+    ArgSpec { optName = "opt-all-unsafe",
+              updateCfg = optAllUnsafe,
+              info = "Enable all safe and unsafe optimizations. "
+                     ++ "Equivalent to -O2 --opt-google-closure "
+                     ++ "--opt-unsafe-ints."},
     ArgSpec { optName = "opt-google-closure",
               updateCfg = updateClosureCfg,
               info = "Run the Google Closure compiler on the output. "
@@ -82,6 +88,10 @@ unsafeMul cfg _ = cfg {multiplyIntOp = fastMultiply}
 --   this!
 unsafeMath :: Config -> [String] -> Config
 unsafeMath = vagueInts ||| unsafeMul
+
+-- | Enable all optmizations, both safe and unsafe.
+optAllUnsafe :: Config -> [String] -> Config
+optAllUnsafe = updateClosureCfg ||| unsafeMath
 
 -- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> [String] -> Config
