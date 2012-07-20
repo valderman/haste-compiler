@@ -35,14 +35,6 @@ argSpecs = [
               updateCfg = \cfg _ -> cfg {doTCE = True,
                                          evalLib = evalTrampolining},
               info = "Perform tail call elimination."},
-    ArgSpec { optName = "opt-vague-ints",
-              updateCfg = vagueInts,
-              info = "Int math has 53 bits of precision, but gives incorrect "
-                     ++ "results rather than properly wrapping around when "
-                     ++ "those 53 bits are exceeded. Bitwise operations still "
-                     ++ "only work on the lowest 32 bits. This option should "
-                     ++ "give a substantial performance boost for Int math "
-                     ++ "heavy code."},
     ArgSpec { optName = "opt-unsafe-ints",
               updateCfg = unsafeMath,
               info = "Enable all unsafe Int math optimizations. Equivalent to "
@@ -54,6 +46,14 @@ argSpecs = [
                      ++ "up Int multiplication by a factor of at least four, "
                      ++ "but may give incorrect results when the product "
                      ++ "falls outside the interval [-2^52, 2^52]."},
+    ArgSpec { optName = "opt-vague-ints",
+              updateCfg = vagueInts,
+              info = "Int math has 53 bits of precision, but gives incorrect "
+                     ++ "results rather than properly wrapping around when "
+                     ++ "those 53 bits are exceeded. Bitwise operations still "
+                     ++ "only work on the lowest 32 bits. This option should "
+                     ++ "give a substantial performance boost for Int math "
+                     ++ "heavy code."},
     ArgSpec { optName = "out=",
               updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
               info = "Write the JS blob to <arg>."},
