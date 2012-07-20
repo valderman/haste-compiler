@@ -66,15 +66,15 @@ genOp cfg op xs =
     IntNeOp ->   binOp Neq
 
     -- Word ops
-    WordAddOp ->  binOp Add
-    WordSubOp ->  binOp Sub
-    WordMulOp ->  binOp Mul
+    WordAddOp ->  wordMath $ binOp Add
+    WordSubOp ->  wordMath $ binOp Sub
+    WordMulOp ->  wordMath $ call "imul"
     WordQuotOp -> call "quot"
     WordRemOp ->  binOp Mod
-    AndOp ->      unsignedBinOp BitAnd
-    OrOp ->       unsignedBinOp BitOr
-    XorOp ->      unsignedBinOp BitXor
-    SllOp ->      unsignedBinOp Shl
+    AndOp ->      wordMath $ binOp BitAnd
+    OrOp ->       wordMath $ binOp BitOr
+    XorOp ->      wordMath $ binOp BitXor
+    SllOp ->      wordMath $ binOp Shl
     SrlOp ->      binOp ShrL
     WordGtOp ->   binOp AST.GT
     WordGeOp ->   binOp GTE
@@ -183,6 +183,5 @@ genOp cfg op xs =
     binOp bop = let [x, y] = xs in Right $ BinOp bop x y
     
     -- Bitwise ops on words need to be unsigned; exploit the fact that >>> is!
-    unsignedBinOp bop = let [x,y] = xs
-                        in Right $ BinOp ShrL (BinOp bop x y) (litN 0)
+    wordMath = fmap (\op -> BinOp ShrL op (litN 0))
     intMath = fmap (wrapIntMath cfg)
