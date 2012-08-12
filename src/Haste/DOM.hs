@@ -75,7 +75,7 @@ setStyle :: Elem -> PropID -> String -> IO ()
 setStyle e prop val = jsSetStyle e (toJSStr prop) (toJSStr val)
 
 -- | Get an element by its HTML ID attribute.
-elemById :: String -> IO (Maybe Elem)
+elemById :: ElemID -> IO (Maybe Elem)
 elemById eid = do
   fromPtr `fmap` (jsFind $ toJSStr eid)
 
