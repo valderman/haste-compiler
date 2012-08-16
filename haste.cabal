@@ -60,7 +60,8 @@ Executable haste-boot
         tar,
         bzlib,
         zip-archive,
-        download
+        curl,
+        download-curl
     Default-Language: Haskell98
 
 Executable hastec

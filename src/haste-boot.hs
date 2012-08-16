@@ -3,7 +3,8 @@ import BootVer
 import System.Exit (ExitCode (..))
 import System.Process (waitForProcess, runProcess)
 import System.Directory
-import Network.Download
+import Network.Curl.Download.Lazy
+import Network.Curl.Opts
 import Data.ByteString.Lazy as BS hiding (putStrLn, unpack, elem)
 import Codec.Compression.BZip
 import Codec.Archive.Tar
@@ -63,12 +64,12 @@ locateCompiler _ = do
 fetchStdLibs :: FilePath -> IO ()
 fetchStdLibs hasteDir = do
   putStrLn "Downloading base libs from ekblad.cc"
-  res <- openURI "http://ekblad.cc/haste-libs.tar.bz2"
+  res <- openLazyURIWithOpts [CurlFollowLocation True] "http://ekblad.cc/haste-libs.tar.bz2"
   case res of
     Left err ->
       error $ "Unable to download base libs: " ++ err
     Right file ->
-      unpack (hasteDir ++ "/..") . read . decompress $ fromChunks [file]
+      unpack (hasteDir ++ "/..") . read . decompress $ file
 
 buildFursuit :: FilePath -> FilePath -> IO ()
 buildFursuit hastec hasteDir = do
@@ -86,12 +87,12 @@ buildStdLib hastec hasteDir = do
 installClosure :: FilePath -> IO ()
 installClosure hasteDir = do
   putStrLn "Downloading Google Closure compiler..."
-  closure <- openURI closureURI
+  closure <- openLazyURIWithOpts [CurlFollowLocation True] closureURI
   case closure of
     Left _ ->
       putStrLn "Couldn't download Closure compiler; continuing without."
     Right closure' -> do
-      let cloArch = Zip.toArchive $ fromChunks [closure']
+      let cloArch = Zip.toArchive closure'
       case Zip.findEntryByPath "compiler.jar" cloArch of
         Just compiler ->
           BS.writeFile (hasteDir ++ "/compiler.jar")
