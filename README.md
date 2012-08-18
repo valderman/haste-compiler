@@ -7,7 +7,7 @@ A compiler to generate Javascript code from Haskell.
 Building
 --------
 
-Clone Fursuit and install it using `cabal install`, then do the same for
+Clone [Fursuit](https://github.com/valderman/fursuit) and install it using `cabal install`, then do the same for
 haste-compiler and finally run `haste-boot` (or `~/.cabal/bin/haste-boot` if
 you don't have ~/.cabal/bin on your $PATH). That's it; you're now (hopefully)
 ready to build your first Haste application.
