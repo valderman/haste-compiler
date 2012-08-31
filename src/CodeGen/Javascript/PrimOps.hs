@@ -169,6 +169,15 @@ genOp cfg op xs =
     UnsafeFreezeByteArrayOp -> Right $ Array $ [litN 1,xs!!1,xs!!0]
     ByteArrayContents_Char -> Right $ head xs
 
+    -- MVars
+    NewMVarOp     -> call "newMVar"
+    TakeMVarOp    -> call "takeMVar"
+    TryTakeMVarOp -> call "tryTakeMVar"
+    PutMVarOp     -> call "putMVar"
+    TryPutMVarOp  -> call "tryPutMVar"
+    SameMVarOp    -> call "sameMVar"
+    IsEmptyMVarOp -> call "isEmptyMVar"
+
     -- Misc. ops
     -- Get the data constructor tag from a value.
     DataToTagOp    -> Right $ Index (head xs) (xs !! 0)

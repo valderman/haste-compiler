@@ -21,7 +21,7 @@ data RebuildInfo = Dont | Libs | Everything
 bootVer :: BootVer
 bootVer = BootVer {
     codegenVer = 1,
-    libVer     = 1
+    libVer     = 2
   }
 
 -- | Returns which parts of Haste need rebooting. A change in the boot file

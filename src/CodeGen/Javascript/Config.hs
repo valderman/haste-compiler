@@ -1,5 +1,5 @@
 module CodeGen.Javascript.Config (
-  Config (..), AppStart, defConfig, stdRtsLib, stdJSLib, startASAP,
+  Config (..), AppStart, defConfig, stdJSLibs, startASAP,
   startOnLoadComplete, appName, sysLibPath, hastePath, evalTrampolining,
   eval, fastMultiply, safeMultiply) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
@@ -12,11 +12,10 @@ import Paths_haste_compiler (getDataFileName)
 
 type AppStart = String -> String
 
-stdRtsLib :: FilePath
-stdRtsLib = unsafePerformIO $ getDataFileName "rts.js"
-
-stdJSLib :: FilePath
-stdJSLib = unsafePerformIO $ getDataFileName "stdlib.js"
+stdJSLibs :: [FilePath]
+stdJSLibs = unsafePerformIO $ mapM getDataFileName [
+    "rts.js", "stdlib.js", "MVar.js"
+  ]
 
 -- | Name of the application; decides which directories to keep app specific
 --   data in.
@@ -102,7 +101,7 @@ data Config = Config {
 -- | Default compiler configuration.
 defConfig :: Config
 defConfig = Config {
-    rtsLibs          = [stdRtsLib,stdJSLib],
+    rtsLibs          = stdJSLibs,
     evalLib          = eval,
     libPath          = sysLibPath,
     targetLibPath    = ".",
