@@ -179,10 +179,10 @@ genOp cfg op xs =
     IsEmptyMVarOp -> call "isEmptyMVar"
 
     -- Misc. ops
-    -- Get the data constructor tag from a value.
     SeqOp          -> Right $ Array [litN 1, xs !! 1, NativeCall "E" [(xs!!0)]]
     AtomicallyOp   -> Right $ Call (xs !! 0) [xs !! 1]
-    DataToTagOp    -> Right $ Index (head xs) (xs !! 0)
+    -- Get the data constructor tag from a value.
+    DataToTagOp    -> Right $ Index (head xs) (litN 0)
     TouchOp        -> Right $ xs !! 1
     RaiseOp        -> call "die"
     RaiseIOOp      -> call "die"
