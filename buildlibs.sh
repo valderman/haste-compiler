@@ -4,7 +4,7 @@ if [[ $1 == "" ]] ; then
     exit 1
 fi
 
-FLAGS=-O2
+FLAGS="-O2 --unbooted"
 
 libpath=$1/libraries
 
