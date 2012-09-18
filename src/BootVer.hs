@@ -20,7 +20,7 @@ data RebuildInfo = Dont | Libs | Everything
 --   than the one specified in its boot file, it needs to be rebooted.
 bootVer :: BootVer
 bootVer = BootVer {
-    codegenVer = 2,
+    codegenVer = 3,
     libVer     = 3
   }
 

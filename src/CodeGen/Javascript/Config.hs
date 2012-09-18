@@ -14,7 +14,7 @@ type AppStart = String -> String
 
 stdJSLibs :: [FilePath]
 stdJSLibs = unsafePerformIO $ mapM getDataFileName [
-    "rts.js", "stdlib.js", "MVar.js"
+    "rts.js", "stdlib.js", "MVar.js", "StableName.js"
   ]
 
 -- | Name of the application; decides which directories to keep app specific

@@ -22,6 +22,7 @@ Data-Files:
     eval.js
     eval-trampoline.js
     MVar.js
+    StableName.js
 
 Library
     Hs-Source-Dirs: src

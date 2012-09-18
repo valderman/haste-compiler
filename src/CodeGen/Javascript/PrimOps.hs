@@ -178,6 +178,11 @@ genOp cfg op xs =
     SameMVarOp    -> call "sameMVar"
     IsEmptyMVarOp -> call "isEmptyMVar"
 
+    -- Stable names
+    MakeStableNameOp  -> call "makeStableName"
+    EqStableNameOp    -> call "eqStableName"
+    StableNameToIntOp -> Right $ head xs
+
     -- Misc. ops
     SeqOp          -> Right $ Array [litN 1, xs !! 1, NativeCall "E" [(xs!!0)]]
     AtomicallyOp   -> Right $ Call (xs !! 0) [xs !! 1]
