@@ -1,14 +1,7 @@
 #!/bin/bash
 
-let failed=0
-let tests=0
-
-for file in Tests/*.hs; do
-    let tests=$tests+1
-    thistest="success"
-
-    module=`echo $file | sed -e s/Tests\\\/// | sed -e s/\.hs//`
-
+runTest() {
+    module=$1
     echo "Running test $module..."
 
     ghc_output=`runghc -DTEST_MODULE=$module TestDriver.hs`
@@ -39,6 +32,22 @@ for file in Tests/*.hs; do
         echo "  GHC disagrees with hastec -O2 --opt-tce output!"
         echo "  GHC says '$ghc_output', but hastec says '$haste_tce_output'"
     fi
+}
+
+if [[ "$1" != "" ]] ; then
+    runTest $1
+    exit 0
+fi
+
+let failed=0
+let tests=0
+
+for file in Tests/*.hs; do
+    let tests=$tests+1
+    thistest="success"
+
+    module=`echo $file | sed -e s/Tests\\\/// | sed -e s/\.hs//`
+    runTest $module
 
     if [[ $thistest == "failed" ]] ; then
         let failed=$failed+1
