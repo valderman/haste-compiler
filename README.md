@@ -49,7 +49,7 @@ read more about them.
 
 If you want your package to compile with both Haste and, say, GHC, you might
 want to use the CPP extension for conditional compilation. Haste defines the
-preprocessor symbol __HASTE__ for all modules it compiles, and __HASTE_TCE__
+preprocessor symbol `__HASTE__` for all modules it compiles, and `__HASTE_TCE__`
 for those compiled with full trampolining tail call elimination.
 
 
