@@ -47,6 +47,11 @@ You can pass the same flags to hastec as you'd normally pass to GHC:
 Haste also has its own set of command line arguments. Invoke it with --help to
 read more about them.
 
+If you want your package to compile with both Haste and, say, GHC, you might
+want to use the CPP extension for conditional compilation. Haste defines the
+preprocessor symbol __HASTE__ for all modules it compiles, and __HASTE_TCE__
+for those compiled with full trampolining tail call elimination.
+
 
 Reactive web EDSL
 -----------------
