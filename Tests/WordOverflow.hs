@@ -2,7 +2,7 @@
 module Tests.WordOverflow where
 import Data.Word
 
-#ifdef HASTE
+#ifdef __HASTE__
 type Wordish = Word
 #else
 type Wordish = Word32

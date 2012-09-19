@@ -5,7 +5,7 @@ module Tests.DataToTag where
 import Control.Monad
 import System.IO.Unsafe
 
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 output = alert
 #else

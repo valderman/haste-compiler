@@ -2,7 +2,7 @@
 module Tests.IntWrap where
 import Data.Int
 
-#ifdef HASTE
+#ifdef __HASTE__
 type Intish = Int
 #else
 type Intish = Int32

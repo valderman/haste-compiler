@@ -12,7 +12,7 @@ num = 70711
 
 {-# NOINLINE test #-}
 test :: Integer
-#if defined(O2) || defined(TCE)
+#if defined(O2) || defined(__HASTE_TCE__)
 test = mysum 0 [1..100000]
 #else
 test = num^2+4479

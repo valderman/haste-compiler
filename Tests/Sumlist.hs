@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Tests.Sumlist where
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 str :: Showable a => a -> String
 str = show_

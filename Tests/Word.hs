@@ -3,7 +3,7 @@ module Tests.Word where
 import Data.Word
 import Data.Int
 
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 type I = Int
 type W = Word

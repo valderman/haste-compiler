@@ -1,11 +1,11 @@
 {-# LANGUAGE CPP #-}
 module Main where
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 #endif
 import Tests.TEST_MODULE (runTest)
 
-#ifdef HASTE
+#ifdef __HASTE__
 main = do
   res <- runTest
   alert $ show res

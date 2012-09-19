@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 module Tests.DoubleDiv where
 
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 str = show_ . (round_ :: Double -> Int)
 #else

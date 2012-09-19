@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Tests.HasteShowDouble where
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 
 runTest :: IO String

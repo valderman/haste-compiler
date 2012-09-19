@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Tests.PlusPlusUnicode where
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 output = alert
 #else

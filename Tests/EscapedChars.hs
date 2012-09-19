@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Tests.EscapedChars where
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 output = alert
 #else

@@ -44,9 +44,9 @@ compiler cmdargs = do
     Left help -> putStrLn help
     Right (cfg, ghcargs) ->
       defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
-        let ghcargs' = "-DHASTE" : ghcargs
+        let ghcargs' = "-D__HASTE__" : ghcargs
             args = if doTCE cfg
-                     then "-DTCE" : ghcargs'
+                     then "-D__HASTE_TCE__" : ghcargs'
                      else ghcargs'
         dynflags <- getSessionDynFlags
         (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)

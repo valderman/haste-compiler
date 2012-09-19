@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Tests.HasteReadInt where
-#ifdef HASTE
+#ifdef __HASTE__
 import Haste
 
 {-# NOINLINE x #-}
