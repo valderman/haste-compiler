@@ -39,6 +39,12 @@ toBuiltin v =
     (Just "Haste.Prim", "jsRound") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "Math.round"}
+    (Just "Haste.Prim", "jsCeiling") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "Math.ceil"}
+    (Just "Haste.Prim", "jsFloor") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "Math.floor"}
     _ | otherwise ->
       Nothing
   where
