@@ -101,6 +101,8 @@ Executable hastec
         CodeGen.Javascript.Linker
         CodeGen.Javascript.Builtins
         CodeGen.Javascript.Errors
+        CodeGen.Javascript.Traverse
+        CodeGen.Javascript.Replace
     default-language: Haskell98
 
 Executable hastecat
