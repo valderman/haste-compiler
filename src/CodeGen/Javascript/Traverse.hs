@@ -63,14 +63,14 @@ allTopDown :: ASTType a
            -> Traverse acc acc
 allTopDown f = go
   where
-    go (x:xs) acc = f (wrap x) acc >>= go xs
+    go (x:xs) acc = topDown f x acc >>= go xs
     go _ acc      = return acc
 
 instance ASTType JSStmt where
   wrap = Stmt
   topDown f = go
     where
-      goAll (x:xs) acc = f (Stmt x) acc >>= goAll xs
+      goAll (x:xs) acc = go x acc >>= goAll xs
       goAll _ acc      = return acc
       go x acc =
         case x of
@@ -96,12 +96,13 @@ instance ASTType JSExp where
   wrap = Exp
   topDown f = go
     where
-      goAll (x:xs) acc = f (Exp x) acc >>= goAll xs
+      goAll (x:xs) acc = go x acc >>= goAll xs
       goAll _ acc      = return acc
       go x acc =
         case x of
           Call fn args           -> x' >>= go fn >>= goAll args
           FastCall fn args       -> x' >>= go fn >>= goAll args
+          NativeCall _ args      -> x' >>= goAll args
           NativeMethCall fn _ as -> x' >>= go fn >>= goAll as
           Fun args body          -> x' >>= allTopDown f args>>=allTopDown f body
           BinOp _ a b            -> x' >>= go a >>= go b
@@ -112,6 +113,7 @@ instance ASTType JSExp where
           Thunk stmts value      -> x' >>= allTopDown f stmts >>= go value
           Eval ex                -> x' >>= go ex
           Array exprs            -> x' >>= goAll exprs
+          Assign l r             -> x' >>= go l >>= go r
           Index val ix           -> x' >>= go val >>= go ix
           IfExp cond th el       -> x' >>= goAll [cond, th, el]
           Null                   -> x'
