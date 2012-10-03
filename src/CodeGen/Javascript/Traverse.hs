@@ -83,7 +83,9 @@ instance ASTType JSStmt where
           NamedFun _ as body -> x' >>= allTopDown f as >>= goAll body
           ExpStmt ex         -> x' >>= topDown f ex
           Continue           -> x'
-          LocalCopy l e b    -> x' >>= topDown f l >>= topDown f e >>= goAll b
+          LocalCopy l e b    -> x' >>= allTopDown f l
+                                   >>= allTopDown f e
+                                   >>= goAll b
           _                  -> error msg
         where
           x' = f (Stmt x) acc
