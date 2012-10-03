@@ -34,7 +34,6 @@ import CodeGen.Javascript.Replace
 import Data.Int
 import Data.Word
 import Data.Maybe (isJust)
-import Control.Exception hiding (evaluate)
 
 generate :: Config -> ModuleName -> [StgBinding] -> JSMod
 generate cfg modname binds =
@@ -62,7 +61,7 @@ genAST cfg modname binds =
   binds'
   where
     binds' =
-      map (depsAndCode . genJS cfg myModName . uncurry (genBind False True))
+      map (depsAndCode . genJS cfg myModName . uncurry (genBind True))
       $ concatMap unRec
       $ binds
     
@@ -84,24 +83,22 @@ genAST cfg modname binds =
 --   a recursive binding; this is because it's quite a lot easier to keep track
 --   of which functions depend on each other if every genBind call results in a
 --   single function being generated.
---   If the 'careful' parameter is True, the binding must take care that any
---   closed-over vars are kept constant.
 --   Use `genBindRec` to generate code for local potentially recursive bindings 
 --   as their dependencies get merged into their parent's anyway.
-genBind :: Bool -> Bool -> Maybe Int -> StgBinding -> JSGen Config ()
-genBind careful onTopLevel funsInRecGroup (StgNonRec v rhs) = do
+genBind :: Bool -> Maybe Int -> StgBinding -> JSGen Config ()
+genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
   pushBinding v (argsOf rhs)
   v' <- genVar v
   when (not onTopLevel) $ do
     addLocal v'
   let shouldTailLoop = maybe 1 id funsInRecGroup <= 1 && tailRecursive v rhs
-  expr <- genRhs careful shouldTailLoop (isJust funsInRecGroup) rhs
+  expr <- genRhs shouldTailLoop (isJust funsInRecGroup) rhs
   emit $ NewVar (AST.Var v') expr
   popBinding
   where
     argsOf (StgRhsClosure _ _ _ _ _ args _) = args
     argsOf _                                = []
-genBind _ _ _ (StgRec _) =
+genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 
 -- | Returns true if the given expression ever tail recurses on the given var.
@@ -126,14 +123,14 @@ tailRecursive parent (StgRhsClosure _ _ _ _ _ _ body) =
 tailRecursive _ _ =
   False
 
-genBindRec :: Bool -> StgBinding -> JSGen Config ()
-genBindRec careful bs@(StgRec _) =
-  mapM_ (genBind careful False (Just len) . snd) bs'
+genBindRec :: StgBinding -> JSGen Config ()
+genBindRec bs@(StgRec _) =
+  mapM_ (genBind False (Just len) . snd) bs'
   where
     bs' = unRec bs
     len = length bs'
-genBindRec careful b =
-  genBind careful False Nothing b
+genBindRec b =
+  genBind False Nothing b
 
 -- | Turn a recursive binding into a list of non-recursive ones, together with
 --   information about whether they came from a recursive group or not.
@@ -143,16 +140,15 @@ unRec (StgRec bs) = zip (repeat len) (map (uncurry StgNonRec) bs)
     len = Just $ length bs
 unRec b           = [(Nothing, b)]
 
--- | Generate the RHS of a binding. Careful bindings don't close over any
---   mutable vars.
-genRhs :: Bool -> Bool -> Bool -> StgRhs -> JSGen Config JSExp
-genRhs _ _ recursive (StgRhsCon _ con args) = do
+-- | Generate the RHS of a binding.
+genRhs :: Bool -> Bool -> StgRhs -> JSGen Config JSExp
+genRhs _ recursive (StgRhsCon _ con args) = do
   -- Constructors are never partially applied, and we have arguments, so this
   -- is obviously a full application.
   if recursive
      then Thunk [] <$> genEx False (StgConApp con args)
      else genEx False (StgConApp con args)
-genRhs careful tailpos _ (StgRhsClosure _ _ closureDeps upd _ args body) = do
+genRhs tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
   args' <- mapM genVar args
   (retExp, body') <- isolate $ do
     mapM_ addLocal args'
@@ -166,15 +162,15 @@ genRhs careful tailpos _ (StgRhsClosure _ _ closureDeps upd _ args body) = do
     
     loop deps | tailpos   = (:[]) . While (litN 1) . Block . copyVars deps
               | otherwise = id
-    copyVars args body =
-      let locals = localCopies args
+    copyVars vars fnBody =
+      let locals = localCopies vars
           -- First replace all vars with their local copies, then replace all
           -- locals on the LHS with their external counterparts again.
           -- Slow and stupid, but slightly simpler than doing one smart
           -- replacement pass. Replace ASAP!
-          body' = replace (repVarsLHS (zip locals args))
-                $ replace (repVars (zip args locals)) body
-      in return $ LocalCopy locals args body'
+          body' = replace (repVarsLHS (zip locals vars))
+                $ replace (repVars (zip vars locals)) fnBody
+      in return $ LocalCopy locals vars body'
 
 -- | Create local copies of the given vars.
 localCopies :: [JSVar] -> [JSVar]
@@ -268,10 +264,10 @@ genEx _ (StgOpApp op args _type) = do
     Right x -> return x
     Left e  -> warn Normal e >> return (runtimeError e)
 genEx tailpos (StgLet bind expr) = do
-  genBindRec tailpos bind
+  genBindRec bind
   genEx tailpos expr
 genEx tailpos (StgLetNoEscape _ _ bind expr) = do
-  genBindRec tailpos bind
+  genBindRec bind
   genEx tailpos expr
 genEx tailpos (StgCase ex _ _ bndr _ t alts) = do
   genCase tailpos ex bndr t alts
