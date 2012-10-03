@@ -31,6 +31,7 @@ import CodeGen.Javascript.Optimize
 import CodeGen.Javascript.Errors
 import CodeGen.Javascript.Config
 import CodeGen.Javascript.Replace
+import CodeGen.Javascript.Traverse
 import Data.Int
 import Data.Word
 import Data.Maybe (isJust)
@@ -160,18 +161,44 @@ genRhs tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
     thunk [] l@(Lit _) = l
     thunk stmts expr   = Thunk stmts expr
     
-    loop deps | tailpos   = (:[]) . While (litN 1) . Block . copyVars deps
+    loop deps | tailpos   = (:[]) . While (litN 1) . Block . maybeCopyVars deps
               | otherwise = id
-    copyVars vars fnBody =
-      let locals = localCopies vars
-          -- First replace all vars with their local copies, then replace all
-          -- locals on the LHS with their external counterparts again.
-          -- Slow and stupid, but slightly simpler than doing one smart
-          -- replacement pass. Replace ASAP!
-          body' = replace (repVarsLHS (zip locals vars))
-                $ replace (repVars (zip vars locals)) fnBody
-      in return $ LocalCopy locals vars body'
-
+    
+    -- Only copy vars if closures are created in the loop. This frees tight,
+    -- unboxed loops from the performance penalty of an extra compare and call
+    -- each iteration.
+    maybeCopyVars vars fnBody
+      | createsClosures (Block fnBody) =
+        let locals = localCopies vars
+            -- First replace all vars with their local copies, then replace all
+            -- locals on the LHS with their external counterparts again.
+            -- Slow and stupid, but slightly simpler than doing one smart
+            -- replacement pass. Replace ASAP!
+            body' = replace (repVarsLHS (zip locals vars))
+                  $ replace (repVars (zip vars locals)) fnBody
+        in return $ LocalCopy locals vars body'
+      | otherwise =
+          replace returnNullWithContinue fnBody
+    
+    returnNullWithContinue = repNothing {
+        repStm = \e -> case e of
+           Ret Null -> Continue
+           _        -> e
+      }
+    
+    -- Does the given code create any closures?
+    -- This is a bit too coarse-grained; we could eliminate the local copy for
+    -- a few more cases by only counting closures that reference any of the
+    -- tail-looped arguments.
+    createsClosures code =
+      case traverse isClosure False code of
+        Just x -> x
+        _      -> False
+    
+    isClosure (Exp (Fun _ _))   _ = done True
+    isClosure (Exp (Thunk _ _)) _ = done True
+    isClosure _ acc               = return acc
+    
 -- | Create local copies of the given vars.
 localCopies :: [JSVar] -> [JSVar]
 localCopies = map $ fmap (";n_" ++)
