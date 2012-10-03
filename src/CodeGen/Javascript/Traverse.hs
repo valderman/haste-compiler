@@ -2,7 +2,8 @@
 -- | Monad for traversing the JS AST. The monad is strict in its accumulator
 --   and result type.
 module CodeGen.Javascript.Traverse (traverse, traverseToMaybe, ASTNode (..),
-                                    Traverse (..), ASTType (..)) where
+                                    Traverse (..), ASTType (..), done,
+                                    stop) where
 import Data.List
 import Control.Monad
 import CodeGen.Javascript.AST as AST
@@ -82,6 +83,7 @@ instance ASTType JSStmt where
           NamedFun _ as body -> x' >>= allTopDown f as >>= goAll body
           ExpStmt ex         -> x' >>= topDown f ex
           Continue           -> x'
+          LocalCopy l e b    -> x' >>= topDown f l >>= topDown f e >>= goAll b
           _                  -> error msg
         where
           x' = f (Stmt x) acc
@@ -100,7 +102,6 @@ instance ASTType JSExp where
           FastCall fn args       -> x' >>= go fn >>= goAll args
           NativeMethCall fn _ as -> x' >>= go fn >>= goAll as
           Fun args body          -> x' >>= allTopDown f args>>=allTopDown f body
-          ConstClosure vs exp    -> x' >>= allTopDown f vs >>= go exp
           BinOp _ a b            -> x' >>= go a >>= go b
           Neg ex                 -> x' >>= go ex
           Not ex                 -> x' >>= go ex
@@ -111,7 +112,7 @@ instance ASTType JSExp where
           Array exprs            -> x' >>= goAll exprs
           Index val ix           -> x' >>= go val >>= go ix
           IfExp cond th el       -> x' >>= goAll [cond, th, el]
-          DataCon tag stricts    -> x' >>= go tag
+          Null                   -> x'
           _                      -> error msg
         where
           msg = "Don't know how to traverse expression:\n" ++ show x

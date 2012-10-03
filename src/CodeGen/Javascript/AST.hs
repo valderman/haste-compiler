@@ -5,9 +5,9 @@
 -- | Abstract syntax for the Javascript constructs needed to generate JS from
 --   Core.
 module CodeGen.Javascript.AST (
-  JSVar (..), JSName (..), JSStmt (..), JSAlt (..), JSExp (..), JSLit (..),
-  JSOp (..), JSMod (..), JSLabel, opPrec, expPrec, lit, litN, defTag,
-  defState, foreignModule, qualifiedName, bogusJSVar) where
+  JVar (..), JSVar (..), JName (..), JSName (..), JSStmt (..), JSAlt (..),
+  JSExp (..), JSLit (..), JSOp (..), JSMod (..), JSLabel, opPrec, expPrec,
+  lit, litN, defTag, defState, foreignModule, qualifiedName, bogusJSVar) where
 import Prelude hiding (LT, GT)
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -42,11 +42,15 @@ instance Serialize JSMod where
   get =
     JSMod <$> (mkModuleName <$> get) <*> get <*> get
 
-data JSVar = JSVar {
+data JVar a = JSVar {
     jsmod  :: JSLabel,
-    jsname :: JSName
+    jsname :: JName a
   } deriving (Show, Ord, Eq, Generic)
-    
+type JSVar = JVar JSLabel
+
+instance Functor JVar where
+  fmap f (JSVar m n) = JSVar m (fmap f n)
+
 bogusJSVar :: JSVar
 bogusJSVar = JSVar "" (Internal "")
 
@@ -60,11 +64,17 @@ instance Serialize JSVar where
   get = deriveGet
   put = derivePut
 
-data JSName
-  = Foreign  {unique :: JSLabel}
-  | External {unique :: JSLabel}
-  | Internal {unique :: JSLabel}
+data JName a
+  = Foreign  {unique :: a}
+  | External {unique :: a}
+  | Internal {unique :: a}
     deriving (Show, Ord, Eq, Generic)
+type JSName = JName JSLabel
+
+instance Functor JName where
+  fmap f (Foreign x)  = Foreign  $! f x
+  fmap f (External x) = External $! f x
+  fmap f (Internal x) = Internal $! f x
 
 instance Serialize JSName where
   get = deriveGet
@@ -79,6 +89,7 @@ data JSStmt
   | NewVar JSExp JSExp
   | NamedFun String [JSVar] [JSStmt] -- Unused; turn top level defs into tihs
   | ExpStmt JSExp
+  | LocalCopy [JSVar] [JSVar] [JSStmt] -- local copies, incoming vars, body
   | Continue
     deriving (Show, Eq, Generic)
 
@@ -101,7 +112,6 @@ data JSExp
   | NativeCall String [JSExp]
   | NativeMethCall JSExp String [JSExp]
   | Fun [JSVar] [JSStmt]
-  | ConstClosure [JSVar] JSExp
   | BinOp JSOp JSExp JSExp
   | Neg JSExp
   | Not JSExp -- Bitwise negation; JS ~ operator
@@ -114,6 +124,7 @@ data JSExp
   | Index JSExp JSExp -- a[b] where a and b are the first and second JSExp
   | IfExp JSExp JSExp JSExp
   | DataCon JSExp [Bool]
+  | Null
     deriving (Show, Eq, Generic)
 
 instance Serialize JSExp where

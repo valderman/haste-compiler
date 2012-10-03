@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, ParallelListComp #-}
 module CodeGen.Javascript.StgGen (generate) where
 import Prelude hiding (catch)
 import BasicTypes
@@ -30,6 +30,7 @@ import CodeGen.Javascript.PrimOps
 import CodeGen.Javascript.Optimize
 import CodeGen.Javascript.Errors
 import CodeGen.Javascript.Config
+import CodeGen.Javascript.Replace
 import Data.Int
 import Data.Word
 import Data.Maybe (isJust)
@@ -55,14 +56,7 @@ generate cfg modname binds =
     insDep _ ex =
       error $ "Non-NewVar top binding to insDep: " ++ show ex
 
--- | Generate JS AST for bindings and class method stubs.
---   The method stubs are just functions that take a class dictionary as their
---   sole inputs, and return the appropriate function from that dictionary.
---   For instance, the stub for the second method of a class C would look like
---   this:
---     function C.secondMethod(dict) {
---       return dict[2];
---     }
+-- | Generate JS AST for bindings.
 genAST :: Config -> ModuleName -> [StgBinding] -> [(S.Set JSVar, JSStmt)]
 genAST cfg modname binds =
   binds'
@@ -163,22 +157,28 @@ genRhs careful tailpos _ (StgRhsClosure _ _ closureDeps upd _ args body) = do
   (retExp, body') <- isolate $ do
     mapM_ addLocal args'
     genEx tailpos body
-  -- Constant-close over all dependencies
-  deps <- mapM genVar closureDeps
-  constify deps $
-    if isUpdatable upd && null args
-      then thunk (bagToList body') retExp
-      else Fun args' (loop $ bagToList $ body' `snocBag` Ret retExp)
+  return $ if isUpdatable upd && null args
+             then thunk (bagToList body') retExp
+             else Fun args' (loop args' $ bagToList $ body' `snocBag` Ret retExp)
   where
     thunk [] l@(Lit _) = l
     thunk stmts expr   = Thunk stmts expr
-    loop | tailpos   = (:[]) . While (litN 1) . Block
-         | otherwise = id
-    constify deps fun
-      | careful =
-        return $ ConstClosure deps fun
-      | otherwise =
-        return fun
+    
+    loop deps | tailpos   = (:[]) . While (litN 1) . Block . copyVars deps
+              | otherwise = id
+    copyVars args body =
+      let locals = localCopies args
+          -- First replace all vars with their local copies, then replace all
+          -- locals on the LHS with their external counterparts again.
+          -- Slow and stupid, but slightly simpler than doing one smart
+          -- replacement pass. Replace ASAP!
+          body' = replace (repVarsLHS (zip locals args))
+                $ replace (repVars (zip args locals)) body
+      in return $ LocalCopy locals args body'
+
+-- | Create local copies of the given vars.
+localCopies :: [JSVar] -> [JSVar]
+localCopies = map $ fmap (";n_" ++)
 
 -- | Generate the tag for a data constructor. This is used both by genDataCon
 --   and directly by genCase to generate constructors for matching.
@@ -219,9 +219,9 @@ genEx tailpos (StgApp f xs) = do
       let mkVar v = genVar v >>= return . AST.Var
       as <- getCurrentBindingArgs >>= mapM mkVar
       bs <- mapM genArg xs
-      let assign = zipWith (\l r -> ExpStmt $ Assign l r) as bs
-      mapM_ emit assign
-      emit Continue
+      let assign l r = ExpStmt $ Assign l r
+      mapM_ emit (zipWith assign as bs)
+      emit (Ret Null)
       return $ runtimeError "Unreachable!"
     else do
       f' <- genVar f

@@ -91,6 +91,13 @@ instance PrettyJS JSStmt where
     indentFurther $ do
       emitList "" body
     line $ out "}"
+  
+  emit (LocalCopy local incoming body) = do
+    line $ out "var r=(function(" >> emitList "," local >> out "){"
+    indentFurther $ do
+      emit body
+    line $ out "})(" >> emitList "," incoming >> out ");"
+    line $ out "if(null!==r)return r;"
 
   -- Special case for assign statement, as it's so common.
   emit (ExpStmt (Assign lhs rhs)) = do
@@ -173,9 +180,8 @@ instance PrettyJS JSExp where
   emit (Assign lhs rhs) =
     out "(" >> emit lhs >> out "=" >> emit rhs >> out ")"
 
-  emit (ConstClosure vs f) =
-    out "(function(" >> emitList "," vs >> out "){return " >>
-      emit f >> out "})(" >> emitList "," vs >> out ")"
+  emit Null =
+    out "null"
 
 -- | Pretty-print operator expressions, exploiting the unsignedness of >>> to
 --   make the signed binary operators work for our unsigned words where
