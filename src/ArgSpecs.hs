@@ -10,6 +10,9 @@ argSpecs = [
               updateCfg = \cfg _ -> cfg {ppOpts  = pretty},
               info = "Output indented, fairly readable code, with all " ++
                      "external names included in comments."},
+    ArgSpec { optName = "dont-link",
+              updateCfg = \cfg _ -> cfg {performLink   = False},
+              info = "Don't perform linking."},
     ArgSpec { optName = "libinstall",
               updateCfg = \cfg _ -> cfg {targetLibPath = sysLibPath,
                                          performLink   = False},

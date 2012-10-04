@@ -16,11 +16,12 @@ import Args
 import ArgSpecs
 import System.FilePath (addExtension)
 import System.IO (openFile, hClose, IOMode (..))
-import System.Process (runProcess, waitForProcess)
+import System.Process (runProcess, waitForProcess, rawSystem)
 import System.Exit (ExitCode (..))
 import System.Directory (renameFile)
 import Version
 import Data.Version
+import Data.List
 
 rebootMsg :: String
 rebootMsg = "Haste needs to be rebooted; please run haste-boot"
@@ -49,7 +50,15 @@ main :: IO ()
 main = do
   args <- getArgs
   runCompiler <- preArgs args
-  when runCompiler $ hasteMain args
+  when (runCompiler) $ do
+    if allSupported args
+      then hasteMain args
+      else callVanillaGHC args
+
+callVanillaGHC :: [String] -> IO ()
+callVanillaGHC args = do
+  _ <- rawSystem "ghc" (filter (/= "--libinstall") args)
+  return ()
 
 hasteMain :: [String] -> IO ()
 hasteMain args
@@ -60,12 +69,19 @@ hasteMain args
       then compiler (filter (/= "--unbooted") args)
       else fail rebootMsg
 
+allSupported :: [String] -> Bool
+allSupported args =
+  and args'
+  where
+    args' = [not $ any (`isSuffixOf` a) [".c", ".cmm"] | a <- args]
+
 compiler :: [String] -> IO ()
 compiler cmdargs = do
   let cmdargs' | "--opt-all" `elem` cmdargs = "-O2" : cmdargs
                | "--opt-all-unsafe" `elem` cmdargs = "-O2" : cmdargs
                | otherwise                  = cmdargs
       argRes = handleArgs defConfig argSpecs cmdargs'
+      usedGhcMode = if "-c" `elem` cmdargs then OneShot else CompManager
 
   case argRes of
     Left help -> putStrLn help
@@ -77,7 +93,8 @@ compiler cmdargs = do
                      else ghcargs'
         dynflags <- getSessionDynFlags
         (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)
-        _ <- setSessionDynFlags dynflags' {ghcLink = NoLink}
+        _ <- setSessionDynFlags dynflags' {ghcLink = NoLink,
+                                           ghcMode = usedGhcMode}
         let files' = map unLoc files
 
         ts <- mapM (flip guessTarget Nothing) files'
