@@ -19,19 +19,46 @@ import System.IO (openFile, hClose, IOMode (..))
 import System.Process (runProcess, waitForProcess)
 import System.Exit (ExitCode (..))
 import System.Directory (renameFile)
-import BootVer
+import Version
+import Data.Version
 
 rebootMsg :: String
 rebootMsg = "Haste needs to be rebooted; please run haste-boot"
 
+printInfo :: IO ()
+printInfo = do
+  ghcInfo <- runGhc (Just libdir) getSessionDynFlags
+  putStrLn $ formatInfo $ compilerInfo ghcInfo
+  where
+    formatInfo = ('[' :) . tail . unlines . (++ ["]"]) . map ((',' :) . show)
+
+-- | Check for arguments concerning version info and the like, and act on them.
+--   Return True if the compiler should run afterwards.
+preArgs :: [String] -> IO Bool
+preArgs args
+  | "--numeric-version" `elem` args =
+    putStrLn ghcVersion >> return False
+  | "--info" `elem` args =
+    printInfo >> return False
+  | "--version" `elem` args =
+    putStrLn (showVersion hasteVersion) >> return False
+  | otherwise =
+    return True
+
 main :: IO ()
-main | needsReboot == Dont =
-       getArgs >>= compiler
-     | otherwise = do
-       cmdargs <- getArgs
-       if "--unbooted" `elem` cmdargs
-         then compiler (filter (/= "--unbooted") cmdargs)
-         else fail rebootMsg
+main = do
+  args <- getArgs
+  runCompiler <- preArgs args
+  when runCompiler $ hasteMain args
+
+hasteMain :: [String] -> IO ()
+hasteMain args
+  | needsReboot == Dont =
+    compiler args
+  | otherwise = do
+    if "--unbooted" `elem` args
+      then compiler (filter (/= "--unbooted") args)
+      else fail rebootMsg
 
 compiler :: [String] -> IO ()
 compiler cmdargs = do

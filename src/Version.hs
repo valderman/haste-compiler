@@ -1,8 +1,18 @@
-module BootVer (bootVer, needsReboot, BootVer (..), RebuildInfo (..)) where
+-- | Contains version information for Haste.
+module Version (hasteVersion, ghcVersion, bootVer, needsReboot,
+                BootVer (..), RebuildInfo (..)) where
 import System.IO.Unsafe
 import Control.Applicative
 import System.Directory
 import System.IO
+import Data.Version
+import Config (cProjectVersion)
+
+hasteVersion :: Version
+hasteVersion = Version [0, 1] []
+
+ghcVersion :: String
+ghcVersion = cProjectVersion
 
 -- | Describes the boot version of the code generator and standard library
 --   respectively. When codegenVer changes, everything needs to be rebuilt

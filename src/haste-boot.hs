@@ -1,5 +1,5 @@
 import Prelude hiding (read)
-import BootVer
+import Version
 import System.Exit (ExitCode (..))
 import System.Process (waitForProcess, runProcess)
 import System.Directory
