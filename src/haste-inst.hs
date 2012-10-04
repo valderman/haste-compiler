@@ -36,7 +36,7 @@ cabal args = do
   runAndWait "cabal" (hasteargs ++ args) (Just "../testlib")
   where
     hasteargs = ["--with-compiler=" ++ hasteBinary,
-                 "--with-hc-pkg=ghc-pkg",
+                 "--with-hc-pkg=haste-pkg",
                  "--prefix=" ++ hasteDir </> "haste-install",
                  "--ghc-options=\"--libinstall\""]
 

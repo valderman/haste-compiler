@@ -131,3 +131,11 @@ Executable haste-inst
         process,
         directory
     default-language: Haskell98
+
+Executable haste-pkg
+    Main-Is: haste-pkg.hs
+    Hs-Source-Dirs: src
+    Build-Depends:
+        base,
+        process
+    default-language: Haskell98
