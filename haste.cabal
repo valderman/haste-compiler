@@ -121,3 +121,13 @@ Executable hastecat
         mtl,
         array
     default-language: Haskell98
+
+Executable haste-inst
+    Main-Is: haste-inst.hs
+    Hs-Source-Dirs: src
+    Build-Depends:
+        base,
+        filepath,
+        process,
+        directory
+    default-language: Haskell98
