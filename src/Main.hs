@@ -22,6 +22,8 @@ import System.Directory (renameFile)
 import Version
 import Data.Version
 import Data.List
+import EnvUtils
+import System.Posix.Env (setEnv)
 
 rebootMsg :: String
 rebootMsg = "Haste needs to be rebooted; please run haste-boot"
@@ -48,6 +50,7 @@ preArgs args
 
 main :: IO ()
 main = do
+  setEnv "GHC_PACKAGE_PATH" pkgDir True
   args <- getArgs
   runCompiler <- preArgs args
   when (runCompiler) $ do

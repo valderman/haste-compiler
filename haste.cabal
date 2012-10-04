@@ -82,7 +82,8 @@ Executable hastec
         directory,
         array,
         ghc-paths,
-        process
+        process,
+        unix
     Main-Is:
         Main.hs
     Other-Modules:
@@ -137,5 +138,7 @@ Executable haste-pkg
     Hs-Source-Dirs: src
     Build-Depends:
         base,
-        process
+        process,
+        filepath,
+        directory
     default-language: Haskell98
