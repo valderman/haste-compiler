@@ -6,7 +6,7 @@ import EnvUtils
 
 cabal :: [String] -> IO ()
 cabal args = do
-  runAndWait "cabal" (hasteargs ++ args) (Just "../testlib")
+  runAndWait "cabal" (hasteargs ++ args) Nothing
   where
     hasteargs = ["--with-compiler=" ++ hasteBinary,
                  "--with-hc-pkg=haste-pkg",
