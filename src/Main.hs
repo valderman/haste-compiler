@@ -67,8 +67,12 @@ main = do
 
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
-  _ <- rawSystem "ghc" (filter (/= "--libinstall") args)
+  _ <- rawSystem "ghc" (filter noHasteArgs args)
   return ()
+  where
+    noHasteArgs x =
+      x /= "--libinstall" &&
+      x /= "--unbooted"
 
 hasteMain :: [String] -> IO ()
 hasteMain args

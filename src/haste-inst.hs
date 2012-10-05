@@ -3,6 +3,9 @@ module Main where
 import System.FilePath
 import System.Environment
 import EnvUtils
+import Data.List
+
+type Match = (String -> Bool, [String] -> [String])
 
 cabal :: [String] -> IO ()
 cabal args = do
@@ -19,15 +22,13 @@ cabal args = do
 main :: IO ()
 main = do
   as <- getArgs
-  cabal (hasteargs as)
+  as <- return $ if "--install-jsmods" `elem` as || not ("build" `elem` as)
+                   then libinstall : filter (/= "--install-jsmods") as
+                   else as
+  as <- return $ if "--unbooted" `elem` as
+                   then unbooted : filter (/= "--unbooted") as
+                   else as
+  cabal as
   where
-    libinstall = "--ghc-options=\"--libinstall\""
-    hasteargs as
-    -- If the user passes --install-jsmods, hastec is invoked with --libinstall
-    -- even if running haste-inst build.
-      | "--install-jsmods" `elem` as =
-        libinstall : filter (/= "--install-jsmods") as
-      | "build" `elem` as =
-        as
-      | otherwise =
-        libinstall : as
+    libinstall = "--ghc-option=--libinstall"
+    unbooted   = "--ghc-option=--unbooted"
