@@ -1,8 +1,10 @@
 import Prelude hiding (read)
 import Version
 import System.Exit (ExitCode (..))
-import System.Process (waitForProcess, runProcess)
+import System.Process
+import System.FilePath
 import System.Directory
+import Control.Concurrent
 import Network.Curl.Download.Lazy
 import Network.Curl.Opts
 import Data.ByteString.Lazy as BS hiding (putStrLn, unpack, elem)
@@ -11,6 +13,7 @@ import Codec.Archive.Tar
 import System.Environment (getArgs)
 import Control.Monad
 import qualified Codec.Archive.Zip as Zip
+import EnvUtils
 
 data Cfg = Cfg {
     fetchBase :: Bool,
@@ -33,59 +36,49 @@ main = do
           fetchBase    = base,
           fetchClosure = closure
         }
-  cabalDir <- getAppUserDataDirectory "cabal"
-  hasteDir <- getAppUserDataDirectory "haste"
 
   when (needsReboot /= Dont || forceBoot) $ do
-    let localHastec = cabalDir ++ "/bin/hastec"
-    mhastec <- locateCompiler ["hastec", localHastec]
-    case mhastec of
-      Nothing     -> return ()
-      Just hastec -> bootHaste cfg hastec hasteDir
+    let localHasteinst = cabalDir </> "bin" </> "haste-inst"
+        localHastepkg  = cabalDir </> "bin" </> "haste-pkg"
+    mhasteinst <- locateCompiler ["haste-inst", localHasteinst]
+    mhastepkg <- locateCompiler ["haste-pkg", localHastepkg]
+    case (mhasteinst, mhastepkg) of
+      (Just hasteinst, Just hastepkg) -> bootHaste cfg hasteinst hastepkg
+      _                               -> return ()
 
 bootHaste :: Cfg -> FilePath -> FilePath -> IO ()
-bootHaste cfg hastec hasteDir = do
-  when (fetchBase cfg) $ fetchStdLibs hasteDir
-  buildFursuit hastec hasteDir
-  buildStdLib hastec hasteDir
-  when (fetchClosure cfg) $ installClosure hasteDir
-  Prelude.writeFile (hasteDir ++ "/booted") (show bootVer)
+bootHaste cfg hasteinst hastepkg = do
+  when (fetchBase cfg) fetchStdLibs
+  copySystemPkgConfigs hastepkg
+  buildFursuit hasteinst
+  buildStdLib hasteinst
+  when (fetchClosure cfg) installClosure
+  Prelude.writeFile (hasteDir </> "booted") (show bootVer)
 
-locateCompiler :: [FilePath] -> IO (Maybe FilePath)
-locateCompiler (c:cs) = do
-  exe <- findExecutable c
-  case exe of
-    Nothing -> locateCompiler cs
-    _       -> return exe
-locateCompiler _ = do
-  putStrLn "No hastec executable found; aborting!"
-  return Nothing
-
-fetchStdLibs :: FilePath -> IO ()
-fetchStdLibs hasteDir = do
+fetchStdLibs :: IO ()
+fetchStdLibs = do
   putStrLn "Downloading base libs from ekblad.cc"
   res <- openLazyURIWithOpts [CurlFollowLocation True] "http://ekblad.cc/haste-libs.tar.bz2"
   case res of
     Left err ->
       error $ "Unable to download base libs: " ++ err
     Right file ->
-      unpack (hasteDir ++ "/..") . read . decompress $ file
+      unpack (hasteDir </> "..") . read . decompress $ file
 
-buildFursuit :: FilePath -> FilePath -> IO ()
-buildFursuit hastec hasteDir = do
-  let furDir = hasteDir ++ "/fursuit/src"
+buildFursuit :: FilePath -> IO ()
+buildFursuit hastec = do
+  let furDir = hasteDir </> "fursuit"
   gitGet hasteDir "fursuit" "git://github.com/valderman/fursuit.git"
-  install hastec furDir ["FRP.Fursuit", "FRP.Fursuit.Async"]
+  install hastec furDir
 
-buildStdLib :: FilePath -> FilePath -> IO ()
-buildStdLib hastec hasteDir = do
-  let builddir = hasteDir ++ "/hastesrc/src"
+buildStdLib :: FilePath -> IO ()
+buildStdLib hastec = do
+  let builddir = hasteDir </> "hastesrc" </> "haste-lib"
   gitGet hasteDir "hastesrc" "git://github.com/valderman/haste-compiler.git"
-  install hastec builddir ["Haste", "Haste.Reactive", "Haste.JSON",
-                           "Haste.Ajax", "Haste.Reactive.Ajax"]
+  install hastec builddir
 
-installClosure :: FilePath -> IO ()
-installClosure hasteDir = do
+installClosure :: IO ()
+installClosure = do
   putStrLn "Downloading Google Closure compiler..."
   closure <- openLazyURIWithOpts [CurlFollowLocation True] closureURI
   case closure of
@@ -105,7 +98,7 @@ installClosure hasteDir = do
 
 gitGet :: FilePath -> FilePath -> String -> IO ()
 gitGet dir repodir repo = do
-  let clonedir = dir ++ "/" ++ repodir
+  let clonedir = dir </> repodir
   putStrLn $ "Attempting to clone/update: " ++ repo
   exists <- doesDirectoryExist clonedir
   let (args, workdir) =
@@ -118,12 +111,36 @@ gitGet dir repodir repo = do
     ExitFailure _ -> error $ "Failed!"
     _             -> return ()
 
-install :: FilePath -> FilePath -> [FilePath] -> IO ()
-install hastec srcdir modules = do
-  putStrLn $ "Installing modules: " ++ show modules
-  let args = ["-O2", "-Wall", "--libinstall", "--unbooted"] ++ modules
-  build <- runProcess hastec args (Just srcdir) Nothing Nothing Nothing Nothing
+install :: FilePath -> FilePath -> IO ()
+install hasteinst srcdir = do
+  let args = ["install", "--unbooted"]
+  build <- runProcess hasteinst args (Just srcdir)
+                      Nothing Nothing Nothing Nothing
   res <- waitForProcess build
   case res of
     ExitFailure _ -> error $ "Failed!"
     _             -> putStrLn "OK!"
+
+copySystemPkgConfigs :: FilePath -> IO ()
+copySystemPkgConfigs hastepkg = do
+  copyPkgConfig hastepkg "rts"
+  copyPkgConfig hastepkg "ghc-prim"
+  copyPkgConfig hastepkg "integer-gmp"
+  copyPkgConfig hastepkg "base"
+
+copyPkgConfig :: FilePath -> String -> IO ()
+copyPkgConfig hastepkg package = do
+  (_, pkgdata, _, ghcpkgProc) <- runInteractiveProcess "ghc-pkg"
+                                                       ["describe", package]
+                                                       Nothing
+                                                       Nothing
+  hastepkgDone <- newEmptyMVar
+  _ <- forkIO $ do
+    hastepkgProc <- runProcess hastepkg ["update", "-"] Nothing Nothing
+                               (Just pkgdata) Nothing Nothing
+    _ <- waitForProcess hastepkgProc
+    putMVar hastepkgDone ()
+    return ()
+  _ <- waitForProcess ghcpkgProc
+  takeMVar hastepkgDone
+  return ()
