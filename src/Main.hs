@@ -25,13 +25,16 @@ import Data.List
 import EnvUtils
 import System.Posix.Env (setEnv)
 
+logStr :: String -> IO ()
+logStr = hPutStrLn stderr
+
 rebootMsg :: String
 rebootMsg = "Haste needs to be rebooted; please run haste-boot"
 
 printInfo :: IO ()
 printInfo = do
-  ghcInfo <- runGhc (Just libdir) getSessionDynFlags
-  putStrLn $ formatInfo $ compilerInfo ghcInfo
+  ghc <- runGhc (Just libdir) getSessionDynFlags
+  putStrLn $ formatInfo $ compilerInfo ghc
   where
     formatInfo = ('[' :) . tail . unlines . (++ ["]"]) . map ((',' :) . show)
 
@@ -45,6 +48,10 @@ preArgs args
     printInfo >> return False
   | "--version" `elem` args =
     putStrLn (showVersion hasteVersion) >> return False
+  | "--supported-extensions" `elem` args =
+    (putStrLn $ unlines $ supportedLanguagesAndExtensions) >> return False
+  | "--supported-languages" `elem` args =
+    (putStrLn $ unlines $ supportedLanguagesAndExtensions) >> return False
   | otherwise =
     return True
 
@@ -107,7 +114,7 @@ compiler cmdargs = do
         mapM_ (compile cfg dynflags') deps
         when (performLink cfg) $ liftIO $ do
           flip mapM_ files' $ \file -> do
-            putStrLn $ "Linking " ++ outFile cfg file
+            logStr $ "Linking " ++ outFile cfg file
             link cfg file
             case useGoogleClosure cfg of 
               Just clopath -> closurize clopath $ outFile cfg file
@@ -116,7 +123,7 @@ compiler cmdargs = do
 -- | Run Google Closure on a file.
 closurize :: FilePath -> FilePath -> IO ()
 closurize cloPath file = do
-  putStrLn $ "Running the Google Closure compiler on " ++ file ++ "..."
+  logStr $ "Running the Google Closure compiler on " ++ file ++ "..."
   let cloFile = file `addExtension` ".clo"
   cloOut <- openFile cloFile WriteMode
   build <- runProcess "java"
@@ -139,12 +146,12 @@ closurize cloPath file = do
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
   case ms_hsc_src modSummary of
-    HsBootFile -> liftIO $ putStrLn $ "Skipping boot " ++ myName
+    HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
     _          -> do
       (pgm, name) <- prepare dynflags modSummary
       let theCode    = generate cfg name pgm
           targetpath = (targetLibPath cfg)
-      liftIO $ putStrLn $ "Compiling " ++ myName ++ " into " ++ targetpath
+      liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
       liftIO $ writeModule targetpath theCode
   where
     myName = moduleNameString $ moduleName $ ms_mod modSummary
