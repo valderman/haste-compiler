@@ -7,26 +7,47 @@ A compiler to generate Javascript code from Haskell.
 Building
 --------
 
-Clone [Fursuit](https://github.com/valderman/fursuit) and install it using `cabal install`, then do the same for
-haste-compiler and finally run `haste-boot` (or `~/.cabal/bin/haste-boot` if
-you don't have ~/.cabal/bin on your $PATH). That's it; you're now (hopefully)
-ready to build your first Haste application.
+First, make sure that you are running GHC 7.4.2, as this is what the base
+libraries installed by haste-boot expects. Other versions may work, but they
+may also be quite buggy.
 
-I'd strongly recommend adding ~/.cabal/bin to your $PATH, or you'll have to
-invoke Haste as ~/.cabal/bin/hastec, which is sort of awkward.
+Second, clone haste-compiler and install it using `cabal install`.
+
+Finally, run `haste-boot` (or `~/.cabal/bin/haste-boot`, if you don't have
+`~/.cabal/bin` in your `$PATH`) and wait for it to finish - you should now be
+able to use Haste!
+
 
 
 Building your own base libraries
 --------------------------------
 
-First off, build Fursuit and Haste using cabal.
+First off, run `haste-boot --force --no-base`.
+Then, download the source code of the same GHC version you're running
+(7.4.1 and 7.4.2 are the only versions tested so far, but any reasonable recent
+version should be OK).
 
-Next step, download the source code of a recent version of GHC (7.4.1 is the
-only version tested so far) and run `./buildlibs.sh $PATH_TO_GHC_SOURCE` from
-within the Haste directory.
+Unpack the GHC sources you just downloaded, go to the directory where you
+unpacked it and copy the file `mk/build.mk.sample` to `mk/build.mk` and edit
+it to add the following at the very top:
 
-Finally, run `haste-boot --force --no-base` to install the Haste and Fursuit
-libraries on top of your custom base package.
+    INTEGER_LIBRARY = integer-simple
+    BuildFlavour = quick
+
+Now, run `./configure && make`; wait. Fortunately, you only need to do this step
+once. If you want to rebuild your libraries at any time after this, you can
+start from the `buildlibs.sh` step.
+
+After GHC has finished building, go back to the haste-compiler directory and
+run `./buildlibs.sh /wherever/you/unpacked/GHC`. You may get a _LONG_ error
+message from GHC while running buildlibs.sh. If you do, let it finish and
+re-run it. It's also probably a good idea to reinstall Fursuit and haste-lib
+after rebuilding the base libraries; do this by issuing `haste-inst install`
+in their respective directories, or by running
+`haste-boot --force --no-closure --no-base`.
+
+Keep in mind, however, that a base library built on a 64-bit machine will be
+broken, in particular with regards to the arbitrary precision Integer type.
 
 
 Usage
@@ -45,12 +66,23 @@ You can pass the same flags to hastec as you'd normally pass to GHC:
     $ hastec -O2 -fglasgow-exts myprog.hs
 
 Haste also has its own set of command line arguments. Invoke it with --help to
-read more about them.
+read more about them. In particular --opt-all, --opt-google-closure and
+--with-js should be fairly interesting.
 
 If you want your package to compile with both Haste and, say, GHC, you might
 want to use the CPP extension for conditional compilation. Haste defines the
 preprocessor symbol `__HASTE__` for all modules it compiles, and `__HASTE_TCE__`
 for those compiled with full trampolining tail call elimination.
+
+Haste also comes with wrappers for cabal and ghc-pkg, named haste-inst and
+haste-pkg respectively. You can use them to install packages just as you would
+with vanilla GHC and cabal:
+
+    haste-inst install mtl
+
+This will only work for libraries, however, as installing Javascript
+"executables" on your system doesn't make much sense. You can still use
+`haste-inst build` to build your "executables" locally, however.
 
 
 Reactive web EDSL
@@ -113,3 +145,9 @@ Known issues
 
 * Word32 produces funny results on some machines; use Word instead, which is
   guaranteed to be 32 bits with Haste.
+
+* Haste currently uses package information for `rts`, `integer-gmp`, `ghc-prim`
+  and `base` from your vanilla GHC install. As a consequence, Haste needs to be
+  rebooted whenever you upgrade your GHC, and the intermediate files for those
+  four need to be compiled with whatever GHC version you currently have
+  installed.
