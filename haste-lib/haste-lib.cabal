@@ -1,8 +1,8 @@
 Name:           haste-lib
 Version:        0.1
 License:        BSD3
--- License-File:
-Synopsis:       Base libraries for haste-compiler. Only useful for web development, doesn't link with vanilla GHC.
+License-File:   LICENSE
+Synopsis:       Base libraries for haste-compiler.
 Description:    Base libraries for haste-compiler. Only useful for web development, doesn't link with vanilla GHC.
 Cabal-Version:  >= 1.10
 Build-Type:     Simple
