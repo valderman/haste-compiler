@@ -15,7 +15,7 @@ import CodeGen.Javascript
 import Args
 import ArgSpecs
 import System.FilePath (addExtension)
-import System.IO (openFile, hClose, IOMode (..))
+import System.IO
 import System.Process (runProcess, waitForProcess, rawSystem)
 import System.Exit (ExitCode (..))
 import System.Directory (renameFile)

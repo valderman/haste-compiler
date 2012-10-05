@@ -1,0 +1,38 @@
+Name:           haste-lib
+Version:        0.1
+License:        BSD3
+-- License-File:
+Synopsis:       Base libraries for haste-compiler. Only useful for web development, doesn't link with vanilla GHC.
+Description:    Base libraries for haste-compiler. Only useful for web development, doesn't link with vanilla GHC.
+Cabal-Version:  >= 1.10
+Build-Type:     Simple
+Author:         Anton Ekblad <anton@ekblad.cc>
+Copyright:      Anton Ekblad <anton@ekblad.cc>
+Maintainer:     Anton Ekblad <anton@ekblad.cc>
+Homepage:       http://ekblad.cc
+Bug-reports:    http://ekblad.cc
+Stability:      Experimental
+
+Library
+    Hs-Source-Dirs: src
+    GHC-Options: -Wall -O2
+    Exposed-Modules:
+        Haste
+        Haste.JSON
+        Haste.Ajax
+        Haste.Reactive
+        Haste.DOM
+        Haste.Prim
+    Other-Modules:
+        Haste.Readable
+        Haste.Showable
+        Haste.Callback
+        Haste.Random
+        Haste.Reactive.DOM
+        Haste.Reactive.Ajax
+    Build-Depends:
+        base,
+        ghc-prim,
+        fursuit,
+        containers
+    Default-Language: Haskell98
