@@ -6,13 +6,13 @@ runTest() {
 
     ghc_output=`runghc -DTEST_MODULE=$module TestDriver.hs`
 
-    hastec --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    hastec --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     haste_output=`js TestDriver.js`
 
-    hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     haste_opt_output=`js TestDriver.js`
 
-    hastec -O2 --opt-tce --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null
+    hastec -O2 --opt-tce --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     haste_tce_output=`js TestDriver.js`
 
     if [[ "$ghc_output" != "$haste_output" ]] ; then
