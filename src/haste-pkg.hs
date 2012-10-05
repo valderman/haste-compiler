@@ -10,4 +10,8 @@ main = do
   pkgDirExists <- doesDirectoryExist pkgDir
   when (not pkgDirExists) $ do
     runAndWait "ghc-pkg" ["init", pkgDir] Nothing
-  runAndWait "ghc-pkg" args Nothing
+  runAndWait "ghc-pkg" (conffile : map userToGlobal args) Nothing
+  where
+    conffile = "--global-conf=" ++ pkgDir
+    userToGlobal "--user" = "--global"
+    userToGlobal str      = str
