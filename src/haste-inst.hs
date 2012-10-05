@@ -17,6 +17,7 @@ cabal args = do
       | otherwise =
         ["--with-compiler=" ++ hasteBinary,
          "--with-hc-pkg=haste-pkg",
+         "--with-hsc2hs=hsc2hs",
          "--prefix=" ++ hasteDir </> "haste-install"]
 
 main :: IO ()
