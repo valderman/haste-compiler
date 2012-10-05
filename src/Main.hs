@@ -87,7 +87,8 @@ allSupported :: [String] -> Bool
 allSupported args =
   and args'
   where
-    args' = [not $ any (`isSuffixOf` a) [".c", ".cmm"] | a <- args]
+    args' = [not $ any (`isSuffixOf` a) someoneElsesProblems | a <- args]
+    someoneElsesProblems = [".c", ".cmm", ".hs-boot", ".lhs-boot"]
 
 compiler :: [String] -> IO ()
 compiler cmdargs = do
