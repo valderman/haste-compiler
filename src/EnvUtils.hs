@@ -12,6 +12,9 @@ cabalDir = unsafePerformIO $ getAppUserDataDirectory "cabal"
 hasteDir :: FilePath
 hasteDir = unsafePerformIO $ getAppUserDataDirectory "haste"
 
+libDir :: FilePath
+libDir = hasteDir </> "haste-install" </> "lib"
+
 pkgDir :: FilePath
 pkgDir = hasteDir </> "haste-pkg"
 

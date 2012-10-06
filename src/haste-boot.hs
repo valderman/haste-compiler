@@ -4,7 +4,6 @@ import System.Exit (ExitCode (..))
 import System.Process
 import System.FilePath
 import System.Directory
-import Control.Concurrent
 import Network.Curl.Download.Lazy
 import Network.Curl.Opts
 import Data.ByteString.Lazy as BS hiding (putStrLn, unpack, elem)
@@ -39,17 +38,14 @@ main = do
 
   when (needsReboot /= Dont || forceBoot) $ do
     let localHasteinst = cabalDir </> "bin" </> "haste-inst"
-        localHastepkg  = cabalDir </> "bin" </> "haste-pkg"
     mhasteinst <- locateCompiler ["haste-inst", localHasteinst]
-    mhastepkg <- locateCompiler ["haste-pkg", localHastepkg]
-    case (mhasteinst, mhastepkg) of
-      (Just hasteinst, Just hastepkg) -> bootHaste cfg hasteinst hastepkg
-      _                               -> return ()
+    case mhasteinst of
+      Just hasteinst -> bootHaste cfg hasteinst
+      _              -> return ()
 
-bootHaste :: Cfg -> FilePath -> FilePath -> IO ()
-bootHaste cfg hasteinst hastepkg = do
+bootHaste :: Cfg -> FilePath -> IO ()
+bootHaste cfg hasteinst = do
   when (fetchBase cfg) fetchStdLibs
-  copySystemPkgConfigs hastepkg
   buildFursuit hasteinst
   buildStdLib hasteinst
   when (fetchClosure cfg) installClosure
@@ -121,27 +117,3 @@ install hasteinst srcdir = do
   case res of
     ExitFailure _ -> error $ "Failed!"
     _             -> putStrLn "OK!"
-
-copySystemPkgConfigs :: FilePath -> IO ()
-copySystemPkgConfigs hastepkg = do
-  copyPkgConfig hastepkg "rts"
-  copyPkgConfig hastepkg "ghc-prim"
-  copyPkgConfig hastepkg "integer-gmp"
-  copyPkgConfig hastepkg "base"
-
-copyPkgConfig :: FilePath -> String -> IO ()
-copyPkgConfig hastepkg package = do
-  (_, pkgdata, _, ghcpkgProc) <- runInteractiveProcess "ghc-pkg"
-                                                       ["describe", package]
-                                                       Nothing
-                                                       Nothing
-  hastepkgDone <- newEmptyMVar
-  _ <- forkIO $ do
-    hastepkgProc <- runProcess hastepkg ["update", "-"] Nothing Nothing
-                               (Just pkgdata) Nothing Nothing
-    _ <- waitForProcess hastepkgProc
-    putMVar hastepkgDone ()
-    return ()
-  _ <- waitForProcess ghcpkgProc
-  takeMVar hastepkgDone
-  return ()
