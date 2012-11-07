@@ -84,6 +84,10 @@ This will only work for libraries, however, as installing Javascript
 "executables" on your system doesn't make much sense. You can still use
 `haste-inst build` to build your "executables" locally, however.
 
+For more information on how Haste works, see
+[the Haste Report](http://ekblad.cc/hastereport.pdf "Haste Report"),
+though beware that parts of Haste may have changed quite a bit.
+
 
 Reactive web EDSL
 -----------------
