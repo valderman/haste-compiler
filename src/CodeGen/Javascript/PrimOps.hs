@@ -151,6 +151,22 @@ genOp cfg op xs =
     UnsafeThawArrayOp -> Right $ Array [defTag, defState, (head xs)]
     -- TODO: copy, clone, freeze, thaw
     
+    -- Byte Array ops
+    NewByteArrayOp_Char      -> call "newByteArr"
+    SameMutableByteArrayOp   -> fmap (Thunk []) $ binOp Eq
+    ReadByteArrayOp_Char     -> Right $ Array [defTag, defState, Index arr ix]
+      where (arr:ix:_) = xs
+    WriteByteArrayOp_Char    -> Right $ Assign (Index arr ix) rhs
+      where (arr:ix:rhs:_) = xs
+    WriteByteArrayOp_Int8    -> Right $ Assign (Index arr ix) rhs
+      where (arr:ix:rhs:_) = xs
+    SizeofByteArrayOp        -> Right $ Index (head xs) (lit "length")
+    SizeofMutableByteArrayOp -> Right $ Index (head xs) (lit "length")
+    IndexByteArrayOp_Char    -> Right $ Array [defTag, Index arr ix]
+      where (arr:ix:_) = xs
+    IndexByteArrayOp_Int8    -> Right $ Array [defTag, Index arr ix]
+      where (arr:ix:_) = xs
+    
     -- Mutable variables
     NewMutVarOp -> call "nMV"
     ReadMutVarOp -> call "rMV"
