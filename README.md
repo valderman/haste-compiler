@@ -17,6 +17,12 @@ Finally, run `haste-boot` (or `~/.cabal/bin/haste-boot`, if you don't have
 `~/.cabal/bin` in your `$PATH`) and wait for it to finish - you should now be
 able to use Haste!
 
+You should probably run the test suite first though, to verify that everything
+is working. To do that, execute `./runtests.sh` in the Haste root directory.
+You may also run only a particular test by executing `./runtest.sh NameOfTest`.
+The test suite is written for use with Mozilla's SpiderMonkey Javascript engine,
+which can be found in the `spidermonkey-bin` package if you're running Debian or
+any of its derivatives, and may or may not work with other implementations.
 
 
 Building your own base libraries
