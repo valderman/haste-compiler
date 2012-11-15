@@ -109,13 +109,14 @@ compiler cmdargs = do
     Left help -> putStrLn help
     
     -- We got a config and a set of arguments for GHC; let's compile!
-    Right (cfg, ghcargs) ->
+    Right (cfg, ghcargs) -> do
+      (ghcargs', _) <- parseStaticFlags (map noLoc ghcargs)
       defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
         -- Handle dynamic GHC flags.
-        let ghcargs' = "-D__HASTE__" : ghcargs
+        let ghcargs'' = "-D__HASTE__" : map unLoc ghcargs'
             args = if doTCE cfg
-                     then "-D__HASTE_TCE__" : ghcargs'
-                     else ghcargs'
+                     then "-D__HASTE_TCE__" : ghcargs''
+                     else ghcargs''
         dynflags <- getSessionDynFlags
         (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)
         _ <- setSessionDynFlags dynflags' {ghcLink = NoLink,
