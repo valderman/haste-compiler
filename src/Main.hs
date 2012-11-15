@@ -110,7 +110,9 @@ compiler cmdargs = do
     
     -- We got a config and a set of arguments for GHC; let's compile!
     Right (cfg, ghcargs) -> do
-      (ghcargs', _) <- parseStaticFlags (map noLoc ghcargs)
+      -- Parse static flags, but ignore profiling.
+      (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
+      
       defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
         -- Handle dynamic GHC flags.
         let ghcargs'' = "-D__HASTE__" : map unLoc ghcargs'
