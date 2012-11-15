@@ -1,7 +1,6 @@
 -- | Misc. utilities for interacting with the environment. Paths,
 --   external processes, etc. go here.
 module EnvUtils where
-import System.Environment
 import System.Process
 import System.IO.Unsafe
 import System.Directory
@@ -18,12 +17,9 @@ pkgDir = hasteDir </> "haste-pkg"
 
 runAndWait :: FilePath -> [String] -> Maybe FilePath -> IO ()
 runAndWait file args workDir = do
-  env <- getEnvironment
-  h <- runProcess file args workDir (Just $ pkgEnv:env) Nothing Nothing Nothing
-  ec <- waitForProcess h
+  h <- runProcess file args workDir Nothing Nothing Nothing Nothing
+  _ <- waitForProcess h
   return ()
-  where
-    pkgEnv = ("GHC_PACKAGE_PATH", pkgDir)
 
 locateCompiler :: [FilePath] -> IO (Maybe FilePath)
 locateCompiler (c:cs) = do

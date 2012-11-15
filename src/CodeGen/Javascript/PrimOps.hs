@@ -2,6 +2,7 @@ module CodeGen.Javascript.PrimOps (genOp) where
 import PrimOp
 import CodeGen.Javascript.AST as AST
 import CodeGen.Javascript.Config
+import CodeGen.Javascript.Util
 
 -- | Generate primops.
 --   Many of these ops return lifted Bool values; however, no thunk is
@@ -53,6 +54,7 @@ genOp cfg op xs =
     -- FIXME: this is correct but slow!
     IntMulMayOfloOp -> intMath $ Right $ multiplyIntOp cfg (xs !! 0) (xs !! 1)
     IntQuotOp ->       call "quot"
+    IntQuotRemOp ->    call "quotRemI"
     IntRemOp ->        binOp Mod -- JS % operator is actually rem, not mod!
     IntAddCOp -> call "addC"
     IntSubCOp -> call "subC"
@@ -210,7 +212,7 @@ genOp cfg op xs =
     -- noDuplicate is only relevant in a threaded environment.
     NoDuplicateOp  -> Right $ head xs
     CatchOp        -> call "jsCatch"
-    x              -> Left $ "Unsupported PrimOp: " ++ show x
+    x              -> Left $ "Unsupported PrimOp: " ++ showOutputable x
   where
     call f = Right $ NativeCall f xs
     binOp bop = let [x, y] = xs in Right $ BinOp bop x y

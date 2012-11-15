@@ -9,6 +9,7 @@ import System.Directory
 import System.FilePath (combine, replaceExtension)
 import Control.Applicative
 import Paths_haste_compiler (getDataFileName)
+import DynFlags
 
 type AppStart = String -> String
 
@@ -95,7 +96,9 @@ data Config = Config {
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
-    jsExternals :: [FilePath]
+    jsExternals :: [FilePath],
+    -- | Dynamic flags used for compilation.
+    dynFlags :: DynFlags
   }
 
 -- | Default compiler configuration.
@@ -114,5 +117,6 @@ defConfig = Config {
     verbose          = False,
     doTCE            = False,
     useGoogleClosure = Nothing,
-    jsExternals      = []
+    jsExternals      = [],
+    dynFlags         = tracingDynFlags
   }
