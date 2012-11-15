@@ -65,6 +65,7 @@ main = do
       then hasteMain args
       else callVanillaGHC args
 
+-- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
   _ <- rawSystem "ghc" (filter noHasteArgs args)
@@ -74,6 +75,8 @@ callVanillaGHC args = do
       x /= "--libinstall" &&
       x /= "--unbooted"
 
+-- | Run the compiler if everything's satisfactorily booted, otherwise whine
+--   and exit.
 hasteMain :: [String] -> IO ()
 hasteMain args
   | needsReboot == Dont =
@@ -83,6 +86,8 @@ hasteMain args
       then compiler (filter (/= "--unbooted") args)
       else fail rebootMsg
 
+-- | Determine whether all given args are handled by Haste, or if we need to
+--   ship them off to vanilla GHC instead.
 allSupported :: [String] -> Bool
 allSupported args =
   and args'
@@ -90,6 +95,7 @@ allSupported args =
     args' = [not $ any (`isSuffixOf` a) someoneElsesProblems | a <- args]
     someoneElsesProblems = [".c", ".cmm", ".hs-boot", ".lhs-boot"]
 
+-- | The main compiler driver.
 compiler :: [String] -> IO ()
 compiler cmdargs = do
   let cmdargs' | "--opt-all" `elem` cmdargs = "-O2" : cmdargs
@@ -99,9 +105,13 @@ compiler cmdargs = do
       usedGhcMode = if "-c" `elem` cmdargs then OneShot else CompManager
 
   case argRes of
+    -- We got --help as an argument - display help and exit.
     Left help -> putStrLn help
+    
+    -- We got a config and a set of arguments for GHC; let's compile!
     Right (cfg, ghcargs) ->
       defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
+        -- Handle dynamic GHC flags.
         let ghcargs' = "-D__HASTE__" : ghcargs
             args = if doTCE cfg
                      then "-D__HASTE_TCE__" : ghcargs'
@@ -112,11 +122,14 @@ compiler cmdargs = do
                                            ghcMode = usedGhcMode}
         let files' = map unLoc files
 
+        -- Prepare and compile all needed targets.
         ts <- mapM (flip guessTarget Nothing) files'
         setTargets ts
         _ <- load LoadAllTargets
         deps <- depanal [] False
         mapM_ (compile cfg dynflags') deps
+        
+        -- Link everything together into a .js file.
         when (performLink cfg) $ liftIO $ do
           flip mapM_ files' $ \file -> do
             logStr $ "Linking " ++ outFile cfg file
@@ -148,6 +161,7 @@ closurize cloPath file = do
     ExitSuccess ->
       renameFile cloFile file
 
+-- | Compile a module into a .jsmod intermediate file.
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
   case ms_hsc_src modSummary of
@@ -161,6 +175,7 @@ compile cfg dynflags modSummary = do
   where
     myName = moduleNameString $ moduleName $ ms_mod modSummary
 
+-- | Do everything required to get a list of STG bindings out of a module.
 prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName)
 prepare dynflags theMod = do
   env <- getSession
