@@ -14,7 +14,7 @@ may also be quite buggy.
 Second, clone haste-compiler and install it using `cabal install`.
 
 Finally, run `haste-boot` (or `~/.cabal/bin/haste-boot`, if you don't have
-`~/.cabal/bin` in your `$PATH`) and wait for it to finish - you should now be
+`~/Library/Haskell/bin` or `~/.cabal/bin` in your `$PATH`) and wait for it to finish - you should now be
 able to use Haste!
 
 You should probably run the test suite first though, to verify that everything
