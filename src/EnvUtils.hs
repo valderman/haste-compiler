@@ -18,12 +18,16 @@ pkgDir = hasteDir </> "haste-pkg"
 
 runAndWait :: FilePath -> [String] -> Maybe FilePath -> IO ()
 runAndWait file args workDir = do
-  env <- getEnvironment
-  h <- runProcess file args workDir (Just $ pkgEnv:env) Nothing Nothing Nothing
-  ec <- waitForProcess h
+  theEnv <- getEnvironment
+  h <- runProcess file (augmentArgs args) workDir (Just $ augmentEnv theEnv) Nothing Nothing Nothing
+  _ <- waitForProcess h
   return ()
   where
-    pkgEnv = ("GHC_PACKAGE_PATH", pkgDir)
+    -- cabal can't work with GHC_PACKAGE_PATH anymore, use --package-db=foo instead.
+    augmentEnv  | file == "cabal" = id
+                | otherwise = (("GHC_PACKAGE_PATH", pkgDir) :)
+    augmentArgs | file == "cabal" = (("--package-db=" ++ pkgDir) :)
+                | otherwise = id
 
 locateCompiler :: [FilePath] -> IO (Maybe FilePath)
 locateCompiler (c:cs) = do
