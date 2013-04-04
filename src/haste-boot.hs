@@ -113,6 +113,7 @@ gitGet dir repodir repo = do
 
 install :: FilePath -> FilePath -> IO ()
 install hasteinst srcdir = do
+  putStrLn $ "Running haste-inst in " ++ srcdir
   let args = ["install", "--unbooted"]
   build <- runProcess hasteinst args (Just srcdir)
                       Nothing Nothing Nothing Nothing
