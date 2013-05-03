@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, ParallelListComp #-}
 module CodeGen.Javascript.StgGen (generate) where
-import Prelude hiding (catch)
+import Prelude
 import BasicTypes
 import StgSyn
 import CoreSyn (AltCon (..))
@@ -15,7 +15,6 @@ import Var
 import ForeignCall
 import PrimOp
 import IdInfo
-import Outputable
 import TyCon
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -32,6 +31,7 @@ import CodeGen.Javascript.Errors
 import CodeGen.Javascript.Config
 import CodeGen.Javascript.Replace
 import CodeGen.Javascript.Traverse
+import CodeGen.Javascript.Util
 import Data.Int
 import Data.Word
 import Data.Maybe (isJust)
@@ -208,27 +208,23 @@ localCopies = map $ fmap (";n_" ++)
 --
 --   IMPORTANT: remember to update the RTS if any changes are made to the
 --              constructor tag values!
-genDataConTag :: DataCon -> Either JSLabel JSExp
+genDataConTag :: DataCon -> JSExp
 genDataConTag d = do
   let n = occNameString $ nameOccName $ dataConName d
       m = moduleNameString $ moduleName $ nameModule $ dataConName d
   case (n, m) of
-    ("True", "GHC.Types")      -> Right $ lit True
-    ("False", "GHC.Types")     -> Right $ lit False
-    ("S#", "GHC.Integer.Type") -> Left "I"
-    _                          -> Right $ lit (fromIntegral $ dataConTag d :: Double)
+    ("True", "GHC.Types")  -> lit True
+    ("False", "GHC.Types") -> lit False
+    _                      -> lit (fromIntegral $ dataConTag d :: Double)
 
 -- | Generate code for data constructor creation.
 genDataCon :: DataCon -> JSGen Config JSExp
 genDataCon dc = do
   case genDataConTag dc of
-    Right t@(Lit (Boolean _)) ->
+    t@(Lit (Boolean _)) ->
       return t
-    Right t ->
+    t ->
       return $ DataCon t (map strict (dataConRepStrictness dc))
-    Left var ->
-      return $ AST.Var $ JSVar {jsmod = moduleNameString$AST.name$foreignModule,
-                                jsname = Foreign var}
   where
     strict MarkedStrict = True
     strict _            = False
@@ -283,7 +279,7 @@ genEx _ (StgOpApp op args _type) = do
           genOp cfg op' args'
         StgPrimCallOp (PrimCall f _) ->
           Right $ NativeCall (unpackFS f) args'
-        StgFCallOp (CCall (CCallSpec (StaticTarget f _) _ _)) _t ->
+        StgFCallOp (CCall (CCallSpec (StaticTarget f _ _) _ _)) _t ->
           Right $ NativeCall (unpackFS f) args'
         _ ->
           Left "Unsupported primop encountered!"
@@ -302,7 +298,7 @@ genEx tailpos (StgSCC _ _ _ ex) = do
   genEx tailpos ex
 genEx tailpos (StgTick _ _ ex) = do
   genEx tailpos ex
-genEx _ (StgLam _ _ _) =
+genEx _ (StgLam _ _) =
   error "StgLam shouldn't happen during CG!"
 
 genCase :: Bool -> StgExpr -> Id -> AltType -> [StgAlt] -> JSGen Config JSExp
@@ -357,10 +353,9 @@ tyConIsBoolean tc =
 genAlt :: Bool -> JSVar -> JSVar -> StgAlt -> JSGen Config JSAlt
 genAlt tailpos scrut res (con, args, used, body) = do
   construct <- case con of
-    DEFAULT                                  -> return Def
-    LitAlt l                                 -> Cond <$> genLit l
-    DataAlt c | Right tag <- genDataConTag c -> return $ Cond tag
-    _ -> error "Bad data constructor tag generated!"
+    DEFAULT                            -> return Def
+    LitAlt l                           -> Cond <$> genLit l
+    DataAlt c | tag <- genDataConTag c -> return $ Cond tag
 
   args' <- mapM genVar args
   addLocal args'
@@ -375,7 +370,6 @@ genAlt tailpos scrut res (con, args, used, body) = do
 genArg :: StgArg -> JSGen Config JSExp
 genArg (StgVarArg v)  = AST.Var <$> genVar v
 genArg (StgLitArg l)  = genLit l
-genArg (StgTypeArg _) = error "Type argument remained in STG!"
 
 genLit :: Literal -> JSGen Config JSExp
 genLit l = do
@@ -396,7 +390,7 @@ genLit l = do
     MachWord64 w        -> return . litN $ fromIntegral w
     MachNullAddr        -> return $ litN 0
     MachInt64 n         -> return . litN $ fromIntegral n
-    LitInteger _ n      -> AST.Var <$> genVar n
+    LitInteger n _      -> return . litN $ fromIntegral n
     MachLabel _ _ _     -> return $ lit ":(" -- Labels point to machine code - ignore!
   where
     constFail t n = t ++ " literal " ++ show n ++ " doesn't fit in 32 bits;"
@@ -406,7 +400,7 @@ genLit l = do
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String
-foreignName (CCall (CCallSpec (StaticTarget str _) _ _)) =
+foreignName (CCall (CCallSpec (StaticTarget str _ _) _ _)) =
   unpackFS str
 foreignName _ =
   error "Dynamic foreign calls not supported!"
@@ -425,7 +419,8 @@ toJSVar thisMod v msuffix =
         JSVar {jsname = External $ extern ++ suffix,
                jsmod  = myMod}
       | otherwise ->
-          error $ "Var is neither foreign, local or global: " ++ show v
+          error $ "Var is neither foreign, local or global: " ++
+                  showOutputable v
   where
     suffix = case msuffix of
                Just s -> s
@@ -437,7 +432,7 @@ toJSVar thisMod v msuffix =
     myMod  =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe name)
     extern = occNameString $ nameOccName name
-    unique = showPpr $ nameUnique name
+    unique = showOutputable $ nameUnique name
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.

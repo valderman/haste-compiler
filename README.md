@@ -7,9 +7,9 @@ A compiler to generate Javascript code from Haskell.
 Building
 --------
 
-First, make sure that you are running GHC 7.4.2, as this is what the base
-libraries installed by haste-boot expects. Other versions may work, but they
-may also be quite buggy.
+First, make sure that you are running GHC 7.6.1. Pre-7.6 versions will refuse
+to compile due to changes in GHC. Other 7.6 versions will compile, but the
+libraries installed by haste-boot will probably not work all that well.
 
 Second, clone haste-compiler and install it using `cabal install`.
 
@@ -30,8 +30,7 @@ Building your own base libraries
 
 First off, run `haste-boot --force --no-base`.
 Then, download the source code of the same GHC version you're running
-(7.4.1 and 7.4.2 are the only versions tested so far, but any reasonable recent
-version should be OK).
+(7.6.1 is the only version tested to work).
 
 Unpack the GHC sources you just downloaded, go to the directory where you
 unpacked it and copy the file `mk/build.mk.sample` to `mk/build.mk` and edit

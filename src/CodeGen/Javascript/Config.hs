@@ -9,12 +9,13 @@ import System.Directory
 import System.FilePath (combine, replaceExtension)
 import Control.Applicative
 import Paths_haste_compiler (getDataFileName)
+import DynFlags
 
 type AppStart = String -> String
 
 stdJSLibs :: [FilePath]
 stdJSLibs = unsafePerformIO $ mapM getDataFileName [
-    "rts.js", "stdlib.js", "MVar.js", "StableName.js"
+    "rts.js", "stdlib.js", "MVar.js", "StableName.js", "Integer.js"
   ]
 
 -- | Name of the application; decides which directories to keep app specific
@@ -95,7 +96,9 @@ data Config = Config {
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
-    jsExternals :: [FilePath]
+    jsExternals :: [FilePath],
+    -- | Dynamic flags used for compilation.
+    dynFlags :: DynFlags
   }
 
 -- | Default compiler configuration.
@@ -114,5 +117,6 @@ defConfig = Config {
     verbose          = False,
     doTCE            = False,
     useGoogleClosure = Nothing,
-    jsExternals      = []
+    jsExternals      = [],
+    dynFlags         = tracingDynFlags
   }

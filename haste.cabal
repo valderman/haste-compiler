@@ -23,6 +23,7 @@ Data-Files:
     eval-trampoline.js
     MVar.js
     StableName.js
+    Integer.js
 
 Executable haste-boot
     Main-Is: haste-boot.hs
@@ -118,4 +119,24 @@ Executable haste-pkg
         process,
         filepath,
         directory
+    default-language: Haskell98
+
+Executable haste-install-his
+    Main-Is: haste-install-his.hs
+    Hs-Source-Dirs: src
+    Build-Depends:
+        base,
+        filepath,
+        directory,
+        process
+    default-language: Haskell98
+
+Executable haste-copy-pkg
+    Main-Is: haste-copy-pkg.hs
+    Hs-Source-Dirs: src
+    Build-Depends:
+        base,
+        filepath,
+        directory,
+        process
     default-language: Haskell98

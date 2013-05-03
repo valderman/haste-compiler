@@ -9,9 +9,11 @@ main = do
   args <- getArgs
   pkgDirExists <- doesDirectoryExist pkgDir
   when (not pkgDirExists) $ do
+    createDirectoryIfMissing True libDir
     runAndWait "ghc-pkg" ["init", pkgDir] Nothing
-  runAndWait "ghc-pkg" (conffile : map userToGlobal args) Nothing
+  runAndWait "ghc-pkg" (packages ++ map userToGlobal args) Nothing
   where
-    conffile = "--global-conf=" ++ pkgDir
+    packages = ["--no-user-package-db",
+                "--global-package-db=" ++ pkgDir]
     userToGlobal "--user" = "--global"
     userToGlobal str      = str

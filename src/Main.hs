@@ -23,7 +23,6 @@ import Version
 import Data.Version
 import Data.List
 import EnvUtils
-import System.Posix.Env (setEnv)
 
 logStr :: String -> IO ()
 logStr = hPutStrLn stderr
@@ -57,13 +56,16 @@ preArgs args
 
 main :: IO ()
 main = do
-  setEnv "GHC_PACKAGE_PATH" pkgDir True
-  args <- getArgs
-  runCompiler <- preArgs args
-  when (runCompiler) $ do
-    if allSupported args
-      then hasteMain args
-      else callVanillaGHC args
+    args <- fmap (++ packageDBArgs) getArgs
+    runCompiler <- preArgs args
+    when (runCompiler) $ do
+      if allSupported args
+        then hasteMain args
+        else callVanillaGHC args
+  where
+    packageDBArgs = ["-no-global-package-db",
+                     "-no-user-package-db",
+                     "-package-db " ++ pkgDir]
 
 -- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
@@ -113,7 +115,7 @@ compiler cmdargs = do
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
       
-      defaultErrorHandler defaultLogAction $ runGhc (Just libdir) $ do
+      defaultErrorHandler putStrLn defaultFlushOut $ runGhc (Just libdir) $ do
         -- Handle dynamic GHC flags.
         let ghcargs'' = "-D__HASTE__" : map unLoc ghcargs'
             args = if doTCE cfg
@@ -188,10 +190,10 @@ prepare dynflags theMod = do
     >>= desugarModule
     >>= liftIO . hscSimplify env . coreModule
     >>= liftIO . tidyProgram env
-    >>= prepPgm . fst
+    >>= prepPgm env . fst
     >>= liftIO . coreToStg dynflags
   return (pgm, name)
   where
-    prepPgm tidy = liftIO $ do
-      prepd <- corePrepPgm dynflags (cg_binds tidy) (cg_tycons tidy)
+    prepPgm env tidy = liftIO $ do
+      prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
       return prepd

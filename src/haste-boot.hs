@@ -4,7 +4,6 @@ import System.Exit (ExitCode (..))
 import System.Process
 import System.FilePath
 import System.Directory
-import Control.Concurrent
 import Network.Curl.Download.Lazy
 import Network.Curl.Opts
 import Data.ByteString.Lazy as BS hiding (putStrLn, unpack, elem)
@@ -16,8 +15,9 @@ import qualified Codec.Archive.Zip as Zip
 import EnvUtils
 
 data Cfg = Cfg {
-    fetchBase :: Bool,
-    fetchClosure  :: Bool
+    fetchBase      :: Bool,
+    fetchClosure   :: Bool,
+    fetchHasteLibs :: Bool
   }
 
 main :: IO ()
@@ -32,26 +32,26 @@ main = do
       closure   = if elem "--no-closure" args
                      then False
                      else forceBoot || needsReboot == Everything
+      haste     = not (elem "--no-haste" args)
       cfg = Cfg {
-          fetchBase    = base,
-          fetchClosure = closure
+          fetchBase      = base,
+          fetchClosure   = closure,
+          fetchHasteLibs = haste
         }
 
   when (needsReboot /= Dont || forceBoot) $ do
     let localHasteinst = cabalDir </> "bin" </> "haste-inst"
-        localHastepkg  = cabalDir </> "bin" </> "haste-pkg"
     mhasteinst <- locateCompiler ["haste-inst", localHasteinst]
-    mhastepkg <- locateCompiler ["haste-pkg", localHastepkg]
-    case (mhasteinst, mhastepkg) of
-      (Just hasteinst, Just hastepkg) -> bootHaste cfg hasteinst hastepkg
-      _                               -> return ()
+    case mhasteinst of
+      Just hasteinst -> bootHaste cfg hasteinst
+      _              -> return ()
 
-bootHaste :: Cfg -> FilePath -> FilePath -> IO ()
-bootHaste cfg hasteinst hastepkg = do
+bootHaste :: Cfg -> FilePath -> IO ()
+bootHaste cfg hasteinst = do
   when (fetchBase cfg) fetchStdLibs
-  copySystemPkgConfigs hastepkg
-  buildFursuit hasteinst
-  buildStdLib hasteinst
+  when (fetchHasteLibs cfg) $ do
+    buildFursuit hasteinst
+    buildStdLib hasteinst
   when (fetchClosure cfg) installClosure
   Prelude.writeFile (hasteDir </> "booted") (show bootVer)
 
@@ -113,6 +113,7 @@ gitGet dir repodir repo = do
 
 install :: FilePath -> FilePath -> IO ()
 install hasteinst srcdir = do
+  putStrLn $ "Running haste-inst in " ++ srcdir
   let args = ["install", "--unbooted"]
   build <- runProcess hasteinst args (Just srcdir)
                       Nothing Nothing Nothing Nothing
@@ -120,27 +121,3 @@ install hasteinst srcdir = do
   case res of
     ExitFailure _ -> error $ "Failed!"
     _             -> putStrLn "OK!"
-
-copySystemPkgConfigs :: FilePath -> IO ()
-copySystemPkgConfigs hastepkg = do
-  copyPkgConfig hastepkg "rts"
-  copyPkgConfig hastepkg "ghc-prim"
-  copyPkgConfig hastepkg "integer-gmp"
-  copyPkgConfig hastepkg "base"
-
-copyPkgConfig :: FilePath -> String -> IO ()
-copyPkgConfig hastepkg package = do
-  (_, pkgdata, _, ghcpkgProc) <- runInteractiveProcess "ghc-pkg"
-                                                       ["describe", package]
-                                                       Nothing
-                                                       Nothing
-  hastepkgDone <- newEmptyMVar
-  _ <- forkIO $ do
-    hastepkgProc <- runProcess hastepkg ["update", "-"] Nothing Nothing
-                               (Just pkgdata) Nothing Nothing
-    _ <- waitForProcess hastepkgProc
-    putMVar hastepkgDone ()
-    return ()
-  _ <- waitForProcess ghcpkgProc
-  takeMVar hastepkgDone
-  return ()
