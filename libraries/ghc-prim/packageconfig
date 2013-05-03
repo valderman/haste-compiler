@@ -1,0 +1,35 @@
+name: ghc-prim
+version: 0.3.0.0
+id: ghc-prim-0.3.0.0-d5221a8c8a269b66ab9a07bdc23317dd
+license: BSD3
+copyright:
+maintainer: libraries@haskell.org
+stability:
+homepage:
+package-url:
+synopsis: GHC primitives
+description: GHC primitives.
+category:
+author:
+exposed: True
+exposed-modules: GHC.Prim GHC.Classes GHC.CString GHC.Debug
+                 GHC.Magic GHC.PrimopWrappers GHC.IntWord64 GHC.Tuple GHC.Types
+hidden-modules:
+trusted: False
+import-dirs: ${pkgroot}/haste-install/lib/ghc-prim-0.3.0.0
+library-dirs: ${pkgroot}/haste-install/lib/ghc-prim-0.3.0.0
+hs-libraries:
+extra-libraries:
+extra-ghci-libraries:
+include-dirs:
+includes:
+depends: builtin_rts
+hugs-options:
+cc-options:
+ld-options:
+framework-dirs:
+frameworks:
+haddock-interfaces:
+haddock-html:
+pkgroot: "/home/valderman/.haste"
+
