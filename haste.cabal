@@ -23,6 +23,7 @@ Data-Files:
     eval-trampoline.js
     MVar.js
     StableName.js
+    Integer.js
 
 Executable haste-boot
     Main-Is: haste-boot.hs

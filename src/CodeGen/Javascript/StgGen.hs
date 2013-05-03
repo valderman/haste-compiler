@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternGuards, ParallelListComp #-}
 module CodeGen.Javascript.StgGen (generate) where
-import Prelude hiding (catch)
+import Prelude
 import BasicTypes
 import StgSyn
 import CoreSyn (AltCon (..))
@@ -15,7 +15,6 @@ import Var
 import ForeignCall
 import PrimOp
 import IdInfo
-import Outputable
 import TyCon
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -209,27 +208,23 @@ localCopies = map $ fmap (";n_" ++)
 --
 --   IMPORTANT: remember to update the RTS if any changes are made to the
 --              constructor tag values!
-genDataConTag :: DataCon -> Either JSLabel JSExp
+genDataConTag :: DataCon -> JSExp
 genDataConTag d = do
   let n = occNameString $ nameOccName $ dataConName d
       m = moduleNameString $ moduleName $ nameModule $ dataConName d
   case (n, m) of
-    ("True", "GHC.Types")      -> Right $ lit True
-    ("False", "GHC.Types")     -> Right $ lit False
-    ("S#", "GHC.Integer.Type") -> Left "I"
-    _                          -> Right $ lit (fromIntegral $ dataConTag d :: Double)
+    ("True", "GHC.Types")  -> lit True
+    ("False", "GHC.Types") -> lit False
+    _                      -> lit (fromIntegral $ dataConTag d :: Double)
 
 -- | Generate code for data constructor creation.
 genDataCon :: DataCon -> JSGen Config JSExp
 genDataCon dc = do
   case genDataConTag dc of
-    Right t@(Lit (Boolean _)) ->
+    t@(Lit (Boolean _)) ->
       return t
-    Right t ->
+    t ->
       return $ DataCon t (map strict (dataConRepStrictness dc))
-    Left var ->
-      return $ AST.Var $ JSVar {jsmod = moduleNameString$AST.name$foreignModule,
-                                jsname = Foreign var}
   where
     strict MarkedStrict = True
     strict _            = False
@@ -358,10 +353,9 @@ tyConIsBoolean tc =
 genAlt :: Bool -> JSVar -> JSVar -> StgAlt -> JSGen Config JSAlt
 genAlt tailpos scrut res (con, args, used, body) = do
   construct <- case con of
-    DEFAULT                                  -> return Def
-    LitAlt l                                 -> Cond <$> genLit l
-    DataAlt c | Right tag <- genDataConTag c -> return $ Cond tag
-    _ -> error "Bad data constructor tag generated!"
+    DEFAULT                            -> return Def
+    LitAlt l                           -> Cond <$> genLit l
+    DataAlt c | tag <- genDataConTag c -> return $ Cond tag
 
   args' <- mapM genVar args
   addLocal args'
