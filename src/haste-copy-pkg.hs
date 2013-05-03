@@ -12,62 +12,63 @@ import EnvUtils
 
 main :: IO ()
 main = do
-  pkgs <- getArgs
+  args <- getArgs
+  let (pkgdbs, pkgs) = partition ("--package-db=" `isPrefixOf`) args
   Just hastepkg <- locateCompiler ["haste-pkg",
                                    cabalDir </> "bin" </> "haste-pkg"]
-  if null pkgs
-    then putStrLn "Usage: haste-copy-pkg [--package-conf=foo.conf] <packages>"
-    else mapM_ (copyPkgConfig hastepkg) pkgs
+  if null args
+    then putStrLn "Usage: haste-copy-pkg [--package-db=foo.conf] <packages>"
+    else mapM_ (copyPkgConfig pkgdbs hastepkg) pkgs
 
 -- | Copy and modify a package config to work with Haste. A config can be
 --   read from a file or copied from the system's package DB.
-copyPkgConfig :: FilePath -> String -> IO ()
-copyPkgConfig hastepkg pkg = do
+copyPkgConfig :: [String] -> FilePath -> String -> IO ()
+copyPkgConfig pkgdbs hastepkg pkg = do
   isFile <- doesFileExist pkg
   if isFile
     then copyFromFile hastepkg pkg
-    else copyFromDB hastepkg pkg
+    else copyFromDB pkgdbs hastepkg pkg
 
 -- | Copy and modify a package config from a file.
 copyFromFile :: FilePath -> FilePath -> IO ()
 copyFromFile hastepkg pkgfile = do
   hPkgFile <- openFile pkgfile ReadMode
   sync <- newEmptyMVar
-  savePkgConfig hastepkg hPkgFile sync
+  savePkgConfig hastepkg pkgfile hPkgFile sync
   takeMVar sync
   return ()
 
 -- | Copy a modified package config from the system's DB.
-copyFromDB :: FilePath -> String -> IO ()
-copyFromDB hastepkg package = do
+copyFromDB :: [String] -> FilePath -> String -> IO ()
+copyFromDB pkgdbs hastepkg package = do
   (_, pkgdata, _, ghcpkgProc) <- runInteractiveProcess "ghc-pkg"
                                                        args
                                                        Nothing
                                                        Nothing
   hastepkgDone <- newEmptyMVar
-  _ <- forkIO $ savePkgConfig hastepkg pkgdata hastepkgDone 
+  _ <- forkIO $ savePkgConfig hastepkg package pkgdata hastepkgDone 
   _ <- waitForProcess ghcpkgProc
   takeMVar hastepkgDone
   return ()
   where
-    args = ["describe", package]
+    args = ["describe", package] ++ pkgdbs
 
 -- | Modify and save a config read from a handle.
-savePkgConfig :: FilePath -> Handle -> MVar () -> IO ()
-savePkgConfig hastepkg pkgdata hastepkgDone = do
+savePkgConfig :: FilePath -> String -> Handle -> MVar () -> IO ()
+savePkgConfig hastepkg pkgname pkgdata hastepkgDone = do
   (indata, _, _, hpkgProc) <- runInteractiveProcess hastepkg
                                                     ["update", "-", "--force"]
                                                     Nothing
                                                     Nothing
   pkgtext <- hGetContents pkgdata
-  hPutStrLn indata (fixPaths pkgtext)
+  hPutStrLn indata (fixPaths pkgname pkgtext)
   hClose indata
   _ <- waitForProcess hpkgProc
   putMVar hastepkgDone ()
 
 -- | Hack a config to work with Haste.
-fixPaths :: String -> String
-fixPaths pkgtext =
+fixPaths :: String -> String -> String
+fixPaths pkgname pkgtext =
   pkgtext'
   where
     pkgtext' = unlines
@@ -78,22 +79,17 @@ fixPaths pkgtext =
     
     fixPath str
       | isKey "library-dirs:" str =
-        "library-dirs: " ++ importDir </> pkgdir
+        "library-dirs: " ++ importDir </> pkgname
 {-      | isKey "include-dirs:" str =
-        "include-dirs: " ++ importDir </> pkgdir -}
+        "include-dirs: " ++ importDir </> pkgname -}
       | isKey "import-dirs:" str =
-        "import-dirs: " ++ importDir </> pkgdir
+        "import-dirs: " ++ importDir </> pkgname
       | isKey "pkgroot:" str =
         "pkgroot: \"" ++ pkgRoot ++ "\""
       | "-inplace" `isSuffixOf` str =
         reverse $ drop (length "-inplace") $ reverse str
       | otherwise =
         str
-      where
-        pkgdir =
-          case reverse str of
-            (':':_) -> ""
-            str'    -> reverse $ takeWhile (/= '/') str'
 
     isKey _ "" =
       False
