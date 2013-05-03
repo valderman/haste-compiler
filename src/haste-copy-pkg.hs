@@ -72,22 +72,29 @@ fixPaths pkgtext =
   where
     pkgtext' = unlines
              . map fixPath
-             . filter (not . ("library-dirs:" `isPrefixOf`))
-             . filter (not . ("include" `isPrefixOf`))
              . filter (not . ("haddock" `isPrefixOf`))
              . filter (not . ("hs-libraries:" `isPrefixOf`))
              $ lines pkgtext
     
     fixPath str
+      | isKey "library-dirs:" str =
+        "library-dirs: " ++ importDir </> pkgdir
+{-      | isKey "include-dirs:" str =
+        "include-dirs: " ++ importDir </> pkgdir -}
       | isKey "import-dirs:" str =
-        "import-dirs: " ++ importDir
+        "import-dirs: " ++ importDir </> pkgdir
       | isKey "pkgroot:" str =
         "pkgroot: \"" ++ pkgRoot ++ "\""
       | "-inplace" `isSuffixOf` str =
         reverse $ drop (length "-inplace") $ reverse str
       | otherwise =
         str
-    
+      where
+        pkgdir =
+          case reverse str of
+            (':':_) -> ""
+            str'    -> reverse $ takeWhile (/= '/') str'
+
     isKey _ "" =
       False
     isKey key str =
