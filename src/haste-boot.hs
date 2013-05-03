@@ -15,8 +15,9 @@ import qualified Codec.Archive.Zip as Zip
 import EnvUtils
 
 data Cfg = Cfg {
-    fetchBase :: Bool,
-    fetchClosure  :: Bool
+    fetchBase      :: Bool,
+    fetchClosure   :: Bool,
+    fetchHasteLibs :: Bool
   }
 
 main :: IO ()
@@ -31,9 +32,11 @@ main = do
       closure   = if elem "--no-closure" args
                      then False
                      else forceBoot || needsReboot == Everything
+      haste     = not (elem "--no-haste" args)
       cfg = Cfg {
-          fetchBase    = base,
-          fetchClosure = closure
+          fetchBase      = base,
+          fetchClosure   = closure,
+          fetchHasteLibs = haste
         }
 
   when (needsReboot /= Dont || forceBoot) $ do
@@ -46,8 +49,9 @@ main = do
 bootHaste :: Cfg -> FilePath -> IO ()
 bootHaste cfg hasteinst = do
   when (fetchBase cfg) fetchStdLibs
-  buildFursuit hasteinst
-  buildStdLib hasteinst
+  when (fetchHasteLibs cfg) $ do
+    buildFursuit hasteinst
+    buildStdLib hasteinst
   when (fetchClosure cfg) installClosure
   Prelude.writeFile (hasteDir </> "booted") (show bootVer)
 
