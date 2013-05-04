@@ -23,6 +23,7 @@ popd
 pushd .
 cd libraries/integer-gmp
 haste-inst install --unbooted
+haste-inst install --unbooted
 popd
 
 # Install base from GHC source. GHC needs to be built beforehand.
