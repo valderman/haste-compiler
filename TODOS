@@ -1,5 +1,0 @@
-* Look into rewriting as much of the base libraries as possible in pure JS;
-  huge space savings are likely!
-  [nice to have/hard work]
-
-* Allow Integer literals larger than +/-2^31
