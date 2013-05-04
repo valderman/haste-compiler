@@ -1,6 +1,6 @@
 #!/bin/bash
 if [[ $1 == "" ]] ; then
-    echo "Usage: $0 path_to_ghc_source [--no-closure]"
+    echo "Usage: $0 path_to_ghc_source [--only-base]"
     exit 1
 fi
 
@@ -36,6 +36,11 @@ haste-install-his base-$baseversion dist/build
 haste-copy-pkg base-$baseversion --package-db=dist/package.conf.inplace
 popd
 
+# If we were only asked to install base, then we're done now.
+if [[ $2 == "--only-base" ]] ; then
+    exit 0
+fi
+
 # Install fursuit, since haste-lib depends on it.
 pushd .
 tempdir=$(mktemp -d)
@@ -52,9 +57,4 @@ cd libraries/haste-lib
 haste-inst install --unbooted
 popd
 
-# Fetch google Closure compiler and mark Haste as booted.
-if [[ $2 == "--no-closure" ]] ; then
-    haste-boot --force --no-haste --no-base --no-closure
-else
-    haste-boot --force --no-haste --no-base
-fi
+haste-boot --force --no-haste --no-base

@@ -21,10 +21,7 @@ fi
 ln -s $build_dir ~/.haste
 
 # Build libraries, etc.
-./buildlibs.sh $1 --no-closure
-
-# Remove boot indicator
-rm $build_dir/booted
+./buildlibs.sh $1 --only-base
 
 # Pack it all up
 cd ~
@@ -39,4 +36,3 @@ if [[ $restore_backup == "yes" ]] ; then
     mv $backup_dir/.haste ~/
     rmdir $backup_dir
 fi
-
