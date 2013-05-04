@@ -417,13 +417,21 @@ negateInteger (J# i)            = J# (negateInteger# i)
 \begin{code}
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
-encodeFloatInteger (S# i) j  = int_encodeFloat# i j
-encodeFloatInteger (J# m#) e = encodeFloat# m# e
+encodeFloatInteger i@(S# _) j = encodeFloatInteger (toBig i) j
+encodeFloatInteger m@(J# _) e =
+    toFloat# m#
+  where
+    e' = (S# 1# `shiftLInteger` e)
+    m# = case m `timesInteger` e' of J# m# -> m#
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger (S# i) j  = int_encodeDouble# i j
-encodeDoubleInteger (J# m#) e = encodeDouble# m# e
+encodeDoubleInteger i@(S# _) j = encodeDoubleInteger (toBig i) j
+encodeDoubleInteger m@(J# _) e =
+    toDouble# m#
+  where
+    e' = (S# 1# `shiftLInteger` e)
+    m# = case m `timesInteger` e' of J# m# -> m#
 
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
@@ -446,15 +454,6 @@ floatFromInteger :: Integer -> Float#
 floatFromInteger (S# i#) = int2Float# i#
 floatFromInteger (J# i#) = toFloat# i#
 
-foreign import ccall unsafe "integer_cbits_encodeFloat"
-        encodeFloat# :: ByteArray# -> Int# -> Float#
-foreign import ccall unsafe "__int_encodeFloat"
-        int_encodeFloat# :: Int# -> Int# -> Float#
-
-foreign import ccall unsafe "integer_cbits_encodeDouble"
-        encodeDouble# :: ByteArray# -> Int# -> Double#
-foreign import ccall unsafe "__int_encodeDouble"
-        int_encodeDouble# :: Int# -> Int# -> Double#
 \end{code}
 
 %*********************************************************
