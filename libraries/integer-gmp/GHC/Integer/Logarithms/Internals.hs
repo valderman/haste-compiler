@@ -39,7 +39,7 @@ integerLog2# i@(J# _) = log2I i
 
 log2I :: Integer -> Int#
 log2I i =
-    l2 1 0#
+    l2 (S# 1#) 0#
   where
     l2 x l | x `ltInteger` i = l2 (shiftLInteger x 1#) (l +# 1#)
            | x `gtInteger` i = l -# 1#
@@ -83,70 +83,21 @@ roundingMode# (S# i) t =
                     else if c `ltWord#` k
                             then 2#
                             else 1#
-roundingMode# (J# ba) t =
-    case word2Int# (int2Word# t `and#` MMASK##) of
-      j ->      -- index of relevant bit in word
-        case uncheckedIShiftRA# t WSHIFT# of
-          k ->  -- index of relevant word
-            case indexWordArray# ba k `and#`
-                    ((uncheckedShiftL# 2## j) `minusWord#` 1##) of
-              r ->
-                case uncheckedShiftL# 1## j of
-                  c -> if c `gtWord#` r
-                        then 0#
-                        else if c `ltWord#` r
-                                then 2#
-                                else test (k -# 1#)
-  where
-    test i = if i <# 0#
-                then 1#
-                else case indexWordArray# ba i of
-                        0## -> test (i -# 1#)
-                        _   -> 2#
+roundingMode# i@(J# _) t =
+    case i `andInteger` ((shiftLInteger (S# 2#) t) `minusInteger` S# 1#) of
+      k -> case shiftLInteger (S# 1#) t of
+            c -> if c `gtInteger` k
+                    then 0#
+                    else if c `ltInteger` k
+                            then 2#
+                            else 1#
 
 -- wordLog2# 0## = -1#
 {-# INLINE wordLog2# #-}
 wordLog2# :: Word# -> Int#
-wordLog2# w =
-  case leadingZeros of
-   BA lz ->
-    let zeros u = indexInt8Array# lz (word2Int# u) in
-                    case uncheckedShiftRL# w 24# of
-                     e ->
-                      if e `neWord#` 0##
-                       then 32# -# zeros e
-                       else
-                        case uncheckedShiftRL# w 16# of
-                         f ->
-                          if f `neWord#` 0##
-                           then 24# -# zeros f
-                           else
-                            case uncheckedShiftRL# w 8# of
-                             g ->
-                              if g `neWord#` 0##
-                               then 16# -# zeros g
-                               else 8# -# zeros w
-
-
--- Lookup table
-data BA = BA ByteArray#
-
-leadingZeros :: BA
-leadingZeros =
-    let mkArr s =
-          case newByteArray# 256# s of
-            (# s1, mba #) ->
-              case writeInt8Array# mba 0# 9# s1 of
-                s2 ->
-                  let fillA lim val idx st =
-                        if idx ==# 256#
-                          then st
-                          else if idx <# lim
-                                then case writeInt8Array# mba idx val st of
-                                        nx -> fillA lim val (idx +# 1#) nx
-                                else fillA (2# *# lim) (val -# 1#) idx st
-                  in case fillA 2# 8# 1# s2 of
-                      s3 -> case unsafeFreezeByteArray# mba s3 of
-                              (# _, ba #) -> ba
-    in case mkArr realWorld# of
-        b -> BA b
+wordLog2# i =
+    if i `eqWord#` 0## then -1# else l2 1## 0#
+  where
+    l2 x l | x `ltWord#` i = l2 (x `timesWord#` 2##) (l +# 1#)
+           | x `gtWord#` i = l -# 1#
+           | x `eqWord#` i = l
