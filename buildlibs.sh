@@ -1,6 +1,6 @@
 #!/bin/bash
 if [[ $1 == "" ]] ; then
-    echo "Usage: $0 path_to_ghc_source"
+    echo "Usage: $0 path_to_ghc_source [--no-closure]"
     exit 1
 fi
 
@@ -53,4 +53,8 @@ haste-inst install --unbooted
 popd
 
 # Fetch google Closure compiler and mark Haste as booted.
-haste-boot --force --no-haste --no-base
+if [[ $2 == "--no-closure" ]] ; then
+    haste-boot --force --no-haste --no-base --no-closure
+else
+    haste-boot --force --no-haste --no-base
+fi
