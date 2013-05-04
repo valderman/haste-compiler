@@ -14,9 +14,8 @@ Haste.
 
 Second, clone haste-compiler and install it using `cabal install`.
 
-Finally, run `haste-boot` (or `~/.cabal/bin/haste-boot`, if you don't have
-`~/Library/Haskell/bin` or `~/.cabal/bin` in your `$PATH`) and wait for it to finish - you should now be
-able to use Haste!
+Now follow the instructions under _Building your own base libraries_ to build
+your base libraries, since the haste-boot method is currently broken.
 
 You should probably run the test suite first though, to verify that everything
 is working. To do that, execute `./runtests.sh` in the Haste root directory.
