@@ -26,7 +26,6 @@ Library {
         GHC.CString
         GHC.Debug
         GHC.Magic
-        GHC.PrimopWrappers
         GHC.IntWord64
         GHC.Tuple
         GHC.Types

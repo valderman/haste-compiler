@@ -13,7 +13,7 @@ category:
 author:
 exposed: True
 exposed-modules: GHC.Prim GHC.Classes GHC.CString GHC.Debug
-                 GHC.Magic GHC.PrimopWrappers GHC.IntWord64 GHC.Tuple GHC.Types
+                 GHC.Magic GHC.IntWord64 GHC.Tuple GHC.Types
 hidden-modules:
 trusted: False
 import-dirs: ${pkgroot}/haste-install/lib/ghc-prim-0.3.0.0
