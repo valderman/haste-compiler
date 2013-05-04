@@ -25,7 +25,6 @@ import GHC.Integer.GMP.Prim (
     plusInteger#, minusInteger#, timesInteger#,
     quotRemInteger#, quotInteger#, remInteger#,
     divModInteger#, divInteger#, modInteger#,
-    gcdInteger#, gcdIntegerInt#, gcdInt#, divExactInteger#,
     decodeDouble#,
     int2Integer#, integer2Int#, word2Integer#, integer2Word#,
     andInteger#, orInteger#, xorInteger#, complementInteger#,
@@ -239,51 +238,21 @@ divInteger (J# a) (J# b)
 -- not call us with both arguments being 0.
 {-# NOINLINE gcdInteger #-}
 gcdInteger :: Integer -> Integer -> Integer
--- SUP: Do we really need the first two cases?
-gcdInteger a@(S# INT_MINBOUND) b = gcdInteger (toBig a) b
-gcdInteger a b@(S# INT_MINBOUND) = gcdInteger a (toBig b)
-gcdInteger (S# a) (S# b) = S# (gcdInt a b)
-gcdInteger ia@(S# a)  ib@(J# _) = gcdInteger (toBig ia) ib
-gcdInteger ia@(J# _) ib@(S# _) = gcdInteger ib ia
-gcdInteger (J# a) (J# b)
-  = J# (gcdInteger# a b)
+gcdInteger a b =
+    gcdI (absInteger a) (absInteger b)
+  where
+    gcdI a b = if b `eqInteger` S# 0#
+                 then a
+                 else gcdI b (a `remInteger` b)
 
 {-# NOINLINE lcmInteger #-}
 lcmInteger :: Integer -> Integer -> Integer
 lcmInteger a b =      if a `eqInteger` S# 0# then S# 0#
                  else if b `eqInteger` S# 0# then S# 0#
-                 else (divExact aa (gcdInteger aa ab)) `timesInteger` ab
-  where aa = absInteger a
-        ab = absInteger b
-
--- This rule needs to use absInteger so that it works correctly when
--- the result is minBound :: Int. But that isn't necessary when the
--- result is converted to an Int.
-{-# RULES
-"gcdInteger/Int" forall a b.
-    gcdInteger (smallInteger a) (smallInteger b)
-        = absInteger (smallInteger (gcdInt a b))
-"integerToInt/gcdInteger/Int" forall a b.
-    integerToInt (gcdInteger (smallInteger a) (smallInteger b)) = gcdInt a b
-  #-}
-gcdInt :: Int# -> Int# -> Int#
-gcdInt 0# y  = absInt y
-gcdInt x  0# = absInt x
-gcdInt x  y  = gcdInt# (absInt x) (absInt y)
-
-absInt :: Int# -> Int#
-absInt x = if x <# 0# then negateInt# x else x
-
-divExact :: Integer -> Integer -> Integer
-divExact a@(S# INT_MINBOUND) b = divExact (toBig a) b
-divExact (S# a) (S# b) = S# (quotInt# a b)
-divExact (S# a) (J# b)
-  = S# (quotInt# a (integer2Int# b))
-divExact (J# a) (S# b)
-  = J# (divExactInteger# a (int2Integer# b))
-divExact (J# a) (J# b)
-  = J# (divExactInteger# a b)
+                 else absInteger ((a `quotInteger` (gcdInteger a b))
+                                  `timesInteger` b)
 \end{code}
+
 
 
 %*********************************************************

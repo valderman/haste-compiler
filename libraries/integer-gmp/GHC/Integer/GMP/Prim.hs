@@ -17,11 +17,6 @@ module GHC.Integer.GMP.Prim (
     divModInteger#,
     divInteger#,
     modInteger#,
-    divExactInteger#,
-
-    gcdInteger#,
-    gcdIntegerInt#,
-    gcdInt#,
 
     decodeDouble#,
 
@@ -102,29 +97,6 @@ foreign import prim "I_div" divInteger#
 foreign import prim "I_mod" modInteger#
   :: ByteArray# -> ByteArray# -> ByteArray#
 
-
--- TODO: used? un-use them!
-
-
--- | Divisor is guaranteed to be a factor of dividend.
---
-foreign import prim "integer_cmm_divExactIntegerzh" divExactInteger#
-  :: ByteArray# -> ByteArray# -> ByteArray#
-
--- | Greatest common divisor.
---
-foreign import prim "integer_cmm_gcdIntegerzh" gcdInteger#
-  :: ByteArray# -> ByteArray# -> ByteArray#
-
--- | Greatest common divisor, where second argument is an ordinary {\tt Int\#}.
---
-foreign import prim "integer_cmm_gcdIntegerIntzh" gcdIntegerInt#
-  :: ByteArray# -> Int# -> Int#
-
--- |
---
-foreign import prim "integer_cmm_gcdIntzh" gcdInt#
-  :: Int# -> Int# -> Int#
 
 
 -------
