@@ -7,9 +7,10 @@ A compiler to generate Javascript code from Haskell.
 Building
 --------
 
-First, make sure that you are running GHC 7.6.1. Pre-7.6 versions will refuse
-to compile due to changes in GHC. Other 7.6 versions will compile, but the
-libraries installed by haste-boot will probably not work all that well.
+First, make sure that you are running GHC 7.6.x. Pre-7.6 versions will refuse
+to compile due to changes in GHC. The libraries fetched by haste-boot were
+built using 7.6.3, but should work fine with any GHC version that can build
+Haste.
 
 Second, clone haste-compiler and install it using `cabal install`.
 
@@ -28,28 +29,15 @@ any of its derivatives, and may or may not work with other implementations.
 Building your own base libraries
 --------------------------------
 
-First off, run `haste-boot --force --no-base`.
-Then, download the source code of the same GHC version you're running
-(7.6.1 is the only version tested to work).
-
-Unpack the GHC sources you just downloaded, go to the directory where you
-unpacked it and copy the file `mk/build.mk.sample` to `mk/build.mk` and edit
-it to add the following at the very top:
-
-    INTEGER_LIBRARY = integer-simple
-    BuildFlavour = quick
-
-Now, run `./configure && make`; wait. Fortunately, you only need to do this step
-once. If you want to rebuild your libraries at any time after this, you can
-start from the `buildlibs.sh` step.
+Download the source code for GHC; any 7.6 version should do. Build it by
+running `./configure && make` in the directory where you unpacked it. You only
+need to do this once; after building GHC, you can rebuild the Haste libraries
+by simply re-running `buildlibs.sh`.
 
 After GHC has finished building, go back to the haste-compiler directory and
 run `./buildlibs.sh /wherever/you/unpacked/GHC`. You may get a _LONG_ error
 message from GHC while running buildlibs.sh. If you do, let it finish and
-re-run it. It's also probably a good idea to reinstall Fursuit and haste-lib
-after rebuilding the base libraries; do this by issuing `haste-inst install`
-in their respective directories, or by running
-`haste-boot --force --no-closure --no-base`.
+re-run it.
 
 Keep in mind, however, that a base library built on a 64-bit machine will be
 broken, in particular with regards to the arbitrary precision Integer type.
@@ -114,8 +102,7 @@ bit machine as Javascript stores everything as Double, which isn't enough for
 64 bit integers.
 
 Many library features also make use of native functionality that is hard or
-impossible to implement on top of Javascript; the Read type class, with its
-heavy use of iconv, is a prime example.
+impossible to implement on top of Javascript. This will be fixed, in time.
 
 
 Why yet another Haskell to Javascript compiler?
@@ -141,22 +128,8 @@ Known issues
 
 * Base libraries built on a 64 bit machine won't work. Don't even bother.
 
-* Read is completely broken until a JS-native alternative can be written.
-
-* Conversions between basic numeric types and strings work, but shouldn't
-  really be used since they're doing a lot of work for something that's
-  a primitive operation in JS. JS-native substitutes are available in the form
-  of show_, read_ and round_ for all types which have an underlying Number
-  representation with Haste (Int, Float and Double.)
-
 * A program that throws unhandled exceptions may not always give a nice error
   message.
 
 * Word32 produces funny results on some machines; use Word instead, which is
   guaranteed to be 32 bits with Haste.
-
-* Haste currently uses package information for `rts`, `integer-gmp`, `ghc-prim`
-  and `base` from your vanilla GHC install. As a consequence, Haste needs to be
-  rebooted whenever you upgrade your GHC, and the intermediate files for those
-  four need to be compiled with whatever GHC version you currently have
-  installed.
