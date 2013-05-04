@@ -34,11 +34,16 @@ default ()
 -- significant down, once a nonzero word is found,
 -- calculate its log2 and add the number of following bits.
 integerLog2# :: Integer -> Int#
-integerLog2# (S# i) = wordLog2# (int2Word# i)
-integerLog2# (J# ba) = log2I# ba
+integerLog2# (S# i)   = wordLog2# (int2Word# i)
+integerLog2# i@(J# _) = log2I i
 
-foreign import prim "I_log2"
-  log2I# :: ByteArray# -> Int#
+log2I :: Integer -> Int#
+log2I i =
+    l2 1 0#
+  where
+    l2 x l | x `ltInteger` i = l2 (shiftLInteger x 1#) (l +# 1#)
+           | x `gtInteger` i = l -# 1#
+           | x `eqInteger` i = l
 
 -- Assumption: Integer is strictly positive
 -- First component is log2 n, second is 0# iff n is a power of two
