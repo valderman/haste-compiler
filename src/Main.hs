@@ -115,7 +115,9 @@ compiler cmdargs = do
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
       
-      defaultErrorHandler putStrLn defaultFlushOut $ runGhc (Just libdir) $ do
+      -- GHC prints the error message itself, so...
+      let logAct = \_ -> return ()
+      defaultErrorHandler logAct defaultFlushOut $ runGhc (Just libdir) $ do
         -- Handle dynamic GHC flags.
         let ghcargs'' = "-D__HASTE__" : map unLoc ghcargs'
             args = if doTCE cfg
