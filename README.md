@@ -14,8 +14,8 @@ Haste.
 
 Second, clone haste-compiler and install it using `cabal install`.
 
-Now follow the instructions under _Building your own base libraries_ to build
-your base libraries, since the haste-boot method is currently broken.
+Now run `./buildlibs.sh` to build the standard libraries. GHC sources are no
+longer needed.
 
 You should probably run the test suite first though, to verify that everything
 is working. To do that, execute `./runtests.sh` in the Haste root directory.
@@ -23,23 +23,6 @@ You may also run only a particular test by executing `./runtest.sh NameOfTest`.
 The test suite is written for use with Mozilla's SpiderMonkey Javascript engine,
 which can be found in the `spidermonkey-bin` package if you're running Debian or
 any of its derivatives, and may or may not work with other implementations.
-
-
-Building your own base libraries
---------------------------------
-
-Download the source code for GHC; any 7.6 version should do. Build it by
-running `./configure && make` in the directory where you unpacked it. You only
-need to do this once; after building GHC, you can rebuild the Haste libraries
-by simply re-running `buildlibs.sh`.
-
-After GHC has finished building, go back to the haste-compiler directory and
-run `./buildlibs.sh /wherever/you/unpacked/GHC`. You may get a _LONG_ error
-message from GHC while running buildlibs.sh. If you do, let it finish and
-re-run it.
-
-Keep in mind, however, that a base library built on a 64-bit machine will be
-broken, in particular with regards to the arbitrary precision Integer type.
 
 
 Usage
@@ -95,13 +78,10 @@ brackets of the Strathclyde Haskell Enhancement
 Libraries
 ---------
 
-Haste is able to use the standard Haskell libraries to a certain extent.
-However, there are a few caveats. The base libraries need to be built on a 32
-bit machine as Javascript stores everything as Double, which isn't enough for
-64 bit integers.
-
-Many library features also make use of native functionality that is hard or
-impossible to implement on top of Javascript. This will be fixed, in time.
+Haste is able to use standard Haskell libraries to a certain extent.
+However, many primitive operations are still not implemented, which means that
+any code making use of them will give you a compiler warning, then die at
+runtime with an angry error. This is currently being worked on.
 
 
 Why yet another Haskell to Javascript compiler?
@@ -125,10 +105,5 @@ Known issues
   primop, I'd be happy if you'd report it together with a small test case that
   demonstrates the problem.
 
-* Base libraries built on a 64 bit machine won't work. Don't even bother.
-
 * A program that throws unhandled exceptions may not always give a nice error
   message.
-
-* Word32 produces funny results on some machines; use Word instead, which is
-  guaranteed to be 32 bits with Haste.
