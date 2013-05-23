@@ -31,7 +31,8 @@ Library
         Haste.Reactive.DOM
         Haste.Reactive.Ajax
     Build-Depends:
-        base,
+        base == 4.6.0.1,
+        array == 0.4.0.1,
         ghc-prim,
         fursuit,
         containers
