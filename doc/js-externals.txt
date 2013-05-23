@@ -13,6 +13,9 @@ To import a foreign function, simply declare it with FFI as usual:
 Then write myFunction in JS taking the precautions outlined below. Link against
 the file containing your JS function by passing --with-js=myFile.js to hastec.
 
+There is a neat tool for automatically generating FFI bindings at
+https://github.com/RudolfVonKrugstein/haste-ffi-parser - check it out.
+
 
 
 ** Haskell and the Real World
