@@ -31,7 +31,7 @@ import GHC.Integer.GMP.Prim (
     int64ToInteger#,  integerToInt64#,
     word64ToInteger#, integerToWord64#,
     shiftLInteger#, shiftRInteger#, toFloat#, toDouble#,
-    negateInteger#
+    negateInteger#, integerToJSString#
  )
 
 import GHC.IntWord64 (
@@ -504,6 +504,13 @@ shiftLInteger (J# d) i   = J# (shiftLInteger# d i)
 shiftRInteger :: Integer -> Int# -> Integer
 shiftRInteger j@(S# _) i = shiftRInteger (toBig j) i
 shiftRInteger (J# d) i   = J# (shiftRInteger# d i)
+
+{-# NOINLINE integerToJSString #-}
+integerToJSString :: Integer -> ByteArray#
+integerToJSString i@(S# _) = integerToJSString (toBig i)
+integerToJSString (J# i)   = integerToJSString# i
+
+
 \end{code}
 
 %*********************************************************
