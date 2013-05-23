@@ -5,6 +5,8 @@
            , MagicHash
            , UnboxedTuples
            , ForeignFunctionInterface
+           , GHCForeignImportPrim
+           , UnliftedFFITypes
   #-}
 -- We believe we could deorphan this module, by moving lots of things
 -- around, but we haven't got there yet:
@@ -47,6 +49,7 @@ import GHC.Float.RealFracMethods
 import GHC.Float.ConversionUtils
 import GHC.Integer.Logarithms ( integerLogBase# )
 import GHC.Integer.Logarithms.Internals
+import GHC.Integer (fromRat)
 import GHC.HastePrim
 
 infixr 8  **
@@ -235,13 +238,7 @@ instance  Fractional Float  where
         | n == 0        = 0/0
         | n < 0         = (-1)/0
         | otherwise     = 1/0
-    fromRational (n:%d)
-        | n == 0        = encodeFloat 0 0
-        | n < 0         = -(fromRat'' minEx mantDigs (-n) d)
-        | otherwise     = fromRat'' minEx mantDigs n d
-          where
-            minEx       = FLT_MIN_EXP
-            mantDigs    = FLT_MANT_DIG
+    fromRational (n:%d) = unsafeCoerce# (fromRat n d)
     recip x             =  1.0 / x
 
 -- RULES for Integer and Int
@@ -396,13 +393,7 @@ instance  Fractional Double  where
         | n == 0        = 0/0
         | n < 0         = (-1)/0
         | otherwise     = 1/0
-    fromRational (n:%d)
-        | n == 0        = encodeFloat 0 0
-        | n < 0         = -(fromRat'' minEx mantDigs (-n) d)
-        | otherwise     = fromRat'' minEx mantDigs n d
-          where
-            minEx       = DBL_MIN_EXP
-            mantDigs    = DBL_MANT_DIG
+    fromRational (n:%d) = fromRat n d
     recip x             =  1.0 / x
 
 instance  Floating Double  where
@@ -814,47 +805,6 @@ fromRat x = x'
 Now, here's Lennart's code (which works)
 
 \begin{code}
--- | Converts a 'Rational' value into any type in class 'RealFloat'.
-{-# RULES
-"fromRat/Float"     fromRat = (fromRational :: Rational -> Float)
-"fromRat/Double"    fromRat = (fromRational :: Rational -> Double)
-  #-}
-fromRat :: (RealFloat a) => Rational -> a
-
--- Deal with special cases first, delegating the real work to fromRat'
-fromRat (n :% 0) | n > 0     =  1/0        -- +Infinity
-                 | n < 0     = -1/0        -- -Infinity
-                 | otherwise =  0/0        -- NaN
-
-fromRat (n :% d) | n > 0     = fromRat' (n :% d)
-                 | n < 0     = - fromRat' ((-n) :% d)
-                 | otherwise = encodeFloat 0 0             -- Zero
-
--- Conversion process:
--- Scale the rational number by the RealFloat base until
--- it lies in the range of the mantissa (as used by decodeFloat/encodeFloat).
--- Then round the rational to an Integer and encode it with the exponent
--- that we got from the scaling.
--- To speed up the scaling process we compute the log2 of the number to get
--- a first guess of the exponent.
-
-fromRat' :: (RealFloat a) => Rational -> a
--- Invariant: argument is strictly positive
-fromRat' x = r
-  where b = floatRadix r
-        p = floatDigits r
-        (minExp0, _) = floatRange r
-        minExp = minExp0 - p            -- the real minimum exponent
-        xMax   = toRational (expt b p)
-        p0 = (integerLogBase b (numerator x) - integerLogBase b (denominator x) - p) `max` minExp
-        -- if x = n/d and ln = integerLogBase b n, ld = integerLogBase b d,
-        -- then b^(ln-ld-1) < x < b^(ln-ld+1)
-        f = if p0 < 0 then 1 :% expt b (-p0) else expt b p0 :% 1
-        x0 = x / f
-        -- if ln - ld >= minExp0, then b^(p-1) < x0 < b^(p+1), so there's at most
-        -- one scaling step needed, otherwise, x0 < b^p and no scaling is needed
-        (x', p') = if x0 >= xMax then (x0 / toRational b, p0+1) else (x0, p0)
-        r = encodeFloat (round x') p'
 
 -- Exponentiation with a cache for the most common numbers.
 minExpt, maxExpt :: Int
@@ -906,75 +856,6 @@ of division.
 The below is an adaption of fromRat' for the conversion to
 Float or Double exploiting the known floatRadix and avoiding
 divisions as much as possible.
-
-\begin{code}
-{-# SPECIALISE fromRat'' :: Int -> Int -> Integer -> Integer -> Float,
-                            Int -> Int -> Integer -> Integer -> Double #-}
-fromRat'' :: RealFloat a => Int -> Int -> Integer -> Integer -> a
--- Invariant: n and d strictly positive
-fromRat'' minEx@(I# me#) mantDigs@(I# md#) n d =
-    case integerLog2IsPowerOf2# d of
-      (# ld#, pw# #)
-        | pw# ==# 0# ->
-          case integerLog2# n of
-            ln# | ln# >=# (ld# +# me# -# 1#) ->
-                  -- this means n/d >= 2^(minEx-1), i.e. we are guaranteed to get
-                  -- a normalised number, round to mantDigs bits
-                  if ln# <# md#
-                    then encodeFloat n (I# (negateInt# ld#))
-                    else let n'  = n `shiftR` (I# (ln# +# 1# -# md#))
-                             n'' = case roundingMode# n (ln# -# md#) of
-                                    0# -> n'
-                                    2# -> n' + 1
-                                    _  -> case fromInteger n' .&. (1 :: Int) of
-                                            0 -> n'
-                                            _ -> n' + 1
-                         in encodeFloat n'' (I# (ln# -# ld# +# 1# -# md#))
-                | otherwise ->
-                  -- n/d < 2^(minEx-1), a denorm or rounded to 2^(minEx-1)
-                  -- the exponent for encoding is always minEx-mantDigs
-                  -- so we must shift right by (minEx-mantDigs) - (-ld)
-                  case ld# +# (me# -# md#) of
-                    ld'# | ld'# <=# 0#  -> -- we would shift left, so we don't shift
-                           encodeFloat n (I# ((me# -# md#) -# ld'#))
-                         | ld'# <=# ln#  ->
-                           let n' = n `shiftR` (I# ld'#)
-                           in case roundingMode# n (ld'# -# 1#) of
-                                0# -> encodeFloat n' (minEx - mantDigs)
-                                1# -> if fromInteger n' .&. (1 :: Int) == 0
-                                        then encodeFloat n' (minEx-mantDigs)
-                                        else encodeFloat (n' + 1) (minEx-mantDigs)
-                                _  -> encodeFloat (n' + 1) (minEx-mantDigs)
-                         | ld'# ># (ln# +# 1#)  -> encodeFloat 0 0 -- result of shift < 0.5
-                         | otherwise ->  -- first bit of n shifted to 0.5 place
-                           case integerLog2IsPowerOf2# n of
-                            (# _, 0# #) -> encodeFloat 0 0  -- round to even
-                            (# _, _ #)  -> encodeFloat 1 (minEx - mantDigs)
-        | otherwise ->
-          let ln = I# (integerLog2# n)
-              ld = I# ld#
-              -- 2^(ln-ld-1) < n/d < 2^(ln-ld+1)
-              p0 = max minEx (ln - ld)
-              (n', d')
-                | p0 < mantDigs = (n `shiftL` (mantDigs - p0), d)
-                | p0 == mantDigs = (n, d)
-                | otherwise     = (n, d `shiftL` (p0 - mantDigs))
-              -- if ln-ld < minEx, then n'/d' < 2^mantDigs, else
-              -- 2^(mantDigs-1) < n'/d' < 2^(mantDigs+1) and we
-              -- may need one scaling step
-              scale p a b
-                | (b `shiftL` mantDigs) <= a = (p+1, a, b `shiftL` 1)
-                | otherwise = (p, a, b)
-              (p', n'', d'') = scale (p0-mantDigs) n' d'
-              -- n''/d'' < 2^mantDigs and p' == minEx-mantDigs or n''/d'' >= 2^(mantDigs-1)
-              rdq = case n'' `quotRem` d'' of
-                     (q,r) -> case compare (r `shiftL` 1) d'' of
-                                LT -> q
-                                EQ -> if fromInteger q .&. (1 :: Int) == 0
-                                        then q else q+1
-                                GT -> q+1
-          in  encodeFloat rdq p'
-\end{code}
 
 
 %*********************************************************

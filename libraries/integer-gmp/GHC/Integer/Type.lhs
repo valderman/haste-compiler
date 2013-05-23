@@ -31,7 +31,7 @@ import GHC.Integer.GMP.Prim (
     int64ToInteger#,  integerToInt64#,
     word64ToInteger#, integerToWord64#,
     shiftLInteger#, shiftRInteger#, toFloat#, toDouble#,
-    negateInteger#, integerToJSString#
+    negateInteger#, integerToJSString#, fromRat#
  )
 
 import GHC.IntWord64 (
@@ -510,6 +510,11 @@ integerToJSString :: Integer -> ByteArray#
 integerToJSString i@(S# _) = integerToJSString (toBig i)
 integerToJSString (J# i)   = integerToJSString# i
 
+-- Convert a/b into a Double
+fromRat :: Integer -> Integer -> Double
+fromRat i@(S# _) j    = fromRat (toBig i) j
+fromRat i j@(S# _)    = fromRat i (toBig j)
+fromRat (J# i) (J# j) = D# (fromRat# i j)
 
 \end{code}
 

@@ -38,7 +38,8 @@ module GHC.Integer.GMP.Prim (
     word64ToInteger#, integerToWord64#,
     toFloat#, toDouble#,
     negateInteger#,
-    integerToJSString#
+    integerToJSString#,
+    fromRat#
   ) where
 
 import GHC.Prim
@@ -173,8 +174,11 @@ foreign import prim "I_shiftLeft"
 foreign import prim "I_shiftRight"
     shiftRInteger# :: ByteArray# -> Int# -> ByteArray#
 
-foreign import prim "I_toString" integerToJSString#
-  :: ByteArray# -> ByteArray#
+foreign import prim "I_toString"
+    integerToJSString# :: ByteArray# -> ByteArray#
+
+foreign import prim "I_fromRat"
+    fromRat# :: ByteArray# -> ByteArray# -> Double#
 
 integer2Word# :: ByteArray# -> Word#
 integer2Word# n = int2Word# (integer2Int# n)
