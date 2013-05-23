@@ -31,5 +31,3 @@ framework-dirs:
 frameworks:
 haddock-interfaces:
 haddock-html:
-pkgroot: "/home/valderman/.haste"
-
