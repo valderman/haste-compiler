@@ -8,7 +8,8 @@ libpath=$1/libraries
 
 # Install builtin RTS package, and create some dirs.
 mkdir -p ~/.haste/haste-install/lib/ghc
-haste-copy-pkg rts-1.0 rts
+cp -rf include ~/.haste/
+haste-pkg update libraries/rts.pkg
 
 # Install custom ghc-prim.
 pushd .
