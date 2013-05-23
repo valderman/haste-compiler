@@ -1,0 +1,6 @@
+This is a slightly hacked version of the array package from GHC 7.6.3.
+This file sums up the differences.
+
+* Unboxed Int64 and Word64 arrays are disabled; unboxed arrays are broken
+  anyway, and Haste should really implement its own lightweight array library
+  relying on JS arrays instead.

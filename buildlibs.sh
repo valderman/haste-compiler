@@ -31,6 +31,12 @@ haste-install-his base-$baseversion dist/build
 haste-copy-pkg base-$baseversion --package-db=dist/package.conf.inplace
 popd
 
+# Install haxored array
+pushd .
+cd libraries/array
+haste-inst install --unbooted
+popd
+
 # If we were only asked to install base, then we're done now.
 if [[ $2 == "--only-base" ]] ; then
     exit 0
