@@ -1,0 +1,10 @@
+This is a slightly hacked copy of base from GHC 7.6.3.
+This file sums up the differences.
+
+* Added module with Haste primitives. (GHC.HastePrim)
+* Browser-native implementations of Show for Int, Integer, Double.
+  (GHC.Show, GHC.Float)
+* Fixes for primops that change type with host machine bitness.
+  (GHC.Word, GHC.Int, GHC.Storable, GHC.Constants)
+* Temporarily disable showEFloat, showGFloat and showFFloat until they can
+  be fixed. (Numeric)

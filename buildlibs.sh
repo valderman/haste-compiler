@@ -1,10 +1,4 @@
 #!/bin/bash
-if [[ $1 == "" ]] ; then
-    echo "Usage: $0 path_to_ghc_source [--only-base]"
-    exit 1
-fi
-
-libpath=$1/libraries
 
 # Install builtin RTS package, and create some dirs.
 mkdir -p ~/.haste/haste-install/lib/ghc
@@ -27,9 +21,9 @@ haste-inst install --unbooted
 haste-inst install --unbooted
 popd
 
-# Install base from GHC source. GHC needs to be built beforehand.
+# Install haxxored base
 pushd .
-cd $libpath/base
+cd libraries/base
 baseversion=$(cat base.cabal|egrep '^version'|awk '{print $2}')
 haste-inst configure --unbooted
 haste-inst build --unbooted --install-jsmods
