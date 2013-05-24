@@ -19,8 +19,6 @@ Data-Dir:
 Data-Files:
     rts.js
     stdlib.js
-    eval.js
-    eval-trampoline.js
     MVar.js
     StableName.js
     Integer.js

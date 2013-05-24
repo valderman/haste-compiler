@@ -118,11 +118,8 @@ compiler cmdargs = do
       -- GHC prints the error message itself, so...
       let logAct = \_ -> return ()
       defaultErrorHandler logAct defaultFlushOut $ runGhc (Just libdir) $ do
-        -- Handle dynamic GHC flags.
-        let ghcargs'' = "-D__HASTE__" : map unLoc ghcargs'
-            args = if doTCE cfg
-                     then "-D__HASTE_TCE__" : ghcargs''
-                     else ghcargs''
+        -- Handle dynamic GHC flags. Make sure __HASTE__ is #defined.
+        let args = "-D__HASTE__" : map unLoc ghcargs'
         dynflags <- getSessionDynFlags
         (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)
         _ <- setSessionDynFlags dynflags' {ghcLink = NoLink,

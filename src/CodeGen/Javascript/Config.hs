@@ -1,7 +1,7 @@
 module CodeGen.Javascript.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startASAP,
-  startOnLoadComplete, appName, sysLibPath, hastePath, evalTrampolining,
-  eval, fastMultiply, safeMultiply) where
+  startOnLoadComplete, appName, sysLibPath, hastePath, fastMultiply,
+  safeMultiply) where
 import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
 import CodeGen.Javascript.AST
 import System.IO.Unsafe (unsafePerformIO)
@@ -32,7 +32,7 @@ append = flip combine
 --   as well always do it this way, to simplify the config a bit.
 startASAP :: AppStart
 startASAP mainSym =
-  "E(E(" ++ mainSym ++ ")(0));"
+  "E(" ++ mainSym ++ ")(0);"
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart
@@ -57,20 +57,10 @@ safeMultiply a b = NativeCall "imul" [a, b]
 fastMultiply :: JSExp -> JSExp -> JSExp
 fastMultiply = BinOp Mul
 
--- | Trampolining eval version.
-evalTrampolining :: FilePath
-evalTrampolining = unsafePerformIO $ getDataFileName "eval-trampoline.js"
-
--- | Non-trampolining eval version.
-eval :: FilePath
-eval = unsafePerformIO $ getDataFileName "eval.js"
-
 -- | Compiler configuration.
 data Config = Config {
     -- | Runtime files to dump into the JS blob.
     rtsLibs :: [FilePath],
-    -- | Which eval version to use. (Will be trampolining or normal.)
-    evalLib :: FilePath,
     -- | Path to directory where system libraries are located.
     libPath :: FilePath,
     -- | Write all modules to this path.
@@ -91,8 +81,6 @@ data Config = Config {
     multiplyIntOp :: JSExp -> JSExp -> JSExp,
     -- | Be verbose about warnings, etc.?
     verbose :: Bool,
-    -- | Perform tail call elimination?
-    doTCE :: Bool,
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
@@ -105,7 +93,6 @@ data Config = Config {
 defConfig :: Config
 defConfig = Config {
     rtsLibs          = stdJSLibs,
-    evalLib          = eval,
     libPath          = sysLibPath,
     targetLibPath    = ".",
     appStart         = startOnLoadComplete,
@@ -115,7 +102,6 @@ defConfig = Config {
     wrapIntMath      = strictly32Bits,
     multiplyIntOp    = safeMultiply,
     verbose          = False,
-    doTCE            = False,
     useGoogleClosure = Nothing,
     jsExternals      = [],
     dynFlags         = tracingDynFlags

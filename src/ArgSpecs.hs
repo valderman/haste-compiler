@@ -34,10 +34,6 @@ argSpecs = [
               info = "Run the Google Closure compiler on the output. "
                    ++ "Use --opt-google-closure=foo.jar to hint that foo.jar "
                    ++ "is the Closure compiler."},
-    ArgSpec { optName = "opt-tce",
-              updateCfg = \cfg _ -> cfg {doTCE = True,
-                                         evalLib = evalTrampolining},
-              info = "Perform tail call elimination."},
     ArgSpec { optName = "opt-unsafe-ints",
               updateCfg = unsafeMath,
               info = "Enable all unsafe Int math optimizations. Equivalent to "

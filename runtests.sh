@@ -12,9 +12,6 @@ runTest() {
     hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     haste_opt_output=`js TestDriver.js`
 
-    hastec -O2 --opt-tce --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
-    haste_tce_output=`js TestDriver.js`
-
     if [[ "$ghc_output" != "$haste_output" ]] ; then
         thistest="failed"
         echo "  GHC disagrees with hastec output!"
@@ -25,12 +22,6 @@ runTest() {
         thistest="failed"
         echo "  GHC disagrees with hastec -O2 output!"
         echo "  GHC says '$ghc_output', but hastec says '$haste_opt_output'"
-    fi
-
-    if [[ "$ghc_output" != "$haste_tce_output" ]] ; then
-        thistest="failed"
-        echo "  GHC disagrees with hastec -O2 --opt-tce output!"
-        echo "  GHC says '$ghc_output', but hastec says '$haste_tce_output'"
     fi
 }
 

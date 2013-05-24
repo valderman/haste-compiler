@@ -245,14 +245,9 @@ genEx tailpos (StgApp f xs) = do
     else do
       f' <- genVar f
       xs' <- mapM genArg xs
-      performTCE <- doTCE <$> getCfg
-      let nonNullaryFunApp =
-            optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
-      case null xs of
-        True  | performTCE -> return $ AST.Var f'
-              | otherwise  -> return $ Eval (AST.Var f')
-        False | performTCE -> return $ Thunk [] nonNullaryFunApp
-              | otherwise  -> return nonNullaryFunApp
+      if null xs
+        then return $ Eval (AST.Var f')
+        else return $ optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
 genEx _ (StgLit l) = do
   genLit l
 genEx _ (StgConApp con args) = do
@@ -307,11 +302,7 @@ genCase tailpos ex scrut t alts = do
   scrut' <- genVar scrut
   res <- genResultVar scrut
   addLocal [scrut', res]
-  performTCE <- doTCE <$> getCfg
-  let expr = if performTCE
-               then (Eval ex')
-               else ex'
-  emit $ NewVar (AST.Var scrut') expr
+  emit $ NewVar (AST.Var scrut') ex'
   genAlts tailpos t scrut' res alts
 
 genAlts :: Bool -> AltType -> JSVar -> JSVar -> [StgAlt] -> JSGen Config JSExp
