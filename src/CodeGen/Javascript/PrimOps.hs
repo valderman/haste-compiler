@@ -149,8 +149,8 @@ genOp cfg op xs =
     SizeofMutableArrayOp -> Right $ Index (head xs) (lit "length")
     IndexArrayOp -> Right $ Array [defTag, Index arr ix]
       where (arr:ix:_) = xs
-    UnsafeFreezeArrayOp -> Right $ Array [defTag, defState, (head xs)]
-    UnsafeThawArrayOp -> Right $ Array [defTag, defState, (head xs)]
+    UnsafeFreezeArrayOp -> Right $ Array [defTag, defState, head xs]
+    UnsafeThawArrayOp -> Right $ Array [defTag, defState, head xs]
     -- TODO: copy, clone, freeze, thaw
     
     -- Byte Array ops
@@ -183,8 +183,8 @@ genOp cfg op xs =
     WriteOffAddrOp_Int8 -> call "wOffAddr"
 
     -- ByteArray ops
-    NewAlignedPinnedByteArrayOp_Char -> Right $ NativeCall "newBA" [xs!!0, xs!!2]
-    UnsafeFreezeByteArrayOp -> Right $ Array $ [litN 1,xs!!1,xs!!0]
+    NewAlignedPinnedByteArrayOp_Char -> Right $ NativeCall "newBA" [xs!!0]
+    UnsafeFreezeByteArrayOp -> Right $ Array $ [litN 1,xs!!0]
     ByteArrayContents_Char -> Right $ head xs
 
     -- MVars
@@ -202,20 +202,23 @@ genOp cfg op xs =
     StableNameToIntOp -> Right $ head xs
 
     -- Misc. ops
-    SeqOp          -> Right $ Array [litN 1, xs !! 1, NativeCall "E" [(xs!!0)]]
-    AtomicallyOp   -> Right $ Call (xs !! 0) [xs !! 1]
+    SeqOp          -> Right $ Array [litN 1, defState, NativeCall "E" [(xs!!0)]]
+    AtomicallyOp   -> Right $ Call (xs !! 0) []
     -- Get the data constructor tag from a value.
     DataToTagOp    -> call "dataToTag"
-    TouchOp        -> Right $ xs !! 1
+    TouchOp        -> Right $ defState
     RaiseOp        -> call "die"
     RaiseIOOp      -> call "die"
     -- noDuplicate is only relevant in a threaded environment.
-    NoDuplicateOp  -> Right $ head xs
+    NoDuplicateOp  -> Right $ defState
     CatchOp        -> call "jsCatch"
     x              -> Left $ "Unsupported PrimOp: " ++ showOutputable x
   where
     call f = Right $ NativeCall f xs
-    binOp bop = let [x, y] = xs in Right $ BinOp bop x y
+    binOp bop =
+      case xs of
+        [x, y] -> Right $ BinOp bop x y
+        _      -> error $ "PrimOps.binOp failed! op is " ++ show bop
     
     -- Bitwise ops on words need to be unsigned; exploit the fact that >>> is!
     wordMath = fmap (\op -> BinOp ShrL op (litN 0))

@@ -16,6 +16,8 @@ import ForeignCall
 import PrimOp
 import IdInfo
 import TyCon
+import Type
+import TysPrim
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Monad
@@ -267,7 +269,7 @@ genEx _ (StgConApp con args) = do
     evaluate True arg = Eval arg
     evaluate _ arg    = arg
 genEx _ (StgOpApp op args _type) = do
-  args' <- mapM genArg args
+  args' <- genArgs args
   cfg <- getCfg
   let theOp = case op of
         StgPrimOp op' ->
@@ -358,6 +360,20 @@ genAlt tailpos scrut res (con, args, used, body) = do
   where
     bindVar var ix = NewVar (AST.Var var) (Index (AST.Var scrut) (litN ix))
 
+-- | Generate an argument list. Any arguments of type State# a are filtered out.
+genArgs :: [StgArg] -> JSGen Config [JSExp]
+genArgs = mapM genArg . filter hasRep
+  where
+    hasRep (StgVarArg v) = hasRepresentation v
+    hasRep _             = True
+
+-- | Returns True if the given var actually has a representation.
+--   Currently, only values of type State# a are considered representationless.
+hasRepresentation :: Var -> Bool
+hasRepresentation v = maybe True id $ do
+  (tc, _) <- splitTyConApp_maybe (varType v)
+  return $ tc /= statePrimTyCon
+
 genArg :: StgArg -> JSGen Config JSExp
 genArg (StgVarArg v)  = AST.Var <$> genVar v
 genArg (StgLitArg l)  = genLit l
@@ -424,6 +440,11 @@ toJSVar thisMod v msuffix =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe name)
     extern = occNameString $ nameOccName name
     unique = showOutputable $ nameUnique name
+
+-- | Generate a list of function argument variables.
+--   Vars of type State# a are ignored.
+genArgVars :: [Var] -> JSGen Config [JSVar]
+genArgVars = mapM genVar . filter hasRepresentation
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
