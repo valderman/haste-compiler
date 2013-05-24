@@ -258,9 +258,6 @@ genEx _ (StgConApp con args) = do
   case con' of
     DataCon tag stricts -> do
       return $ Array (tag : zipWith evaluate stricts args')
-    AST.Var v | jsname v == Foreign "I" && 
-                jsmod v == moduleNameString (AST.name foreignModule) -> do
-      return $ NativeCall "I" args'
     constr@(Lit _) | null args' ->
       return constr
     _ ->
