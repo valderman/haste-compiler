@@ -62,4 +62,5 @@ foreign import ccall unsafe "hs_word64ToInt64"   word64ToInt64#   :: Word64# -> 
 foreign import ccall unsafe "hs_intToInt64"      intToInt64#      :: Int# -> Int64#
 foreign import ccall unsafe "hs_int64ToInt"      int64ToInt#      :: Int64# -> Int#
 foreign import ccall unsafe "hs_wordToWord64"    wordToWord64#    :: Word# -> Word64#
+foreign import ccall unsafe "hs_mkWord64"        mkWord64#        :: Word# -> Word# -> Word64#
 foreign import ccall unsafe "hs_word64ToWord"    word64ToWord#    :: Word64# -> Word#

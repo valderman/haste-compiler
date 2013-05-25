@@ -3,6 +3,8 @@
            , BangPatterns
            , ForeignFunctionInterface
            , EmptyDataDecls
+           , MagicHash
+           , UnliftedFFITypes
   #-}
 
 -- ----------------------------------------------------------------------------
@@ -16,7 +18,6 @@
 
 module GHC.Fingerprint (
         Fingerprint(..), fingerprint0, 
-        fingerprintData,
         fingerprintString,
         fingerprintFingerprints
    ) where
@@ -28,6 +29,9 @@ import GHC.List
 import GHC.Real
 import Foreign
 import Foreign.C
+import GHC.HastePrim
+import GHC.IntWord64
+import GHC.Word
 
 import GHC.Fingerprint.Type
 
@@ -41,38 +45,35 @@ fingerprint0 :: Fingerprint
 fingerprint0 = Fingerprint 0 0
 
 fingerprintFingerprints :: [Fingerprint] -> Fingerprint
-fingerprintFingerprints fs = unsafeDupablePerformIO $
-  withArrayLen fs $ \len p -> do
-    fingerprintData (castPtr p) (len * sizeOf (head fs))
+fingerprintFingerprints = md5 . concat . map showFingerprint
 
-fingerprintData :: Ptr Word8 -> Int -> IO Fingerprint
-fingerprintData buf len = do
-  allocaBytes SIZEOF_STRUCT_MD5CONTEXT $ \pctxt -> do
-    c_MD5Init pctxt
-    c_MD5Update pctxt buf (fromIntegral len)
-    allocaBytes 16 $ \pdigest -> do
-      c_MD5Final pdigest pctxt
-      peek (castPtr pdigest :: Ptr Fingerprint)
+showFingerprint :: Fingerprint -> String
+showFingerprint (Fingerprint (W64# a) (W64# b)) =
+    fromJSStr (md5# (jsShow# a)) ++ fromJSStr (md5# (jsShow# b))
 
 -- This is duplicated in compiler/utils/Fingerprint.hsc
 fingerprintString :: String -> Fingerprint
-fingerprintString str = unsafeDupablePerformIO $
-  withArrayLen word8s $ \len p ->
-     fingerprintData p len
-    where word8s = concatMap f str
-          f c = let w32 :: Word32
-                    w32 = fromIntegral (ord c)
-                in [fromIntegral (w32 `shiftR` 24),
-                    fromIntegral (w32 `shiftR` 16),
-                    fromIntegral (w32 `shiftR` 8),
-                    fromIntegral w32]
+fingerprintString = md5
 
-data MD5Context
+foreign import ccall unsafe "md5" md5# :: JSString -> JSString
+foreign import ccall unsafe "jsShowI" jsShow# :: Word64# -> JSString
+foreign import ccall unsafe "parseInt" parseInt# :: JSString -> Word
 
-foreign import ccall unsafe "MD5Init"
-   c_MD5Init   :: Ptr MD5Context -> IO ()
-foreign import ccall unsafe "MD5Update"
-   c_MD5Update :: Ptr MD5Context -> Ptr Word8 -> CInt -> IO ()
-foreign import ccall unsafe "MD5Final"
-   c_MD5Final  :: Ptr Word8 -> Ptr MD5Context -> IO ()
+md5 :: String -> Fingerprint
+md5 str =
+    Fingerprint w64_1 w64_2
+  where
+    md5sum = fromJSStr (md5# (toJSStr str))
+    (s1, rest')   = splitAt 8 md5sum
+    (s2, rest'')  = splitAt 8 rest'
+    (s3, rest''') = splitAt 8 rest''
+    (s4, _)       = splitAt 8 rest'''
+    (w1,w2,w3,w4) = (parseHex s1, parseHex s2, parseHex s3, parseHex s3)
+    w64_1         = mkWord64 w1 w2
+    w64_2         = mkWord64 w3 w4
 
+mkWord64 :: Word -> Word -> Word64
+mkWord64 (W# w1) (W# w2) = W64# (mkWord64# w1 w2)
+
+parseHex :: String -> Word
+parseHex str = parseInt# (toJSStr ('0':'x':str))
