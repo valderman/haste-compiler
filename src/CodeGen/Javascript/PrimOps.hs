@@ -141,7 +141,7 @@ genOp cfg op xs =
     -- Array ops
     NewArrayOp -> call "newArr"
     SameMutableArrayOp -> fmap (Thunk []) $ binOp Eq
-    ReadArrayOp -> Right $ Array [defTag, defState, Index arr ix]
+    ReadArrayOp -> Right $ Array [defTag, Index arr ix]
       where (arr:ix:_) = xs
     WriteArrayOp -> Right $ Assign (Index arr ix) rhs
       where (arr:ix:rhs:_) = xs
@@ -149,14 +149,14 @@ genOp cfg op xs =
     SizeofMutableArrayOp -> Right $ Index (head xs) (lit "length")
     IndexArrayOp -> Right $ Array [defTag, Index arr ix]
       where (arr:ix:_) = xs
-    UnsafeFreezeArrayOp -> Right $ Array [defTag, defState, head xs]
-    UnsafeThawArrayOp -> Right $ Array [defTag, defState, head xs]
+    UnsafeFreezeArrayOp -> Right $ Array [defTag, head xs]
+    UnsafeThawArrayOp -> Right $ Array [defTag, head xs]
     -- TODO: copy, clone, freeze, thaw
     
     -- Byte Array ops
     NewByteArrayOp_Char      -> call "newByteArr"
     SameMutableByteArrayOp   -> fmap (Thunk []) $ binOp Eq
-    ReadByteArrayOp_Char     -> Right $ Array [defTag, defState, Index arr ix]
+    ReadByteArrayOp_Char     -> Right $ Array [defTag, Index arr ix]
       where (arr:ix:_) = xs
     WriteByteArrayOp_Char    -> Right $ Assign (Index arr ix) rhs
       where (arr:ix:rhs:_) = xs
@@ -202,7 +202,7 @@ genOp cfg op xs =
     StableNameToIntOp -> Right $ head xs
 
     -- Misc. ops
-    SeqOp          -> Right $ Array [litN 1, defState, NativeCall "E" [(xs!!0)]]
+    SeqOp          -> Right $ Array [litN 1, NativeCall "E" [(xs!!0)]]
     AtomicallyOp   -> Right $ Call (xs !! 0) []
     -- Get the data constructor tag from a value.
     DataToTagOp    -> call "dataToTag"

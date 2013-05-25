@@ -99,7 +99,7 @@ genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
   emit $ NewVar (AST.Var v') expr
   popBinding
   where
-    argsOf (StgRhsClosure _ _ _ _ _ args _) = args
+    argsOf (StgRhsClosure _ _ _ _ _ args _) = filter hasRepresentation args
     argsOf _                                = []
 genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
@@ -152,7 +152,7 @@ genRhs _ recursive (StgRhsCon _ con args) = do
      then Thunk [] <$> genEx False (StgConApp con args)
      else genEx False (StgConApp con args)
 genRhs tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
-  args' <- mapM genVar args
+  args' <- genArgVars args
   (retExp, body') <- isolate $ do
     mapM_ addLocal args'
     genEx tailpos body
@@ -239,32 +239,36 @@ genEx tailpos (StgApp f xs) = do
     then do
       let mkVar v = genVar v >>= return . AST.Var
       as <- getCurrentBindingArgs >>= mapM mkVar
-      bs <- mapM genArg xs
+      bs <- genArgs xs
       let assign l r = ExpStmt $ Assign l r
       mapM_ emit (zipWith assign as bs)
       emit (Ret Null)
       return $ runtimeError "Unreachable!"
     else do
       f' <- genVar f
-      xs' <- mapM genArg xs
-      if null xs
-        then return $ Eval (AST.Var f')
-        else return $ optApp (arityInfo $ idInfo f) $ Call (AST.Var f') xs'
+      xs' <- genArgs xs
+      let numStgArgs = length xs
+          numJsArgs  = length xs'
+          arity      = (arityInfo $ idInfo f) - (numStgArgs - numJsArgs)
+      return $ case null xs of
+        True          -> Eval (AST.Var f')
+        _ | null xs'  -> Call (AST.Var f') []
+          | otherwise -> optApp arity $ Call (AST.Var f') xs'
 genEx _ (StgLit l) = do
   genLit l
 genEx _ (StgConApp con args) = do
   con' <- genDataCon con
-  args' <- mapM genArg args
   case con' of
     DataCon tag stricts -> do
-      return $ Array (tag : zipWith evaluate stricts args')
-    constr@(Lit _) | null args' ->
+      (args', stricts') <- genArgsPair $ zip args stricts
+      return $ Array (tag : zipWith evaluate args' stricts')
+    constr@(Lit _) ->
       return constr
     _ ->
       error $ "Data constructor generated crazy code: " ++ show con'
   where
-    evaluate True arg = Eval arg
-    evaluate _ arg    = arg
+    evaluate arg True = Eval arg
+    evaluate arg _    = arg
 genEx _ (StgOpApp op args _type) = do
   args' <- genArgs args
   cfg <- getCfg
@@ -347,9 +351,9 @@ genAlt tailpos scrut res (con, args, used, body) = do
     LitAlt l                           -> Cond <$> genLit l
     DataAlt c | tag <- genDataConTag c -> return $ Cond tag
 
-  args' <- mapM genVar args
+  (args', used') <- genArgVarsPair (zip args used)
   addLocal args'
-  let binds = [bindVar v ix | (v, ix, True) <- zip3 args' [1..] used]
+  let binds = [bindVar v ix | (v, True, ix) <- zip3 args' used' [1..]]
   (ret, body') <- isolate $ genEx tailpos body
   return $ construct
          $ bagToList
@@ -363,6 +367,18 @@ genArgs = mapM genArg . filter hasRep
   where
     hasRep (StgVarArg v) = hasRepresentation v
     hasRep _             = True
+
+-- | Filter out args without representation, along with their accompanying
+--   pair element, then generate code for the args.
+--   Se `genArgVarsPair` for more information.
+genArgsPair :: [(StgArg, a)] -> JSGen Config ([JSExp], [a])
+genArgsPair aps = do
+    args' <- mapM genArg args
+    return (args', xs)
+  where
+    (args, xs) = unzip $ filter hasRep aps
+    hasRep (StgVarArg v, _) = hasRepresentation v
+    hasRep _                = True
 
 -- | Returns True if the given var actually has a representation.
 --   Currently, only values of type State# a are considered representationless.
@@ -442,6 +458,18 @@ toJSVar thisMod v msuffix =
 --   Vars of type State# a are ignored.
 genArgVars :: [Var] -> JSGen Config [JSVar]
 genArgVars = mapM genVar . filter hasRepresentation
+
+-- | Filter a list of (Var, anything) pairs, generate JSVars from the Vars
+--   and then return both lists.
+--   Lists of vars are often accompanied by lists of strictness or usage
+--   annotations, which need to be filtered for types without representation
+--   as well.
+genArgVarsPair :: [(Var, a)] -> JSGen Config ([JSVar], [a])
+genArgVarsPair vps = do
+    vs' <- mapM genVar vs
+    return (vs', xs) 
+  where
+    (vs, xs) = unzip $ filter (hasRepresentation . fst) vps
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
