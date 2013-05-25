@@ -8,9 +8,7 @@ Building
 --------
 
 First, make sure that you are running GHC 7.6.x. Pre-7.6 versions will refuse
-to compile due to changes in GHC. The libraries fetched by haste-boot were
-built using 7.6.3, but should work fine with any GHC version that can build
-Haste.
+to compile due to changes in GHC.
 
 Second, clone haste-compiler and install it using `cabal install`.
 
@@ -52,7 +50,7 @@ Haste also comes with wrappers for cabal and ghc-pkg, named haste-inst and
 haste-pkg respectively. You can use them to install packages just as you would
 with vanilla GHC and cabal:
 
-    haste-inst install mtl
+    $ haste-inst install mtl
 
 This will only work for libraries, however, as installing Javascript
 "executables" on your system doesn't make much sense. You can still use
