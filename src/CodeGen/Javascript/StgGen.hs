@@ -261,7 +261,10 @@ genEx _ (StgConApp con args) = do
   case con' of
     DataCon tag stricts -> do
       (args', stricts') <- genArgsPair $ zip args stricts
-      return $ Array (tag : zipWith evaluate args' stricts')
+      -- Don't create unboxed tuples with a single element.
+      case (isUnboxedTupleCon con, args') of
+        (True, [arg]) -> return $ evaluate arg (head stricts')
+        _             -> return $ Array (tag : zipWith evaluate args' stricts')
     constr@(Lit _) ->
       return constr
     _ ->
@@ -301,12 +304,35 @@ genEx _ (StgLam _ _) =
 
 genCase :: Bool -> StgExpr -> Id -> AltType -> [StgAlt] -> JSGen Config JSExp
 genCase tailpos ex scrut t alts = do
-  ex' <- genEx False ex
-  scrut' <- genVar scrut
-  res <- genResultVar scrut
-  addLocal [scrut', res]
-  emit $ NewVar (AST.Var scrut') ex'
-  genAlts tailpos t scrut' res alts
+    ex' <- genEx False ex
+    -- If we have a unary unboxed tuple, we want to eliminate the case
+    -- entirely (modulo evaluation), so just generate the expression in the
+    -- sole alternative.
+    case (isUnaryUnboxedTuple scrut, alts) of
+      (True, [(_, as, _, expr)]) | [arg] <- filter hasRepresentation as -> do
+        arg' <- genVar arg
+        addLocal [arg']
+        emit $ NewVar (AST.Var arg') ex'
+        genEx tailpos expr
+      (True, _) ->
+        error "Case on unary unboxed tuple with more than one alt! WTF?!"
+      _ -> do
+        scrut' <- genVar scrut
+        emit $ NewVar (AST.Var scrut') ex'
+        res <- genResultVar scrut
+        addLocal [scrut', res]
+        genAlts tailpos t scrut' res alts
+
+-- | Returns True if the given Var is an unboxed tuple with a single element
+--   after any represenationless elements are discarded.
+isUnaryUnboxedTuple :: Var -> Bool
+isUnaryUnboxedTuple v = maybe False id $ do
+    (_, args) <- splitTyConApp_maybe t
+    case filter typeHasRep args of
+      [_] -> return $ isUnboxedTupleType t
+      _   -> return False
+  where
+    t = varType v
 
 genAlts :: Bool -> AltType -> JSVar -> JSVar -> [StgAlt] -> JSGen Config JSExp
 genAlts tailpos _ scrut res [alt] = do
@@ -350,7 +376,6 @@ genAlt tailpos scrut res (con, args, used, body) = do
     DEFAULT                            -> return Def
     LitAlt l                           -> Cond <$> genLit l
     DataAlt c | tag <- genDataConTag c -> return $ Cond tag
-
   (args', used') <- genArgVarsPair (zip args used)
   addLocal args'
   let binds = [bindVar v ix | (v, True, ix) <- zip3 args' used' [1..]]
@@ -383,9 +408,13 @@ genArgsPair aps = do
 -- | Returns True if the given var actually has a representation.
 --   Currently, only values of type State# a are considered representationless.
 hasRepresentation :: Var -> Bool
-hasRepresentation v = maybe True id $ do
-  (tc, _) <- splitTyConApp_maybe (varType v)
-  return $ tc /= statePrimTyCon
+hasRepresentation = typeHasRep . varType
+
+typeHasRep :: Type -> Bool
+typeHasRep t =
+  case splitTyConApp_maybe t of
+    Just (tc, _) -> tc /= statePrimTyCon
+    _            -> True
 
 genArg :: StgArg -> JSGen Config JSExp
 genArg (StgVarArg v)  = AST.Var <$> genVar v
