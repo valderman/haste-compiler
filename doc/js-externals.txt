@@ -18,56 +18,14 @@ https://github.com/RudolfVonKrugstein/haste-ffi-parser - check it out.
 
 
 
-** Haskell and the Real World
+** Arguments and return values
 
-As far as Haskell is concerned, the real world is all about IO, and it treats
-all foreign imports as though they were IO functions. IO functions take one
-additional argument, representing the state of the world before the function
-application, and returns an extra value representing the state of the world
-after application.
-
-The actual values are unimportant; in fact, they're never examined and really
-ought to be optimized away. For now though, they're in there, and you need to
-deal with them.
-
-
-
-** Arguments
-
-When writing a function that makes use of n arguments, you need to have n+1
-arguments in your function's argument list. This is the state argument
-mentioned previously, and it's the last argument your function gets.
-
-Now, you may think that, since JS isn't too picky about how many arguments you
-pass to your functions, you can just omit that state argument; unfortunately,
-no, you can't. At the moment, the runtime makes use of a function's length
-attribute to determine how to deal with it (apply right away or create a
-closure,) and if your JS function has a different number of arguments in its
-formal argument list than what it actually accepts, the runtime is going to
-screw up big time.
-
-
-
-** Return values
-
-When returning values, you need to return an unboxed pair, with the state of
-the world as its first element and your actual return value as the second.
-As the pair is unboxed, meaning that its members don't need to be thunked or
-anything funny like that, returning is quite straightforward:
-
-  return [1, state_of_the_world, your_return_value];
-
-You may pass any value for state_of_the_world, and your_return_value can be
-a number or a string. The leading 1 is the data constructor tag for an unboxed
-tuple.
-
-You need to return this tuple even if you don't want to actually return
-anything. In that case, the right thing to do is to pass [1] for
-your_return_value.
-
-Finally, you must make sure to cast your return value to the proper type; if
-you want to return an integer, you'd better make sure the last element of the
-tuple actually is a Number and not a string or array looking like one.
+You don't need to take any special care with arguments or return values; if
+your function needs two integers and produces one double, it should take two
+arguments and return a single value, just as when writing "normal" Javascript.
+It's your responsibility to ensure that you return sane values (don't return
+0.42 if your FFI import declaration says you should return an integer), but
+Haste takes care of all wrapping and unboxing.
 
 
 
