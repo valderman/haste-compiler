@@ -23,6 +23,7 @@ Library
         Haste.Reactive
         Haste.DOM
         Haste.Prim
+        Haste.Concurrent
     Other-Modules:
         Haste.Readable
         Haste.Showable
@@ -33,6 +34,7 @@ Library
     Build-Depends:
         base == 4.6.0.1,
         array == 0.4.0.1,
+        transformers,
         ghc-prim,
         fursuit,
         containers
