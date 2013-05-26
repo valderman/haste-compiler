@@ -44,13 +44,9 @@ fi
 
 # Install fursuit, since haste-lib depends on it.
 pushd .
-tempdir=$(mktemp -d)
-cd $tempdir
-git clone https://github.com/valderman/fursuit.git
-cd fursuit
+cd libraries/fursuit
 haste-inst install --unbooted
 popd
-rm -rf $tempdir
 
 # Install haste-lib.
 pushd .

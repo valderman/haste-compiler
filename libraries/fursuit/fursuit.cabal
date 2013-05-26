@@ -1,0 +1,29 @@
+Name:           fursuit
+Version:        0.1
+License:        BSD3
+Synopsis:       FUnctional Reactivity with Signals Using a sIngle Thread of control
+Description:    FUnctional Reactivity with Signals Using a sIngle Thread of control
+Cabal-Version:  >= 1.10
+Build-Type:     Simple
+Author:         Anton Ekblad <anton@ekblad.cc>
+Copyright:      Anton Ekblad <anton@ekblad.cc>
+Maintainer:     Anton Ekblad <anton@ekblad.cc>
+Homepage:       http://ekblad.cc
+Bug-reports:    http://ekblad.cc
+Stability:      Experimental
+
+Library
+    Hs-Source-Dirs: src
+    GHC-Options: -Wall -O2
+    Exposed-Modules:
+        FRP.Fursuit
+        FRP.Fursuit.Async
+    Other-Modules:
+        FRP.Fursuit.Signal
+        FRP.Fursuit.Sink
+        FRP.Fursuit.Pipe
+        FRP.Fursuit.Locking
+    Build-Depends:
+        base,
+        containers
+    Default-Language: Haskell98
