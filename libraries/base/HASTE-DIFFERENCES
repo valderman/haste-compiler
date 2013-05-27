@@ -1,6 +1,8 @@
 This is a slightly hacked copy of base from GHC 7.6.3.
 This file sums up the differences.
 
+* Implement Data.Typeable fingerprinting in Haskell/JS rather than C.
+  (GHC.Fingerprint, GHC.IntWord64)
 * Added module with Haste primitives. (GHC.HastePrim)
 * Browser-native implementations of Show for Int, Integer, Double.
   (GHC.Show, GHC.Float)
