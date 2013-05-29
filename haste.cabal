@@ -24,6 +24,7 @@ Data-Files:
     Integer.js
     md5.js
     array.js
+    pointers.js
 
 Executable haste-boot
     Main-Is: haste-boot.hs

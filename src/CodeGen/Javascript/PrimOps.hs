@@ -153,6 +153,7 @@ genOp cfg op xs =
     
     -- Byte Array ops
     NewByteArrayOp_Char      -> call "newByteArr"
+    NewPinnedByteArrayOp_Char-> call "newByteArr"
     SameMutableByteArrayOp   -> fmap (Thunk []) $ binOp Eq
     IndexByteArrayOp_Char    -> Right $ Index (Index arr (lit "i8")) ix
     IndexByteArrayOp_Int     -> Right $ Index (Index arr (lit "i32")) ix
@@ -201,13 +202,41 @@ genOp cfg op xs =
     ReadMutVarOp -> call "rMV"
     WriteMutVarOp -> call "wMV"
     
-    -- OffAddr ops
-    ReadOffAddrOp_Char -> Right $ Index (xs !! 0) (xs !! 1)
-    ReadOffAddrOp_Int8 -> Right $ Index (xs !! 0) (xs !! 1)
-    ReadOffAddrOp_Word8 -> Right $ Index (xs !! 0) (xs !! 1)
-    ReadOffAddrOp_WideChar -> Right $ Index (xs !! 0) (xs !! 1)
-    WriteOffAddrOp_WideChar -> call "wOffAddr"
-    WriteOffAddrOp_Int8 -> call "wOffAddr"
+    -- Pointer ops
+    WriteOffAddrOp_Char    -> writeOffAddr xs "i8"  1
+    WriteOffAddrOp_Int     -> writeOffAddr xs "i32" 4
+    WriteOffAddrOp_Int8    -> writeOffAddr xs "i8"  1
+    WriteOffAddrOp_Int16   -> writeOffAddr xs "i16" 2
+    WriteOffAddrOp_Int32   -> writeOffAddr xs "i32" 4
+    WriteOffAddrOp_Word    -> writeOffAddr xs "w32" 4
+    WriteOffAddrOp_Word8   -> writeOffAddr xs "w8"  1
+    WriteOffAddrOp_Word16  -> writeOffAddr xs "w16" 2
+    WriteOffAddrOp_Word32  -> writeOffAddr xs "w32" 4
+    WriteOffAddrOp_Float   -> writeOffAddr xs "f32" 4
+    WriteOffAddrOp_Double  -> writeOffAddr xs "f64" 8
+    ReadOffAddrOp_Char     -> readOffAddr xs "i8"   1
+    ReadOffAddrOp_Int      -> readOffAddr xs "i32"  4
+    ReadOffAddrOp_Int8     -> readOffAddr xs "i8"   1
+    ReadOffAddrOp_Int16    -> readOffAddr xs "i16"  2
+    ReadOffAddrOp_Int32    -> readOffAddr xs "i32"  4
+    ReadOffAddrOp_Word     -> readOffAddr xs "w32"  4
+    ReadOffAddrOp_Word8    -> readOffAddr xs "w8"   1
+    ReadOffAddrOp_Word16   -> readOffAddr xs "w16"  2
+    ReadOffAddrOp_Word32   -> readOffAddr xs "w32"  4
+    ReadOffAddrOp_Float    -> readOffAddr xs "f32"  4
+    ReadOffAddrOp_Double   -> readOffAddr xs "f64"  8
+    AddrAddOp              -> call "plusAddr"
+    AddrSubOp              -> Right $ NativeCall "plusAddr" [addr, Neg off]
+      where (addr:off:_) = xs
+    AddrEqOp               -> call "addrEq"
+    AddrNeOp               -> Right $ Neg $ NativeCall "addrEq" [a, b]
+      where (a:b:_) = xs
+    AddrLtOp               -> call "addrLT"
+    AddrGtOp               -> call "addrGT"
+    AddrLeOp               -> Right $ Neg $ NativeCall "addrGT" [a, b]
+      where (a:b:_) = xs
+    AddrGeOp               -> Right $ Neg $ NativeCall "addrLT" [a, b]
+      where (a:b:_) = xs
 
     -- MVars
     NewMVarOp     -> call "newMVar"
@@ -237,11 +266,24 @@ genOp cfg op xs =
     x              -> Left $ "Unsupported PrimOp: " ++ showOutputable x
   where
     (arr:ix:_) = xs
+    
     writeArr (a:i:rhs:_) elemtype =
       Right $ Assign (Index (Index a (lit elemtype)) i) rhs
     writeArr _ _ =
       error "writeArray primop with too few arguments!"
+
+    writeOffAddr (addr:off:rhs:_) etype esize =
+      Right $ NativeCall "writeOffAddr" [lit etype, litN esize, addr, off, rhs]
+    writeOffAddr _ _ _ =
+      error "writeOffAddr primop with too few arguments!"
+    
+    readOffAddr (addr:off:_) etype esize =
+      Right $ NativeCall "readOffAddr" [lit etype, litN esize, addr, off]
+    readOffAddr _ _ _ =
+      error "readOffAddr primop with too few arguments!"
+
     call f = Right $ NativeCall f xs
+    
     binOp bop =
       case xs of
         [x, y] -> Right $ BinOp bop x y
