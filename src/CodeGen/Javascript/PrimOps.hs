@@ -20,8 +20,8 @@ genOp cfg op xs =
     NotOp          -> Right $ Not (head xs) -- bitwise
 
     -- Conversions
-    ChrOp          -> Right $ NativeCall "String.fromCharCode" xs
-    OrdOp          -> Right $ NativeMethCall (head xs) "charCodeAt" [lit (0::Double)]
+    ChrOp          -> Right $ head xs
+    OrdOp          -> Right $ head xs
     Word2IntOp     -> Right $ BinOp BitAnd (head xs) (litN 0xffffffff)
     Int2WordOp     -> Right $ BinOp ShrL (head xs) (litN 0)
     Int2FloatOp    -> Right $ head xs
@@ -142,13 +142,11 @@ genOp cfg op xs =
     NewArrayOp -> call "newArr"
     SameMutableArrayOp -> fmap (Thunk []) $ binOp Eq
     ReadArrayOp -> Right $ Index arr ix
-      where (arr:ix:_) = xs
     WriteArrayOp -> Right $ Assign (Index arr ix) rhs
-      where (arr:ix:rhs:_) = xs
+      where (_arr:_ix:rhs:_) = xs
     SizeofArrayOp -> Right $ Index (head xs) (lit "length")
     SizeofMutableArrayOp -> Right $ Index (head xs) (lit "length")
     IndexArrayOp -> Right $ Index arr ix
-      where (arr:ix:_) = xs
     UnsafeFreezeArrayOp -> Right $ head xs
     UnsafeThawArrayOp -> Right $ head xs
     -- TODO: copy, clone, freeze, thaw
@@ -156,18 +154,47 @@ genOp cfg op xs =
     -- Byte Array ops
     NewByteArrayOp_Char      -> call "newByteArr"
     SameMutableByteArrayOp   -> fmap (Thunk []) $ binOp Eq
-    ReadByteArrayOp_Char     -> Right $ Index arr ix
-      where (arr:ix:_) = xs
-    WriteByteArrayOp_Char    -> Right $ Assign (Index arr ix) rhs
-      where (arr:ix:rhs:_) = xs
-    WriteByteArrayOp_Int8    -> Right $ Assign (Index arr ix) rhs
-      where (arr:ix:rhs:_) = xs
-    SizeofByteArrayOp        -> Right $ Index (head xs) (lit "length")
-    SizeofMutableByteArrayOp -> Right $ Index (head xs) (lit "length")
-    IndexByteArrayOp_Char    -> Right $ Index arr ix
-      where (arr:ix:_) = xs
-    IndexByteArrayOp_Int8    -> Right $ Index arr ix
-      where (arr:ix:_) = xs
+    IndexByteArrayOp_Char    -> Right $ Index (Index arr (lit "i8")) ix
+    IndexByteArrayOp_Int     -> Right $ Index (Index arr (lit "i32")) ix
+    IndexByteArrayOp_Int8    -> Right $ Index (Index arr (lit "i8")) ix
+    IndexByteArrayOp_Int16   -> Right $ Index (Index arr (lit "i16")) ix
+    IndexByteArrayOp_Int32   -> Right $ Index (Index arr (lit "i32")) ix
+    IndexByteArrayOp_Word    -> Right $ Index (Index arr (lit "w32")) ix
+    IndexByteArrayOp_Word8   -> Right $ Index (Index arr (lit "w8")) ix
+    IndexByteArrayOp_Word16  -> Right $ Index (Index arr (lit "w16")) ix
+    IndexByteArrayOp_Word32  -> Right $ Index (Index arr (lit "w32")) ix
+    IndexByteArrayOp_Float   -> Right $ Index (Index arr (lit "f32")) ix
+    IndexByteArrayOp_Double  -> Right $ Index (Index arr (lit "f64")) ix
+    
+    ReadByteArrayOp_Char     -> Right $ Index (Index arr (lit "i8")) ix
+    ReadByteArrayOp_Int      -> Right $ Index (Index arr (lit "i32")) ix
+    ReadByteArrayOp_Int8     -> Right $ Index (Index arr (lit "i8")) ix
+    ReadByteArrayOp_Int16    -> Right $ Index (Index arr (lit "i16")) ix
+    ReadByteArrayOp_Int32    -> Right $ Index (Index arr (lit "i32")) ix
+    ReadByteArrayOp_Word     -> Right $ Index (Index arr (lit "w32")) ix
+    ReadByteArrayOp_Word8    -> Right $ Index (Index arr (lit "w8")) ix
+    ReadByteArrayOp_Word16   -> Right $ Index (Index arr (lit "w16")) ix
+    ReadByteArrayOp_Word32   -> Right $ Index (Index arr (lit "w32")) ix
+    ReadByteArrayOp_Float    -> Right $ Index (Index arr (lit "f32")) ix
+    ReadByteArrayOp_Double   -> Right $ Index (Index arr (lit "f64")) ix
+    
+    WriteByteArrayOp_Char    -> writeArr xs "i8"
+    WriteByteArrayOp_Int     -> writeArr xs "i32"
+    WriteByteArrayOp_Int8    -> writeArr xs "i8"
+    WriteByteArrayOp_Int16   -> writeArr xs "i16"
+    WriteByteArrayOp_Int32   -> writeArr xs "i32"
+    WriteByteArrayOp_Word    -> writeArr xs "w32"
+    WriteByteArrayOp_Word8   -> writeArr xs "w8"
+    WriteByteArrayOp_Word16  -> writeArr xs "w16"
+    WriteByteArrayOp_Word32  -> writeArr xs "w32"
+    WriteByteArrayOp_Float   -> writeArr xs "f32"
+    WriteByteArrayOp_Double  -> writeArr xs "f64"
+    
+    SizeofByteArrayOp        -> Right $ Index (head xs) (lit "byteLength")
+    SizeofMutableByteArrayOp -> Right $ Index (head xs) (lit "byteLength")
+    NewAlignedPinnedByteArrayOp_Char -> Right $ NativeCall "newByteArr" [xs!!0]
+    UnsafeFreezeByteArrayOp  -> Right $ head xs
+    ByteArrayContents_Char   -> Right $ head xs
     
     -- Mutable variables
     NewMutVarOp -> call "nMV"
@@ -181,11 +208,6 @@ genOp cfg op xs =
     ReadOffAddrOp_WideChar -> Right $ Index (xs !! 0) (xs !! 1)
     WriteOffAddrOp_WideChar -> call "wOffAddr"
     WriteOffAddrOp_Int8 -> call "wOffAddr"
-
-    -- ByteArray ops
-    NewAlignedPinnedByteArrayOp_Char -> Right $ NativeCall "newBA" [xs!!0]
-    UnsafeFreezeByteArrayOp -> Right $ head xs
-    ByteArrayContents_Char -> Right $ head xs
 
     -- MVars
     NewMVarOp     -> call "newMVar"
@@ -214,6 +236,11 @@ genOp cfg op xs =
     CatchOp        -> call "jsCatch"
     x              -> Left $ "Unsupported PrimOp: " ++ showOutputable x
   where
+    (arr:ix:_) = xs
+    writeArr (a:i:rhs:_) elemtype =
+      Right $ Assign (Index (Index a (lit elemtype)) i) rhs
+    writeArr _ _ =
+      error "writeArray primop with too few arguments!"
     call f = Right $ NativeCall f xs
     binOp bop =
       case xs of
@@ -221,5 +248,5 @@ genOp cfg op xs =
         _      -> error $ "PrimOps.binOp failed! op is " ++ show bop
     
     -- Bitwise ops on words need to be unsigned; exploit the fact that >>> is!
-    wordMath = fmap (\op -> BinOp ShrL op (litN 0))
+    wordMath = fmap (\oper -> BinOp ShrL oper (litN 0))
     intMath = fmap (wrapIntMath cfg)

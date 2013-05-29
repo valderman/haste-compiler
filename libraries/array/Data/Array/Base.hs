@@ -808,8 +808,6 @@ instance IArray UArray Int32 where
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
 
-{- Disable unboxed Int64 arrays for now; unboxed arrays are broken anyway and need to be fixed.
-
 instance IArray UArray Int64 where
     {-# INLINE bounds #-}
     bounds (UArray l u _ _) = (l,u)
@@ -819,7 +817,8 @@ instance IArray UArray Int64 where
     unsafeArray lu ies = runST (unsafeArrayUArray lu ies 0)
 #ifdef __GLASGOW_HASKELL__
     {-# INLINE unsafeAt #-}
-    unsafeAt (UArray _ _ _ arr#) (I# i#) = I64# (indexInt64Array# arr# i#)
+    unsafeAt (UArray _ _ _ arr#) (I# i#) =
+      I64# (unsafeCoerce# (indexInt64Array# arr# (unsafeCoerce# i#)))
 #endif
 #ifdef __HUGS__
     unsafeAt = unsafeAtBArray
@@ -830,7 +829,6 @@ instance IArray UArray Int64 where
     unsafeAccum f arr ies = runST (unsafeAccumUArray f arr ies)
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
--}
 
 instance IArray UArray Word8 where
     {-# INLINE bounds #-}
@@ -895,7 +893,6 @@ instance IArray UArray Word32 where
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
 
-{- Disable unboxed Word64 arrays until we fix unboxed arrays.
 instance IArray UArray Word64 where
     {-# INLINE bounds #-}
     bounds (UArray l u _ _) = (l,u)
@@ -905,7 +902,8 @@ instance IArray UArray Word64 where
     unsafeArray lu ies = runST (unsafeArrayUArray lu ies 0)
 #ifdef __GLASGOW_HASKELL__
     {-# INLINE unsafeAt #-}
-    unsafeAt (UArray _ _ _ arr#) (I# i#) = W64# (indexWord64Array# arr# i#)
+    unsafeAt (UArray _ _ _ arr#) (I# i#) =
+      W64# (unsafeCoerce# (indexWord64Array# arr# (unsafeCoerce# i#)))
 #endif
 #ifdef __HUGS__
     unsafeAt = unsafeAtBArray
@@ -916,7 +914,6 @@ instance IArray UArray Word64 where
     unsafeAccum f arr ies = runST (unsafeAccumUArray f arr ies)
     {-# INLINE unsafeAccumArray #-}
     unsafeAccumArray f initialValue lu ies = runST (unsafeAccumArrayUArray f initialValue lu ies)
--}
 
 instance (Ix ix, Eq e, IArray UArray e) => Eq (UArray ix e) where
     (==) = eqUArray
@@ -1401,8 +1398,6 @@ instance MArray (STUArray s) Int32 (ST s) where
         case writeInt32Array# marr# i# e# s1# of { s2# ->
         (# s2#, () #) }
 
-{- Disable unboxed Int64 arrays. Type errors, etc.
-
 instance MArray (STUArray s) Int64 (ST s) where
     {-# INLINE getBounds #-}
     getBounds (STUArray l u _ _) = return (l,u)
@@ -1415,12 +1410,11 @@ instance MArray (STUArray s) Int64 (ST s) where
     {-# INLINE unsafeRead #-}
     unsafeRead (STUArray _ _ _ marr#) (I# i#) = ST $ \s1# ->
         case readInt64Array# marr# i# s1# of { (# s2#, e# #) ->
-        (# s2#, I64# e# #) }
+        (# s2#, I64# (unsafeCoerce# e#) #) }
     {-# INLINE unsafeWrite #-}
     unsafeWrite (STUArray _ _ _ marr#) (I# i#) (I64# e#) = ST $ \s1# ->
-        case writeInt64Array# marr# i# e# s1# of { s2# ->
+        case writeInt64Array# marr# i# (unsafeCoerce# e#) s1# of { s2# ->
         (# s2#, () #) }
--}
 
 instance MArray (STUArray s) Word8 (ST s) where
     {-# INLINE getBounds #-}
@@ -1476,7 +1470,6 @@ instance MArray (STUArray s) Word32 (ST s) where
         case writeWord32Array# marr# i# e# s1# of { s2# ->
         (# s2#, () #) }
 
-{- Type errors, disable, broken, etc.
 instance MArray (STUArray s) Word64 (ST s) where
     {-# INLINE getBounds #-}
     getBounds (STUArray l u _ _) = return (l,u)
@@ -1489,12 +1482,12 @@ instance MArray (STUArray s) Word64 (ST s) where
     {-# INLINE unsafeRead #-}
     unsafeRead (STUArray _ _ _ marr#) (I# i#) = ST $ \s1# ->
         case readWord64Array# marr# i# s1# of { (# s2#, e# #) ->
-        (# s2#, W64# e# #) }
+        (# s2#, W64# (unsafeCoerce# e#) #) }
     {-# INLINE unsafeWrite #-}
     unsafeWrite (STUArray _ _ _ marr#) (I# i#) (W64# e#) = ST $ \s1# ->
-        case writeWord64Array# marr# i# e# s1# of { s2# ->
+        case writeWord64Array# marr# i# (unsafeCoerce# e#) s1# of { s2# ->
         (# s2#, () #) }
--}
+
 -----------------------------------------------------------------------------
 -- Translation between elements and bytes
 

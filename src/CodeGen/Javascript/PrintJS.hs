@@ -237,12 +237,15 @@ instance PrettyJS JSLit where
                    else out n'
   emit (Str s) = out ('"':fixQuotes s) >> out ['"']
     where
-      fixQuotes ('\\':xs) = '\\':'\\' : fixQuotes xs
-      fixQuotes ('"':xs)  = '\\':'"'  : fixQuotes xs
-      fixQuotes ('\n':xs) = '\\':'n'  : fixQuotes xs
-      fixQuotes (x:xs)    = x : fixQuotes xs
-      fixQuotes _         = []
-  emit (Chr c) = out $ show c
+      fixQuotes ('\\':'x':xs) = '\\':'x'  : fixQuotes xs
+      fixQuotes ('\\':'u':xs) = '\\':'u'  : fixQuotes xs
+      fixQuotes ('\\':xs)     = '\\':'\\' : fixQuotes xs
+      fixQuotes ('"':xs)      = '\\':'"'  : fixQuotes xs
+      fixQuotes ('\'':xs)     = '\\':'\'' : fixQuotes xs
+      fixQuotes ('\n':xs)     = '\\':'n'  : fixQuotes xs
+      fixQuotes (x:xs)        = x : fixQuotes xs
+      fixQuotes _             = []
+  emit (Chr c) = out $ '\'' : c : ['\'']
   emit (Boolean b) = out $ if b then "true" else "false"
 
 emitList :: PrettyJS a => Output -> [a] -> PrettyM ()

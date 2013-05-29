@@ -23,6 +23,7 @@ Data-Files:
     StableName.js
     Integer.js
     md5.js
+    array.js
 
 Executable haste-boot
     Main-Is: haste-boot.hs

@@ -35,6 +35,7 @@ import CodeGen.Javascript.Replace
 import CodeGen.Javascript.Traverse
 import CodeGen.Javascript.Util
 import Data.Int
+import Data.Char (ord, chr)
 import Data.Word
 import Data.Maybe (isJust)
 
@@ -420,10 +421,33 @@ genArg :: StgArg -> JSGen Config JSExp
 genArg (StgVarArg v)  = AST.Var <$> genVar v
 genArg (StgLitArg l)  = genLit l
 
+-- | Generate a JS \xXX or \uXXXX escape sequence for a char if it's >127.
+toHex :: Char -> String
+toHex c =
+  case ord c of
+    n | n < 127   -> [c]
+      | otherwise -> toHex' (n `rem` 65536)
+  where
+    toHex' n =
+      case toH "" n of
+        s@(_:_:[]) -> "\\x" ++ s
+        s          -> "\\u" ++ s
+
+    toH s 0 = s
+    toH s n = case n `quotRem` 16 of
+                (next, c) -> toH (i2h c : s) next
+
+    i2h n | n < 10    = chr (n + 48)
+          | otherwise = chr (n + 87)
+
+-- | Escape all non-ASCII characters in the given string.
+hexifyString :: FastString -> String
+hexifyString = concatMap toHex . unpackFS
+
 genLit :: Literal -> JSGen Config JSExp
 genLit l = do
   case l of
-    MachStr s           -> return . lit  $ unpackFS s
+    MachStr s           -> return . lit $ hexifyString s
     MachInt n
       | n > 2147483647 ||
         n < -2147483648 -> do warn Verbose (constFail "Int" n)
@@ -431,8 +455,8 @@ genLit l = do
       | otherwise       -> return . litN $ fromIntegral n
     MachFloat f         -> return . litN $ fromRational f
     MachDouble d        -> return . litN $ fromRational d
-    MachChar c          -> return $ lit c
-    MachWord w          
+    MachChar c          -> return . litN $ fromIntegral $ ord c
+    MachWord w
       | w > 0xffffffff  -> do warn Verbose (constFail "Word" w)
                               return $ truncWord w
       | otherwise       -> return . litN $ fromIntegral w

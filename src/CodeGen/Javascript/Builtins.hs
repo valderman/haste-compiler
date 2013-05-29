@@ -28,6 +28,9 @@ toBuiltin v =
     (Just "GHC.CString", "unpackAppendCString#") ->
       Just $ JSVar {jsmod  = foreignModName,
                     jsname = Foreign "unAppCStr"}
+    (Just "GHC.CString", "unpackFoldrCString#") ->
+      Just $ JSVar {jsmod  = foreignModName,
+                    jsname = Foreign "unFoldrCStr"}
     
     -- Primitive needs of the Haste standard library
     (Just "Haste.Prim", "toJSStr") ->
