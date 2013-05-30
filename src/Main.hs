@@ -116,7 +116,7 @@ compiler cmdargs = do
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
       
       -- GHC prints the error message itself, so...
-      let logAct = \_ -> return ()
+      let logAct = hPutStrLn stderr
       defaultErrorHandler logAct defaultFlushOut $ runGhc (Just libdir) $ do
         -- Handle dynamic GHC flags. Make sure __HASTE__ is #defined.
         let args = "-D__HASTE__" : map unLoc ghcargs'

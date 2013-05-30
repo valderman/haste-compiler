@@ -155,29 +155,31 @@ genOp cfg op xs =
     NewByteArrayOp_Char      -> call "newByteArr"
     NewPinnedByteArrayOp_Char-> call "newByteArr"
     SameMutableByteArrayOp   -> fmap (Thunk []) $ binOp Eq
-    IndexByteArrayOp_Char    -> Right $ Index (Index arr (lit "i8")) ix
-    IndexByteArrayOp_Int     -> Right $ Index (Index arr (lit "i32")) ix
-    IndexByteArrayOp_Int8    -> Right $ Index (Index arr (lit "i8")) ix
-    IndexByteArrayOp_Int16   -> Right $ Index (Index arr (lit "i16")) ix
-    IndexByteArrayOp_Int32   -> Right $ Index (Index arr (lit "i32")) ix
-    IndexByteArrayOp_Word    -> Right $ Index (Index arr (lit "w32")) ix
-    IndexByteArrayOp_Word8   -> Right $ Index (Index arr (lit "w8")) ix
-    IndexByteArrayOp_Word16  -> Right $ Index (Index arr (lit "w16")) ix
-    IndexByteArrayOp_Word32  -> Right $ Index (Index arr (lit "w32")) ix
-    IndexByteArrayOp_Float   -> Right $ Index (Index arr (lit "f32")) ix
-    IndexByteArrayOp_Double  -> Right $ Index (Index arr (lit "f64")) ix
+    IndexByteArrayOp_Char    -> readArr xs "i8"
+    IndexByteArrayOp_Int     -> readArr xs "i32"
+    IndexByteArrayOp_Int8    -> readArr xs "i8"
+    IndexByteArrayOp_Int16   -> readArr xs "i16"
+    IndexByteArrayOp_Int32   -> readArr xs "i32"
+    IndexByteArrayOp_Word    -> readArr xs "w32"
+    IndexByteArrayOp_Word8   -> readArr xs "w8"
+    IndexByteArrayOp_Word16  -> readArr xs "w16"
+    IndexByteArrayOp_Word32  -> readArr xs "w32"
+    IndexByteArrayOp_WideChar-> readArr xs "w32"
+    IndexByteArrayOp_Float   -> readArr xs "f32"
+    IndexByteArrayOp_Double  -> readArr xs "f64"
     
-    ReadByteArrayOp_Char     -> Right $ Index (Index arr (lit "i8")) ix
-    ReadByteArrayOp_Int      -> Right $ Index (Index arr (lit "i32")) ix
-    ReadByteArrayOp_Int8     -> Right $ Index (Index arr (lit "i8")) ix
-    ReadByteArrayOp_Int16    -> Right $ Index (Index arr (lit "i16")) ix
-    ReadByteArrayOp_Int32    -> Right $ Index (Index arr (lit "i32")) ix
-    ReadByteArrayOp_Word     -> Right $ Index (Index arr (lit "w32")) ix
-    ReadByteArrayOp_Word8    -> Right $ Index (Index arr (lit "w8")) ix
-    ReadByteArrayOp_Word16   -> Right $ Index (Index arr (lit "w16")) ix
-    ReadByteArrayOp_Word32   -> Right $ Index (Index arr (lit "w32")) ix
-    ReadByteArrayOp_Float    -> Right $ Index (Index arr (lit "f32")) ix
-    ReadByteArrayOp_Double   -> Right $ Index (Index arr (lit "f64")) ix
+    ReadByteArrayOp_Char     -> readArr xs "i8"
+    ReadByteArrayOp_Int      -> readArr xs "i32"
+    ReadByteArrayOp_Int8     -> readArr xs "i8"
+    ReadByteArrayOp_Int16    -> readArr xs "i16"
+    ReadByteArrayOp_Int32    -> readArr xs "i32"
+    ReadByteArrayOp_Word     -> readArr xs "w32"
+    ReadByteArrayOp_Word8    -> readArr xs "w8"
+    ReadByteArrayOp_Word16   -> readArr xs "w16"
+    ReadByteArrayOp_Word32   -> readArr xs "w32"
+    ReadByteArrayOp_WideChar -> readArr xs "w32"
+    ReadByteArrayOp_Float    -> readArr xs "f32"
+    ReadByteArrayOp_Double   -> readArr xs "f64"
     
     WriteByteArrayOp_Char    -> writeArr xs "i8"
     WriteByteArrayOp_Int     -> writeArr xs "i32"
@@ -188,6 +190,7 @@ genOp cfg op xs =
     WriteByteArrayOp_Word8   -> writeArr xs "w8"
     WriteByteArrayOp_Word16  -> writeArr xs "w16"
     WriteByteArrayOp_Word32  -> writeArr xs "w32"
+    WriteByteArrayOp_WideChar-> writeArr xs "w32"
     WriteByteArrayOp_Float   -> writeArr xs "f32"
     WriteByteArrayOp_Double  -> writeArr xs "f64"
     
@@ -212,6 +215,7 @@ genOp cfg op xs =
     WriteOffAddrOp_Word8   -> writeOffAddr xs "w8"  1
     WriteOffAddrOp_Word16  -> writeOffAddr xs "w16" 2
     WriteOffAddrOp_Word32  -> writeOffAddr xs "w32" 4
+    WriteOffAddrOp_WideChar-> writeOffAddr xs "w32" 4
     WriteOffAddrOp_Float   -> writeOffAddr xs "f32" 4
     WriteOffAddrOp_Double  -> writeOffAddr xs "f64" 8
     ReadOffAddrOp_Char     -> readOffAddr xs "i8"   1
@@ -223,6 +227,7 @@ genOp cfg op xs =
     ReadOffAddrOp_Word8    -> readOffAddr xs "w8"   1
     ReadOffAddrOp_Word16   -> readOffAddr xs "w16"  2
     ReadOffAddrOp_Word32   -> readOffAddr xs "w32"  4
+    ReadOffAddrOp_WideChar -> readOffAddr xs "w32"  4
     ReadOffAddrOp_Float    -> readOffAddr xs "f32"  4
     ReadOffAddrOp_Double   -> readOffAddr xs "f64"  8
     AddrAddOp              -> call "plusAddr"
@@ -252,6 +257,12 @@ genOp cfg op xs =
     EqStableNameOp    -> call "eqStableName"
     StableNameToIntOp -> Right $ head xs
 
+    -- Exception masking
+    -- There's only one thread anyway, so async exceptions can't happen.
+    MaskAsyncExceptionsOp   -> Right $ Call (head xs) []
+    UnmaskAsyncExceptionsOp -> Right $ Call (head xs) []
+    MaskStatus              -> Right $ litN 0
+
     -- Misc. ops
     SeqOp          -> Right $ NativeCall "E" [head xs]
     AtomicallyOp   -> Right $ Call (xs !! 0) []
@@ -268,8 +279,13 @@ genOp cfg op xs =
     (arr:ix:_) = xs
     
     writeArr (a:i:rhs:_) elemtype =
-      Right $ Assign (Index (Index a (lit elemtype)) i) rhs
+      Right $ Assign (Index (Index (Index a (lit "v")) (lit elemtype)) i) rhs
     writeArr _ _ =
+      error "writeArray primop with too few arguments!"
+
+    readArr (a:i:_) elemtype =
+      Right $ Index (Index (Index a (lit "v")) (lit elemtype)) i
+    readArr _ _ =
       error "writeArray primop with too few arguments!"
 
     writeOffAddr (addr:off:rhs:_) etype esize =
