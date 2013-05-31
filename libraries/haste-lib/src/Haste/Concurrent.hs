@@ -2,8 +2,8 @@
 -- | Implements concurrency for Haste based on "A Poor Man's Concurrency Monad".
 module Haste.Concurrent (
     MVar, CIO,
-    forkIO, newMVar, newEmptyMVar, takeMVar, putMVar, withMVarIO, modifyMVarIO,
-    concurrent, liftIO
+    forkIO, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, withMVarIO,
+    modifyMVarIO, concurrent, liftIO
   ) where
 import Control.Monad.IO.Class
 import Control.Monad.Cont.Class
@@ -11,8 +11,8 @@ import Control.Monad
 import Data.IORef
 
 data MV a
-  = Full a [CIO ()] -- A full MVar: a value plus a writer queue
-  | Empty  [CIO ()] -- An empty MVar: a reader queue
+  = Full  [(a, CIO ())] -- A full MVar: a queue of writers
+  | Empty [a -> CIO ()] -- An empty MVar: a queue of readers
 newtype MVar a = MVar (IORef (MV a))
 
 data Action where
@@ -38,6 +38,7 @@ instance MonadCont CIO where
 forkIO :: CIO () -> CIO ()
 forkIO (C m) = C $ \next -> Fork [m (const Stop), next ()]
 
+-- | Spawn several threads at once.
 forkMany :: [CIO ()] -> CIO ()
 forkMany ms = C $ \next -> Fork (next () : [act (const Stop) | C act <- ms])
 
@@ -46,40 +47,46 @@ forkActs :: [Action] -> CIO ()
 forkActs acts = C $ \next -> Fork (next () : acts)
 
 -- | Create a new MVar with an initial value.
--- newMVar :: MonadIO m => a -> m (MVar a)
-newMVar a = liftIO $ MVar `fmap` newIORef (Full a [])
+newMVar :: MonadIO m => a -> m (MVar a)
+newMVar a = liftIO $ MVar `fmap` newIORef (Full [(a, C $ const Stop)])
 
 -- | Create a new empty MVar.
 newEmptyMVar :: MonadIO m => m (MVar a)
 newEmptyMVar = liftIO $ MVar `fmap` newIORef (Empty [])
 
 -- | Read an MVar. Blocks if the MVar is empty.
---   Whenever an MVar is emptied, takeMVar wakes *all* writers. Fix this!
+--   Only the first writer in the write queue, if any, is woken.
 takeMVar :: MVar a -> CIO a
 takeMVar mv@(MVar ref) =
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
-      Full x ws -> do
-        writeIORef ref (Empty [])
-        return $ forkMany ws >> return x
+      Full ((x,w):ws) -> do
+        writeIORef ref (Full ws)
+        return $ forkIO w >> return x
+      Full _ -> do
+        writeIORef ref (Empty [next])
+        return $ C (const Stop)
       Empty rs -> do
-        writeIORef ref (Empty (rs ++ [takeMVar mv >>= next]))
+        writeIORef ref (Empty (rs ++ [next]))
         return $ C (const Stop)
 
 -- | Write an MVar. Blocks if the MVar is already full.
+--   Only the first reader in the read queue, if any, is woken.
 putMVar :: MVar a -> a -> CIO ()
 putMVar mv@(MVar ref) x =
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
-      Full x' ws -> do
-        writeIORef ref (Full x' (ws ++ [putMVar mv x >>= next]))
+      Full ws -> do
+        writeIORef ref (Full (ws ++ [(x, next ())]))
         return $ C (const Stop)
-      Empty rs -> do
-        writeIORef ref (Full x [])
-        return $ forkMany rs
-
+      Empty (r:rs) -> do
+        writeIORef ref (Empty rs)
+        return $ forkIO (r x)
+      Empty _ -> do
+        writeIORef ref (Full [(x, next ())])
+        return $ C (const Stop)
 
 -- | Perform an IO action over an MVar.
 withMVarIO :: MVar a -> (a -> IO b) -> CIO b
