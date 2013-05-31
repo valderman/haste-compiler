@@ -6,16 +6,19 @@ module Haste.Concurrent (
     concurrent, liftIO
   ) where
 import Control.Monad.IO.Class
+import Control.Monad.Cont.Class
+import Control.Monad
 import Data.IORef
 
-newtype MVar a = MVar (IORef (Maybe a, [Action], [Action]))
+data MV a
+  = Full a [CIO ()] -- A full MVar: a value plus a writer queue
+  | Empty  [CIO ()] -- An empty MVar: a reader queue
+newtype MVar a = MVar (IORef (MV a))
 
 data Action where
-  Atom  :: IO Action -> Action
-  Fork  :: Action -> Action -> Action
-  Read  :: MVar a -> (a -> Action) -> Action
-  Write :: MVar a -> a -> Action -> Action
-  Stop  :: Action
+  Atom :: IO Action -> Action
+  Fork :: [Action] -> Action
+  Stop :: Action
 
 -- | Concurrent IO monad. The normal IO monad does not have concurrency
 --   capabilities with Haste. This monad is basically IO plus concurrency.
@@ -28,25 +31,55 @@ instance Monad CIO where
 instance MonadIO CIO where
   liftIO m = C $ \next -> Atom (fmap next m)
 
+instance MonadCont CIO where
+  callCC f = C $ \next -> unC (f (\a -> C $ \_ -> next a)) next
+
 -- | Spawn a new thread.
 forkIO :: CIO () -> CIO ()
-forkIO (C m) = C $ \next -> Fork (m (const Stop)) (next ())
+forkIO (C m) = C $ \next -> Fork [m (const Stop), next ()]
+
+forkMany :: [CIO ()] -> CIO ()
+forkMany ms = C $ \next -> Fork (next () : [act (const Stop) | C act <- ms])
+
+-- | Fork an Action. Not exported.
+forkActs :: [Action] -> CIO ()
+forkActs acts = C $ \next -> Fork (next () : acts)
 
 -- | Create a new MVar with an initial value.
-newMVar :: MonadIO m => a -> m (MVar a)
-newMVar a = liftIO $ MVar `fmap` newIORef (Just a, [], [])
+-- newMVar :: MonadIO m => a -> m (MVar a)
+newMVar a = liftIO $ MVar `fmap` newIORef (Full a [])
 
 -- | Create a new empty MVar.
 newEmptyMVar :: MonadIO m => m (MVar a)
-newEmptyMVar = liftIO $ MVar `fmap` newIORef (Nothing, [], [])
+newEmptyMVar = liftIO $ MVar `fmap` newIORef (Empty [])
 
 -- | Read an MVar. Blocks if the MVar is empty.
+--   Whenever an MVar is emptied, takeMVar wakes *all* writers. Fix this!
 takeMVar :: MVar a -> CIO a
-takeMVar v = C $ \next -> Read v next
+takeMVar mv@(MVar ref) =
+  callCC $ \next -> join $ liftIO $ do
+    v <- readIORef ref
+    case v of
+      Full x ws -> do
+        writeIORef ref (Empty [])
+        return $ forkMany ws >> return x
+      Empty rs -> do
+        writeIORef ref (Empty (rs ++ [takeMVar mv >>= next]))
+        return $ C (const Stop)
 
 -- | Write an MVar. Blocks if the MVar is already full.
 putMVar :: MVar a -> a -> CIO ()
-putMVar v x = C $ \next -> Write v x (next ())
+putMVar mv@(MVar ref) x =
+  callCC $ \next -> join $ liftIO $ do
+    v <- readIORef ref
+    case v of
+      Full x' ws -> do
+        writeIORef ref (Full x' (ws ++ [putMVar mv x >>= next]))
+        return $ C (const Stop)
+      Empty rs -> do
+        writeIORef ref (Full x [])
+        return $ forkMany rs
+
 
 -- | Perform an IO action over an MVar.
 withMVarIO :: MVar a -> (a -> IO b) -> CIO b
@@ -70,33 +103,8 @@ concurrent (C m) = scheduler [m (const Stop)]
         Atom io -> do
           next <- io
           scheduler (ps ++ [next])
-        Fork a b -> do
-          scheduler (ps ++ [a,b])
-        -- The Read primitive is a little complicated. If there's a writer
-        -- waiting for the MVar, then wake it and remove it from the wait queue.
-        -- If the MVar is empty, then add the reader to the read queue and put
-        -- it to sleep.
-        self@(Read (MVar r) next) -> do
-          (mx, readers, writers) <- readIORef r
-          case mx of
-            Just x -> do
-              let (w, ws) = splitAt 1 writers
-              writeIORef r (Nothing, readers, ws)
-              scheduler (w ++ ps ++ [next x])
-            _      -> do
-              writeIORef r (mx, readers ++ [self], writers)
-              scheduler ps
-        -- The Write primitive does the exact opposite of Read.
-        self@(Write (MVar r) x next) -> do
-          (mx, readers, writers) <- readIORef r
-          case mx of
-            Nothing -> do
-              let (rdr, rdrs) = splitAt 1 readers
-              writeIORef r (Just x, rdrs, writers)
-              scheduler (rdr ++ ps ++ [next])
-            _      -> do
-              writeIORef r (mx, readers, writers ++ [self])
-              scheduler ps
+        Fork ps' -> do
+          scheduler (ps ++ ps')
         Stop -> do
           scheduler ps
     scheduler _ =
