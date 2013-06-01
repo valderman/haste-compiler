@@ -35,6 +35,7 @@ Library
         base == 4.6.0.1,
         array == 0.4.0.1,
         transformers,
+        monads-tf,
         ghc-prim,
         fursuit,
         containers

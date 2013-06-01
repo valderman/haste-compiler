@@ -5,6 +5,7 @@ module Haste.Callback (setCallback, JSFun (..), mkCallback, Event (..),
 import Haste.Prim
 import Haste.DOM
 import Data.String
+import Control.Monad.IO.Class
 
 newtype JSFun a = JSFun (Ptr a)
 
@@ -69,12 +70,12 @@ evtName evt =
     OnBlur      -> "blur"
 
 -- | Set a callback for the given event.
-setCallback :: Elem -> Event a -> a -> IO Bool
+setCallback :: MonadIO m => Elem -> Event a -> a -> m Bool
 setCallback e evt f =
-  jsSetCB e (evtName evt) (mkCallback $! f)
+  liftIO $ jsSetCB e (evtName evt) (mkCallback $! f)
 
 -- | Wrapper for window.setTimeout; execute the given computation after a delay
 --   given in milliseconds.
-setTimeout :: Int -> IO () -> IO ()
+setTimeout :: MonadIO m => Int -> IO () -> m ()
 setTimeout delay cb =
-  jsSetTimeout delay (mkCallback $! cb)
+  liftIO $ jsSetTimeout delay (mkCallback $! cb)

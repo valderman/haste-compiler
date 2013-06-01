@@ -5,6 +5,7 @@ module Haste.DOM (Elem (..), PropID, ElemID,
                   getChildBefore, getLastChild, getChildren, setChildren,
                   getStyle, setStyle) where
 import Haste.Prim
+import Control.Monad.IO.Class
 
 newtype Elem = Elem JSAny
 type PropID = String
@@ -26,61 +27,61 @@ foreign import ccall jsKillChild :: Elem -> Elem -> IO ()
 foreign import ccall jsClearChildren :: Elem -> IO ()
 
 -- | Append the first element as a child of the second element.
-addChild :: Elem -> Elem -> IO ()
-addChild = jsAppendChild
+addChild :: MonadIO m => Elem -> Elem -> m ()
+addChild child parent = liftIO $ jsAppendChild child parent
 
 -- | Insert the first element as a child into the second, before the third.
 --   For instance:
 -- @
 --   addChildBefore childToAdd theContainer olderChild
 -- @
-addChildBefore :: Elem -> Elem -> Elem -> IO ()
-addChildBefore = jsAddChildBefore
+addChildBefore :: MonadIO m => Elem -> Elem -> Elem -> m ()
+addChildBefore child parent oldChild =
+  liftIO $ jsAddChildBefore child parent oldChild
 
 -- | Get the sibling before the given one, if any.
-getChildBefore :: Elem -> IO (Maybe Elem)
-getChildBefore e = fromPtr `fmap` jsGetChildBefore e
+getChildBefore :: MonadIO m => Elem -> m (Maybe Elem)
+getChildBefore e = liftIO $ fromPtr `fmap` jsGetChildBefore e
 
 -- | Get the last of an element's children.
-getLastChild :: Elem -> IO (Maybe Elem)
-getLastChild e = fromPtr `fmap` jsGetLastChild e
+getLastChild :: MonadIO m => Elem -> m (Maybe Elem)
+getLastChild e = liftIO $ fromPtr `fmap` jsGetLastChild e
 
 -- | Get a list of all children belonging to a certain element.
-getChildren :: Elem -> IO [Elem]
-getChildren e = fromPtr `fmap` jsGetChildren e
+getChildren :: MonadIO m => Elem -> m [Elem]
+getChildren e = liftIO $ fromPtr `fmap` jsGetChildren e
 
 -- | Clear the given element's list of children, and append all given children
 --   to it.
-setChildren :: Elem -> [Elem] -> IO ()
-setChildren e ch = jsSetChildren e (toPtr ch)
+setChildren :: MonadIO m => Elem -> [Elem] -> m ()
+setChildren e ch = liftIO $ jsSetChildren e (toPtr ch)
 
 -- | Create an element.
-newElem :: String -> IO Elem
-newElem = jsCreateElem . toJSStr
+newElem :: MonadIO m => String -> m Elem
+newElem = liftIO . jsCreateElem . toJSStr
 
 -- | Set a property of the given element.
-setProp :: Elem -> PropID -> String -> IO ()
-setProp e prop val = jsSet e (toJSStr prop) (toJSStr val)
+setProp :: MonadIO m => Elem -> PropID -> String -> m ()
+setProp e prop val = liftIO $ jsSet e (toJSStr prop) (toJSStr val)
 
 -- | Get a property of an element.
-getProp :: Elem -> PropID -> IO String
-getProp e prop = fromJSStr `fmap` jsGet e (toJSStr prop)
+getProp :: MonadIO m => Elem -> PropID -> m String
+getProp e prop = liftIO $ fromJSStr `fmap` jsGet e (toJSStr prop)
 
 -- | Get a CSS style property of an element.
-getStyle :: Elem -> PropID -> IO String
-getStyle e prop = fromJSStr `fmap` jsGetStyle e (toJSStr prop)
+getStyle :: MonadIO m => Elem -> PropID -> m String
+getStyle e prop = liftIO $ fromJSStr `fmap` jsGetStyle e (toJSStr prop)
 
 -- | Get a CSS style property of an element.
-setStyle :: Elem -> PropID -> String -> IO ()
-setStyle e prop val = jsSetStyle e (toJSStr prop) (toJSStr val)
+setStyle :: MonadIO m => Elem -> PropID -> String -> m ()
+setStyle e prop val = liftIO $ jsSetStyle e (toJSStr prop) (toJSStr val)
 
 -- | Get an element by its HTML ID attribute.
-elemById :: ElemID -> IO (Maybe Elem)
-elemById eid = do
-  fromPtr `fmap` (jsFind $ toJSStr eid)
+elemById :: MonadIO m => ElemID -> m (Maybe Elem)
+elemById eid = liftIO $ fromPtr `fmap` (jsFind $ toJSStr eid)
 
 -- | Perform an IO action on an element.
-withElem :: ElemID -> (Elem -> IO a) -> IO a
+withElem :: MonadIO m => ElemID -> (Elem -> m a) -> m a
 withElem e act = do
   me' <- elemById e
   case me' of
@@ -88,9 +89,9 @@ withElem e act = do
     _       -> error $ "No element with ID " ++ e ++ " could be found!"
 
 -- | Remove all children from the given element.
-clearChildren :: Elem -> IO ()
-clearChildren = jsClearChildren
+clearChildren :: MonadIO m => Elem -> m ()
+clearChildren = liftIO . jsClearChildren
 
 -- | Remove the first element from the second's children.
-removeChild :: Elem -> Elem -> IO ()
-removeChild = jsKillChild
+removeChild :: MonadIO m => Elem -> Elem -> m ()
+removeChild child parent = liftIO $ jsKillChild child parent

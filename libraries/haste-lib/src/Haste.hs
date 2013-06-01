@@ -8,6 +8,7 @@ import Haste.Readable
 import Haste.Showable
 import Haste.Callback
 import Haste.Random
+import Control.Monad.IO.Class
 
 foreign import ccall jsAlert  :: JSString -> IO ()
 foreign import ccall jsLog    :: JSString -> IO ()
@@ -16,22 +17,22 @@ foreign import ccall jsEval   :: JSString -> IO JSString
 foreign import ccall jsCat    :: Ptr [JSString] -> JSString -> JSString
 
 -- | Javascript alert() function.
-alert :: String -> IO ()
-alert = jsAlert . toJSStr
+alert :: MonadIO m => String -> m ()
+alert = liftIO . jsAlert . toJSStr
 
 -- | Javascript prompt() function.
-prompt :: String -> IO String
-prompt q = do
+prompt :: MonadIO m => String -> m String
+prompt q = liftIO $ do
   a <- jsPrompt (toJSStr q)
   return (fromJSStr a)
 
 -- | Javascript eval() function.
-eval :: String -> IO String
-eval js = jsEval (toJSStr js) >>= return . fromJSStr
+eval :: MonadIO m => String -> m String
+eval js = liftIO $ jsEval (toJSStr js) >>= return . fromJSStr
 
 -- | Use console.log to write a message.
-writeLog :: String -> IO ()
-writeLog = jsLog . toJSStr
+writeLog :: MonadIO m => String -> m ()
+writeLog = liftIO . jsLog . toJSStr
 
 -- | Concatenate a series of JSStrings using the specified separator.
 catJSStr :: JSString -> [JSString] -> JSString

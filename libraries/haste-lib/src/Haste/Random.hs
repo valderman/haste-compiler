@@ -4,6 +4,7 @@ import Haste.Prim
 import Data.Int
 import Data.Word
 import Data.List (unfoldr)
+import Control.Monad.IO.Class
 
 foreign import ccall jsRand :: IO Double
 
@@ -14,8 +15,8 @@ mkSeed :: Int -> Seed
 mkSeed = Seed . fromInt
 
 -- | Generate a new seed using Javascript's PRNG.
-newSeed :: IO Seed
-newSeed = do
+newSeed :: MonadIO m => m Seed
+newSeed = liftIO $ do
   x <- jsRand
   s <- jsRand
   let sign = if s > 0.5 then 1 else -1
