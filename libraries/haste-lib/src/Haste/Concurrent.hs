@@ -42,10 +42,6 @@ forkIO (C m) = C $ \next -> Fork [m (const Stop), next ()]
 forkMany :: [CIO ()] -> CIO ()
 forkMany ms = C $ \next -> Fork (next () : [act (const Stop) | C act <- ms])
 
--- | Fork an Action. Not exported.
-forkActs :: [Action] -> CIO ()
-forkActs acts = C $ \next -> Fork (next () : acts)
-
 -- | Create a new MVar with an initial value.
 newMVar :: MonadIO m => a -> m (MVar a)
 newMVar a = liftIO $ MVar `fmap` newIORef (Full [(a, C $ const Stop)])
@@ -57,7 +53,7 @@ newEmptyMVar = liftIO $ MVar `fmap` newIORef (Empty [])
 -- | Read an MVar. Blocks if the MVar is empty.
 --   Only the first writer in the write queue, if any, is woken.
 takeMVar :: MVar a -> CIO a
-takeMVar mv@(MVar ref) =
+takeMVar (MVar ref) =
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -74,7 +70,7 @@ takeMVar mv@(MVar ref) =
 -- | Write an MVar. Blocks if the MVar is already full.
 --   Only the first reader in the read queue, if any, is woken.
 putMVar :: MVar a -> a -> CIO ()
-putMVar mv@(MVar ref) x =
+putMVar (MVar ref) x =
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
