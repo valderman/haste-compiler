@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE GADTs, FlexibleInstances, MultiParamTypeClasses, 
+             FlexibleContexts, OverlappingInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | DOM events and utilities for the Haste reactive library.
 module Haste.Reactive.DOM (clicked,valueOf,valueAt,ElemProp,elemProp) where
@@ -11,7 +12,7 @@ import Data.IORef
 
 {-# NOINLINE eventHandlers #-}
 -- | Contains a list of all installed event handlers.
-eventHandlers :: Readable a => IORef (M.Map (ElemID, Event e) (Signal a))
+eventHandlers :: JSType a => IORef (M.Map (ElemID, Event e) (Signal a))
 eventHandlers = unsafePerformIO $ newIORef M.empty
 
 -- | Represents a property of a DOM object.
@@ -28,7 +29,7 @@ elemProp str =
     (_, [])     -> error "elemProp: No object attribute given!"
     (obj, attr) -> D obj (tail attr)
 
-unlessExists :: Readable a => ElemID -> Event e -> IO (Signal a) -> Signal a
+unlessExists :: JSType a => ElemID -> Event e -> IO (Signal a) -> Signal a
 unlessExists eid evt create = new $ do
   handlers <- readIORef eventHandlers
   case M.lookup (eid, evt) handlers of
@@ -51,16 +52,16 @@ clicked eid = unlessExists eid OnClick clickedIO
 
 -- | The value property of the given element, updated whenever an onchange
 --   event is raised.
-valueOf :: Readable a => ElemID -> Signal a
+valueOf :: JSType a  => ElemID -> Signal a
 valueOf e = e `valueAt` OnChange
 
 -- | The value property of the given element, triggered on a custom event.
-valueAt :: (Readable a, Callback e) => ElemID -> Event e -> Signal a
-valueAt eid evt = filterMapS fromStr $ unlessExists eid evt valueAtIO
+valueAt :: (JSType a, Callback e) => ElemID -> Event e -> Signal a
+valueAt eid evt = filterMapS fromString $ unlessExists eid evt valueAtIO
   where
     valueAtIO = withElem eid $ \e -> do
       str <- getProp e "value"
-      (src, sig) <- case fromStr str of
+      (src, sig) <- case read str of
         Just x -> pipe x
         _      -> error $ "Bad initial value in valueAt: " ++ str
   
@@ -71,7 +72,14 @@ valueAt eid evt = filterMapS fromStr $ unlessExists eid evt valueAtIO
         then error $ "Browser doesn't support sane event handlers!"
         else return sig
 
-instance Showable a => Sink ElemProp a where
+-- | Like show, but strips enclosing quotes.
+toStr :: Show a => a -> String
+toStr x =
+  case show x of
+    ('"':xs) -> init xs
+    xs       -> xs
+
+instance Show a => Sink ElemProp a where
   (D obj attr) << val = withElem obj $ \e -> sink (setProp e attr . toStr) val
 
 -- | Replace the sink element's list of child nodes whenever a new list of

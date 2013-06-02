@@ -8,7 +8,7 @@
 module Haste.JSON (JSON (..), encode, decode, (!), (~>)) where
 import Haste
 import Haste.Prim
-import Data.String
+import Data.String as S
 
 -- Remember to update jsParseJSON if this data type changes!
 data JSON
@@ -19,7 +19,7 @@ data JSON
   | Dict [(JSString, JSON)]
 
 instance IsString JSON where
-  fromString = Str . fromString
+  fromString = Str . S.fromString
 
 numFail :: a
 numFail = error "Num JSON: not a numeric JSON node!"
@@ -101,5 +101,5 @@ encode = catJSStr "" . enc []
 decode :: JSString -> Maybe JSON
 decode = fromPtr . jsParseJSON
 
-instance Showable JSON where
-  show_ = fromJSStr . encode
+instance Show JSON where
+  show = fromJSStr . encode

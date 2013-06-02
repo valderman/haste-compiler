@@ -19,10 +19,6 @@ type URL = String
 type Key = String
 type Val = String
 
-instance Showable Method where
-  show_ GET  = "GET"
-  show_ POST = "POST"
-
 -- | Make an AJAX request to a URL, treating the response as plain text.
 textRequest :: MonadIO m
             => Method
@@ -31,7 +27,7 @@ textRequest :: MonadIO m
             -> (String -> IO ())
             -> m ()
 textRequest m url kv cb = do
-  _ <- liftIO $ ajaxReq (toJSStr $ show_ m) url' True "" cb'
+  _ <- liftIO $ ajaxReq (toJSStr $ show m) url' True "" cb'
   return ()
   where
     cb' = mkCallback $ cb . fromJSStr
@@ -48,7 +44,7 @@ textRequest_ :: MonadIO m
              -> (JSString -> IO ())
              -> m ()
 textRequest_ m url kv cb = liftIO $ do
-  _ <- ajaxReq (toJSStr $ show_ m) url' True "" (mkCallback cb)
+  _ <- ajaxReq (toJSStr $ show m) url' True "" (mkCallback cb)
   return ()
   where
     url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
@@ -72,7 +68,7 @@ jsonRequest_ :: MonadIO m
              -> (Maybe JSON -> IO ())
              -> m ()
 jsonRequest_ m url kv cb = liftIO $ do
-  _ <- ajaxReq (toJSStr $ show_ m) url' True "" cb'
+  _ <- ajaxReq (toJSStr $ show m) url' True "" cb'
   return ()
   where
     cb' = mkCallback $ cb . decode

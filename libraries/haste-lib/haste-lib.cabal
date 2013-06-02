@@ -25,13 +25,13 @@ Library
         Haste.Prim
         Haste.Concurrent
     Other-Modules:
-        Haste.Readable
-        Haste.Showable
+        Haste.JSType
         Haste.Callback
         Haste.Random
         Haste.Reactive.DOM
         Haste.Reactive.Ajax
     Build-Depends:
+        integer-gmp,
         base == 4.6.0.1,
         array == 0.4.0.1,
         transformers,
