@@ -5,7 +5,7 @@ import Haste
 
 {-# NOINLINE x #-}
 x :: Int
-x = read_ "27"
+Just x = fromString "27"
 
 runTest :: IO Int
 runTest = return x

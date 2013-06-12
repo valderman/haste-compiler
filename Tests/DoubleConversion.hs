@@ -3,9 +3,9 @@ module Tests.DoubleConversion where
 
 #ifdef __HASTE__
 import Haste
-strFloor = show_ . (floor_ :: Double -> Int)
-strCeiling = show_ . (ceiling_ :: Double -> Int)
-strRound = show_ . (round_ :: Double -> Int)
+strFloor = show . (floor_ :: Double -> Int)
+strCeiling = show . (ceiling_ :: Double -> Int)
+strRound = show . (round_ :: Double -> Int)
 #else
 strFloor = show . (floor :: Double -> Int)
 strCeiling = show . (ceiling :: Double -> Int)

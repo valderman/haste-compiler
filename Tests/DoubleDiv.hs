@@ -3,7 +3,7 @@ module Tests.DoubleDiv where
 
 #ifdef __HASTE__
 import Haste
-str = show_ . (round_ :: Double -> Int)
+str = toString . (round_ :: Double -> Int)
 #else
 str = show . (round :: Double -> Int)
 #endif

@@ -7,9 +7,9 @@ import Data.Int
 import Haste
 type I = Int
 type W = Word
-i2w = fromInt
-w2i = round_
-showish = show_
+i2w = convert
+w2i = convert
+showish = toString
 #else
 type I = Int32
 type W = Word32
