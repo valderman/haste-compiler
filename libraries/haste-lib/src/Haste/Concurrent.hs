@@ -11,8 +11,8 @@ import Control.Monad
 import Data.IORef
 
 data MV a
-  = Full  [(a, CIO ())] -- A full MVar: a queue of writers
-  | Empty [a -> CIO ()] -- An empty MVar: a queue of readers
+  = Full a [(a, CIO ())] -- A full MVar: a queue of writers
+  | Empty  [a -> CIO ()] -- An empty MVar: a queue of readers
 newtype MVar a = MVar (IORef (MV a))
 
 data Action where
@@ -36,7 +36,7 @@ instance MonadCont CIO where
 
 -- | Spawn a new thread.
 forkIO :: CIO () -> CIO ()
-forkIO (C m) = C $ \next -> Fork [m (const Stop), next ()]
+forkIO (C m) = C $ \next -> Fork [next (), m (const Stop)]
 
 -- | Spawn several threads at once.
 forkMany :: [CIO ()] -> CIO ()
@@ -44,7 +44,7 @@ forkMany ms = C $ \next -> Fork (next () : [act (const Stop) | C act <- ms])
 
 -- | Create a new MVar with an initial value.
 newMVar :: MonadIO m => a -> m (MVar a)
-newMVar a = liftIO $ MVar `fmap` newIORef (Full [(a, C $ const Stop)])
+newMVar a = liftIO $ MVar `fmap` newIORef (Full a [])
 
 -- | Create a new empty MVar.
 newEmptyMVar :: MonadIO m => m (MVar a)
@@ -57,12 +57,12 @@ takeMVar (MVar ref) =
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
-      Full ((x,w):ws) -> do
-        writeIORef ref (Full ws)
+      Full x ((x',w):ws) -> do
+        writeIORef ref (Full x' ws)
         return $ forkIO w >> return x
-      Full _ -> do
-        writeIORef ref (Empty [next])
-        return $ C (const Stop)
+      Full x _ -> do
+        writeIORef ref (Empty [])
+        return $ return x
       Empty rs -> do
         writeIORef ref (Empty (rs ++ [next]))
         return $ C (const Stop)
@@ -74,15 +74,15 @@ putMVar (MVar ref) x =
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
-      Full ws -> do
-        writeIORef ref (Full (ws ++ [(x, next ())]))
+      Full oldx ws -> do
+        writeIORef ref (Full oldx (ws ++ [(x, next ())]))
         return $ C (const Stop)
       Empty (r:rs) -> do
         writeIORef ref (Empty rs)
         return $ forkIO (r x)
       Empty _ -> do
-        writeIORef ref (Full [(x, next ())])
-        return $ C (const Stop)
+        writeIORef ref (Full x [])
+        return $ next ()
 
 -- | Perform an IO action over an MVar.
 withMVarIO :: MVar a -> (a -> IO b) -> CIO b
