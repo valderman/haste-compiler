@@ -15,11 +15,11 @@ runTest() {
     haste_output=`js TestDriver.js`
 
     if [[ $quiet == 1 ]] ; then
-        hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
+        hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs > /dev/null 2>&1
     else
-        hastec -O2 --verbose --debug --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs
+        hastec -O2 --verbose --debug --start=asap -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs
     fi
-    haste_opt_output=`js TestDriver.js`
+    haste_opt_output=`js TestDriver.O2.js`
 
     if [[ "$ghc_output" != "$haste_output" ]] ; then
         thistest="failed"
