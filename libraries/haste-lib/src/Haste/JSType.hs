@@ -12,10 +12,10 @@ import Haste.Prim (JSString, toJSStr, fromJSStr)
 
 foreign import ccall "Number" jsNumber        :: JSString -> Double
 foreign import ccall "String" jsString        :: Double -> JSString
-foreign import ccall "Math.round" jsRound     :: Double -> Int
+foreign import ccall jsRound     :: Double -> Int
 foreign import ccall "I_toInt" jsIToInt       :: ByteArray# -> Int
-foreign import ccall "I_toJSString" jsIToString :: ByteArray# -> JSString
-foreign import ccall "Integer.fromJSString" jsStringToI :: JSString -> ByteArray#
+foreign import ccall "I_toString" jsIToString :: ByteArray# -> JSString
+foreign import ccall "I_fromString" jsStringToI :: JSString -> ByteArray#
 foreign import ccall "I_fromNumber" jsNumToI  :: ByteArray# -> ByteArray#
 
 data JSNumber
