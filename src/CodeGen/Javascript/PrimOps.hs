@@ -26,9 +26,9 @@ genOp cfg op xs =
     Int2WordOp     -> Right $ BinOp ShrL (head xs) (litN 0)
     Int2FloatOp    -> Right $ head xs
     Int2DoubleOp   -> Right $ head xs
-    Double2IntOp   -> Right $ head xs
+    Double2IntOp   -> Right $ BinOp (BitAnd) (head xs) (litN 0xffffffff)
     Double2FloatOp -> Right $ head xs
-    Float2IntOp    -> Right $ head xs
+    Float2IntOp    -> Right $ BinOp (BitAnd) (head xs) (litN 0xffffffff)
     Float2DoubleOp -> Right $ head xs
     
     -- Narrowing ops
