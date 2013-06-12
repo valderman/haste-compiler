@@ -534,7 +534,7 @@ genVar var | hasRepresentation var = do
       dependOn var'
       return $! var'
 genVar _ = do
-  return $ JSVar "" (Foreign "undefined")
+  return $ JSVar "" (Foreign "_")
 
 -- | Generate a result variable for the given scrutinee variable.
 --   Each scrutinee has exactly one result variable; previously, we used the
