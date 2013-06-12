@@ -153,7 +153,7 @@ genRhs _ recursive (StgRhsCon _ con args) = do
      then Thunk [] <$> genEx False (StgConApp con args)
      else genEx False (StgConApp con args)
 genRhs tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
-  args' <- genArgVars args
+  args' <- mapM genVar args
   (retExp, body') <- isolate $ do
     mapM_ addLocal args'
     genEx tailpos body
@@ -240,17 +240,15 @@ genEx tailpos (StgApp f xs) = do
     then do
       let mkVar v = genVar v >>= return . AST.Var
       as <- getCurrentBindingArgs >>= mapM mkVar
-      bs <- genArgs xs
+      bs <- mapM genArg xs
       let assign l r = ExpStmt $ Assign l r
       mapM_ emit (zipWith assign as bs)
       emit (Ret Null)
       return $ runtimeError "Unreachable!"
     else do
       f' <- genVar f
-      xs' <- genArgs xs
-      let numStgArgs = length xs
-          numJsArgs  = length xs'
-          arity      = (arityInfo $ idInfo f) - (numStgArgs - numJsArgs)
+      xs' <- mapM genArg xs
+      let arity      = arityInfo $ idInfo f
       return $ case null xs of
         True          -> Eval (AST.Var f')
         _ | null xs'  -> Call (AST.Var f') []
@@ -527,7 +525,7 @@ genArgVarsPair vps = do
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
 genVar :: Var -> JSGen Config JSVar
-genVar var = do
+genVar var | hasRepresentation var = do
   thisMod <- getModName
   case toBuiltin var of
     Just var' -> return var'
@@ -535,6 +533,8 @@ genVar var = do
       let var' = toJSVar thisMod var Nothing
       dependOn var'
       return $! var'
+genVar _ = do
+  return $ JSVar "" (Foreign "undefined")
 
 -- | Generate a result variable for the given scrutinee variable.
 --   Each scrutinee has exactly one result variable; previously, we used the

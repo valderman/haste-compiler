@@ -33,7 +33,7 @@ append = flip combine
 --   as well always do it this way, to simplify the config a bit.
 startASAP :: AppStart
 startASAP mainSym =
-  "A(" ++ mainSym ++ ", []);"
+  "A(" ++ mainSym ++ ", [0]);"
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart
