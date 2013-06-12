@@ -247,6 +247,7 @@ instance PrettyJS JSLit where
       fixQuotes _             = []
   emit (Chr c) = out $ '\'' : c : ['\'']
   emit (Boolean b) = out $ if b then "true" else "false"
+  emit (Integer i) = out "I_fromString('" >> out (show i) >> out "')"
 
 emitList :: PrettyJS a => Output -> [a] -> PrettyM ()
 emitList between xs = do

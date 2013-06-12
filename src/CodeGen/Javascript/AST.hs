@@ -133,6 +133,7 @@ instance Serialize JSExp where
 
 data JSLit
   = Num Double
+  | Integer Integer
   | Str String
   | Chr Char
   | Boolean Bool
@@ -167,6 +168,9 @@ instance Lit String where
 
 instance Lit Char where
   lit = Lit . Chr
+
+instance Lit Integer where
+  lit = Lit . Integer
 
 litN :: Double -> JSExp
 litN = lit
