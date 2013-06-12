@@ -3,7 +3,7 @@
 module Haste.Concurrent (
     MVar, CIO,
     forkIO, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, withMVarIO,
-    modifyMVarIO, concurrent, liftIO
+    peekMVar, modifyMVarIO, concurrent, liftIO
   ) where
 import Control.Monad.IO.Class
 import Control.Monad.Cont.Class
@@ -66,6 +66,14 @@ takeMVar (MVar ref) =
       Empty rs -> do
         writeIORef ref (Empty (rs ++ [next]))
         return $ C (const Stop)
+
+-- | Peek at the value inside a given MVar, if any, without removing it.
+peekMVar :: MonadIO m => MVar a -> m (Maybe a)
+peekMVar (MVar ref) = liftIO $ do
+  v <- readIORef ref
+  case v of
+    Full x _ -> return (Just x)
+    _        -> return Nothing
 
 -- | Write an MVar. Blocks if the MVar is already full.
 --   Only the first reader in the read queue, if any, is woken.
