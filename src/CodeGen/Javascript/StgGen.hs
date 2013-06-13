@@ -204,7 +204,10 @@ genRhs tailpos _ (StgRhsClosure _ _ _ upd _ args body) = do
     
 -- | Create local copies of the given vars.
 localCopies :: [JSVar] -> [JSVar]
-localCopies = map $ fmap (";n_" ++)
+localCopies = map mkLocal
+  where
+    mkLocal x@(JSVar _ (External _)) = x
+    mkLocal x                        = fmap (";n_" ++) x
 
 -- | Generate the tag for a data constructor. This is used both by genDataCon
 --   and directly by genCase to generate constructors for matching.
