@@ -200,16 +200,6 @@ Library {
         Control.Monad.ST.Lazy.Imp
         Foreign.ForeignPtr.Imp
         System.Environment.ExecutablePath
-    c-sources:
-        cbits/PrelIOUtils.c
-        cbits/WCsubst.c
-        cbits/Win32Utils.c
-        cbits/DarwinUtils.c
-        cbits/consUtils.c
-        cbits/iconv.c
-        cbits/inputReady.c
-        cbits/primFloat.c
-        cbits/md5.c
     include-dirs: include
     includes:    HsBase.h
     install-includes:    HsBase.h HsBaseConfig.h EventConfig.h WCsubst.h consUtils.h Typeable.h

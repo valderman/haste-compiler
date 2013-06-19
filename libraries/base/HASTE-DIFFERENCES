@@ -11,3 +11,4 @@ This file sums up the differences.
 * Temporarily disable showEFloat, showGFloat and showFFloat until they can
   be fixed. (Numeric)
 * Implement fromRational in JS, and get rid of its old helpers. (GHC.Float)
+* Remove the C bits.
