@@ -9,6 +9,9 @@ import System.FilePath
 cabalDir :: FilePath
 cabalDir = unsafePerformIO $ getAppUserDataDirectory "cabal"
 
+cabalBinDir :: FilePath
+cabalBinDir = cabalDir </> "bin"
+
 hasteDir :: FilePath
 hasteDir = unsafePerformIO $ getAppUserDataDirectory "haste"
 
@@ -24,16 +27,24 @@ runAndWait file args workDir = do
   _ <- waitForProcess h
   return ()
 
-locateCompiler :: [FilePath] -> IO (Maybe FilePath)
-locateCompiler (c:cs) = do
-  exe <- findExecutable c
-  case exe of
-    Nothing -> locateCompiler cs
-    _       -> return exe
-locateCompiler _ = do
-  putStrLn "No hastec executable found; aborting!"
-  return Nothing
+locateBinary :: String -> [FilePath] -> IO (Either String FilePath)
+locateBinary progname (c:cs) = do
+  mexe <- findExecutable c
+  case mexe of
+    Nothing  -> locateBinary progname cs
+    Just exe -> return (Right exe)
+locateBinary progname _ = do
+  return $ Left $ "No " ++ progname ++ " executable found; aborting!"
+
+binaryPath :: FilePath -> FilePath
+binaryPath exe = unsafePerformIO $ do
+  b <- locateBinary exe [exe, cabalBinDir </> exe]
+  case b of
+    Left err   -> error err
+    Right path -> return path
 
 hasteBinary :: FilePath
-Just hasteBinary = unsafePerformIO $ do
-  locateCompiler ["hastec", cabalDir </> "bin" </> "hastec"]
+hasteBinary = binaryPath "hastec"
+
+hastePkgBinary :: FilePath
+hastePkgBinary = binaryPath "haste-pkg"

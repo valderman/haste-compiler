@@ -14,11 +14,9 @@ main :: IO ()
 main = do
   args <- getArgs
   let (pkgdbs, pkgs) = partition ("--package-db=" `isPrefixOf`) args
-  Just hastepkg <- locateCompiler ["haste-pkg",
-                                   cabalDir </> "bin" </> "haste-pkg"]
   if null args
     then putStrLn "Usage: haste-copy-pkg [--package-db=foo.conf] <packages>"
-    else mapM_ (copyPkgConfig pkgdbs hastepkg) pkgs
+    else mapM_ (copyPkgConfig pkgdbs hastePkgBinary) pkgs
 
 -- | Copy and modify a package config to work with Haste. A config can be
 --   read from a file or copied from the system's package DB.

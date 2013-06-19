@@ -41,10 +41,10 @@ main = do
 
   when (needsReboot /= Dont || forceBoot) $ do
     let localHasteinst = cabalDir </> "bin" </> "haste-inst"
-    mhasteinst <- locateCompiler ["haste-inst", localHasteinst]
+    mhasteinst <- locateBinary "haste-inst" ["haste-inst", localHasteinst]
     case mhasteinst of
-      Just hasteinst -> bootHaste cfg hasteinst
-      _              -> return ()
+      Right hasteinst -> bootHaste cfg hasteinst
+      Left err        -> error err
 
 bootHaste :: Cfg -> FilePath -> IO ()
 bootHaste cfg hasteinst = do
