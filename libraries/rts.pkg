@@ -18,7 +18,6 @@ trusted: False
 import-dirs: ${pkgroot}/haste-install/lib
 library-dirs: ${pkgroot}/haste-install/lib
 hs-libraries:
-extra-libraries: ffi m rt dl
 extra-ghci-libraries:
 include-dirs: ${pkgroot}/include
 includes: Stg.h

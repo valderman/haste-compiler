@@ -126,16 +126,16 @@
 /* #undef HAVE_LIBBFD */
 
 /* Define to 1 if you need -ldl to get dlopen(). */
-#define HAVE_LIBDL 1
+/* #define HAVE_LIBDL */
 
 /* Define to 1 if you have the `iberty' library (-liberty). */
 /* #undef HAVE_LIBIBERTY */
 
 /* Define to 1 if you need to link with libm */
-#define HAVE_LIBM 1
+/* #undef HAVE_LIBM */
 
 /* Define to 1 if you have the `rt' library (-lrt). */
-#define HAVE_LIBRT 1
+/* #undef HAVE_LIBRT */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
