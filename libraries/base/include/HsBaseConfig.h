@@ -310,26 +310,14 @@
 /* Define to 1 if you have the <ctype.h> header file. */
 #define HAVE_CTYPE_H 1
 
-/* Define if you have epoll support. */
-#define HAVE_EPOLL 1
-
-/* Define to 1 if you have the `epoll_ctl' function. */
-#define HAVE_EPOLL_CTL 1
-
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
-
-/* Define to 1 if you have the `eventfd' function. */
-#define HAVE_EVENTFD 1
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
 
 /* Define to 1 if you have the `ftruncate' function. */
 #define HAVE_FTRUNCATE 1
-
-/* Define to 1 if you have the `getclock' function. */
-/* #undef HAVE_GETCLOCK */
 
 /* Define to 1 if you have the `getrusage' function. */
 #define HAVE_GETRUSAGE 1
@@ -340,23 +328,8 @@
 /* Define to 1 if you have the `iswspace' function. */
 #define HAVE_ISWSPACE 1
 
-/* Define to 1 if you have the `kevent' function. */
-/* #undef HAVE_KEVENT */
-
-/* Define to 1 if you have the `kevent64' function. */
-/* #undef HAVE_KEVENT64 */
-
-/* Define if you have kqueue support. */
-/* #undef HAVE_KQUEUE */
-
 /* Define to 1 if you have the <langinfo.h> header file. */
 #define HAVE_LANGINFO_H 1
-
-/* Define to 1 if you have libcharset. */
-/* #undef HAVE_LIBCHARSET */
-
-/* Define to 1 if you have the `rt' library (-lrt). */
-/* #undef HAVE_LIBRT */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
@@ -369,12 +342,6 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
-
-/* Define if you have poll support. */
-#define HAVE_POLL 1
-
-/* Define to 1 if you have the <poll.h> header file. */
-#define HAVE_POLL_H 1
 
 /* Define to 1 if you have the <signal.h> header file. */
 #define HAVE_SIGNAL_H 1
@@ -391,15 +358,6 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
-/* Define to 1 if you have the <sys/epoll.h> header file. */
-#define HAVE_SYS_EPOLL_H 1
-
-/* Define to 1 if you have the <sys/eventfd.h> header file. */
-#define HAVE_SYS_EVENTFD_H 1
-
-/* Define to 1 if you have the <sys/event.h> header file. */
-/* #undef HAVE_SYS_EVENT_H */
-
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #define HAVE_SYS_RESOURCE_H 1
 
@@ -414,9 +372,6 @@
 
 /* Define to 1 if you have the <sys/timeb.h> header file. */
 #define HAVE_SYS_TIMEB_H 1
-
-/* Define to 1 if you have the <sys/timers.h> header file. */
-/* #undef HAVE_SYS_TIMERS_H */
 
 /* Define to 1 if you have the <sys/times.h> header file. */
 #define HAVE_SYS_TIMES_H 1
@@ -433,9 +388,6 @@
 /* Define to 1 if you have the <sys/wait.h> header file. */
 #define HAVE_SYS_WAIT_H 1
 
-/* Define to 1 if you have the <termios.h> header file. */
-#define HAVE_TERMIOS_H 1
-
 /* Define to 1 if you have the `times' function. */
 #define HAVE_TIMES 1
 
@@ -451,15 +403,6 @@
 /* Define to 1 if you have the <wctype.h> header file. */
 #define HAVE_WCTYPE_H 1
 
-/* Define to 1 if you have the <windows.h> header file. */
-/* #undef HAVE_WINDOWS_H */
-
-/* Define to 1 if you have the <winsock.h> header file. */
-/* #undef HAVE_WINSOCK_H */
-
-/* Define to 1 if you have the `_chsize' function. */
-/* #undef HAVE__CHSIZE */
-
 /* Define to Haskell type for cc_t */
 #define HTYPE_CC_T Word8
 
@@ -467,10 +410,10 @@
 #define HTYPE_CHAR Int8
 
 /* Define to Haskell type for clock_t */
-#define HTYPE_CLOCK_T Int64
+#define HTYPE_CLOCK_T Int32
 
 /* Define to Haskell type for dev_t */
-#define HTYPE_DEV_T Word64
+#define HTYPE_DEV_T Word32
 
 /* Define to Haskell type for double */
 #define HTYPE_DOUBLE Double
@@ -482,7 +425,7 @@
 #define HTYPE_GID_T Word32
 
 /* Define to Haskell type for ino_t */
-#define HTYPE_INO_T Word64
+#define HTYPE_INO_T Word32
 
 /* Define to Haskell type for int */
 #define HTYPE_INT Int32
@@ -491,10 +434,10 @@
 #define HTYPE_INTMAX_T Int64
 
 /* Define to Haskell type for intptr_t */
-#define HTYPE_INTPTR_T Int64
+#define HTYPE_INTPTR_T Int32
 
 /* Define to Haskell type for long */
-#define HTYPE_LONG Int64
+#define HTYPE_LONG Int32
 
 /* Define to Haskell type for long long */
 #define HTYPE_LONG_LONG Int64
@@ -503,19 +446,19 @@
 #define HTYPE_MODE_T Word32
 
 /* Define to Haskell type for nlink_t */
-#define HTYPE_NLINK_T Word64
+#define HTYPE_NLINK_T Word32
 
 /* Define to Haskell type for off_t */
-#define HTYPE_OFF_T Int64
+#define HTYPE_OFF_T Int32
 
 /* Define to Haskell type for pid_t */
 #define HTYPE_PID_T Int32
 
 /* Define to Haskell type for ptrdiff_t */
-#define HTYPE_PTRDIFF_T Int64
+#define HTYPE_PTRDIFF_T Int32
 
 /* Define to Haskell type for rlim_t */
-#define HTYPE_RLIM_T Word64
+#define HTYPE_RLIM_T Word32
 
 /* Define to Haskell type for short */
 #define HTYPE_SHORT Int16
@@ -527,22 +470,22 @@
 #define HTYPE_SIG_ATOMIC_T Int32
 
 /* Define to Haskell type for size_t */
-#define HTYPE_SIZE_T Word64
+#define HTYPE_SIZE_T Word32
 
 /* Define to Haskell type for speed_t */
 #define HTYPE_SPEED_T Word32
 
 /* Define to Haskell type for ssize_t */
-#define HTYPE_SSIZE_T Int64
+#define HTYPE_SSIZE_T Int32
 
 /* Define to Haskell type for suseconds_t */
-#define HTYPE_SUSECONDS_T Int64
+#define HTYPE_SUSECONDS_T Int32
 
 /* Define to Haskell type for tcflag_t */
 #define HTYPE_TCFLAG_T Word32
 
 /* Define to Haskell type for time_t */
-#define HTYPE_TIME_T Int64
+#define HTYPE_TIME_T Int32
 
 /* Define to Haskell type for uid_t */
 #define HTYPE_UID_T Word32
@@ -551,7 +494,7 @@
 #define HTYPE_UINTMAX_T Word64
 
 /* Define to Haskell type for uintptr_t */
-#define HTYPE_UINTPTR_T Word64
+#define HTYPE_UINTPTR_T Word32
 
 /* Define to Haskell type for unsigned char */
 #define HTYPE_UNSIGNED_CHAR Word8
@@ -560,7 +503,7 @@
 #define HTYPE_UNSIGNED_INT Word32
 
 /* Define to Haskell type for unsigned long */
-#define HTYPE_UNSIGNED_LONG Word64
+#define HTYPE_UNSIGNED_LONG Word32
 
 /* Define to Haskell type for unsigned long long */
 #define HTYPE_UNSIGNED_LONG_LONG Word64
@@ -575,28 +518,22 @@
 #define HTYPE_WCHAR_T Int32
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "libraries@haskell.org"
+#define PACKAGE_BUGREPORT "http://github.com/valderman/haste-compiler"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "Haskell base package"
+#define PACKAGE_NAME "Haste base package"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Haskell base package 1.0"
+#define PACKAGE_STRING "Haste base package 1.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "base"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL ""
+#define PACKAGE_URL "http://github.com/valderman/haste-compiler"
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "1.0"
-
-/* The size of `kev.filter', as computed by sizeof. */
-/* #undef SIZEOF_KEV_FILTER */
-
-/* The size of `kev.flags', as computed by sizeof. */
-/* #undef SIZEOF_KEV_FLAGS */
 
 /* The size of `struct MD5Context', as computed by sizeof. */
 #define SIZEOF_STRUCT_MD5CONTEXT 0
@@ -609,3 +546,4 @@
 
 /* Define for large files, on AIX-style hosts. */
 /* #undef _LARGE_FILES */
+
