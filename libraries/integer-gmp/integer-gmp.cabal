@@ -10,11 +10,6 @@ description:
 cabal-version:  >=1.6
 build-type: Simple
 
-extra-source-files:
-  cbits/float.c
-  cbits/alloc.c
-  cbits/longlong.c
-
 source-repository head
     type:     git
     location: http://darcs.haskell.org/packages/integer-gmp.git/
@@ -29,7 +24,6 @@ Library {
     other-modules: GHC.Integer.Type
     extensions: CPP, MagicHash, UnboxedTuples, NoImplicitPrelude,
                 ForeignFunctionInterface, UnliftedFFITypes
-    c-sources: cbits/cbits.c
     -- We need to set the package name to integer-gmp
     -- (without a version number) as it's magic.
     ghc-options: -package-name integer-gmp
