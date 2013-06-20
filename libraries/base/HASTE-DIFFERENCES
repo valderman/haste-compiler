@@ -1,6 +1,10 @@
 This is a slightly hacked copy of base from GHC 7.6.3.
 This file sums up the differences.
 
+* Change type size defs to what's normal for a 32 bit platform.
+  (include/HsBaseConfig.h)
+* Undef some platform specific stuff.
+  (include/*)
 * Implement Data.Typeable fingerprinting in Haskell/JS rather than C.
   (GHC.Fingerprint, GHC.IntWord64)
 * Added module with Haste primitives. (GHC.HastePrim)
@@ -12,3 +16,4 @@ This file sums up the differences.
   be fixed. (Numeric)
 * Implement fromRational in JS, and get rid of its old helpers. (GHC.Float)
 * Remove the C bits.
+* Stub out GHC.Event.EPoll/KQueue.
