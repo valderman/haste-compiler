@@ -4,7 +4,7 @@
              DeriveGeneric #-}
 -- | Abstract syntax for the Javascript constructs needed to generate JS from
 --   Core.
-module CodeGen.Javascript.AST (
+module Haste.AST (
   JVar (..), JSVar (..), JName (..), JSName (..), JSStmt (..), JSAlt (..),
   JSExp (..), JSLit (..), JSOp (..), JSMod (..), JSLabel, opPrec, expPrec,
   lit, litN, defTag, defState, foreignModule, qualifiedName, bogusJSVar) where

@@ -69,21 +69,21 @@ Executable hastec
         Args
         ArgSpecs
         Version
-        CodeGen.Javascript
-        CodeGen.Javascript.Config
-        CodeGen.Javascript.AST
-        CodeGen.Javascript.Monad
-        CodeGen.Javascript.StgGen
-        CodeGen.Javascript.Optimize
-        CodeGen.Javascript.PrintJS
-        CodeGen.Javascript.PrettyM
-        CodeGen.Javascript.PrimOps
-        CodeGen.Javascript.Module
-        CodeGen.Javascript.Linker
-        CodeGen.Javascript.Builtins
-        CodeGen.Javascript.Errors
-        CodeGen.Javascript.Traverse
-        CodeGen.Javascript.Replace
+        Haste
+        Haste.Config
+        Haste.AST
+        Haste.Monad
+        Haste.StgGen
+        Haste.Optimize
+        Haste.PrintJS
+        Haste.PrettyM
+        Haste.PrimOps
+        Haste.Module
+        Haste.Linker
+        Haste.Builtins
+        Haste.Errors
+        Haste.Traverse
+        Haste.Replace
     default-language: Haskell98
 
 Executable hastecat

@@ -1,8 +1,8 @@
 -- | All of hastec's command line arguments.
 module ArgSpecs (argSpecs) where
 import Args
-import CodeGen.Javascript.Config
-import CodeGen.Javascript
+import Haste.Config
+import Haste
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [

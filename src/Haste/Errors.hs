@@ -1,10 +1,10 @@
 -- | Functions for warning about and causing runtime errors.
-module CodeGen.Javascript.Errors (runtimeError, warn, WarnLevel(..)) where
+module Haste.Errors (runtimeError, warn, WarnLevel(..)) where
 import System.IO.Unsafe
 import System.IO
-import CodeGen.Javascript.AST
-import CodeGen.Javascript.Monad
-import CodeGen.Javascript.Config
+import Haste.AST
+import Haste.Monad
+import Haste.Config
 
 data WarnLevel = Normal | Verbose deriving Eq
 

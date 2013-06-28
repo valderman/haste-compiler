@@ -1,9 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
-module CodeGen.Javascript.Linker (link) where
-import CodeGen.Javascript.Config
-import CodeGen.Javascript.AST
-import CodeGen.Javascript.PrintJS
-import CodeGen.Javascript.Module
+module Haste.Linker (link) where
+import Haste.Config
+import Haste.AST
+import Haste.PrintJS
+import Haste.Module
 import Bag
 import qualified Data.Map as M
 import qualified Data.Set as S

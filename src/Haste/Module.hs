@@ -1,8 +1,8 @@
 -- | Read and write JSMods.
-module CodeGen.Javascript.Module (writeModule, readModule) where
+module Haste.Module (writeModule, readModule) where
 import Module (moduleNameSlashes)
 import qualified Data.ByteString as B
-import CodeGen.Javascript.AST
+import Haste.AST
 import System.FilePath
 import System.Directory
 import Control.Applicative

@@ -1,10 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
-module CodeGen.Javascript.Monad (
+module Haste.Monad (
   JSGen, genJS, emit, dependOn, getModName, pushBinding, popBinding,
   getCurrentBinding, getCurrentBindingArgs, isolate, addLocal, getCfg) where
 import Control.Monad.State
 import Bag
-import CodeGen.Javascript.AST hiding (code, deps)
+import Haste.AST hiding (code, deps)
 import qualified Data.Set as S
 import Control.Applicative
 import GhcPlugins (Var)

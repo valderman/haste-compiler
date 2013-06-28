@@ -1,9 +1,9 @@
-module CodeGen.Javascript.Config (
+module Haste.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startASAP,
   startOnLoadComplete, appName, sysLibPath, hastePath, fastMultiply,
   safeMultiply) where
-import CodeGen.Javascript.PrettyM (PrettyOpts, compact)
-import CodeGen.Javascript.AST
+import Haste.PrettyM (PrettyOpts, compact)
+import Haste.AST
 import System.IO.Unsafe (unsafePerformIO)
 import System.Directory
 import System.FilePath (combine, replaceExtension)

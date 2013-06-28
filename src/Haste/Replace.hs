@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-module CodeGen.Javascript.Replace (Replace (..), repNothing, repVars,
+module Haste.Replace (Replace (..), repNothing, repVars,
                                    repVarsLHS, replace) where
-import CodeGen.Javascript.AST as AST
+import Haste.AST as AST
 
 -- | Interface for functions that replace a node in the AST with another.
 data Replace = Replace {

@@ -1,5 +1,5 @@
 -- | Misc. utility functions.
-module CodeGen.Javascript.Util where
+module Haste.Util where
 import DynFlags
 import Outputable
 

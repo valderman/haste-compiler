@@ -1,8 +1,8 @@
 -- | Transformations purely on the JS AST, generally in the interest of
 --   producing smaller, faster or more readable code.
-module CodeGen.Javascript.Optimize (optCase, optApp) where
-import CodeGen.Javascript.AST as AST
-import CodeGen.Javascript.Monad
+module Haste.Optimize (optCase, optApp) where
+import Haste.AST as AST
+import Haste.Monad
 
 -- | Generate an optimized switch statement. For a wonder, this code is almost
 --   always MORE readable than its unoptimized equivalent.

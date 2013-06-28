@@ -1,7 +1,7 @@
 -- | Various functions generated as builtins
-module CodeGen.Javascript.Builtins (toBuiltin) where
+module Haste.Builtins (toBuiltin) where
 import GhcPlugins as P
-import CodeGen.Javascript.AST as AST
+import Haste.AST as AST
 import Control.Applicative
 
 toBuiltin :: P.Var -> Maybe JSVar

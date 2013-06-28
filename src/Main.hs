@@ -11,7 +11,7 @@ import HscTypes
 import GhcMonad
 import System.Environment (getArgs)
 import Control.Monad (when)
-import CodeGen.Javascript
+import Haste
 import Args
 import ArgSpecs
 import System.FilePath (addExtension)

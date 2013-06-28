@@ -1,8 +1,8 @@
 -- | jspcat - print the contents of a JSMod intermediate file.
 module Main where
 import System.Environment (getArgs)
-import CodeGen.Javascript
-import CodeGen.Javascript.AST (bogusJSVar)
+import Haste
+import Haste.AST (bogusJSVar)
 
 main = do
   as <- getArgs

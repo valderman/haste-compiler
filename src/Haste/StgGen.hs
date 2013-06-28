@@ -1,5 +1,5 @@
 {-# LANGUAGE PatternGuards, ParallelListComp #-}
-module CodeGen.Javascript.StgGen (generate) where
+module Haste.StgGen (generate) where
 import Prelude
 import BasicTypes
 import StgSyn
@@ -22,18 +22,18 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Monad
 import Control.Applicative
-import CodeGen.Javascript.AST as AST hiding (unique, name, deps, code)
-import qualified CodeGen.Javascript.AST as AST (name, deps, code)
-import CodeGen.Javascript.Monad
-import CodeGen.Javascript.PrintJS
-import CodeGen.Javascript.Builtins
-import CodeGen.Javascript.PrimOps
-import CodeGen.Javascript.Optimize
-import CodeGen.Javascript.Errors
-import CodeGen.Javascript.Config
-import CodeGen.Javascript.Replace
-import CodeGen.Javascript.Traverse
-import CodeGen.Javascript.Util
+import Haste.AST as AST hiding (unique, name, deps, code)
+import qualified Haste.AST as AST (name, deps, code)
+import Haste.Monad
+import Haste.PrintJS
+import Haste.Builtins
+import Haste.PrimOps
+import Haste.Optimize
+import Haste.Errors
+import Haste.Config
+import Haste.Replace
+import Haste.Traverse
+import Haste.Util
 import Data.Int
 import Data.Char (ord, chr)
 import Data.Word
@@ -95,7 +95,7 @@ genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
   v' <- genVar v
   when (not onTopLevel) $ do
     addLocal v'
-  let shouldTailLoop = maybe 1 id funsInRecGroup <= 1 && tailRecursive v rhs
+  let shouldTailLoop = tailRecursive v rhs
   expr <- genRhs shouldTailLoop (isJust funsInRecGroup) rhs
   emit $ NewVar (AST.Var v') expr
   popBinding

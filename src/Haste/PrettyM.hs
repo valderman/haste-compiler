@@ -3,9 +3,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | JS AST pretty printing monad.
-module CodeGen.Javascript.PrettyM where
+module Haste.PrettyM where
 import qualified Data.Map as M
-import CodeGen.Javascript.AST as AST
+import Haste.AST as AST
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.State

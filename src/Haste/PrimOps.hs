@@ -1,8 +1,8 @@
-module CodeGen.Javascript.PrimOps (genOp) where
+module Haste.PrimOps (genOp) where
 import PrimOp
-import CodeGen.Javascript.AST as AST
-import CodeGen.Javascript.Config
-import CodeGen.Javascript.Util
+import Haste.AST as AST
+import Haste.Config
+import Haste.Util
 
 -- | Generate primops.
 --   Many of these ops return lifted Bool values; however, no thunk is

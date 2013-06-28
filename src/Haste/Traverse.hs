@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleInstances, BangPatterns #-}
 -- | Monad for traversing the JS AST. The monad is strict in its accumulator
 --   and result type.
-module CodeGen.Javascript.Traverse (traverse, traverseToMaybe, ASTNode (..),
-                                    Traverse (..), ASTType (..), done,
-                                    stop) where
+module Haste.Traverse (traverse, traverseToMaybe, ASTNode (..),
+                       Traverse (..), ASTType (..), done,
+                       stop) where
 import Data.List
 import Control.Monad
-import CodeGen.Javascript.AST as AST
+import Haste.AST as AST
 
 data Traverse t a  = Done !t | Next !a | Stop deriving Show
 
@@ -130,5 +130,5 @@ instance ASTType JSAlt where
     f (Alt x) acc >>= allTopDown f branch
 
 instance ASTType JSVar where
-  wrap = CodeGen.Javascript.Traverse.Var
-  topDown f x acc = f (CodeGen.Javascript.Traverse.Var x) acc
+  wrap = Haste.Traverse.Var
+  topDown f x acc = f (Haste.Traverse.Var x) acc
