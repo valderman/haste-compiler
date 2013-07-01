@@ -38,8 +38,6 @@ import Haste.Errors
 import Haste.PrimOps
 import Haste.Builtins
 
-import Debug.Trace
-
 generate :: Config -> ModuleName -> [StgBinding] -> J.Module
 generate cfg modname binds =
   Module {
@@ -55,10 +53,11 @@ generate cfg modname binds =
     insFun m _ =
       m
 
+    -- TODO: perhaps do dependency-based linking for externals as well?
     insDep m (ds, AST (Assign (NewVar (Internal v _)) _ _) _) =
       M.insert v (S.delete v ds) m
-    insDep m (_, stm) =
-      trace ("insDep: " ++ show stm) m
+    insDep m _ =
+      m
 
 -- | Generate JS AST for bindings.
 genAST :: Config -> ModuleName -> [StgBinding] -> [(S.Set J.Name, AST Stm)]
@@ -213,8 +212,10 @@ genCase t ex scrut alts = do
       alts' <- mapM (genAlt scrut' res) otherAlts
       -- Use the ternary operator where possible.
       case tryTernary scrutinee (varExp res) defAlt' alts' of
---        Just ifEx -> do
---          return ifEx
+        Just ifEx -> do
+          continue $ newVar scrut' ex'
+          continue $ newVar res ifEx
+          return (varExp res)
         _ -> do
           continue $ newVar scrut' ex'
           continue $ case_ scrutinee defAlt' alts'

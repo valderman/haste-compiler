@@ -50,10 +50,12 @@ instance Pretty Exp where
        else "!" .+. pp ex
   pp (BinOp op a b) =
     opParens op a b
-  pp (Fun args body) = do
-    "function(" .+. ppList "," args .+. "){\n"
-    indent $ pp body
-    ind .+. "}"
+  pp (Fun mname args body) = do
+      "function" .+. lambdaname .+. "(" .+. ppList "," args .+. "){\n"
+      indent $ pp body
+      ind .+. "}"
+    where
+      lambdaname = maybe "" (\n -> " " .+. pp n) mname
   pp (Call _ call f args) = do
     case call of
       Normal   -> "A(" .+. pp f .+. ",[" .+. ppList "," args .+. "])"

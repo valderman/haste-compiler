@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternGuards #-}
 -- | Optimizations over the JSTarget AST.
 module Data.JSTarget.Optimize (
     optimizeCase, optimizeFun, tryTernary
@@ -7,8 +8,6 @@ import Data.JSTarget.Op
 import Data.JSTarget.Traversal
 import Control.Applicative
 import Data.List (foldl')
-
-import Debug.Trace
 
 optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ex js) =
@@ -40,18 +39,11 @@ tryTernary scrut retEx def [(m, alt)] =
       alt'' <- inlineAssignsLocal $ astCode alt'
       case (def'', alt'') of
         (Return el, Return th) ->
-          return $ Just $ IfEx (optEquality (astCode scrut) (astCode m)) th el
+          return $ Just $ IfEx (BinOp Eq (astCode scrut) (astCode m)) th el
         _ ->
           return Nothing
 tryTernary _ _ _ _ =
   Nothing
-
--- | Simplify certain equality expressions.
-optEquality :: Exp -> Exp -> Exp
-optEquality scrutinee (Lit (LBool True))  = scrutinee
-optEquality scrutinee (Lit (LBool False)) = Not scrutinee
-optEquality scrutinee (Lit (LNum 0))      = Not scrutinee
-optEquality scrutinee comparator          = BinOp Eq scrutinee comparator
 
 -- | How many times does an expression satisfying the given predicate occur in
 --   an AST (including jumps)?
@@ -72,7 +64,7 @@ occurrences tr p ast =
 --   State# RealWorld.
 replaceEx :: JSTrav ast => Exp -> Exp -> ast -> TravM ast
 replaceEx old new =
-  mapJS (not <$> isShared) (\x -> if x == old then trace ("byter " ++ show old ++ " mot " ++ show new) $ pure new else pure x) pure
+  mapJS (not <$> isShared) (\x -> if x == old then pure new else pure x) pure
 
 -- | Inline assignments where the assignee is only ever used once.
 --   Does not inline anything into a shared code path, as that would break
@@ -101,16 +93,29 @@ inlineAssigns ast = do
 -- | Like `inlineAssigns`, but doesn't care what happens beyond a jump.
 inlineAssignsLocal :: JSTrav ast => ast -> TravM ast
 inlineAssignsLocal ast = do
-    mapJS (not <$> isShared) return inl ast
+    mapJS (\n -> not (isLambda n || isShared n)) return inl ast
   where
     varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
     varOccurs _ _                  = False
     inl keep@(Assign (NewVar lhs) ex next) = do
-      occurs <- occurrences (not <$> isShared) (varOccurs lhs) next
-      case occurs of
-        Never -> return next
-        Once  -> replaceEx (Var lhs) ex next
-        Lots  -> return keep
+      occurs <- occurrences (const True) (varOccurs lhs) next
+      occurs' <- occurrences (const True) (varOccurs lhs) ex
+      case occurs + occurs' of
+        Never ->
+          -- completely unnecessary - remove
+          return next
+        Once ->
+          -- can't be recursive - inline
+          replaceEx (Var lhs) ex next
+        Lots | Fun Nothing vs body <- ex,
+               occurs < Lots,
+               Internal lhsname _ <- lhs ->
+          -- only occurs at most once outside, so replace with named lambda
+          -- since the binding is only relevant for recursion!
+          replaceEx (Var lhs) (Fun (Just lhsname) vs body) next
+        _ ->
+          -- Really nothing to be done here.
+          return keep
     inl stm = return stm
 
 -- | Turn sequences like `v0 = foo; v1 = v0; v2 = v1; return v2;` into a
@@ -176,7 +181,7 @@ shrinkCase =
 --     }
 --   }
 tailLoopify :: Var -> Exp -> TravM Exp
-tailLoopify f fun@(Fun args body) = do
+tailLoopify f fun@(Fun mname args body) = do
     tailrecs <- occurrences (not <$> isLambda) isTailRec body
     if tailrecs > Never
       then do
@@ -186,7 +191,7 @@ tailLoopify f fun@(Fun args body) = do
             return fun -- TODO: add optimization here as well!
           False -> do
             body' <- mapJS (not <$> isLambda) pure replaceByAssign body
-            return $ Fun args (Forever body')
+            return $ Fun mname args (Forever body')
       else do
         return fun
   where
@@ -195,8 +200,8 @@ tailLoopify f fun@(Fun args body) = do
     
     -- Only traverse until we find a closure
     createsClosures = foldJS (\acc _ -> not acc) isClosure False
-    isClosure _ (Exp (Fun _ _)) = pure True
-    isClosure acc _             = pure acc
+    isClosure _ (Exp (Fun _ _ _)) = pure True
+    isClosure acc _               = pure acc
 
     -- Assign any changed vars, then loop.
     replaceByAssign (Return (Call _ _ (Var f') args')) | f == f' = do

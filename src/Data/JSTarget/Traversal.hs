@@ -64,7 +64,7 @@ instance JSTrav Exp where
                  l@(Lit _)      -> pure l
                  Not ex         -> Not <$> mapEx ex
                  BinOp op a b   -> BinOp op <$> mapEx a <*> mapEx b
-                 Fun vs stm     -> Fun vs <$> mapJS tr fe fs stm
+                 Fun nam vs stm -> Fun nam vs <$> mapJS tr fe fs stm
                  Call ar c f xs -> Call ar c <$> mapEx f <*> mapJS tr fe fs xs
                  Index arr ix   -> Index <$> mapEx arr <*> mapEx ix
                  Arr exs        -> Arr <$> mapM mapEx exs
@@ -90,7 +90,7 @@ instance JSTrav Exp where
                   BinOp _ a b  -> do
                     acc' <- foldJS tr f acc a
                     foldJS tr f acc' b
-                  Fun _ stm    -> do
+                  Fun _ _ stm    -> do
                     foldJS tr f acc stm
                   Call _ _ fun xs -> do
                     acc' <- foldJS tr f acc fun
@@ -200,19 +200,22 @@ instance (JSTrav a, JSTrav b) => JSTrav (Either a b) where
 
 class Pred a where
   (.|.) :: a -> a -> a
+  (.&.) :: a -> a -> a
 
 instance Pred (a -> Bool) where
   p .|. q = \x -> p x || q x
+  p .&. q = \x -> p x && q x
 
 instance Pred (a -> b -> Bool) where
   p .|. q = \a b -> p a b || q a b
+  p .&. q = \a b -> p a b && q a b
 
 isShared :: ASTNode -> Bool
 isShared (Label _) = True
 isShared _         = False
 
 isLambda :: ASTNode -> Bool
-isLambda (Exp (Fun _ _)) = True
+isLambda (Exp (Fun _ _ _)) = True
 isLambda _               = False
 
 -- | Counts occurrences. Use ints or something for a more exact count.

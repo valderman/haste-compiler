@@ -61,7 +61,7 @@ data Exp where
   Lit      :: Lit -> Exp
   Not      :: Exp -> Exp
   BinOp    :: BinOp -> Exp -> Exp -> Exp
-  Fun      :: [Var] -> Stm -> Exp
+  Fun      :: Maybe Name -> [Var] -> Stm -> Exp
   Call     :: Arity -> Call -> Exp -> [Exp] -> Exp
   Index    :: Exp -> Exp -> Exp
   Arr      :: [Exp] -> Exp

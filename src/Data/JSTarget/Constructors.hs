@@ -84,7 +84,7 @@ foldApp ex =
 
 -- | Create a thunk.
 thunk :: AST Stm -> AST Exp
-thunk stm = callForeign "T" [Fun [] <$> stm]
+thunk stm = callForeign "T" [Fun Nothing [] <$> stm]
 
 -- | Evaluate an expression that may or may not be a thunk.
 eval :: AST Exp -> AST Exp
@@ -104,7 +104,7 @@ index arr ix = Index <$> arr <*> ix
 
 -- | Create a function.
 fun :: [Var] -> AST Stm -> AST Exp
-fun args = fmap (Fun args)
+fun args = fmap (Fun Nothing args)
 
 -- | Create an array of expressions.
 array :: [AST Exp] -> AST Exp
