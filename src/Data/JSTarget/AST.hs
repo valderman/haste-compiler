@@ -3,9 +3,10 @@ module Data.JSTarget.AST where
 import qualified Data.Set as S
 import qualified Data.Map as M
 import System.IO.Unsafe
+import System.Random (randomIO)
 import Data.IORef
+import Data.Word
 import Control.Applicative
-import Control.Monad (ap)
 import Data.JSTarget.Op
 
 type Arity = Int
@@ -13,17 +14,24 @@ type Comment = String
 
 newtype Shared a = Shared Lbl deriving (Eq, Show)
 
-newtype Name = Name Int deriving (Enum, Eq, Ord, Show)
+data Name = Name String (Maybe String) deriving (Eq, Ord, Show)
 
-zeroName :: Name
-zeroName = Name 0
+class HasModule a where
+  moduleOf :: a -> Maybe String
+
+instance HasModule Name where
+  moduleOf (Name _ mmod) = mmod
+
+instance HasModule Var where
+  moduleOf (Foreign _)    = Nothing
+  moduleOf (Internal n _) = moduleOf n
 
 -- | Representation of variables. Parametrized because we sometimes want to
 --   disallow foreign vars.
 data Var where
   Foreign  :: String -> Var
   Internal :: Name -> Comment -> Var
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 -- | Left hand side of an assignment. Normally we only assign internal vars,
 --   but for some primops we need to assign array elements as well.
@@ -49,14 +57,16 @@ data Lit where
 
 -- | Expressions. Completely predictable.
 data Exp where
-  Var   :: Var -> Exp
-  Lit   :: Lit -> Exp
-  Not   :: Exp -> Exp
-  BinOp :: BinOp -> Exp -> Exp -> Exp
-  Fun   :: [Var] -> Stm -> Exp
-  Call  :: Arity -> Call -> Exp -> [Exp] -> Exp
-  Index :: Exp -> Exp -> Exp
-  Arr   :: [Exp] -> Exp
+  Var      :: Var -> Exp
+  Lit      :: Lit -> Exp
+  Not      :: Exp -> Exp
+  BinOp    :: BinOp -> Exp -> Exp -> Exp
+  Fun      :: [Var] -> Stm -> Exp
+  Call     :: Arity -> Call -> Exp -> [Exp] -> Exp
+  Index    :: Exp -> Exp -> Exp
+  Arr      :: [Exp] -> Exp
+  AssignEx :: Exp -> Exp -> Exp
+  IfEx     :: Exp -> Exp -> Exp -> Exp
   deriving (Eq, Show)
 
 -- | Statements. The only mildly interesting thing here are the Case and Jump
@@ -68,35 +78,46 @@ data Stm where
   Return  :: Exp -> Stm
   Cont    :: Stm
   Jump    :: Shared Stm -> Stm
+  NullRet :: Stm
   deriving (Eq, Show)
 
--- | Case alternatives - a literal and a branch.
-type Alt = (Lit, Stm)
+-- | Case alternatives - an expression to match and a branch.
+type Alt = (Exp, Stm)
 
 -- | Represents a module. A module has a name, a dependency map of all its
 --   definitions, and a bunch of definitions.
 data Module = Module {
-    name :: String,
-    deps :: M.Map Name (S.Set Name),
-    defs :: M.Map Name Exp
+    modName  :: !String,
+    modDeps  :: !(M.Map Name (S.Set Name)),
+    modDefs  :: !(M.Map Name (AST Exp))
+  }
+
+-- | Imaginary module for foreign code that may need one.
+foreignModule :: Module
+foreignModule = Module {
+    modName  = "",
+    modDeps  = M.empty,
+    modDefs  = M.empty
   }
 
 -- | An AST with local jumps.
-newtype AST a = AST {unAST :: JumpTable -> (a, JumpTable)}
+data AST a = AST {
+    astCode  :: a,
+    astJumps :: JumpTable
+  } deriving (Show, Eq)
 
 instance Functor AST where
-  fmap f (AST ast) = AST $ \m ->
-    case ast m of (x, m') -> (f x, m')
+  fmap f (AST ast js) = AST (f ast) js
 
 instance Applicative AST where
-  pure  = return
-  (<*>) = ap
+  pure = return
+  (AST f js) <*> (AST x js') = AST (f x) (M.union js' js)
 
 instance Monad AST where
-  return x        = AST $ \m -> (x, m)
-  (AST ast) >>= f = AST $ \m ->
-    case ast m of
-      (x, m') -> unAST (f x) m'
+  return x = AST x M.empty
+  (AST ast js) >>= f =
+    case f ast of
+      AST ast' js' -> AST ast' (M.union js' js)
 
 -- | Returns the precedence of the top level operator of the given expression.
 --   Everything that's not an operator has equal precedence, higher than any
@@ -108,37 +129,27 @@ expPrec _              = 1000
 
 type JumpTable = M.Map Lbl Stm
 
-getRef :: Lbl -> AST Stm
-getRef lbl = AST $ \m -> (m M.! lbl, m)
-
-putRef :: Lbl -> Stm -> AST ()
-putRef lbl stm = AST $ \m -> ((), M.insert lbl stm m)
-
--- | Extract all shared code paths from an AST.
-jumps :: AST ast -> JumpTable
-jumps = snd . freeze
-
--- | Extract the actual AST, sans jumps.
-code :: AST ast -> ast
-code = fst . freeze
-
--- | Freeze the AST, producing data that's suitable for reading but a pain to
---   modify.
-freeze :: AST ast -> (ast, JumpTable)
-freeze (AST ast) = ast M.empty
-
--- | Turn a frozen AST back into one that's convenient to modify but slightly
---   less convenient to read.
-unfreeze :: (ast, JumpTable) -> AST ast
-unfreeze = AST . const
-
-newtype Lbl = Lbl Int deriving (Eq, Ord, Show)
+data Lbl = Lbl !Word64 !Word64 deriving (Eq, Ord, Show)
 
 {-# NOINLINE nextLbl #-}
-nextLbl :: IORef Int
+nextLbl :: IORef Word64
 nextLbl = unsafePerformIO $ newIORef 0
 
+{-# NOINLINE lblNamespace #-}
+-- | Namespace for labels, to avoid collisions when combining modules.
+--   We really ought to make this f(package, module) or something, but a random
+--   64 bit unsigned int should suffice.
+lblNamespace :: Word64
+lblNamespace = unsafePerformIO $ randomIO
+
 {-# NOINLINE lblFor #-}
-lblFor :: AST Stm -> Lbl
-lblFor s = unsafePerformIO $ do
-  atomicModifyIORef' nextLbl (\lbl -> (lbl+1, Lbl lbl))
+lblFor :: Stm -> AST Lbl
+lblFor s = do
+    (r, s') <- freshRef
+    AST r (M.singleton r s')
+  where
+    freshRef = return $! unsafePerformIO $! do
+      r <- atomicModifyIORef' nextLbl (\lbl -> (lbl+1, Lbl lblNamespace lbl))
+      -- We need to depend on s, or GHC will hoist us out of lblFor, possibly
+      -- causing circular dependencies between expressions.
+      return (r, s)

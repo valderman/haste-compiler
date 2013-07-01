@@ -2,12 +2,12 @@
 module ArgSpecs (argSpecs) where
 import Args
 import Haste.Config
-import Haste
+import Data.JSTarget.PP (debugPPOpts)
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [
     ArgSpec { optName = "debug",
-              updateCfg = \cfg _ -> cfg {ppOpts  = pretty},
+              updateCfg = \cfg _ -> cfg {ppOpts  = debugPPOpts},
               info = "Output indented, fairly readable code, with all " ++
                      "external names included in comments."},
     ArgSpec { optName = "dont-link",

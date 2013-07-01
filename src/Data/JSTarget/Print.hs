@@ -1,11 +1,10 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleInstances, GADTs, OverloadedStrings #-}
 module Data.JSTarget.Print where
 import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Data.JSTarget.PP as PP
 import Data.ByteString.Lazy.Builder
-import Data.ByteString.Lazy.Builder.ASCII
-import Data.Array
 import Data.Monoid
 import Control.Monad
 
@@ -19,17 +18,7 @@ instance Pretty Var where
       put $ "/* " <> stringUtf8 comment <> " */"
 
 instance Pretty Name where
-  pp (Name 0) =
-      put (string7 "_0")
-  pp (Name n) =
-      put $ go n (char7 '_')
-    where
-      arrLen = 62
-      chars = listArray (0,arrLen-1)
-              $ "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      go 0 acc = acc
-      go n acc = let (rest, ix) = n `quotRem` arrLen 
-                 in go rest (acc <> char7 (chars ! ix))
+  pp name = finalNameFor name >>= put . buildFinalName
 
 instance Pretty LHS where
   pp (NewVar v)  = "var " .+. pp v
@@ -58,7 +47,7 @@ instance Pretty Exp where
   pp (Not ex) =
     if expPrec (Not ex) > expPrec ex 
        then "!(" .+. pp ex .+. ")"
-       else pp ex
+       else "!" .+. pp ex
   pp (BinOp op a b) =
     opParens op a b
   pp (Fun args body) = do
@@ -74,11 +63,15 @@ instance Pretty Exp where
     pp arr .+. "[" .+. pp ix .+. "]"
   pp (Arr exs) = do
     "[" .+. ppList "," exs .+. "]"
+  pp (AssignEx l r) = do
+    pp l .+. "=" .+. pp r
+  pp (IfEx c th el) = do
+    pp c .+. "?" .+. pp th .+. ":" .+. pp el
 
 instance Pretty Stm where
-  pp (Case cond def alts (Shared next)) = do
+  pp (Case cond def alts (Shared nextRef)) = do
     prettyCase cond def alts
-    PP.resolve next >>= pp
+    lookupLabel nextRef >>= pp
   pp (Forever stm) = do
     line "while(1){"
     indent $ pp stm
@@ -93,6 +86,8 @@ instance Pretty Stm where
     -- Jumps are essentially fallthroughs which keep track of their
     -- continuation to make analysis and optimization easier.
     return ()
+  pp (NullRet) = do
+    return ()
 
 -- | Turn eligible case statements into if statements.
 prettyCase :: Exp -> Stm -> [Alt] -> PP ()
@@ -103,11 +98,11 @@ prettyCase cond def [(con, branch)] = do
   indent $ pp def
   line "}"
   where
-    test (LNum 0)      = pp $ Not cond
-    test (LBool True)  = pp cond
-    test (LBool False) = pp $ Not cond
-    test _                   = pp cond .+. "===" .+. pp con
-prettyCase cond def [] = do
+    test (Lit (LBool True))  = pp cond
+    test (Lit (LBool False)) = pp $ Not cond
+    test (Lit (LNum 0))      = pp $ Not cond
+    test _                   = pp cond .+. "==" .+. pp con
+prettyCase _ def [] = do
   pp def
 prettyCase cond def alts = do
   line $ "switch(" .+. pp cond .+. "){"
@@ -125,6 +120,10 @@ instance Pretty Alt where
       "break;"
 
 opParens :: BinOp -> Exp -> Exp -> PP ()
+opParens Sub a (BinOp Sub (Lit (LNum 0)) b) =
+  opParens Add a b
+opParens Sub (Lit (LNum 0)) b =
+  "-" .+. pp b
 opParens op a b =
   parens a >> put (string7 $ show op) >> parens b
   where

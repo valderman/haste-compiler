@@ -54,15 +54,17 @@ Executable hastec
         ghc-prim,
         ghc >= 7.2,
         mtl,
-        cereal,
+        binary,
         containers,
+        data-default,
         bytestring,
         filepath,
         directory,
         array,
         ghc-paths,
         process,
-        unix
+        unix,
+        random
     Main-Is:
         Main.hs
     Other-Modules:
@@ -71,35 +73,21 @@ Executable hastec
         Version
         Haste
         Haste.Config
-        Haste.AST
         Haste.Monad
-        Haste.StgGen
-        Haste.Optimize
-        Haste.PrintJS
-        Haste.PrettyM
         Haste.PrimOps
         Haste.Module
         Haste.Linker
         Haste.Builtins
         Haste.Errors
-        Haste.Traverse
-        Haste.Replace
-    default-language: Haskell98
-
-Executable hastecat
-    Main-Is: jspcat.hs
-    Hs-Source-Dirs: src
-    Build-Depends:
-        base,
-        cereal,
-        ghc-prim,
-        ghc,
-        containers,
-        filepath,
-        directory,
-        bytestring,
-        mtl,
-        array
+        Data.JSTarget
+        Data.JSTarget.AST
+        Data.JSTarget.Binary
+        Data.JSTarget.Constructors
+        Data.JSTarget.Op
+        Data.JSTarget.Optimize
+        Data.JSTarget.PP
+        Data.JSTarget.Print
+        Data.JSTarget.Traversal
     default-language: Haskell98
 
 Executable haste-inst

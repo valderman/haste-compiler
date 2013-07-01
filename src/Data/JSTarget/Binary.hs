@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Binary instances for JSTarget types.
 module Data.JSTarget.Binary () where
 import Prelude hiding (LT, GT)
@@ -6,6 +7,10 @@ import Data.Array
 import Control.Applicative
 import Data.JSTarget.AST
 import Data.JSTarget.Op
+
+instance Binary a => Binary (AST a) where
+  put (AST x jumps) = put x >> put jumps
+  get = AST <$> get <*> get
 
 instance Binary Module where
   put (Module name deps defs) = put name >> put deps >> put defs
@@ -50,6 +55,8 @@ instance Binary Exp where
   put (Call a c f xs) = putWord8 5 >> put a >> put c >> put f >> put xs
   put (Index arr ix)  = putWord8 6 >> put arr >> put ix
   put (Arr exs)       = putWord8 7 >> put exs
+  put (AssignEx l r)  = putWord8 8 >> put l >> put r
+  put (IfEx c th el)  = putWord8 9 >> put c >> put th >> put el
   
   get = do
     tag <- getWord8
@@ -62,6 +69,9 @@ instance Binary Exp where
       5 -> Call <$> get <*> get <*> get <*> get
       6 -> Index <$> get <*> get
       7 -> Arr <$> get
+      8 -> AssignEx <$> get <*> get
+      9 -> IfEx <$> get <*> get <*> get
+      n -> error $ "Bad tag in get :: Get Exp: " ++ show n
 
 instance Binary Stm where
   put (Case e def alts next) =
@@ -76,6 +86,8 @@ instance Binary Stm where
     putWord8 4
   put (Jump j) =
     putWord8 5 >> put j
+  put (NullRet) =
+    putWord8 6
   
   get = do
     tag <- getWord8
@@ -86,6 +98,8 @@ instance Binary Stm where
       3 -> Return <$> get
       4 -> pure Cont
       5 -> Jump <$> get
+      6 -> pure NullRet
+      n -> error $ "Bad tag in get :: Get Stm: " ++ show n
 
 instance Binary BinOp where
   put Add    = putWord8 0
@@ -111,21 +125,21 @@ instance Binary BinOp where
   get = (opTbl !) <$> getWord8
 
 instance Binary Name where
-  put (Name s) = put s
-  get = Name <$> get
+  put (Name name owner) = put name >> put owner
+  get = Name <$> get <*> get
 
 instance Binary a => Binary (Shared a) where
   put (Shared lbl) = put lbl
   get = Shared <$> get
 
 instance Binary Lbl where
-  put (Lbl lbl) = put lbl
-  get = Lbl <$> get
+  put (Lbl namespace lbl) = put namespace >> put lbl
+  get = Lbl <$> get <*> get
 
 opTbl :: Array Word8 BinOp
 opTbl =
-    listArray (0, arrLen-1) elems
+    listArray (0, arrLen-1) es
   where
-    arrLen = fromIntegral $ length elems
-    elems = [Add, Mul, Sub, Div, Mod, And, Or, Eq, Neq, LT, GT,
-             LTE, GTE, Shl, ShrL, ShrA, BitAnd, BitOr, BitXor]
+    arrLen = fromIntegral $ length es
+    es = [Add, Mul, Sub, Div, Mod, And, Or, Eq, Neq, LT, GT,
+          LTE, GTE, Shl, ShrL, ShrA, BitAnd, BitOr, BitXor]

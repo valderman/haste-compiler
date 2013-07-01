@@ -1,6 +1,6 @@
 -- | Optimizations over the JSTarget AST.
 module Data.JSTarget.Optimize (
-    inlineAssigns, inlineReturns, shrinkCase, tailLoopify
+    optimizeCase, optimizeFun, tryTernary
   ) where
 import Data.JSTarget.AST
 import Data.JSTarget.Op
@@ -8,34 +8,105 @@ import Data.JSTarget.Traversal
 import Control.Applicative
 import Data.List (foldl')
 
+import Debug.Trace
+
+optimizeFun :: Var -> AST Exp -> AST Exp
+optimizeFun f (AST ex js) =
+  runTravM (tailLoopify f ex) js
+
+optimizeCase :: JSTrav ast => AST ast -> AST ast
+optimizeCase (AST ast js) =
+  runTravM (shrinkCase ast >>= inlineReturns >>= inlineAssigns) js
+
+-- | Attempt to turn two case branches into a ternary operator expression.
+tryTernary :: AST Exp
+           -> AST Exp
+           -> (AST Stm -> AST Stm)
+           -> [(AST Exp, AST Stm -> AST Stm)]
+           -> Maybe (AST Exp)
+tryTernary scrut retEx def [(m, alt)] =
+    case runTravM opt allJumps of
+      AST (Just ex) js -> Just (AST ex js)
+      _                -> Nothing
+  where
+    def' = def $ Return <$> retEx
+    alt' = alt $ Return <$> retEx
+    AST _ allJumps = scrut >> m >> def' >> alt'
+    opt = do
+      -- Make sure the return expression is used somewhere, then cut away all
+      -- useless assignments. If what's left is a single Return statement,
+      -- we have a pure expression suitable for use with ?:.
+      def'' <- inlineAssignsLocal $ astCode def'
+      alt'' <- inlineAssignsLocal $ astCode alt'
+      case (def'', alt'') of
+        (Return el, Return th) ->
+          return $ Just $ IfEx (optEquality (astCode scrut) (astCode m)) th el
+        _ ->
+          return Nothing
+tryTernary _ _ _ _ =
+  Nothing
+
+-- | Simplify certain equality expressions.
+optEquality :: Exp -> Exp -> Exp
+optEquality scrutinee (Lit (LBool True))  = scrutinee
+optEquality scrutinee (Lit (LBool False)) = Not scrutinee
+optEquality scrutinee (Lit (LNum 0))      = Not scrutinee
+optEquality scrutinee comparator          = BinOp Eq scrutinee comparator
+
 -- | How many times does an expression satisfying the given predicate occur in
 --   an AST (including jumps)?
-occurrences :: JSTrav ast => (ASTNode -> Bool) -> ast -> AST Occs
-occurrences p ast =
+occurrences :: JSTrav ast
+            => (ASTNode -> Bool)
+            -> (ASTNode -> Bool)
+            -> ast
+            -> TravM Occs
+occurrences tr p ast =
     foldJS trav count Never ast
   where
-    trav n _ = n < Lots -- Stop traversal if we're already >1.
-    count n ast | p ast = pure $ n + Once
-    count n _           = pure n
+    trav n node = tr node && n < Lots -- Stop traversal if we're already >1.
+    count n node | p node = pure $ n + Once
+    count n _             = pure n
 
 -- | Replace all occurrences of an expression, without entering shared code
 --   paths. IO ordering is preserved even when entering lambdas thanks to
 --   State# RealWorld.
-replaceEx :: JSTrav ast => Exp -> Exp -> ast -> AST ast
+replaceEx :: JSTrav ast => Exp -> Exp -> ast -> TravM ast
 replaceEx old new =
-  mapJS (not <$> isShared) (\x -> if x == old then pure new else pure x) pure
+  mapJS (not <$> isShared) (\x -> if x == old then trace ("byter " ++ show old ++ " mot " ++ show new) $ pure new else pure x) pure
 
 -- | Inline assignments where the assignee is only ever used once.
 --   Does not inline anything into a shared code path, as that would break
 --   things horribly.
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
-inlineAssigns :: JSTrav ast => ast -> AST ast
+inlineAssigns :: JSTrav ast => ast -> TravM ast
 inlineAssigns ast = do
     mapJS (const True) return inl ast
   where
+    always = const True
+    noJump = not <$> isShared
+    varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
+    varOccurs _ _                  = False
     inl keep@(Assign (NewVar lhs) ex next) = do
-      occurs <- occurrences (\(Exp (Var lhs')) -> lhs == lhs') next
+      occurs <- occurrences always (varOccurs lhs) next
+      occursLocal <- occurrences noJump (varOccurs lhs) next
+      if occurs == occursLocal
+        then case occurs of
+          Never -> replaceEx (Var lhs) ex next -- return next
+          Once  -> replaceEx (Var lhs) ex next
+          Lots  -> return keep
+        else return keep
+    inl stm = return stm
+
+-- | Like `inlineAssigns`, but doesn't care what happens beyond a jump.
+inlineAssignsLocal :: JSTrav ast => ast -> TravM ast
+inlineAssignsLocal ast = do
+    mapJS (not <$> isShared) return inl ast
+  where
+    varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
+    varOccurs _ _                  = False
+    inl keep@(Assign (NewVar lhs) ex next) = do
+      occurs <- occurrences (not <$> isShared) (varOccurs lhs) next
       case occurs of
         Never -> return next
         Once  -> replaceEx (Var lhs) ex next
@@ -46,33 +117,39 @@ inlineAssigns ast = do
 --   straightforward `return foo;`.
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
-inlineReturns :: JSTrav ast => ast -> AST ast
+inlineReturns :: JSTrav ast => ast -> TravM ast
 inlineReturns ast = do
     mapJS (const True) return inl ast
   where
     inl keep@(Assign (NewVar lhs) ex next) = do
       unchanged <- straightReturnPath (Var lhs) next
       if unchanged
-        then return $ Return ex
+        then replaceNullReturn (Return ex) next >> return (Return ex)
         else return keep
     inl stm = return stm
+
+    replaceNullReturn r = mapJS (const True) return (rep r)
+    rep r stm | stm == r = return NullRet
+    rep _ stm            = return stm
 
 -- | Is the given expression passed to a Return node unchanged
 --   (modulo new name assignments)? If it is, we can get rid of the extra
 --   assignments and return it right away.
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
-straightReturnPath :: Exp -> Stm -> AST Bool
+straightReturnPath :: Exp -> Stm -> TravM Bool
 straightReturnPath x (Return x') = do
   return $ x == x'
 straightReturnPath x (Jump (Shared lbl)) = do
   getRef lbl >>= straightReturnPath x
 straightReturnPath x (Assign (NewVar lhs) x' next) | x == x' = do
   straightReturnPath (Var lhs) next
+straightReturnPath _ _ =
+  return False
 
 -- | Inline all occurrences of the given shared code path.
 --   Use with caution - preferrably not at all!
-inlineShared :: JSTrav ast => Lbl -> ast -> AST ast
+inlineShared :: JSTrav ast => Lbl -> ast -> TravM ast
 inlineShared lbl =
     mapJS (not <$> isShared) pure inl
   where
@@ -80,11 +157,11 @@ inlineShared lbl =
     inl s                                  = pure s
 
 -- | Shrink case statements as much as possible.
-shrinkCase :: JSTrav ast => ast -> AST ast
+shrinkCase :: JSTrav ast => ast -> TravM ast
 shrinkCase =
     mapJS (const True) pure shrink
   where
-    shrink (Case cond def [] next@(Shared lbl))
+    shrink (Case _ def [] next@(Shared lbl))
       | def == Jump next = getRef lbl
       | otherwise        = inlineShared lbl def
     shrink stm           = return stm
@@ -98,9 +175,9 @@ shrinkCase =
 --       })(a', b', c');
 --     }
 --   }
-tailLoopify :: Var -> Exp -> AST Exp
+tailLoopify :: Var -> Exp -> TravM Exp
 tailLoopify f fun@(Fun args body) = do
-    tailrecs <- occurrences isTailRec body
+    tailrecs <- occurrences (not <$> isLambda) isTailRec body
     if tailrecs > Never
       then do
         needToCopy <- createsClosures body
@@ -124,6 +201,8 @@ tailLoopify f fun@(Fun args body) = do
     -- Assign any changed vars, then loop.
     replaceByAssign (Return (Call _ _ (Var f') args')) | f == f' = do
       return $ foldl' assignUnlessEqual Cont (zip args args')
+    replaceByAssign stm =
+      return stm
 
     -- Assign an expression to a variable, unless that expression happens to
     -- be the variable itself.
