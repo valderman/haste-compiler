@@ -122,7 +122,9 @@ instance Pretty Alt where
     line $ "case " .+. pp con .+. ":"
     indent $ do
       pp branch
-      "break;"
+      case branch of
+        Return _ -> return ()
+        _        -> line "break;"
 
 opParens :: BinOp -> Exp -> Exp -> PP ()
 opParens Sub a (BinOp Sub (Lit (LNum 0)) b) =
