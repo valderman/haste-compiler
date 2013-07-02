@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
 -- | Optimizations over the JSTarget AST.
 module Data.JSTarget.Optimize (
-    optimizeCase, optimizeFun, tryTernary
+    optimizeFun, tryTernary
   ) where
 import Data.JSTarget.AST
 import Data.JSTarget.Op
@@ -9,13 +9,9 @@ import Data.JSTarget.Traversal
 import Control.Applicative
 import Data.List (foldl')
 
-optimizeFun :: Var -> AST Exp -> AST Exp
-optimizeFun f (AST ex js) =
-  runTravM (tailLoopify f ex) js
-
-optimizeCase :: JSTrav ast => AST ast -> AST ast
-optimizeCase (AST ast js) =
-  runTravM (shrinkCase ast >>= inlineReturns >>= inlineAssigns) js
+optimizeFun :: JSTrav ast => Var -> AST ast -> AST ast
+optimizeFun _ (AST ast js) =
+  runTravM (shrinkCase ast >>= inlineReturns) js -- (inlineAssigns >>= tailLoopify f) js
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: AST Exp
@@ -75,18 +71,22 @@ inlineAssigns :: JSTrav ast => ast -> TravM ast
 inlineAssigns ast = do
     mapJS (const True) return inl ast
   where
-    always = const True
-    noJump = not <$> isShared
     varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
     varOccurs _ _                  = False
     inl keep@(Assign (NewVar lhs) ex next) = do
-      occurs <- occurrences always (varOccurs lhs) next
-      occursLocal <- occurrences noJump (varOccurs lhs) next
-      if occurs == occursLocal
-        then case occurs of
-          Never -> replaceEx (Var lhs) ex next -- return next
-          Once  -> replaceEx (Var lhs) ex next
-          Lots  -> return keep
+      occursRec <- occurrences (const True) (varOccurs lhs) ex
+      occurs <- occurrences (const True) (varOccurs lhs) next
+      occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
+      if occurs == occursLocal && occursRec == Never
+        then case occursRec + occursLocal of
+          Once -> do
+            replaceEx (Var lhs) ex next
+{-          Lots | Fun Nothing vs body <- ex,
+                 occurs < Lots,
+                 Internal lhsname _ <- lhs ->
+            replaceEx (Var lhs) (Fun (Just lhsname) vs body) next -}
+          _ ->
+            return keep
         else return keep
     inl stm = return stm
 

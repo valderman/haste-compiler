@@ -141,7 +141,7 @@ genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
   when (not onTopLevel) $ do
     addLocal v'
   expr <- genRhs (isJust funsInRecGroup) rhs
-  let expr' = {- optimizeFun v' $ optimizeCase -} expr
+  let expr' = optimizeFun v' expr
   continue $ newVar v' expr'
 genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
