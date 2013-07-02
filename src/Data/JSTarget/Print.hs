@@ -21,8 +21,8 @@ instance Pretty Name where
   pp name = finalNameFor name >>= put . buildFinalName
 
 instance Pretty LHS where
-  pp (NewVar v)  = "var " .+. pp v
-  pp (LhsExp ex) = pp ex
+  pp (NewVar _ v) = "var " .+. pp v
+  pp (LhsExp ex)  = pp ex
 
 instance Pretty Lit where
   pp (LNum d)  = put d
@@ -77,8 +77,11 @@ instance Pretty Stm where
   pp (Forever stm) = do
     line "while(1){"
     indent $ pp stm
+    "}"
   pp (Assign lhs ex next) = do
-    line $ pp lhs .+. " = " .+. pp ex .+. ";"
+    if lhs == blackHole
+      then line $ pp ex .+. ";"
+      else line $ pp lhs .+. " = " .+. pp ex .+. ";"
     pp next
   pp (Return ex) = do
     line $ "return " .+. pp ex .+. ";"

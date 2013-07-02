@@ -132,8 +132,8 @@ ret :: AST Exp -> AST Stm
 ret = fmap Return
 
 -- | Create a new var with a new value.
-newVar :: Var -> AST Exp -> AST Stm -> AST Stm
-newVar lhs = liftA2 $ \rhs -> Assign (NewVar lhs) rhs
+newVar :: Reorderable -> Var -> AST Exp -> AST Stm -> AST Stm
+newVar r lhs = liftA2 $ \rhs -> Assign (NewVar r lhs) rhs
 
 -- | Assignment without var.
 assign :: AST Exp -> AST Exp -> AST Stm -> AST Stm

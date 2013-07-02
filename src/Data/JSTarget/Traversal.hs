@@ -177,10 +177,10 @@ instance JSTrav (Exp, Stm) where
     foldJS tr f acc' ex
 
 instance JSTrav LHS where
-  mapJS _ _ _ lhs@(NewVar _)  = return lhs
-  mapJS tr fe fs (LhsExp ex)  = LhsExp <$> mapJS tr fe fs ex
-  foldJS _ _ acc (NewVar _)   = return acc
-  foldJS tr f acc (LhsExp ex) = foldJS tr f acc ex
+  mapJS _ _ _ lhs@(NewVar _ _) = return lhs
+  mapJS tr fe fs (LhsExp ex)   = LhsExp <$> mapJS tr fe fs ex
+  foldJS _ _ acc (NewVar _ _)  = return acc
+  foldJS tr f acc (LhsExp ex)  = foldJS tr f acc ex
 
 instance JSTrav a => JSTrav (Shared a) where
   mapJS tr fe fs sh@(Shared lbl) = do

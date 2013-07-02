@@ -108,7 +108,8 @@ addDef libpath v = do
     -- addDef _definitely_ updates the state, so refresh once again
     st'' <- get
     let  Name comment _ = v
-         defs' = maybe (defs st'')
-                      (\body -> defs st'' . newVar (internalVar v comment) body)
-                      (M.lookup v (modDefs m))
+         defs' =
+           maybe (defs st'')
+                 (\body -> defs st'' . newVar True (internalVar v comment) body)
+                 (M.lookup v (modDefs m))
     put st'' {defs = defs'}

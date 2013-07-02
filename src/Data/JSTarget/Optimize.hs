@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternGuards #-}
 -- | Optimizations over the JSTarget AST.
 module Data.JSTarget.Optimize (
-    optimizeFun, tryTernary
+    optimizeFun, tryTernary, topLevelInline
   ) where
 import Data.JSTarget.AST
 import Data.JSTarget.Op
@@ -9,9 +9,18 @@ import Data.JSTarget.Traversal
 import Control.Applicative
 import Data.List (foldl')
 
-optimizeFun :: JSTrav ast => Var -> AST ast -> AST ast
-optimizeFun _ (AST ast js) =
-  runTravM (shrinkCase ast >>= inlineReturns) js -- (inlineAssigns >>= tailLoopify f) js
+import Debug.Trace
+
+-- TODO: tryTernary may inline calls that would otherwise be in tail position
+--       which is something we'd really like to avoid.
+
+optimizeFun :: Var -> AST Exp -> AST Exp
+optimizeFun f (AST ast js) =
+  flip runTravM js $ do 
+    shrinkCase ast >>= inlineReturns >>= inlineAssigns True
+
+topLevelInline :: AST Stm -> AST Stm
+topLevelInline (AST ast js) = runTravM (inlineAssigns False ast) js
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: AST Exp
@@ -58,33 +67,38 @@ occurrences tr p ast =
 -- | Replace all occurrences of an expression, without entering shared code
 --   paths. IO ordering is preserved even when entering lambdas thanks to
 --   State# RealWorld.
-replaceEx :: JSTrav ast => Exp -> Exp -> ast -> TravM ast
-replaceEx old new =
-  mapJS (not <$> isShared) (\x -> if x == old then pure new else pure x) pure
+replaceEx :: JSTrav ast => (ASTNode -> Bool) -> Exp -> Exp -> ast -> TravM ast
+replaceEx trav old new =
+  mapJS trav (\x -> if x == old then pure new else pure x) pure
 
 -- | Inline assignments where the assignee is only ever used once.
 --   Does not inline anything into a shared code path, as that would break
 --   things horribly.
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
-inlineAssigns :: JSTrav ast => ast -> TravM ast
-inlineAssigns ast = do
+inlineAssigns :: JSTrav ast => Bool -> ast -> TravM ast
+inlineAssigns blackholeOK ast = do
     mapJS (const True) return inl ast
   where
     varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
     varOccurs _ _                  = False
-    inl keep@(Assign (NewVar lhs) ex next) = do
+    inl keep@(Assign (NewVar mayReorder lhs) ex next) = do
       occursRec <- occurrences (const True) (varOccurs lhs) ex
       occurs <- occurrences (const True) (varOccurs lhs) next
       occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
+
       if occurs == occursLocal && occursRec == Never
         then case occursRec + occursLocal of
-          Once -> do
-            replaceEx (Var lhs) ex next
-{-          Lots | Fun Nothing vs body <- ex,
-                 occurs < Lots,
-                 Internal lhsname _ <- lhs ->
-            replaceEx (Var lhs) (Fun (Just lhsname) vs body) next -}
+          -- Don't inline lambdas at the moment, but use less verbose syntax.
+          _     | Fun Nothing vs body <- ex,
+                  Internal lhsname _ <- lhs ->
+            return $ Assign blackHole (Fun (Just lhsname) vs body) next
+          -- Never-used symbols don't need assignment.
+          Never | blackholeOK -> do
+            return (Assign blackHole ex next)
+          -- Inline of any non-lambda value
+          Once | mayReorder -> do
+            replaceEx (not <$> isShared) (Var lhs) ex next
           _ ->
             return keep
         else return keep
@@ -97,22 +111,19 @@ inlineAssignsLocal ast = do
   where
     varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
     varOccurs _ _                  = False
-    inl keep@(Assign (NewVar lhs) ex next) = do
+    inl keep@(Assign (NewVar mayReorder lhs) ex next) = do
       occurs <- occurrences (const True) (varOccurs lhs) next
       occurs' <- occurrences (const True) (varOccurs lhs) ex
       case occurs + occurs' of
         Never ->
-          -- completely unnecessary - remove
-          return next
-        Once ->
+          return (Assign blackHole ex next)
+        -- Don't inline lambdas at the moment, but use less verbose syntax.
+        _     | Fun Nothing vs body <- ex,
+                Internal lhsname _ <- lhs ->
+          return $ Assign blackHole (Fun (Just lhsname) vs body) next
+        Once | mayReorder ->
           -- can't be recursive - inline
-          replaceEx (Var lhs) ex next
-        Lots | Fun Nothing vs body <- ex,
-               occurs < Lots,
-               Internal lhsname _ <- lhs ->
-          -- only occurs at most once outside, so replace with named lambda
-          -- since the binding is only relevant for recursion!
-          replaceEx (Var lhs) (Fun (Just lhsname) vs body) next
+          replaceEx (not <$> isShared) (Var lhs) ex next
         _ ->
           -- Really nothing to be done here.
           return keep
@@ -126,7 +137,7 @@ inlineReturns :: JSTrav ast => ast -> TravM ast
 inlineReturns ast = do
     mapJS (const True) return inl ast
   where
-    inl keep@(Assign (NewVar lhs) ex next) = do
+    inl keep@(Assign (NewVar True lhs) ex next) = do
       unchanged <- straightReturnPath (Var lhs) next
       if unchanged
         then replaceNullReturn (Return ex) next >> return (Return ex)
@@ -147,7 +158,7 @@ straightReturnPath x (Return x') = do
   return $ x == x'
 straightReturnPath x (Jump (Shared lbl)) = do
   getRef lbl >>= straightReturnPath x
-straightReturnPath x (Assign (NewVar lhs) x' next) | x == x' = do
+straightReturnPath x (Assign (NewVar True lhs) x' next) | x == x' = do
   straightReturnPath (Var lhs) next
 straightReturnPath _ _ =
   return False

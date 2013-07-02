@@ -11,6 +11,7 @@ import Data.JSTarget.Op
 
 type Arity = Int
 type Comment = String
+type Reorderable = Bool
 
 newtype Shared a = Shared Lbl deriving (Eq, Show)
 
@@ -31,12 +32,24 @@ instance HasModule Var where
 data Var where
   Foreign  :: String -> Var
   Internal :: Name -> Comment -> Var
-  deriving (Eq, Ord, Show)
+  deriving (Show)
+
+instance Eq Var where
+  (Foreign f1)  == (Foreign f2)      = f1 == f2
+  (Internal i1 _) == (Internal i2 _) = i1 == i2
+  _ == _                             = False
+
+instance Ord Var where
+  compare (Foreign f1) (Foreign f2)       = compare f1 f2
+  compare (Internal i1 _) (Internal i2 _) = compare i1 i2
+  compare (Foreign _) (Internal _ _)      = Prelude.LT
+  compare (Internal _ _) (Foreign _)      = Prelude.GT
 
 -- | Left hand side of an assignment. Normally we only assign internal vars,
 --   but for some primops we need to assign array elements as well.
+--   LhsExp is never reorderable.
 data LHS where
-  NewVar :: Var -> LHS
+  NewVar :: Reorderable -> Var -> LHS
   LhsExp :: Exp -> LHS
   deriving (Eq, Show)
 
@@ -57,16 +70,16 @@ data Lit where
 
 -- | Expressions. Completely predictable.
 data Exp where
-  Var      :: Var -> Exp
-  Lit      :: Lit -> Exp
-  Not      :: Exp -> Exp
-  BinOp    :: BinOp -> Exp -> Exp -> Exp
-  Fun      :: Maybe Name -> [Var] -> Stm -> Exp
-  Call     :: Arity -> Call -> Exp -> [Exp] -> Exp
-  Index    :: Exp -> Exp -> Exp
-  Arr      :: [Exp] -> Exp
-  AssignEx :: Exp -> Exp -> Exp
-  IfEx     :: Exp -> Exp -> Exp -> Exp
+  Var       :: Var -> Exp
+  Lit       :: Lit -> Exp
+  Not       :: Exp -> Exp
+  BinOp     :: BinOp -> Exp -> Exp -> Exp
+  Fun       :: Maybe Name -> [Var] -> Stm -> Exp
+  Call      :: Arity -> Call -> Exp -> [Exp] -> Exp
+  Index     :: Exp -> Exp -> Exp
+  Arr       :: [Exp] -> Exp
+  AssignEx  :: Exp -> Exp -> Exp
+  IfEx      :: Exp -> Exp -> Exp -> Exp
   deriving (Eq, Show)
 
 -- | Statements. The only mildly interesting thing here are the Case and Jump
@@ -99,6 +112,11 @@ foreignModule = Module {
     modDeps  = M.empty,
     modDefs  = M.empty
   }
+
+-- | An LHS that's guaranteed to not ever be read, enabling the pretty
+--   printer to ignore assignments to it.
+blackHole :: LHS
+blackHole = LhsExp $ Var $ Internal (Name "" (Just "$blackhole")) ""
 
 -- | An AST with local jumps.
 data AST a = AST {

@@ -48,13 +48,13 @@ generate cfg modname binds =
   where
     theMod = genAST cfg modname binds
     
-    insFun m (_, AST (Assign (NewVar (Internal v _)) body _) jumps) =
+    insFun m (_, AST (Assign (NewVar _ (Internal v _)) body _) jumps) =
       M.insert v (AST body jumps) m
     insFun m _ =
       m
 
     -- TODO: perhaps do dependency-based linking for externals as well?
-    insDep m (ds, AST (Assign (NewVar (Internal v _)) _ _) _) =
+    insDep m (ds, AST (Assign (NewVar _ (Internal v _)) _ _) _) =
       M.insert v (S.delete v ds) m
     insDep m _ =
       m
@@ -121,8 +121,8 @@ genEx (StgLam _ _) = do
   error "StgLam caught during code generation - that's impossible!"
 
 genBindRec :: StgBinding -> JSGen Config ()
-genBindRec bs@(StgRec _) =
-  mapM_ (genBind False (Just len) . snd) bs'
+genBindRec bs@(StgRec _) = do
+    mapM_ (genBind False (Just len) . snd) bs'
   where
     bs' = unRec bs
     len = length bs'
@@ -142,7 +142,7 @@ genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
     addLocal v'
   expr <- genRhs (isJust funsInRecGroup) rhs
   let expr' = optimizeFun v' expr
-  continue $ newVar v' expr'
+  continue $ newVar True v' expr'
 genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 
@@ -189,14 +189,14 @@ genArgVarsPair vps = do
 genCase :: AltType -> StgExpr -> Id -> [StgAlt] -> JSGen Config (AST Exp)
 genCase t ex scrut alts = do
   ex' <- genEx ex
-    -- If we have a unary unboxed tuple, we want to eliminate the case
-    -- entirely (modulo evaluation), so just generate the expression in the
-    -- sole alternative.
+  -- If we have a unary unboxed tuple, we want to eliminate the case
+  -- entirely (modulo evaluation), so just generate the expression in the
+  -- sole alternative.
   case (isUnaryUnboxedTuple scrut, alts) of
     (True, [(_, as, _, expr)]) | [arg] <- filter hasRepresentation as -> do
       arg' <- genVar arg
       addLocal [arg']
-      continue (newVar arg' ex')
+      continue (newVar (reorderableType scrut) arg' ex')
       genEx expr
     (True, _) -> do
         error "Case on unary unboxed tuple with more than one alt! WTF?!"
@@ -213,11 +213,11 @@ genCase t ex scrut alts = do
       -- Use the ternary operator where possible.
       case tryTernary scrutinee (varExp res) defAlt' alts' of
         Just ifEx -> do
-          continue $ newVar scrut' ex'
-          continue $ newVar res ifEx
+          continue $ newVar (reorderableType scrut) scrut' ex'
+          continue $ newVar True res ifEx
           return (varExp res)
         _ -> do
-          continue $ newVar scrut' ex'
+          continue $ newVar (reorderableType scrut) scrut' ex'
           continue $ case_ scrutinee defAlt' alts'
           return (varExp res)
   where
@@ -262,10 +262,10 @@ genAlt scrut res (con, args, used, body) = do
   (_, body') <- isolate $ do
     continue $ foldr (.) id binds
     retEx <- genEx body
-    continue $ newVar res retEx
+    continue $ newVar True res retEx
   return $ construct body'
   where
-    bindVar v ix = newVar v (index (varExp scrut) (litN ix))
+    bindVar v ix = newVar True v (index (varExp scrut) (litN ix))
 
 -- | Generate a result variable for the given scrutinee variable.
 genResultVar :: Var.Var -> JSGen Config J.Var
@@ -427,6 +427,15 @@ isUnaryUnboxedTuple v = maybe False id $ do
     case filter typeHasRep args of
       [_] -> return $ isUnboxedTupleType t
       _   -> return False
+  where
+    t = varType v
+
+-- | Is it safe to reorder values of the given type?
+reorderableType :: Var.Var -> Bool
+reorderableType v =
+    case splitTyConApp_maybe t of
+      Just (_, args) -> length (filter typeHasRep args) == length args
+      _              -> typeHasRep t
   where
     t = varType v
 
