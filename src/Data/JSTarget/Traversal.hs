@@ -32,15 +32,14 @@ getRef lbl = T $ \js -> (js, js M.! lbl)
 putRef :: Lbl -> Stm -> TravM ()
 putRef lbl stm = T $ \js -> (M.insert lbl stm js, ())
 
-class JSTrav ast where
+class Show ast => JSTrav ast where
   -- | Bottom up transform over an AST.
-  mapJS :: (ASTNode -> Bool)  -- ^ Should the given node be entered or not?
-                              --   The appropriate mapping function is always
-                              --   applied, however.
-        -> (Exp -> TravM Exp) -- ^ Exp to Exp mapping.
-        -> (Stm -> TravM Stm) -- ^ Stm to Stm mapping.
-        -> ast                -- ^ AST to map over.
-        -> TravM ast
+  foldMapJS :: (a -> ASTNode -> Bool)       -- ^ Enter node?
+            -> (a -> Exp -> TravM (a, Exp)) -- ^ Exp to Exp mapping.
+            -> (a -> Stm -> TravM (a, Stm)) -- ^ Stm to Stm mapping.
+            -> a                            -- ^ Starting accumulator.
+            -> ast                          -- ^ AST to map over.
+            -> TravM (a, ast)
 
   -- | Bottom up fold of an AST.
   foldJS :: (a -> ASTNode -> Bool)    -- ^ Should the given node be entered?
@@ -51,30 +50,69 @@ class JSTrav ast where
          -> ast                       -- ^ AST to fold over.
          -> TravM a
 
+mapJS :: JSTrav ast
+      => (ASTNode -> Bool)
+      -> (Exp -> TravM Exp)
+      -> (Stm -> TravM Stm)
+      -> ast
+      -> TravM ast
+mapJS tr fe fs ast =
+    snd <$> foldMapJS (const tr) (const' fe) (const' fs) () ast
+  where
+    const' f _ x = ((),) <$> f x
+
 instance JSTrav a => JSTrav [a] where
-  mapJS tr fe fs ast = mapM (mapJS tr fe fs) ast
+  foldMapJS tr fe fs acc ast =
+      go (acc, []) ast
+    where
+      go (a, xs') (x:xs) = do
+        (a', x') <- foldMapJS tr fe fs a x
+        go (a', x':xs') xs
+      go (a, xs) _ = do
+        return (a, reverse xs)
   foldJS tr f acc ast = foldM (foldJS tr f) acc ast
 
 instance JSTrav Exp where
-  mapJS tr fe fs ast = do
-      x <- if tr (Exp ast)
-             then do
-               case ast of
-                 v@(Var _)      -> pure v
-                 l@(Lit _)      -> pure l
-                 Not ex         -> Not <$> mapEx ex
-                 BinOp op a b   -> BinOp op <$> mapEx a <*> mapEx b
-                 Fun nam vs stm -> Fun nam vs <$> mapJS tr fe fs stm
-                 Call ar c f xs -> Call ar c <$> mapEx f <*> mapJS tr fe fs xs
-                 Index arr ix   -> Index <$> mapEx arr <*> mapEx ix
-                 Arr exs        -> Arr <$> mapM mapEx exs
-                 AssignEx l r   -> AssignEx <$> mapEx l <*> mapEx r
-                 IfEx c th el   -> IfEx <$> mapEx c <*> mapEx th <*> mapEx el
-             else do
-               return ast
-      fe x
+  foldMapJS tr fe fs acc ast = do
+      (acc', x) <- if tr acc (Exp ast)
+                     then do
+                       case ast of
+                         v@(Var _)      -> do
+                           pure (acc, v)
+                         l@(Lit _)      -> do
+                           pure (acc, l)
+                         Not ex         -> do
+                           fmap Not <$> mapEx acc ex
+                         BinOp op a b   -> do
+                           (acc', a') <- mapEx acc a
+                           (acc'', b') <- mapEx acc' b
+                           return (acc'', BinOp op a' b')
+                         Fun nam vs stm -> do
+                           fmap (Fun nam vs) <$> foldMapJS tr fe fs acc stm
+                         Call ar c f xs -> do
+                           (acc', f') <- mapEx acc f
+                           (acc'', xs') <- foldMapJS tr fe fs acc xs
+                           return (acc'', Call ar c f' xs')
+                         Index arr ix   -> do
+                           (acc', arr') <- mapEx acc arr
+                           (acc'', ix') <- mapEx acc' ix
+                           return (acc'', Index arr' ix')
+                         Arr exs        -> do
+                           fmap Arr <$> foldMapJS tr fe fs acc exs
+                         AssignEx l r   -> do
+                           (acc', l') <- mapEx acc l
+                           (acc'', r') <- mapEx acc' r
+                           return (acc'', AssignEx l' r')
+                         IfEx c th el   -> do
+                           (acc', c') <- mapEx acc c
+                           (acc'', th') <- mapEx acc' th
+                           (acc''', el') <- mapEx acc'' el
+                           return (acc''', IfEx c' th' el')
+                     else do
+                       return (acc, ast)
+      fe acc' x
     where
-      mapEx = mapJS tr fe fs
+      mapEx = foldMapJS tr fe fs
   
   foldJS tr f acc ast = do
     let expast = Exp ast
@@ -112,32 +150,34 @@ instance JSTrav Exp where
     f acc' expast
 
 instance JSTrav Stm where
-  mapJS tr fe fs ast = do
-      x <- if tr (Stm ast)
-             then do
-               case ast of
-                 Case ex def alts next ->
-                   Case <$> mapJS tr fe fs ex
-                        <*> mapJS tr fe fs def
-                        <*> mapJS tr fe fs alts
-                        <*> mapJS tr fe fs next
-                 Forever stm ->
-                   Forever <$> mapJS tr fe fs stm
-                 Assign lhs ex next ->
-                   Assign <$> mapJS tr fe fs lhs
-                          <*> mapJS tr fe fs ex
-                          <*> mapJS tr fe fs next
-                 Return ex ->
-                   Return <$> mapJS tr fe fs ex
-                 Cont ->
-                   return Cont
-                 Jump stm ->
-                   Jump <$> mapJS tr fe fs stm
-                 NullRet ->
-                   return NullRet
-             else do
-               return ast
-      fs x
+  foldMapJS tr fe fs acc ast = do
+      (acc', x) <- if tr acc (Stm ast)
+                     then do
+                       case ast of
+                         Case ex def alts next -> do
+                           (acc', ex') <- foldMapJS tr fe fs acc ex
+                           (acc'', def') <- foldMapJS tr fe fs acc' def
+                           (acc''', alts') <- foldMapJS tr fe fs acc'' alts
+                           (acc'''', next') <- foldMapJS tr fe fs acc''' next
+                           return (acc'''', Case ex' def' alts' next')
+                         Forever stm -> do
+                           fmap Forever <$> foldMapJS tr fe fs acc stm
+                         Assign lhs ex next -> do
+                           (acc', lhs') <- foldMapJS tr fe fs acc lhs
+                           (acc'', ex') <- foldMapJS tr fe fs acc' ex
+                           (acc''', next') <- foldMapJS tr fe fs acc'' next
+                           return (acc''', Assign lhs' ex' next')
+                         Return ex -> do
+                           fmap Return <$> foldMapJS tr fe fs acc ex
+                         Cont -> do
+                           return (acc, Cont)
+                         Jump stm -> do
+                           fmap Jump <$> foldMapJS tr fe fs acc stm
+                         NullRet -> do
+                           return (acc, NullRet)
+                     else do
+                       return (acc, ast)
+      fs acc' x
 
   foldJS tr f acc ast = do
     let stmast = Stm ast
@@ -168,47 +208,46 @@ instance JSTrav Stm where
     f acc' stmast
 
 instance JSTrav (Exp, Stm) where
-  mapJS tr fe fs (ex, stm) = do
-    stm' <- mapJS tr fe fs stm
-    ex' <- mapJS tr fe fs ex
-    return (ex', stm')
+  foldMapJS tr fe fs acc (ex, stm) = do
+    (acc', stm') <- foldMapJS tr fe fs acc stm
+    (acc'', ex') <- foldMapJS tr fe fs acc' ex
+    return (acc'', (ex', stm'))
   foldJS tr f acc (ex, stm) = do
     acc' <- foldJS tr f acc stm
     foldJS tr f acc' ex
 
 instance JSTrav LHS where
-  mapJS _ _ _ lhs@(NewVar _ _) = return lhs
-  mapJS tr fe fs (LhsExp ex)   = LhsExp <$> mapJS tr fe fs ex
+  foldMapJS _ _ _ acc lhs@(NewVar _ _) = return (acc, lhs)
+  foldMapJS t fe fs a (LhsExp ex)      = fmap LhsExp <$> foldMapJS t fe fs a ex
   foldJS _ _ acc (NewVar _ _)  = return acc
   foldJS tr f acc (LhsExp ex)  = foldJS tr f acc ex
 
 instance JSTrav a => JSTrav (Shared a) where
-  mapJS tr fe fs sh@(Shared lbl) = do
-    when (tr (Label lbl)) $ do
-      getRef lbl >>= mapJS tr fe fs >>= putRef lbl
-    return sh
+  foldMapJS tr fe fs acc sh@(Shared lbl) = do
+    if (tr acc (Label lbl)) 
+      then do
+        stm <- getRef lbl
+        (acc', stm') <- foldMapJS tr fe fs acc stm
+        putRef lbl stm'
+        return (acc', sh)
+      else do
+        return (acc, sh)
   foldJS tr f acc (Shared lbl) = do
     if (tr acc (Label lbl))
       then getRef lbl >>= foldJS tr f acc >>= \acc' -> f acc' (Label lbl)
       else f acc (Label lbl)
 
-instance (JSTrav a, JSTrav b) => JSTrav (Either a b) where
-  mapJS tr fe fs (Left x)   = Left <$> mapJS tr fe fs x
-  mapJS tr fe fs (Right x)  = Right <$> mapJS tr fe fs x
-  foldJS tr f acc (Left x)  = foldJS tr f acc x
-  foldJS tr f acc (Right x) = foldJS tr f acc x
-
 class Pred a where
   (.|.) :: a -> a -> a
   (.&.) :: a -> a -> a
 
-instance Pred (a -> Bool) where
-  p .|. q = \x -> p x || q x
-  p .&. q = \x -> p x && q x
-
 instance Pred (a -> b -> Bool) where
   p .|. q = \a b -> p a b || q a b
   p .&. q = \a b -> p a b && q a b
+
+instance Pred (a -> Bool) where
+  p .|. q = \a -> p a || q a
+  p .&. q = \a -> p a && q a
 
 isShared :: ASTNode -> Bool
 isShared (Label _) = True
@@ -216,7 +255,7 @@ isShared _         = False
 
 isLambda :: ASTNode -> Bool
 isLambda (Exp (Fun _ _ _)) = True
-isLambda _               = False
+isLambda _                 = False
 
 -- | Counts occurrences. Use ints or something for a more exact count.
 data Occs = Never | Once | Lots deriving (Eq, Show)

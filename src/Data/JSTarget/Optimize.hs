@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards, TupleSections #-}
 -- | Optimizations over the JSTarget AST.
 module Data.JSTarget.Optimize (
     optimizeFun, tryTernary, topLevelInline
@@ -9,15 +9,16 @@ import Data.JSTarget.Traversal
 import Control.Applicative
 import Data.List (foldl')
 
-import Debug.Trace
-
 -- TODO: tryTernary may inline calls that would otherwise be in tail position
 --       which is something we'd really like to avoid.
 
 optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ast js) =
-  flip runTravM js $ do 
-    shrinkCase ast >>= inlineReturns >>= inlineAssigns True
+  flip runTravM js $ do
+    shrinkCase ast
+    >>= inlineAssigns True
+    >>= inlineReturns
+    >>= inlineAssigns True
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) = runTravM (inlineAssigns False ast) js
@@ -135,39 +136,37 @@ inlineAssignsLocal ast = do
 --   care about the assignment side effect.
 inlineReturns :: JSTrav ast => ast -> TravM ast
 inlineReturns ast = do
-    mapJS (const True) return inl ast
+    mapJS (const True) return inlRet ast
   where
-    inl keep@(Assign (NewVar True lhs) ex next) = do
-      unchanged <- straightReturnPath (Var lhs) next
-      if unchanged
-        then replaceNullReturn (Return ex) next >> return (Return ex)
-        else return keep
-    inl stm = return stm
+    isCase (Stm (Case _ _ _ _)) = True
+    isCase _                    = False
+    pure2 acc x = pure (acc, x)
+    notShared _ (Label _) = False
+    notShared _ _         = True
+    
+    inlRet stm@(Case scr def alts next@(Shared lbl)) = do
+      next' <- getRef lbl
+      case next' of
+        Return x -> do
+          def' <- mapJS (const True) pure (inline lbl next') def
+          alts' <- mapJS (const True) pure (inline lbl next') alts
+          putRef lbl NullRet
+          return $ Case scr def' alts' next
+        _ -> do
+          return stm
+    inlRet stm = do
+      return stm
 
-    replaceNullReturn r = mapJS (const True) return (rep r)
-    rep r stm | stm == r = return NullRet
-    rep _ stm            = return stm
-
--- | Is the given expression passed to a Return node unchanged
---   (modulo new name assignments)? If it is, we can get rid of the extra
---   assignments and return it right away.
---   Ignores LhsExp assignments, since we only introduce those when we actually
---   care about the assignment side effect.
-straightReturnPath :: Exp -> Stm -> TravM Bool
-straightReturnPath x (Return x') = do
-  return $ x == x'
-straightReturnPath x (Jump (Shared lbl)) = do
-  getRef lbl >>= straightReturnPath x
-straightReturnPath x (Assign (NewVar True lhs) x' next) | x == x' = do
-  straightReturnPath (Var lhs) next
-straightReturnPath _ _ =
-  return False
+    inline lbl ret (Jump (Shared lbl')) | lbl == lbl' =
+      return ret
+    inline _ _ stm = do
+      return stm
 
 -- | Inline all occurrences of the given shared code path.
 --   Use with caution - preferrably not at all!
 inlineShared :: JSTrav ast => Lbl -> ast -> TravM ast
 inlineShared lbl =
-    mapJS (not <$> isShared) pure inl
+    mapJS (const True) pure inl
   where
     inl (Jump (Shared lbl')) | lbl == lbl' = getRef lbl
     inl s                                  = pure s

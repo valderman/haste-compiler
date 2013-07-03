@@ -18,7 +18,7 @@ instance Arbitrary Var where
                      Internal <$> arbitrary <*> arbitrary]
 
 instance Arbitrary LHS where
-  arbitrary = oneof [NewVar <$> arbitrary, LhsExp <$> arbitrary]
+  arbitrary = oneof [NewVar <$> arbitrary <*> arbitrary, LhsExp <$> arbitrary]
 
 instance Arbitrary Call where
   arbitrary = oneof [pure Normal, pure Fast, Method <$> arbitrary]
