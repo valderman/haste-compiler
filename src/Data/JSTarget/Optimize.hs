@@ -7,7 +7,6 @@ import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Data.JSTarget.Traversal
 import Control.Applicative
-import Data.List (foldl')
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -213,9 +212,22 @@ tailLoopify f fun@(Fun mname args body) = do
         needToCopy <- createsClosures body
         case needToCopy of
           True -> do
-            return fun -- TODO: add optimization here as well!
+            let args' = map newName args
+                ret = Return (Lit $ LNull)
+            b <- mapJS (not <$> isLambda) pure (replaceByAssign ret args') body
+            let (AST nullRetLbl _) = lblFor NullRet
+                nn = newName f
+                nv = NewVar False nn
+                body' =
+                  Forever $
+                  Assign nv (Call 0 Fast (Fun Nothing args b) (map Var args'))$
+                  Case (Var nn) (Return (Var nn)) [(Lit $ LNull, NullRet)] $
+                  (Shared nullRetLbl)
+            putRef nullRetLbl NullRet
+            return $ Fun mname args' body'
           False -> do
-            body' <- mapJS (not <$> isLambda) pure replaceByAssign body
+            let c = Cont
+            body' <- mapJS (not <$> isLambda) pure (replaceByAssign c args) body
             return $ Fun mname args (Forever body')
       else do
         return fun
@@ -229,10 +241,10 @@ tailLoopify f fun@(Fun mname args body) = do
     isClosure acc _               = pure acc
 
     -- Assign any changed vars, then loop.
-    replaceByAssign (Return (Call 0 _ (Var f') args')) | f == f' = do
-      let (first, second) = foldr assignUnlessEqual (id, Cont) (zip args args')
+    replaceByAssign end as (Return (Call 0 _ (Var f') as')) | f == f' = do
+      let (first, second) = foldr assignUnlessEqual (id, end) (zip as as')
       return $ first second
-    replaceByAssign stm =
+    replaceByAssign _ _ stm =
       return stm
 
     -- Assign an expression to a variable, unless that expression happens to
@@ -247,16 +259,18 @@ tailLoopify f fun@(Fun mname args body) = do
     
     newName (Internal (Name n mmod) _) =
       Internal (Name (' ':n) mmod) ""
+    newName n =
+      n
     
-    contains (Var v) var         = v == var
-    contains (Lit _) _           = False
-    contains (Not x) var         = x `contains` var
-    contains (BinOp _ a b) var   = a `contains` var || b `contains` var
-    contains (Fun _ _ _) var     = False
-    contains (Call _ _ f xs) var = f `contains` var || any (`contains` var) xs
-    contains (Index a i) var     = a `contains` var || i `contains` var
-    contains (Arr xs) var        = any (`contains` var) xs
-    contains (AssignEx l r) var  = l `contains` var || r `contains` var
-    contains (IfEx c t e) var    = any (`contains` var) [c,t,e]
+    contains (Var v) var          = v == var
+    contains (Lit _) _            = False
+    contains (Not x) var          = x `contains` var
+    contains (BinOp _ a b) var    = a `contains` var || b `contains` var
+    contains (Fun _ _ _) _        = False
+    contains (Call _ _ f' xs) var = f' `contains` var||any (`contains` var) xs
+    contains (Index a i) var      = a `contains` var || i `contains` var
+    contains (Arr xs) var         = any (`contains` var) xs
+    contains (AssignEx l r) var   = l `contains` var || r `contains` var
+    contains (IfEx c t e) var     = any (`contains` var) [c,t,e]
 tailLoopify _ fun = do
   return fun

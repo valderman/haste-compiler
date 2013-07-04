@@ -41,10 +41,12 @@ instance Binary Lit where
   put (LStr s)  = putWord8 1 >> put s
   put (LBool b) = putWord8 2 >> put b
   put (LInt n)  = putWord8 3 >> put n
+  put (LNull)   = putWord8 4
   
   get = do
     t <- getWord8
-    [LNum <$> get, LStr <$> get, LBool <$> get, LInt <$> get] !! fromIntegral t
+    [LNum <$> get, LStr <$> get, LBool <$> get, LInt <$> get, pure LNull] !!
+      fromIntegral t
 
 instance Binary Exp where
   put (Var v)           = putWord8 0 >> put v

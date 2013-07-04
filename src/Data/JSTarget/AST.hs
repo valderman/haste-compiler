@@ -66,6 +66,7 @@ data Lit where
   LStr  :: String  -> Lit
   LBool :: Bool    -> Lit
   LInt  :: Integer -> Lit
+  LNull :: Lit
   deriving (Eq, Show)
 
 -- | Expressions. Completely predictable.

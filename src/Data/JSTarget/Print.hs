@@ -38,6 +38,7 @@ instance Pretty Lit where
       fixQuotes _             = []
   pp (LBool b) = put b
   pp (LInt n)  = put n
+  pp (LNull)   = "null"
 
 -- | Default separator; comma followed by space, if spaces are enabled.
 sep :: PP ()

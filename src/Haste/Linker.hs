@@ -23,8 +23,8 @@ mainSym = name "main" (Just "Main")
 -- | Link a program using the given config and input file name.
 link :: Config -> FilePath -> IO ()
 link cfg target = do
-  defs <- getAllDefs (libPath cfg) mainSym
-  let myDefs = if wholeProgramOpts cfg then topLevelInline defs else defs
+  ds <- getAllDefs (libPath cfg) mainSym
+  let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
   let (progText, mainSym') = prettyProg (ppOpts cfg) mainSym myDefs
       callMain = appStart cfg mainSym'
   
