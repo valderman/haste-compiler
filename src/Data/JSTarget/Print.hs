@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleInstances, GADTs, OverloadedStrings #-}
 module Data.JSTarget.Print where
+import Prelude hiding (LT, GT)
 import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Data.JSTarget.PP as PP
@@ -130,16 +131,33 @@ instance Pretty Stm where
 -- | Turn eligible case statements into if statements.
 prettyCase :: Exp -> Stm -> [Alt] -> PP ()
 prettyCase cond def [(con, branch)] = do
-  line $ "if(" .+. test con .+."){"
-  indent $ pp branch
-  line "}else{"
-  indent $ pp def
-  line "}"
+  case (def, branch) of
+    (_, NullRet) -> do
+      line $ "if(" .+. pp (neg (test con)) .+. "){"
+      indent $ pp def
+      line "}"
+    (NullRet, _) -> do
+      line $ "if(" .+. pp (test con) .+. "){"
+      indent $ pp branch
+      line "}"
+    _ -> do
+      line $ "if(" .+. pp (test con) .+."){"
+      indent $ pp branch
+      line "}else{"
+      indent $ pp def
+      line "}"
   where
-    test (Lit (LBool True))  = pp cond
-    test (Lit (LBool False)) = pp $ Not cond
-    test (Lit (LNum 0))      = pp $ Not cond
-    test _                   = pp cond .+. "==" .+. pp con
+    neg (BinOp Eq a b)  = BinOp Neq a b
+    neg (BinOp Neq a b) = BinOp Eq a b
+    neg (BinOp GT a b)  = BinOp LTE a b
+    neg (BinOp LT a b)  = BinOp GTE a b
+    neg (BinOp GTE a b) = BinOp LT a b
+    neg (BinOp LTE a b) = BinOp GT a b
+    neg x               = Not x
+    test (Lit (LBool True))  = cond
+    test (Lit (LBool False)) = Not cond
+    test (Lit (LNum 0))      = Not cond
+    test c                   = BinOp Eq cond c
 prettyCase _ def [] = do
   pp def
 prettyCase cond def alts = do
