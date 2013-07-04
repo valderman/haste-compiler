@@ -83,6 +83,8 @@ data Config = Config {
     multiplyIntOp :: AST Exp -> AST Exp -> AST Exp,
     -- | Be verbose about warnings, etc.?
     verbose :: Bool,
+    -- | Perform optimizations over the whole program at link time?
+    wholeProgramOpts :: Bool,
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
@@ -104,6 +106,7 @@ defConfig = Config {
     wrapIntMath      = strictly32Bits,
     multiplyIntOp    = safeMultiply,
     verbose          = False,
+    wholeProgramOpts = False,
     useGoogleClosure = Nothing,
     jsExternals      = [],
     dynFlags         = tracingDynFlags
