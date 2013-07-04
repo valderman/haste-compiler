@@ -66,7 +66,7 @@ instance Default PPOpts where
   def = PPOpts {
       nameComments   = False,
       useIndentation = False,
-      indentStr      = "  ",
+      indentStr      = "    ",
       useNewlines    = False,
       useSpaces      = False
     }
