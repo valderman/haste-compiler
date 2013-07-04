@@ -23,7 +23,8 @@ data PPOpts = PPOpts {
     nameComments   :: Bool,    -- ^ Emit comments for names, where available?
     useIndentation :: Bool,    -- ^ Should we indent at all?
     indentStr      :: Builder, -- ^ String to use for each step of indentation
-    useNewlines    :: Bool     -- ^ Use line breaks?
+    useNewlines    :: Bool,    -- ^ Use line breaks?
+    useSpaces      :: Bool     -- ^ Use spaces other than where necessary?
   }
 
 type IndentLvl = Int
@@ -66,7 +67,8 @@ instance Default PPOpts where
       nameComments   = False,
       useIndentation = False,
       indentStr      = "  ",
-      useNewlines    = False
+      useNewlines    = False,
+      useSpaces      = False
     }
 
 debugPPOpts :: PPOpts
@@ -74,7 +76,8 @@ debugPPOpts = def {
     nameComments   = True,
     useIndentation = True,
     indentStr      = "  ",
-    useNewlines    = True
+    useNewlines    = True,
+    useSpaces      = True
   }
 
 -- | Generate the final name for a variable.
@@ -161,15 +164,24 @@ ind :: PP ()
 ind = PP $ \opts indentlvl ns _ b ->
   (ns, foldl' (<>) b (replicate indentlvl (indentStr opts)), ())
 
+-- | A space character.
+sp :: PP ()
+sp = whenOpt useSpaces $ put ' '
+
+-- | A newline character.
+newl :: PP ()
+newl = whenOpt useNewlines $ put '\n'
+
 -- | Indent the given builder and terminate it with a newline.
 line :: PP () -> PP ()
 line p = do
   ind >> p
   whenOpt useNewlines $ put '\n'
 
-ppList :: Pretty a => Builder -> [a] -> PP ()
+-- | Pretty print a list with the given separator.
+ppList :: Pretty a => PP () -> [a] -> PP ()
 ppList sep (x:xs) =
-  foldl' (\l r -> l >> put sep >> pp r) (pp x) xs
+  foldl' (\l r -> l >> sep >> pp r) (pp x) xs
 ppList _ _ =
   return ()
 

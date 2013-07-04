@@ -39,6 +39,10 @@ instance Pretty Lit where
   pp (LBool b) = put b
   pp (LInt n)  = put n
 
+-- | Default separator; comma followed by space, if spaces are enabled.
+sep :: PP ()
+sep = "," .+. sp
+
 instance Pretty Exp where
   pp (Var v) =
     pp v
@@ -51,37 +55,37 @@ instance Pretty Exp where
   pp (BinOp op a b) =
     opParens op a b
   pp (Fun mname args body) = do
-      "function" .+. lambdaname .+. "(" .+. ppList "," args .+. "){\n"
+      "function" .+. lambdaname .+. "(" .+. ppList sep args .+. "){" .+. newl
       indent $ pp body
       ind .+. "}"
     where
       lambdaname = maybe "" (\n -> " " .+. pp n) mname
   pp (Call _ call f args) = do
     case call of
-      Normal   -> "A(" .+. pp f .+. ",[" .+. ppList "," args .+. "])"
-      Fast     -> pp f .+. "(" .+. ppList "," args .+. ")"
-      Method m -> pp f .+. put ('.':m) .+. "(" .+. ppList "," args .+. ")"
+      Normal   -> "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
+      Fast     -> pp f .+. "(" .+. ppList sep args .+. ")"
+      Method m -> pp f .+. put ('.':m) .+. "(" .+. ppList sep args .+. ")"
   pp (Index arr ix) = do
     pp arr .+. "[" .+. pp ix .+. "]"
   pp (Arr exs) = do
-    "[" .+. ppList "," exs .+. "]"
+    "[" .+. ppList sep exs .+. "]"
   pp (AssignEx l r) = do
-    pp l .+. "=" .+. pp r
+    pp l .+. sp .+. "=" .+. sp .+. pp r
   pp (IfEx c th el) = do
-    pp c .+. "?" .+. pp th .+. ":" .+. pp el
+    pp c .+. sp .+. "?" .+. sp .+. pp th .+. sp .+. ":" .+. sp .+. pp el
 
 instance Pretty (Var, Exp) where
-  pp (v, ex) = pp v .+. "=" .+. pp ex
+  pp (v, ex) = pp v .+. sp .+. "=" .+. sp .+. pp ex
 
 -- | Print a series of NewVars at once, to avoid unnecessary "var" keywords.
 ppAssigns :: Stm -> PP ()
 ppAssigns stm = do
-    line $ "var " .+. ppList "," as .+. ";"
+    line $ "var " .+. ppList sep assigns .+. ";"
     pp next
   where
-    (as, next) = gather [] stm
-    gather as (Assign (NewVar _ v) ex next) = gather ((v, ex):as) next
-    gather as next                          = (reverse as, next)
+    (assigns, next) = gather [] stm
+    gather as (Assign (NewVar _ v) ex nxt) = gather ((v, ex):as) nxt
+    gather as nxt                          = (reverse as, nxt)
 
 -- | Returns the final statement in a case branch.
 finalStm :: Stm -> PP Stm
