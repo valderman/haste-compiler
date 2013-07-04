@@ -27,9 +27,8 @@ argSpecs = [
                      ++ "--opt-google-closure."},
     ArgSpec { optName = "opt-all-unsafe",
               updateCfg = optAllUnsafe,
-              info = "Enable all safe and unsafe optimizations. "
-                     ++ "Equivalent to -O2 --opt-google-closure "
-                     ++ "--opt-unsafe-ints."},
+              info = "Enable all safe and unsafe optimizations.\n"
+                     ++ "Equivalent to --opt-all --opt-unsafe-ints."},
     ArgSpec { optName = "opt-google-closure",
               updateCfg = updateClosureCfg,
               info = "Run the Google Closure compiler on the output. "
