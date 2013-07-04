@@ -18,8 +18,9 @@ optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ast js) =
   flip runTravM js $ do
     shrinkCase ast
-    >>= inlineReturns
     >>= inlineAssigns True
+    >>= inlineReturns
+    >>= tailLoopify f
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) = runTravM (inlineAssigns False ast) js
@@ -219,7 +220,7 @@ tailLoopify f fun@(Fun mname args body) = do
       else do
         return fun
   where
-    isTailRec (Stm (Return (Call _ _ (Var f') _))) = f == f'
+    isTailRec (Stm (Return (Call 0 _ (Var f') _))) = f == f'
     isTailRec _                                    = False
     
     -- Only traverse until we find a closure
@@ -228,16 +229,34 @@ tailLoopify f fun@(Fun mname args body) = do
     isClosure acc _               = pure acc
 
     -- Assign any changed vars, then loop.
-    replaceByAssign (Return (Call _ _ (Var f') args')) | f == f' = do
-      return $ foldl' assignUnlessEqual Cont (zip args args')
+    replaceByAssign (Return (Call 0 _ (Var f') args')) | f == f' = do
+      let (first, second) = foldr assignUnlessEqual (id, Cont) (zip args args')
+      return $ first second
     replaceByAssign stm =
       return stm
 
     -- Assign an expression to a variable, unless that expression happens to
     -- be the variable itself.
-    assignUnlessEqual next (v, (Var v')) | v == v' =
-      next
-    assignUnlessEqual next (v, x) =
-      Assign (LhsExp (Var v)) x next
+    assignUnlessEqual (v, (Var v')) (next, final) | v == v' =
+      (next, final)
+    assignUnlessEqual (v, x) (next, final) | any (x `contains`) args =
+      (Assign (NewVar False (newName v)) x . next,
+       Assign (LhsExp (Var v)) (Var $ newName v) final)
+                                  | otherwise =
+      (Assign (LhsExp (Var v)) x . next, final)
+    
+    newName (Internal (Name n mmod) _) =
+      Internal (Name (' ':n) mmod) ""
+    
+    contains (Var v) var         = v == var
+    contains (Lit _) _           = False
+    contains (Not x) var         = x `contains` var
+    contains (BinOp _ a b) var   = a `contains` var || b `contains` var
+    contains (Fun _ _ _) var     = False
+    contains (Call _ _ f xs) var = f `contains` var || any (`contains` var) xs
+    contains (Index a i) var     = a `contains` var || i `contains` var
+    contains (Arr xs) var        = any (`contains` var) xs
+    contains (AssignEx l r) var  = l `contains` var || r `contains` var
+    contains (IfEx c t e) var    = any (`contains` var) [c,t,e]
 tailLoopify _ fun = do
   return fun

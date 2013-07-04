@@ -61,10 +61,13 @@ instance Pretty Exp where
     where
       lambdaname = maybe "" (\n -> " " .+. pp n) mname
   pp (Call _ call f args) = do
-    case call of
-      Normal   -> "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
-      Fast     -> pp f .+. "(" .+. ppList sep args .+. ")"
-      Method m -> pp f .+. put ('.':m) .+. "(" .+. ppList sep args .+. ")"
+      case call of
+        Normal   -> "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
+        Fast     -> ppCallFun f .+. "(" .+. ppList sep args .+. ")"
+        Method m -> pp f .+. put ('.':m) .+. "(" .+. ppList sep args .+. ")"
+    where
+      ppCallFun fun@(Fun _ _ _) = "(" .+. pp fun .+. ")"
+      ppCallFun fun             = pp fun
   pp (Index arr ix) = do
     pp arr .+. "[" .+. pp ix .+. "]"
   pp (Arr exs) = do
@@ -105,9 +108,13 @@ instance Pretty Stm where
     indent $ pp stm
     "}"
   pp s@(Assign lhs ex next) = do
-    if lhs == blackHole
-      then line (pp ex .+. ";") >> pp next
-      else ppAssigns s
+    case lhs of
+      _ | lhs == blackHole ->
+        line (pp ex .+. ";") >> pp next
+      NewVar _ _ ->
+        ppAssigns s
+      LhsExp _ ->
+        line (pp lhs .+. sp .+. "=" .+. sp .+. pp ex .+. ";") >> pp next
   pp (Return ex) = do
     line $ "return " .+. pp ex .+. ";"
   pp (Cont) = do
