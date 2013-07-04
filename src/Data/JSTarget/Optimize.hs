@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, TupleSections #-}
+{-# LANGUAGE PatternGuards, TupleSections, DoAndIfThenElse #-}
 -- | Optimizations over the JSTarget AST.
 module Data.JSTarget.Optimize (
     optimizeFun, tryTernary, topLevelInline
@@ -8,6 +8,7 @@ import Data.JSTarget.Op
 import Data.JSTarget.Traversal
 import Control.Applicative
 import Data.List (foldl')
+import qualified Data.Map as M
 
 -- TODO: tryTernary may inline calls that would otherwise be in tail position
 --       which is something we'd really like to avoid.
@@ -18,7 +19,6 @@ optimizeFun f (AST ast js) =
     shrinkCase ast
     >>= inlineAssigns True
     >>= inlineReturns
-    >>= inlineAssigns True
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) = runTravM (inlineAssigns False ast) js
@@ -79,31 +79,53 @@ replaceEx trav old new =
 --   care about the assignment side effect.
 inlineAssigns :: JSTrav ast => Bool -> ast -> TravM ast
 inlineAssigns blackholeOK ast = do
-    mapJS (const True) return inl ast
+    inlinable <- gatherInlinable ast
+    mapJS (const True) return (inl inlinable) ast
   where
     varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
     varOccurs _ _                  = False
-    inl keep@(Assign (NewVar mayReorder lhs) ex next) = do
+    inl m keep@(Assign (NewVar mayReorder lhs) ex next) = do
       occursRec <- occurrences (const True) (varOccurs lhs) ex
-      occurs <- occurrences (const True) (varOccurs lhs) next
-      occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
+      if occursRec == Never
+        then do
+          occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
+          case M.lookup lhs m of
+            Just occ | occ == occursLocal ->
+              case occ of
+                -- Never-used symbols don't need assignment.
+                Never | blackholeOK -> do
+                  return (Assign blackHole ex next)
+                -- Inline of any non-lambda value
+                Once | mayReorder -> do
+                  replaceEx (not <$> isShared) (Var lhs) ex next
+                -- Don't inline lambdas, but use less verbose syntax.
+                _     | Fun Nothing vs body <- ex,
+                        Internal lhsname _ <- lhs -> do
+                  return $ Assign blackHole (Fun (Just lhsname) vs body) next
+                _ -> do
+                  return keep
+            _ ->
+              return keep
+        else do
+          return keep
+    inl _ stm = return stm
 
-      if occurs == occursLocal && occursRec == Never
-        then case occursRec + occursLocal of
-          -- Don't inline lambdas at the moment, but use less verbose syntax.
-          _     | Fun Nothing vs body <- ex,
-                  Internal lhsname _ <- lhs ->
-            return $ Assign blackHole (Fun (Just lhsname) vs body) next
-          -- Never-used symbols don't need assignment.
-          Never | blackholeOK -> do
-            return (Assign blackHole ex next)
-          -- Inline of any non-lambda value
-          Once | mayReorder -> do
-            replaceEx (not <$> isShared) (Var lhs) ex next
-          _ ->
-            return keep
-        else return keep
-    inl stm = return stm
+-- | Gather a map of all inlinable symbols; that is, the once that are used
+--   exactly once.
+gatherInlinable :: JSTrav ast => ast -> TravM (M.Map Var Occs)
+gatherInlinable =
+    fmap (M.filter (< Lots)) . foldJS (\_ _ -> True) countOccs M.empty
+  where
+    updVar (Just occs) = Just (occs+Once)
+    updVar _           = Just Once
+    updVarAss (Just o) = Just o
+    updVarAss _        = Just Never
+    countOccs m (Exp (Var v@(Internal _ _))) =
+      pure $ M.alter updVar v m
+    countOccs m (Stm (Assign (NewVar _ v) _ _)) =
+      pure $ M.alter updVarAss v m
+    countOccs m _ =
+      pure m
 
 -- | Like `inlineAssigns`, but doesn't care what happens beyond a jump.
 inlineAssignsLocal :: JSTrav ast => ast -> TravM ast
@@ -138,12 +160,6 @@ inlineReturns :: JSTrav ast => ast -> TravM ast
 inlineReturns ast = do
     mapJS (const True) return inlRet ast
   where
-    isCase (Stm (Case _ _ _ _)) = True
-    isCase _                    = False
-    pure2 acc x = pure (acc, x)
-    notShared _ (Label _) = False
-    notShared _ _         = True
-    
     inlRet stm@(Case scr def alts next@(Shared lbl)) = do
       next' <- getRef lbl
       case next' of
