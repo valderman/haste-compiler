@@ -91,7 +91,7 @@ instance JSTrav Exp where
                            fmap (Fun nam vs) <$> foldMapJS tr fe fs acc stm
                          Call ar c f xs -> do
                            (acc', f') <- mapEx acc f
-                           (acc'', xs') <- foldMapJS tr fe fs acc xs
+                           (acc'', xs') <- foldMapJS tr fe fs acc' xs
                            return (acc'', Call ar c f' xs')
                          Index arr ix   -> do
                            (acc', arr') <- mapEx acc arr
