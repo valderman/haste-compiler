@@ -108,7 +108,7 @@ instance Pretty Stm where
   pp (Forever stm) = do
     line "while(1){"
     indent $ pp stm
-    "}"
+    line "}"
   pp s@(Assign lhs ex next) = do
     case lhs of
       _ | lhs == blackHole ->
