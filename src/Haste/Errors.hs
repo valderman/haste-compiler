@@ -2,15 +2,15 @@
 module Haste.Errors (runtimeError, warn, WarnLevel(..)) where
 import System.IO.Unsafe
 import System.IO
-import Haste.AST
+import Data.JSTarget
 import Haste.Monad
 import Haste.Config
 
 data WarnLevel = Normal | Verbose deriving Eq
 
 -- | Produce a runtime error whenever this expression gets evaluated.
-runtimeError :: String -> JSExp
-runtimeError s = NativeCall "die" [lit s]
+runtimeError :: String -> AST Exp
+runtimeError s = callForeign "die" [lit s]
 
 -- | Produce a warning message. This function is horrible and should be
 --   replaced with some proper handling for warnings.

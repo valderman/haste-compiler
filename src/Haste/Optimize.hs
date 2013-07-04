@@ -21,6 +21,19 @@ optCase cmp scrut result alts = do
       emit $ Case (cmp $ AST.Var scrut) alts'
       return $ AST.Var result
 
+-- | Turn if statements with single expression branches into expressions using
+--   the ternary operator.
+ifToTernary :: JSStmt -> Maybe JSExp
+ifToTernary (If cond thenDo elseDo) = do
+  then' <- getOkExpr thenDo
+  else' <- getOkExpr elseDo
+  return $ IfExp cond then' else'
+  where
+    getOkExpr [NewVar _ ex] = Just ex
+    getOkExpr _             = Nothing
+ifToTernary _ =
+  Nothing
+
 -- | Optimize a function application. Again, this is more readable than not
 --   optimizing.
 optApp :: Int -> JSExp -> JSExp
@@ -44,19 +57,6 @@ tryFastCall arity (Call f as)
     FastCall f as
 tryFastCall _ app =
   app
-
--- | Turn if statements with single expression branches into expressions using
---   the ternary operator.
-ifToTernary :: JSStmt -> Maybe JSExp
-ifToTernary (If cond thenDo elseDo) = do
-  then' <- getOkExpr thenDo
-  else' <- getOkExpr elseDo
-  return $ IfExp cond then' else'
-  where
-    getOkExpr [NewVar _ ex] = Just ex
-    getOkExpr _             = Nothing
-ifToTernary _ =
-  Nothing
 
 -- | Turn a few common switch statements into smaller code constructs.
 --   These transformations rely on the fact that a Core case expression must

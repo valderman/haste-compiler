@@ -1,8 +1,13 @@
 module Haste.PrimOps (genOp) where
+import Prelude hiding (LT, GT)
 import PrimOp
-import Haste.AST as AST
+import Data.JSTarget
 import Haste.Config
 import Haste.Util
+
+-- | Dummy State# RealWorld value for where one is needed.
+defState :: AST Exp
+defState = litN 0
 
 -- | Generate primops.
 --   Many of these ops return lifted Bool values; however, no thunk is
@@ -10,151 +15,151 @@ import Haste.Util
 --   on the evaluation operation in the RTS being able to handle plain values
 --   as though they were thunks. If this were to change, all those ops MUST
 --   be changed to return thunks!
-genOp :: Config -> PrimOp -> [JSExp] -> Either String JSExp
+genOp :: Config -> PrimOp -> [AST Exp] -> Either String (AST Exp)
 genOp cfg op xs =
   case op of
-    -- Negations
-    IntNegOp       -> Right $ Neg (head xs)
-    DoubleNegOp    -> Right $ Neg (head xs)
-    FloatNegOp     -> Right $ Neg (head xs)
-    NotOp          -> Right $ Not (head xs) -- bitwise
+    -- negations
+    IntNegOp       -> Right $ binOp Sub (litN 0) (head xs)
+    DoubleNegOp    -> Right $ binOp Sub (litN 0) (head xs)
+    FloatNegOp     -> Right $ binOp Sub (litN 0) (head xs)
+    NotOp          -> Right $ not_ (head xs) -- bitwise
 
     -- Conversions
     ChrOp          -> Right $ head xs
     OrdOp          -> Right $ head xs
-    Word2IntOp     -> Right $ BinOp BitAnd (head xs) (litN 0xffffffff)
-    Int2WordOp     -> Right $ BinOp ShrL (head xs) (litN 0)
+    Word2IntOp     -> Right $ binOp BitAnd (head xs) (litN 0xffffffff)
+    Int2WordOp     -> Right $ binOp ShrL (head xs) (litN 0)
     Int2FloatOp    -> Right $ head xs
     Int2DoubleOp   -> Right $ head xs
-    Double2IntOp   -> Right $ BinOp (BitAnd) (head xs) (litN 0xffffffff)
+    Double2IntOp   -> Right $ binOp (BitAnd) (head xs) (litN 0xffffffff)
     Double2FloatOp -> Right $ head xs
-    Float2IntOp    -> Right $ BinOp (BitAnd) (head xs) (litN 0xffffffff)
+    Float2IntOp    -> Right $ binOp (BitAnd) (head xs) (litN 0xffffffff)
     Float2DoubleOp -> Right $ head xs
     
     -- Narrowing ops
-    Narrow8IntOp   -> Right $ BinOp BitAnd (head xs) (lit (0xff :: Double))
-    Narrow16IntOp  -> Right $ BinOp BitAnd (head xs) (lit (0xffff :: Double))
-    Narrow32IntOp  -> Right $ BinOp BitAnd (head xs) (lit (0xffffffff :: Double))
-    Narrow8WordOp  -> Right $ BinOp BitAnd (head xs) (lit (0xff :: Double))
-    Narrow16WordOp -> Right $ BinOp BitAnd (head xs) (lit (0xffff :: Double))
-    Narrow32WordOp -> Right $ BinOp ShrL (BinOp BitAnd (head xs) (lit (0xffffffff :: Double))) (litN 0)
+    Narrow8IntOp   -> Right $ binOp BitAnd (head xs) (lit (0xff :: Double))
+    Narrow16IntOp  -> Right $ binOp BitAnd (head xs) (lit (0xffff :: Double))
+    Narrow32IntOp  -> Right $ binOp BitAnd (head xs) (lit (0xffffffff :: Double))
+    Narrow8WordOp  -> Right $ binOp BitAnd (head xs) (lit (0xff :: Double))
+    Narrow16WordOp -> Right $ binOp BitAnd (head xs) (lit (0xffff :: Double))
+    Narrow32WordOp -> Right $ binOp ShrL (binOp BitAnd (head xs) (lit (0xffffffff :: Double))) (litN 0)
 
     -- Char ops
-    CharGtOp -> binOp AST.GT
-    CharGeOp -> binOp GTE
-    CharEqOp -> binOp Eq
-    CharNeOp -> binOp Neq
-    CharLtOp -> binOp AST.LT
-    CharLeOp -> binOp LTE
+    CharGtOp -> bOp GT
+    CharGeOp -> bOp GTE
+    CharEqOp -> bOp Eq
+    CharNeOp -> bOp Neq
+    CharLtOp -> bOp LT
+    CharLeOp -> bOp LTE
 
     -- Int ops
-    IntAddOp ->        intMath $ binOp Add
-    IntSubOp ->        intMath $ binOp Sub
+    IntAddOp ->        intMath $ bOp Add
+    IntSubOp ->        intMath $ bOp Sub
     IntMulOp ->        intMath $ Right $ multiplyIntOp cfg (xs !! 0) (xs !! 1)
     -- FIXME: this is correct but slow!
     IntMulMayOfloOp -> intMath $ Right $ multiplyIntOp cfg (xs !! 0) (xs !! 1)
-    IntQuotOp ->       call "quot"
-    IntQuotRemOp ->    call "quotRemI"
-    IntRemOp ->        binOp Mod -- JS % operator is actually rem, not mod!
-    IntAddCOp -> call "addC"
-    IntSubCOp -> call "subC"
-    ISllOp ->    binOp Shl
-    ISraOp ->    binOp ShrA
-    ISrlOp ->    binOp ShrL
-    IntGtOp ->   binOp AST.GT
-    IntGeOp ->   binOp GTE
-    IntLtOp ->   binOp AST.LT
-    IntLeOp ->   binOp LTE
-    IntEqOp ->   binOp Eq
-    IntNeOp ->   binOp Neq
+    IntQuotOp ->       callF "quot"
+    IntQuotRemOp ->    callF "quotRemI"
+    IntRemOp ->        bOp Mod -- JS % operator is actually rem, not mod!
+    IntAddCOp -> callF "addC"
+    IntSubCOp -> callF "subC"
+    ISllOp ->    bOp Shl
+    ISraOp ->    bOp ShrA
+    ISrlOp ->    bOp ShrL
+    IntGtOp ->   bOp GT
+    IntGeOp ->   bOp GTE
+    IntLtOp ->   bOp LT
+    IntLeOp ->   bOp LTE
+    IntEqOp ->   bOp Eq
+    IntNeOp ->   bOp Neq
 
     -- Word ops
-    WordAddOp ->  wordMath $ binOp Add
-    WordSubOp ->  wordMath $ binOp Sub
-    WordMulOp ->  wordMath $ call "imul"
-    WordQuotOp -> call "quot"
-    WordRemOp ->  binOp Mod
-    AndOp ->      wordMath $ binOp BitAnd
-    OrOp ->       wordMath $ binOp BitOr
-    XorOp ->      wordMath $ binOp BitXor
-    SllOp ->      wordMath $ binOp Shl
-    SrlOp ->      binOp ShrL
-    WordGtOp ->   binOp AST.GT
-    WordGeOp ->   binOp GTE
-    WordEqOp ->   binOp Eq
-    WordNeOp ->   binOp Neq
-    WordLtOp ->   binOp AST.LT
-    WordLeOp ->   binOp LTE
+    WordAddOp ->  wordMath $ bOp Add
+    WordSubOp ->  wordMath $ bOp Sub
+    WordMulOp ->  wordMath $ callF "imul"
+    WordQuotOp -> callF "quot"
+    WordRemOp ->  bOp Mod
+    AndOp ->      wordMath $ bOp BitAnd
+    OrOp ->       wordMath $ bOp BitOr
+    XorOp ->      wordMath $ bOp BitXor
+    SllOp ->      wordMath $ bOp Shl
+    SrlOp ->      bOp ShrL
+    WordGtOp ->   bOp GT
+    WordGeOp ->   bOp GTE
+    WordEqOp ->   bOp Eq
+    WordNeOp ->   bOp Neq
+    WordLtOp ->   bOp LT
+    WordLeOp ->   bOp LTE
 
     -- Double ops
-    DoubleExpOp    -> Right $ NativeCall "Math.exp" xs
-    DoubleLogOp    -> Right $ NativeCall "Math.log" xs
-    DoubleSqrtOp   -> Right $ NativeCall "Math.sqrt" xs
-    DoubleCosOp    -> Right $ NativeCall "Math.cos" xs
-    DoubleSinOp    -> Right $ NativeCall "Math.sin" xs
-    DoubleTanOp    -> Right $ NativeCall "Math.tan" xs
-    DoubleAcosOp   -> Right $ NativeCall "Math.acos" xs
-    DoubleAsinOp   -> Right $ NativeCall "Math.asin" xs
-    DoubleAtanOp   -> Right $ NativeCall "Math.atan" xs
-    DoubleCoshOp   -> Right $ NativeCall "cosh" xs
-    DoubleSinhOp   -> Right $ NativeCall "sinh" xs
-    DoubleTanhOp   -> Right $ NativeCall "tanh" xs
-    DoubleDecode_2IntOp -> Right $ NativeCall "decodeDouble" xs
-    DoubleGtOp ->    binOp AST.GT
-    DoubleGeOp ->    binOp GTE
-    DoubleEqOp ->    binOp Eq
-    DoubleNeOp ->    binOp Neq
-    DoubleLtOp ->    binOp AST.LT
-    DoubleLeOp ->    binOp LTE
-    DoubleAddOp ->   binOp Add
-    DoubleSubOp ->   binOp Sub
-    DoubleMulOp ->   binOp Mul
-    DoubleDivOp ->   binOp Div
-    DoublePowerOp -> call "Math.pow"
+    DoubleExpOp    -> Right $ callForeign "Math.exp" xs
+    DoubleLogOp    -> Right $ callForeign "Math.log" xs
+    DoubleSqrtOp   -> Right $ callForeign "Math.sqrt" xs
+    DoubleCosOp    -> Right $ callForeign "Math.cos" xs
+    DoubleSinOp    -> Right $ callForeign "Math.sin" xs
+    DoubleTanOp    -> Right $ callForeign "Math.tan" xs
+    DoubleAcosOp   -> Right $ callForeign "Math.acos" xs
+    DoubleAsinOp   -> Right $ callForeign "Math.asin" xs
+    DoubleAtanOp   -> Right $ callForeign "Math.atan" xs
+    DoubleCoshOp   -> Right $ callForeign "cosh" xs
+    DoubleSinhOp   -> Right $ callForeign "sinh" xs
+    DoubleTanhOp   -> Right $ callForeign "tanh" xs
+    DoubleDecode_2IntOp -> Right $ callForeign "decodeDouble" xs
+    DoubleGtOp ->    bOp GT
+    DoubleGeOp ->    bOp GTE
+    DoubleEqOp ->    bOp Eq
+    DoubleNeOp ->    bOp Neq
+    DoubleLtOp ->    bOp LT
+    DoubleLeOp ->    bOp LTE
+    DoubleAddOp ->   bOp Add
+    DoubleSubOp ->   bOp Sub
+    DoubleMulOp ->   bOp Mul
+    DoubleDivOp ->   bOp Div
+    DoublePowerOp -> callF "Math.pow"
 
     -- Float ops
-    FloatExpOp     -> Right $ NativeCall "Math.exp" xs
-    FloatLogOp     -> Right $ NativeCall "Math.log" xs
-    FloatSqrtOp    -> Right $ NativeCall "Math.sqrt" xs
-    FloatCosOp     -> Right $ NativeCall "Math.cos" xs
-    FloatSinOp     -> Right $ NativeCall "Math.sin" xs
-    FloatTanOp     -> Right $ NativeCall "Math.tan" xs
-    FloatAcosOp    -> Right $ NativeCall "Math.acos" xs
-    FloatAsinOp    -> Right $ NativeCall "Math.asin" xs
-    FloatAtanOp    -> Right $ NativeCall "Math.atan" xs
-    FloatCoshOp    -> Right $ NativeCall "cosh" xs
-    FloatSinhOp    -> Right $ NativeCall "sinh" xs
-    FloatTanhOp    -> Right $ NativeCall "tanh" xs
-    FloatDecode_IntOp -> Right $ NativeCall "decodeFloat" xs
-    FloatGtOp ->  binOp AST.GT
-    FloatGeOp ->  binOp GTE
-    FloatEqOp ->  binOp Eq
-    FloatNeOp ->  binOp Neq
-    FloatLtOp ->  binOp AST.LT
-    FloatLeOp ->  binOp LTE
-    FloatAddOp -> binOp Add
-    FloatSubOp -> binOp Sub
-    FloatMulOp -> binOp Mul
-    FloatDivOp -> binOp Div
-    FloatPowerOp -> call "Math.pow"
+    FloatExpOp     -> Right $ callForeign "Math.exp" xs
+    FloatLogOp     -> Right $ callForeign "Math.log" xs
+    FloatSqrtOp    -> Right $ callForeign "Math.sqrt" xs
+    FloatCosOp     -> Right $ callForeign "Math.cos" xs
+    FloatSinOp     -> Right $ callForeign "Math.sin" xs
+    FloatTanOp     -> Right $ callForeign "Math.tan" xs
+    FloatAcosOp    -> Right $ callForeign "Math.acos" xs
+    FloatAsinOp    -> Right $ callForeign "Math.asin" xs
+    FloatAtanOp    -> Right $ callForeign "Math.atan" xs
+    FloatCoshOp    -> Right $ callForeign "cosh" xs
+    FloatSinhOp    -> Right $ callForeign "sinh" xs
+    FloatTanhOp    -> Right $ callForeign "tanh" xs
+    FloatDecode_IntOp -> Right $ callForeign "decodeFloat" xs
+    FloatGtOp ->  bOp GT
+    FloatGeOp ->  bOp GTE
+    FloatEqOp ->  bOp Eq
+    FloatNeOp ->  bOp Neq
+    FloatLtOp ->  bOp LT
+    FloatLeOp ->  bOp LTE
+    FloatAddOp -> bOp Add
+    FloatSubOp -> bOp Sub
+    FloatMulOp -> bOp Mul
+    FloatDivOp -> bOp Div
+    FloatPowerOp -> callF "Math.pow"
     
     -- Array ops
-    NewArrayOp -> call "newArr"
-    SameMutableArrayOp -> fmap (Thunk []) $ binOp Eq
-    ReadArrayOp -> Right $ Index arr ix
-    WriteArrayOp -> Right $ Assign (Index arr ix) rhs
+    NewArrayOp -> callF "newArr"
+    SameMutableArrayOp -> fmap (thunk . ret) $ bOp Eq
+    ReadArrayOp -> Right $ index arr ix
+    WriteArrayOp -> Right $ assignEx (index arr ix) rhs
       where (_arr:_ix:rhs:_) = xs
-    SizeofArrayOp -> Right $ Index (head xs) (lit "length")
-    SizeofMutableArrayOp -> Right $ Index (head xs) (lit "length")
-    IndexArrayOp -> Right $ Index arr ix
+    SizeofArrayOp -> Right $ index (head xs) (lit "length")
+    SizeofMutableArrayOp -> Right $ index (head xs) (lit "length")
+    IndexArrayOp -> Right $ index arr ix
     UnsafeFreezeArrayOp -> Right $ head xs
     UnsafeThawArrayOp -> Right $ head xs
     -- TODO: copy, clone, freeze, thaw
     
     -- Byte Array ops
-    NewByteArrayOp_Char      -> call "newByteArr"
-    NewPinnedByteArrayOp_Char-> call "newByteArr"
-    SameMutableByteArrayOp   -> fmap (Thunk []) $ binOp Eq
+    NewByteArrayOp_Char      -> callF "newByteArr"
+    NewPinnedByteArrayOp_Char-> callF "newByteArr"
+    SameMutableByteArrayOp   -> fmap (thunk . ret) $ bOp Eq
     IndexByteArrayOp_Char    -> readArr xs "i8"
     IndexByteArrayOp_Int     -> readArr xs "i32"
     IndexByteArrayOp_Int8    -> readArr xs "i8"
@@ -194,16 +199,16 @@ genOp cfg op xs =
     WriteByteArrayOp_Float   -> writeArr xs "f32"
     WriteByteArrayOp_Double  -> writeArr xs "f64"
     
-    SizeofByteArrayOp        -> Right $ Index (head xs) (lit "byteLength")
-    SizeofMutableByteArrayOp -> Right $ Index (head xs) (lit "byteLength")
-    NewAlignedPinnedByteArrayOp_Char -> Right $ NativeCall "newByteArr" [xs!!0]
+    SizeofByteArrayOp        -> Right $ index (head xs) (lit "byteLength")
+    SizeofMutableByteArrayOp -> Right $ index (head xs) (lit "byteLength")
+    NewAlignedPinnedByteArrayOp_Char -> Right $ callForeign "newByteArr" [xs!!0]
     UnsafeFreezeByteArrayOp  -> Right $ head xs
     ByteArrayContents_Char   -> Right $ head xs
     
     -- Mutable variables
-    NewMutVarOp -> call "nMV"
-    ReadMutVarOp -> call "rMV"
-    WriteMutVarOp -> call "wMV"
+    NewMutVarOp -> callF "nMV"
+    ReadMutVarOp -> callF "rMV"
+    WriteMutVarOp -> callF "wMV"
     
     -- Pointer ops
     WriteOffAddrOp_Char    -> writeOffAddr xs "i8"  1
@@ -230,81 +235,85 @@ genOp cfg op xs =
     ReadOffAddrOp_WideChar -> readOffAddr xs "w32"  4
     ReadOffAddrOp_Float    -> readOffAddr xs "f32"  4
     ReadOffAddrOp_Double   -> readOffAddr xs "f64"  8
-    AddrAddOp              -> call "plusAddr"
-    AddrSubOp              -> Right $ NativeCall "plusAddr" [addr, Neg off]
+    AddrAddOp              -> callF "plusAddr"
+    AddrSubOp              ->
+        Right $ callForeign "plusAddr" [addr, binOp Sub (litN 0) off]
       where (addr:off:_) = xs
-    AddrEqOp               -> call "addrEq"
-    AddrNeOp               -> Right $ Neg $ NativeCall "addrEq" [a, b]
+    AddrEqOp               -> callF "addrEq"
+    AddrNeOp               ->
+        Right $ binOp Sub (litN 0) $ callForeign "addrEq" [a, b]
       where (a:b:_) = xs
-    AddrLtOp               -> call "addrLT"
-    AddrGtOp               -> call "addrGT"
-    AddrLeOp               -> Right $ Neg $ NativeCall "addrGT" [a, b]
+    AddrLtOp               -> callF "addrLT"
+    AddrGtOp               -> callF "addrGT"
+    AddrLeOp               ->
+        Right $ binOp Sub (litN 0) $ callForeign "addrGT" [a, b]
       where (a:b:_) = xs
-    AddrGeOp               -> Right $ Neg $ NativeCall "addrLT" [a, b]
+    AddrGeOp               ->
+        Right $ binOp Sub (litN 0) $ callForeign "addrLT" [a, b]
       where (a:b:_) = xs
 
     -- MVars
-    NewMVarOp     -> call "newMVar"
-    TakeMVarOp    -> call "takeMVar"
-    TryTakeMVarOp -> call "tryTakeMVar"
-    PutMVarOp     -> call "putMVar"
-    TryPutMVarOp  -> call "tryPutMVar"
-    SameMVarOp    -> call "sameMVar"
-    IsEmptyMVarOp -> call "isEmptyMVar"
+    NewMVarOp     -> callF "newMVar"
+    TakeMVarOp    -> callF "takeMVar"
+    TryTakeMVarOp -> callF "tryTakeMVar"
+    PutMVarOp     -> callF "putMVar"
+    TryPutMVarOp  -> callF "tryPutMVar"
+    SameMVarOp    -> callF "sameMVar"
+    IsEmptyMVarOp -> callF "isEmptyMVar"
 
     -- Stable names
-    MakeStableNameOp  -> call "makeStableName"
-    EqStableNameOp    -> call "eqStableName"
+    MakeStableNameOp  -> callF "makeStableName"
+    EqStableNameOp    -> callF "eqStableName"
     StableNameToIntOp -> Right $ head xs
 
     -- Exception masking
     -- There's only one thread anyway, so async exceptions can't happen.
-    MaskAsyncExceptionsOp   -> Right $ Call (head xs) []
-    UnmaskAsyncExceptionsOp -> Right $ Call (head xs) []
+    MaskAsyncExceptionsOp   -> Right $ callSaturated (head xs) []
+    UnmaskAsyncExceptionsOp -> Right $ callSaturated (head xs) []
     MaskStatus              -> Right $ litN 0
 
     -- Misc. ops
-    SeqOp          -> Right $ NativeCall "E" [head xs]
-    AtomicallyOp   -> Right $ Call (xs !! 0) []
+    SeqOp          -> Right $ callForeign "E" [head xs]
+    AtomicallyOp   -> Right $ callSaturated (xs !! 0) []
     -- Get the data constructor tag from a value.
-    DataToTagOp    -> call "dataToTag"
+    DataToTagOp    -> callF "dataToTag"
     TouchOp        -> Right $ defState
-    RaiseOp        -> call "die"
-    RaiseIOOp      -> call "die"
+    RaiseOp        -> callF "die"
+    RaiseIOOp      -> callF "die"
     -- noDuplicate is only relevant in a threaded environment.
     NoDuplicateOp  -> Right $ defState
-    CatchOp        -> call "jsCatch"
+    CatchOp        -> callF "jsCatch"
     x              -> Left $ "Unsupported PrimOp: " ++ showOutputable x
   where
     (arr:ix:_) = xs
     
     writeArr (a:i:rhs:_) elemtype =
-      Right $ Assign (Index (Index (Index a (lit "v")) (lit elemtype)) i) rhs
+      Right $ assignEx (index (index (index a (lit "v")) (lit elemtype)) i) rhs
     writeArr _ _ =
       error "writeArray primop with too few arguments!"
 
     readArr (a:i:_) elemtype =
-      Right $ Index (Index (Index a (lit "v")) (lit elemtype)) i
+      Right $ index (index (index a (lit "v")) (lit elemtype)) i
     readArr _ _ =
       error "writeArray primop with too few arguments!"
 
     writeOffAddr (addr:off:rhs:_) etype esize =
-      Right $ NativeCall "writeOffAddr" [lit etype, litN esize, addr, off, rhs]
+      Right $ callForeign "writeOffAddr" [lit etype, litN esize, addr, off, rhs]
     writeOffAddr _ _ _ =
       error "writeOffAddr primop with too few arguments!"
     
     readOffAddr (addr:off:_) etype esize =
-      Right $ NativeCall "readOffAddr" [lit etype, litN esize, addr, off]
+      Right $ callForeign "readOffAddr" [lit etype, litN esize, addr, off]
     readOffAddr _ _ _ =
       error "readOffAddr primop with too few arguments!"
 
-    call f = Right $ NativeCall f xs
+    callF f = Right $ callForeign f xs
     
-    binOp bop =
+    bOp bop =
       case xs of
-        [x, y] -> Right $ BinOp bop x y
+        [x, y] -> Right $ binOp bop x y
         _      -> error $ "PrimOps.binOp failed! op is " ++ show bop
     
     -- Bitwise ops on words need to be unsigned; exploit the fact that >>> is!
-    wordMath = fmap (\oper -> BinOp ShrL oper (litN 0))
+    wordMath = fmap (\oper -> binOp ShrL oper (litN 0))
     intMath = fmap (wrapIntMath cfg)

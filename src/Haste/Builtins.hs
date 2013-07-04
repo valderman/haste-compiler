@@ -1,56 +1,43 @@
 -- | Various functions generated as builtins
 module Haste.Builtins (toBuiltin) where
 import GhcPlugins as P
-import Haste.AST as AST
+import Data.JSTarget as J
 import Control.Applicative
 
-toBuiltin :: P.Var -> Maybe JSVar
+toBuiltin :: P.Var -> Maybe J.Var
 toBuiltin v =
   case (modname, varname) of
     (Just "GHC.Prim", "coercionToken#") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "coercionToken"}    
+      Just $ foreignVar "coercionToken"
     (Just "GHC.Prim", "realWorld#") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "realWorld"}
+      Just $ foreignVar "realWorld"
     (Just "GHC.Err", "error") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "err"}
-    
+      Just $ foreignVar "err"
+
     -- Everything to do with unpacking had better be built in for compactness,
     -- efficiency and space reasons.
     (Just "GHC.CString", "unpackCString#") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "unCStr"}
+      Just $ foreignVar "unCStr"
     (Just "GHC.CString", "unpackCStringUtf8#") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "unCStr"}
+      Just $ foreignVar "unCStr"
     (Just "GHC.CString", "unpackAppendCString#") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "unAppCStr"}
+      Just $ foreignVar "unAppCStr"
     (Just "GHC.CString", "unpackFoldrCString#") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "unFoldrCStr"}
-    
+      Just $ foreignVar "unFoldrCStr"
+
     -- Primitive needs of the Haste standard library
     (Just "Haste.Prim", "toJSStr") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "toJSStr"}
+      Just $ foreignVar "toJSStr"
     (Just "Haste.Prim", "fromJSStr") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "fromJSStr"}
+      Just $ foreignVar "fromJSStr"
     (Just "Haste.Prim", "jsRound") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "Math.round"}
+      Just $ foreignVar "Math.round"
     (Just "Haste.Prim", "jsCeiling") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "Math.ceil"}
+      Just $ foreignVar "Math.ceil"
     (Just "Haste.Prim", "jsFloor") ->
-      Just $ JSVar {jsmod  = foreignModName,
-                    jsname = Foreign "Math.floor"}
+      Just $ foreignVar "Math.floor"
     _ | otherwise ->
       Nothing
   where
     modname = moduleNameString . moduleName <$> nameModule_maybe (varName v)
     varname = occNameString $ nameOccName $ varName v
-    foreignModName = moduleNameString $ name foreignModule

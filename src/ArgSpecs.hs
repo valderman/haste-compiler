@@ -2,12 +2,12 @@
 module ArgSpecs (argSpecs) where
 import Args
 import Haste.Config
-import Haste
+import Data.JSTarget.PP (debugPPOpts)
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [
     ArgSpec { optName = "debug",
-              updateCfg = \cfg _ -> cfg {ppOpts  = pretty},
+              updateCfg = \cfg _ -> cfg {ppOpts  = debugPPOpts},
               info = "Output indented, fairly readable code, with all " ++
                      "external names included in comments."},
     ArgSpec { optName = "dont-link",
@@ -21,14 +21,14 @@ argSpecs = [
                      ++ "blob."},
     -- The opt-all enabling -O2 thing is handled directly in main! :(
     ArgSpec { optName = "opt-all",
-              updateCfg = updateClosureCfg,
+              updateCfg = optAllSafe,
               info = "Enable all safe optimizations. "
-                     ++ "Equivalent to -O2 --opt-google-closure."},
+                     ++ "Equivalent to -O2 --opt-whole-program "
+                     ++ "--opt-google-closure."},
     ArgSpec { optName = "opt-all-unsafe",
               updateCfg = optAllUnsafe,
-              info = "Enable all safe and unsafe optimizations. "
-                     ++ "Equivalent to -O2 --opt-google-closure "
-                     ++ "--opt-unsafe-ints."},
+              info = "Enable all safe and unsafe optimizations.\n"
+                     ++ "Equivalent to --opt-all --opt-unsafe-ints."},
     ArgSpec { optName = "opt-google-closure",
               updateCfg = updateClosureCfg,
               info = "Run the Google Closure compiler on the output. "
@@ -53,6 +53,10 @@ argSpecs = [
                      ++ "only work on the lowest 32 bits. This option should "
                      ++ "give a substantial performance boost for Int math "
                      ++ "heavy code."},
+    ArgSpec { optName = "opt-whole-program",
+              updateCfg = enableWholeProgramOpts,
+              info = "Perform optimizations over the whole program at link "
+                     ++ "time.\nMay significantly increase compilation time."},
     ArgSpec { optName = "out=",
               updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
               info = "Write the JS blob to <arg>."},
@@ -88,9 +92,13 @@ unsafeMul cfg _ = cfg {multiplyIntOp = fastMultiply}
 unsafeMath :: Config -> [String] -> Config
 unsafeMath = vagueInts ||| unsafeMul
 
--- | Enable all optmizations, both safe and unsafe.
+-- | Enable all optimizations, both safe and unsafe.
 optAllUnsafe :: Config -> [String] -> Config
-optAllUnsafe = updateClosureCfg ||| unsafeMath
+optAllUnsafe = optAllSafe ||| unsafeMath
+
+-- | Enable all safe optimizations.
+optAllSafe :: Config -> [String] -> Config
+optAllSafe = updateClosureCfg ||| enableWholeProgramOpts
 
 -- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> [String] -> Config
@@ -98,3 +106,7 @@ updateClosureCfg cfg ['=':arg] =
   cfg {useGoogleClosure = Just arg}
 updateClosureCfg cfg _ =
   cfg {useGoogleClosure = Just $ hastePath ++ "/compiler.jar"}
+
+-- | Enable optimizations over the entire program.
+enableWholeProgramOpts :: Config -> [String] -> Config
+enableWholeProgramOpts cfg _ = cfg {wholeProgramOpts = True}

@@ -1,17 +1,18 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Haste.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startASAP,
   startOnLoadComplete, appName, sysLibPath, hastePath, fastMultiply,
   safeMultiply) where
-import Haste.PrettyM (PrettyOpts, compact)
-import Haste.AST
+import Data.JSTarget
 import System.IO.Unsafe (unsafePerformIO)
 import System.Directory
 import System.FilePath (combine, replaceExtension)
-import Control.Applicative
 import Paths_haste_compiler (getDataFileName)
 import DynFlags
+import Data.ByteString.Lazy.Builder
+import Data.Monoid
 
-type AppStart = String -> String
+type AppStart = Builder -> Builder
 
 stdJSLibs :: [FilePath]
 stdJSLibs = unsafePerformIO $ mapM getDataFileName [
@@ -33,12 +34,12 @@ append = flip combine
 --   as well always do it this way, to simplify the config a bit.
 startASAP :: AppStart
 startASAP mainSym =
-  "A(" ++ mainSym ++ ", [0]);"
+  "A(" <> mainSym <> ", [0]);"
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart
 startOnLoadComplete mainSym =
-  "window.onload = function() {" ++ startASAP mainSym ++ "};"
+  "window.onload = function() {" <> startASAP mainSym <> "};"
 
 hastePath :: FilePath
 hastePath = unsafePerformIO $ getAppUserDataDirectory appName
@@ -47,16 +48,16 @@ sysLibPath :: FilePath
 sysLibPath = append "lib" hastePath
 
 -- | Int op wrapper for strictly 32 bit (|0).
-strictly32Bits :: JSExp -> JSExp
-strictly32Bits = flip (BinOp BitOr) (litN 0)
+strictly32Bits :: AST Exp -> AST Exp
+strictly32Bits = flip (binOp BitOr) (litN 0)
 
 -- | Safe Int multiplication.
-safeMultiply :: JSExp -> JSExp -> JSExp
-safeMultiply a b = NativeCall "imul" [a, b]
+safeMultiply :: AST Exp -> AST Exp -> AST Exp
+safeMultiply a b = callForeign "imul" [a, b]
 
 -- | Fast but unsafe Int multiplication.
-fastMultiply :: JSExp -> JSExp -> JSExp
-fastMultiply = BinOp Mul
+fastMultiply :: AST Exp -> AST Exp -> AST Exp
+fastMultiply = binOp Mul
 
 -- | Compiler configuration.
 data Config = Config {
@@ -70,18 +71,20 @@ data Config = Config {
     --   code that starts the program.
     appStart :: AppStart,
     -- | Options to the pretty printer.
-    ppOpts :: PrettyOpts,
+    ppOpts :: PPOpts,
     -- | A function that takes the name of the a target as its input and
     --   outputs the name of the file its JS blob should be written to.
     outFile :: String -> String,
     -- | Link the program?
     performLink :: Bool,
     -- | A function to call on each Int arithmetic primop.
-    wrapIntMath :: JSExp -> JSExp,
+    wrapIntMath :: AST Exp -> AST Exp,
     -- | Operation to use for Int multiplication.
-    multiplyIntOp :: JSExp -> JSExp -> JSExp,
+    multiplyIntOp :: AST Exp -> AST Exp -> AST Exp,
     -- | Be verbose about warnings, etc.?
     verbose :: Bool,
+    -- | Perform optimizations over the whole program at link time?
+    wholeProgramOpts :: Bool,
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
@@ -97,12 +100,13 @@ defConfig = Config {
     libPath          = sysLibPath,
     targetLibPath    = ".",
     appStart         = startOnLoadComplete,
-    ppOpts           = compact,
+    ppOpts           = def,
     outFile          = flip replaceExtension "js",
     performLink      = True,
     wrapIntMath      = strictly32Bits,
     multiplyIntOp    = safeMultiply,
     verbose          = False,
+    wholeProgramOpts = False,
     useGoogleClosure = Nothing,
     jsExternals      = [],
     dynFlags         = tracingDynFlags

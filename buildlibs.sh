@@ -23,6 +23,7 @@ if [ $? != 0 ] ; then
   echo "Failed while installing .hi files for ghc-prim!"
   exit 1
 fi
+
 haste-pkg update packageconfig
 if [ $? != 0 ] ; then
   echo "Failed while registering ghc-prim!"
