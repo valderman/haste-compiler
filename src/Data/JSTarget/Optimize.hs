@@ -9,6 +9,7 @@ import Data.JSTarget.Traversal
 import Control.Applicative
 import Data.List (foldl')
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 -- TODO: tryTernary may inline calls that would otherwise be in tail position
 --       which is something we'd really like to avoid.
@@ -17,8 +18,8 @@ optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ast js) =
   flip runTravM js $ do
     shrinkCase ast
-    >>= inlineAssigns True
     >>= inlineReturns
+    >>= inlineAssigns True
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) = runTravM (inlineAssigns False ast) js
@@ -158,25 +159,22 @@ inlineAssignsLocal ast = do
 --   care about the assignment side effect.
 inlineReturns :: JSTrav ast => ast -> TravM ast
 inlineReturns ast = do
-    mapJS (const True) return inlRet ast
+    (s, ast') <- foldMapJS (\_ _ -> True) pure2 foldRet S.empty ast
+    mapM_ (flip putRef NullRet) $ S.toList s
+    return ast'
   where
-    inlRet stm@(Case scr def alts next@(Shared lbl)) = do
-      next' <- getRef lbl
-      case next' of
-        Return x -> do
-          def' <- mapJS (const True) pure (inline lbl next') def
-          alts' <- mapJS (const True) pure (inline lbl next') alts
-          putRef lbl NullRet
-          return $ Case scr def' alts' next
-        _ -> do
-          return stm
-    inlRet stm = do
-      return stm
-
-    inline lbl ret (Jump (Shared lbl')) | lbl == lbl' =
-      return ret
-    inline _ _ stm = do
-      return stm
+    pure2 s x = pure (s,x)
+    foldRet s (Assign (NewVar _ lhs) rhs (Return (Var v))) | v == lhs = do
+      return (s, Return rhs)
+    foldRet s keep@(Assign (NewVar _ lhs) rhs (Jump (Shared lbl))) = do
+      next <- getRef lbl
+      case next of
+        Return (Var v) | v == lhs ->
+          return (S.insert lbl s, Return rhs)
+        _ ->
+          return (s, keep)
+    foldRet s keep = do
+      return (s, keep)
 
 -- | Inline all occurrences of the given shared code path.
 --   Use with caution - preferrably not at all!
