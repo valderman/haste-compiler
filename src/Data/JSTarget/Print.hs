@@ -70,6 +70,15 @@ instance Pretty Exp where
   pp (IfEx c th el) = do
     pp c .+. "?" .+. pp th .+. ":" .+. pp el
 
+-- | Returns the final statement in a case branch.
+finalStm :: Stm -> PP Stm
+finalStm s =
+  case s of
+    Assign _ _ s'         -> finalStm s'
+    Case _ _ _ (Shared l) -> lookupLabel l >>= finalStm
+    Forever s'            -> finalStm s'
+    _                     -> return s
+
 instance Pretty Stm where
   pp (Case cond def alts (Shared nextRef)) = do
     prettyCase cond def alts
@@ -122,9 +131,11 @@ instance Pretty Alt where
     line $ "case " .+. pp con .+. ":"
     indent $ do
       pp branch
-      case branch of
+      s <- finalStm branch
+      case s of
         Return _ -> return ()
-        _        -> line "break;"
+        Cont     -> return ()
+        _        -> line "break;";
 
 opParens :: BinOp -> Exp -> Exp -> PP ()
 opParens Sub a (BinOp Sub (Lit (LNum 0)) b) =
