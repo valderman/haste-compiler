@@ -70,6 +70,19 @@ instance Pretty Exp where
   pp (IfEx c th el) = do
     pp c .+. "?" .+. pp th .+. ":" .+. pp el
 
+instance Pretty (Var, Exp) where
+  pp (v, ex) = pp v .+. "=" .+. pp ex
+
+-- | Print a series of NewVars at once, to avoid unnecessary "var" keywords.
+ppAssigns :: Stm -> PP ()
+ppAssigns stm = do
+    line $ "var " .+. ppList "," as .+. ";"
+    pp next
+  where
+    (as, next) = gather [] stm
+    gather as (Assign (NewVar _ v) ex next) = gather ((v, ex):as) next
+    gather as next                          = (reverse as, next)
+
 -- | Returns the final statement in a case branch.
 finalStm :: Stm -> PP Stm
 finalStm s =
@@ -87,11 +100,10 @@ instance Pretty Stm where
     line "while(1){"
     indent $ pp stm
     "}"
-  pp (Assign lhs ex next) = do
+  pp s@(Assign lhs ex next) = do
     if lhs == blackHole
-      then line $ pp ex .+. ";"
-      else line $ pp lhs .+. " = " .+. pp ex .+. ";"
-    pp next
+      then line (pp ex .+. ";") >> pp next
+      else ppAssigns s
   pp (Return ex) = do
     line $ "return " .+. pp ex .+. ";"
   pp (Cont) = do
