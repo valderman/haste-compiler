@@ -196,12 +196,15 @@ shrinkCase =
     shrink stm           = return stm
 
 -- | Turn tail recursion on the given var into a loop, if possible.
---   TODO: optimize tail recursive functions that create closures into:
+--   Tail recursive functions that create closures turn into:
 --   function f(a', b', c') {
 --     while(1) {
---       (function(a, b, c) {
+--       var r = (function(a, b, c) {
 --         a' = a; b' = b; c' = c;
 --       })(a', b', c');
+--       if(r != null) {
+--         return r;
+--       }
 --     }
 --   }
 tailLoopify :: Var -> Exp -> TravM Exp
