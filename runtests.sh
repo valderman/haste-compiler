@@ -8,9 +8,9 @@ runTest() {
     ghc_output=`runghc -DTEST_MODULE=$module TestDriver.hs`
 
     if [[ $quiet == 1 ]] ; then
-        hastec --start=asap -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
+        hastec --start=asap -O0 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     else
-        hastec --verbose --debug --start=asap -DTEST_MODULE=$module TestDriver.hs
+        hastec -O0 --verbose --debug --start=asap -DTEST_MODULE=$module TestDriver.hs
     fi
     haste_output=`js TestDriver.js`
 

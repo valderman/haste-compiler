@@ -89,10 +89,10 @@ callVanillaGHC args = do
 hasteMain :: [String] -> IO ()
 hasteMain args
   | needsReboot == Dont =
-    compiler args
+    compiler ("-O2" : args)
   | otherwise = do
     if "--unbooted" `elem` args
-      then compiler (filter (/= "--unbooted") args)
+      then compiler (filter (/= "--unbooted") ("-O2" : args))
       else fail rebootMsg
 
 -- | Determine whether all given args are handled by Haste, or if we need to
