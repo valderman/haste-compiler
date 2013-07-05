@@ -17,10 +17,11 @@ longer needed.
 
 You should probably run the test suite first though, to verify that everything
 is working. To do that, execute `./runtests.sh` in the Haste root directory.
-You may also run only a particular test by executing `./runtest.sh NameOfTest`.
-The test suite is written for use with Mozilla's SpiderMonkey Javascript engine,
-which can be found in the `spidermonkey-bin` package if you're running Debian or
-any of its derivatives, and may or may not work with other implementations.
+You may also run only a particular test by executing `./runtests.sh NameOfTest`.
+The test suite uses the `nodejs` interpreter by default, but this may be
+modified by setting the `JS` environment variable as such:
+`JS=other-js-interpreter ./runtests.sh`. Other JavaScript interpreters may or
+may not work.
 
 
 Usage
@@ -78,10 +79,10 @@ brackets of the Strathclyde Haskell Enhancement
 Libraries
 ---------
 
-Haste is able to use standard Haskell libraries to a certain extent.
-However, many primitive operations are still not implemented, which means that
-any code making use of them will give you a compiler warning, then die at
-runtime with an angry error. This is currently being worked on.
+Haste is able to use standard Haskell libraries. However, some primitive
+operations are still not implemented, which means that any code making 
+of them will give you a compiler warning, then die at runtime with an angry
+error. This is currently being worked on.
 
 
 Why yet another Haskell to Javascript compiler?
@@ -97,9 +98,6 @@ Known issues
 
 * No 64-bit math. Use Integer if you need large integers, use Double if you
   want as fast math as possible (yes, even for integer math.)
-
-* Same-named modules in different packages overwrite each other when compiling
-  with --libinstall.
 
 * Not all GHC primops are implemented; if you encounter an unimplemented
   primop, I'd be happy if you'd report it together with a small test case that
