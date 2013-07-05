@@ -88,25 +88,23 @@ If you still insist, remember the following:
 For reference, here are a few functions to help you get started.
 
 // jsalert :: JSString -> IO ()
-function jsalert(text, _state_of_the_world) {
+function jsalert(text) {
     alert(text);
-    return [1, 0]; // 0 is perfectly valid as the state of the world
 }
 
 // jsprompt :: IO Int
-function jsprompt(_state_of_the_world) {
+function jsprompt() {
     var anInt = parseInt(prompt("Please enter an integer!"));
-    return [1, 0, anInt];
+    return anInt;
 }
 
 // jspure :: Int -> Int
 // Note that this pure function also needs to deal with the world's state.
-function jspure(val, _state_of_the_world) {
-    return [1, 0, val + 1];
+function jspure(val) {
+    return val + 1;
 }
 
 // jscallme :: (JSString -> IO ()) -> IO ()
-function jscallme(callback, _state_of_the_world) {
+function jscallme(callback) {
     A(callback, [[1,'Hi, Haskell!'], 0]); // Note the A() and wrapped argument
-    return [1, "lookie, the world state can even be a string!"];
 }
