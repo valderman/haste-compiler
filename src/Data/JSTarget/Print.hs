@@ -188,7 +188,9 @@ opParens :: BinOp -> Exp -> Exp -> PP ()
 opParens Sub a (BinOp Sub (Lit (LNum 0)) b) =
   opParens Add a b
 opParens Sub (Lit (LNum 0)) b =
-  "-" .+. pp b
+  case b of
+    BinOp _ _ _ -> "-(" .+. pp b .+. ")"
+    _           -> "-" .+. pp b
 opParens op a b =
   parens a >> put (string7 $ show op) >> parens b
   where

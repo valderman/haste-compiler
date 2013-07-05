@@ -157,9 +157,10 @@ instance Monad AST where
 --   Everything that's not an operator has equal precedence, higher than any
 --   binary operator.
 expPrec :: Exp -> Int
-expPrec (BinOp op _ _) = opPrec op
-expPrec (Not _)        = 500
-expPrec _              = 1000
+expPrec (BinOp Sub (Lit (LNum 0)) _) = 500 -- 0-n is always printed as -n
+expPrec (BinOp op _ _)               = opPrec op
+expPrec (Not _)                      = 500
+expPrec _                            = 1000
 
 type JumpTable = M.Map Lbl Stm
 
