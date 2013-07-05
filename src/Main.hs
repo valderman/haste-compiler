@@ -8,6 +8,7 @@ import CorePrep
 import CoreToStg
 import StgSyn (StgBinding)
 import HscTypes
+import Module (moduleNameSlashes)
 import GhcMonad
 import System.Environment (getArgs)
 import Control.Monad (when)
@@ -19,9 +20,13 @@ import System.IO
 import System.Process (runProcess, waitForProcess, rawSystem)
 import System.Exit (ExitCode (..))
 import System.Directory (renameFile)
+import Filesystem (getModified, isFile)
 import Version
 import Data.Version
 import Data.List
+import Data.String
+import Data.Digest.OpenSSL.MD5
+import qualified Data.ByteString.Char8 as B
 import EnvUtils
 
 logStr :: String -> IO ()
@@ -165,19 +170,48 @@ closurize cloPath file = do
     ExitSuccess ->
       renameFile cloFile file
 
+-- | Generate a unique fingerprint for the compiler, command line arguments,
+--   etc.
+genFingerprint :: [String] -> Fingerprint
+genFingerprint args =
+  md5sum $ B.pack $ show [
+      show hasteVersion,
+      show ghcVersion,
+      show bootVer,
+      show args
+    ]
+
 -- | Compile a module into a .jsmod intermediate file.
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
-  case ms_hsc_src modSummary of
-    HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
-    _          -> do
-      (pgm, name) <- prepare dynflags modSummary
-      let theCode    = generate cfg name pgm
-          targetpath = (targetLibPath cfg)
-      liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
-      liftIO $ writeModule targetpath theCode
+    fp <- liftIO $ fmap genFingerprint getArgs
+    should_recompile <- liftIO $ shouldRecompile fp modSummary targetpath
+    when should_recompile $ do
+      case ms_hsc_src modSummary of
+        HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
+        _          -> do
+          (pgm, name) <- prepare dynflags modSummary
+          let theCode = generate cfg fp name pgm
+          liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
+          liftIO $ writeModule targetpath theCode
   where
     myName = moduleNameString $ moduleName $ ms_mod modSummary
+    targetpath = targetLibPath cfg
+
+shouldRecompile :: Fingerprint -> ModSummary -> FilePath -> IO Bool
+shouldRecompile fp ms path = do return True
+{-    exists <- isFile fpPath
+    if exists
+      then do
+        fp' <- readModuleFingerprint path file
+        jsmtime <- getModified fpPath
+        return $ ms_hs_date ms > jsmtime || fp /= fp'
+      else do
+        return True
+  where
+    file   = moduleNameSlashes (ms_mod_name ms) ++ ".jsmod"
+    path'  = path ++ "/" ++ file
+    fpPath = fromString path' -}
 
 -- | Do everything required to get a list of STG bindings out of a module.
 prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName)

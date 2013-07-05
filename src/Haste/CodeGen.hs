@@ -38,12 +38,13 @@ import Haste.Errors
 import Haste.PrimOps
 import Haste.Builtins
 
-generate :: Config -> ModuleName -> [StgBinding] -> J.Module
-generate cfg modname binds =
+generate :: Config -> Fingerprint -> ModuleName -> [StgBinding] -> J.Module
+generate cfg fp modname binds =
   Module {
-      modName = moduleNameString modname,
-      modDeps = foldl' insDep M.empty theMod,
-      modDefs = foldl' insFun M.empty theMod
+      modFingerprint = fp,
+      modName        = moduleNameString modname,
+      modDeps        = foldl' insDep M.empty theMod,
+      modDefs        = foldl' insFun M.empty theMod
     }
   where
     theMod = genAST cfg modname binds

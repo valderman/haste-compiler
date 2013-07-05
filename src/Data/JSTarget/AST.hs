@@ -98,20 +98,24 @@ data Stm where
 -- | Case alternatives - an expression to match and a branch.
 type Alt = (Exp, Stm)
 
+type Fingerprint = String
+
 -- | Represents a module. A module has a name, a dependency map of all its
 --   definitions, and a bunch of definitions.
 data Module = Module {
-    modName  :: !String,
-    modDeps  :: !(M.Map Name (S.Set Name)),
-    modDefs  :: !(M.Map Name (AST Exp))
+    modFingerprint :: !Fingerprint,
+    modName        :: !String,
+    modDeps        :: !(M.Map Name (S.Set Name)),
+    modDefs        :: !(M.Map Name (AST Exp))
   }
 
 -- | Imaginary module for foreign code that may need one.
 foreignModule :: Module
 foreignModule = Module {
-    modName  = "",
-    modDeps  = M.empty,
-    modDefs  = M.empty
+    modFingerprint = "",
+    modName        = "",
+    modDeps        = M.empty,
+    modDefs        = M.empty
   }
 
 -- | An LHS that's guaranteed to not ever be read, enabling the pretty

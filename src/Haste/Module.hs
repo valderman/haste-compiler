@@ -1,5 +1,5 @@
 -- | Read and write JSMods.
-module Haste.Module (writeModule, readModule) where
+module Haste.Module (writeModule, readModule, readModuleFingerprint) where
 import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import System.FilePath
@@ -12,13 +12,19 @@ import Data.Binary
 fileExt :: String
 fileExt = "jsmod"
 
+readModuleFingerprint :: FilePath -> FilePath -> IO Fingerprint
+readModuleFingerprint libpath path = do
+  x <- doesFileExist path
+  let path' = if x then path else combine libpath path
+  decode <$> B.readFile path'
+
 -- | Write a module to file, with the extension specified in `fileExt`.
 --   Assuming that fileExt = "jsmod", a module Foo.Bar is written to
 --   basepath/Foo/Bar.jsmod
 --   If any directory in the path where the module is to be written doesn't
 --   exist, it gets created.
 writeModule :: FilePath -> Module -> IO ()
-writeModule basepath m@(Module modname _ _) = do
+writeModule basepath m@(Module _ modname _ _) = do
   createDirectoryIfMissing True (takeDirectory path)
   B.writeFile (addExtension path fileExt) (encode m)
   where

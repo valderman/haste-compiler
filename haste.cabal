@@ -64,7 +64,9 @@ Executable hastec
         ghc-paths,
         process,
         unix,
-        random
+        random,
+        system-fileio,
+        nano-md5
     Main-Is:
         Main.hs
     Other-Modules:
