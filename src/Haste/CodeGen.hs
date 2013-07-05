@@ -37,11 +37,18 @@ import Haste.Monad
 import Haste.Errors
 import Haste.PrimOps
 import Haste.Builtins
+import Haste.Util (showOutputable)
 
-generate :: Config -> Fingerprint -> ModuleName -> [StgBinding] -> J.Module
-generate cfg fp modname binds =
+generate :: Config
+         -> Fingerprint
+         -> String
+         -> ModuleName
+         -> [StgBinding]
+         -> J.Module
+generate cfg fp pkgid modname binds =
   Module {
       modFingerprint = fp,
+      modPackageId   = pkgid,
       modName        = moduleNameString modname,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
@@ -299,9 +306,9 @@ toJSVar thisMod v msuffix =
     FCallId fc -> foreignVar (foreignName fc)
     _
       | isLocalId v && not hasMod ->
-        internalVar (name (unique ++ suffix) (Just myMod)) ""
+        internalVar (name (unique ++ suffix) (Just (myPkg, myMod))) ""
       | isGlobalId v || hasMod ->
-        internalVar (name (extern ++ suffix) (Just myMod)) comment
+        internalVar (name (extern ++ suffix) (Just (myPkg, myMod))) comment
     _ ->
       error $ "Var is not local, global or external!"
   where
@@ -313,8 +320,10 @@ toJSVar thisMod v msuffix =
     hasMod = case nameModule_maybe vname of
                Nothing -> False
                _       -> True
-    myMod  =
+    myMod =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe vname)
+    myPkg =
+      maybe "main" (showOutputable . modulePackageId) (nameModule_maybe vname)
     extern = occNameString $ nameOccName vname
     unique = show $ nameUnique vname
 

@@ -43,7 +43,7 @@ internalVar :: Name -> String -> Var
 internalVar = Internal
 
 -- | Create a name, qualified or not.
-name :: String -> Maybe String -> Name
+name :: String -> Maybe (String, String) -> Name
 name = Name
 
 -- | A variable expression, for convenience.

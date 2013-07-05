@@ -6,24 +6,21 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Monad.State.Strict
 import Control.Applicative
-import Module hiding (Module)
 import Data.JSTarget
 import qualified Data.ByteString.Lazy as B
 import Data.ByteString.Lazy.Builder
 import Data.Monoid
 
--- | File extension for files housing JSMods.
-modExt :: String
-modExt = ".jsmod"
-
 -- | The program entry point.
+--   This will need to change when we start supporting building "binaries"
+--   using cabal, since we'll have all sorts of funny package names then.
 mainSym :: Name
-mainSym = name "main" (Just "Main")
+mainSym = name "main" (Just ("main", "Main"))
 
 -- | Link a program using the given config and input file name.
-link :: Config -> FilePath -> IO ()
-link cfg target = do
-  ds <- getAllDefs (libPath cfg) mainSym
+link :: Config -> String -> FilePath -> IO ()
+link cfg pkgid target = do
+  ds <- getAllDefs (libPath cfg) pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
   let (progText, mainSym') = prettyProg (ppOpts cfg) mainSym myDefs
       callMain = appStart cfg mainSym'
@@ -36,9 +33,9 @@ link cfg target = do
     <> callMain
 
 -- | Generate a sequence of all assignments needed to run Main.main.
-getAllDefs :: FilePath -> Name -> IO (AST Stm)
-getAllDefs libpath mainsym =
-  runDep $ addDef libpath mainsym
+getAllDefs :: FilePath -> String -> Name -> IO (AST Stm)
+getAllDefs libpath pkgid mainsym =
+  runDep $ addDef libpath pkgid mainsym
 
 data DepState = DepState {
     defs        :: !(AST Stm -> AST Stm),
@@ -72,30 +69,27 @@ getModuleOf libpath v =
   case moduleOf v of
     Just "GHC.Prim" -> return foreignModule
     Just ""         -> return foreignModule
-    Just m          -> getModule libpath
-                       $ (++ modExt)
-                       $ moduleNameSlashes
-                       $ mkModuleName m
+    Just m          -> getModule libpath (maybe "main" id $ pkgOf v) m
     _               -> return foreignModule
 
 -- | Return the module at the given path, loading it into cache if it's not
 --   already there.
-getModule :: FilePath -> FilePath -> DepM Module
-getModule libpath modpath = do
+getModule :: FilePath -> String -> String -> DepM Module
+getModule libpath pkgid modname = do
   st <- get
-  case M.lookup modpath (modules st) of
+  case M.lookup modname (modules st) of
     Just m ->
       return m
     _      -> do
-      liftIO $ putStrLn $ "Linking " ++ modpath
-      m <- liftIO $ readModule libpath modpath
-      put st {modules = M.insert modpath m (modules st)}
+      liftIO $ putStrLn $ "Linking " ++ modname
+      m <- liftIO $ readModule libpath pkgid modname
+      put st {modules = M.insert modname m (modules st)}
       return m
 
 -- | Add a new definition and its dependencies. If the given identifier has
 --   already been added, it's just ignored.
-addDef :: FilePath -> Name -> DepM ()
-addDef libpath v = do
+addDef :: FilePath -> String -> Name -> DepM ()
+addDef libpath pkgid v = do
   st <- get
   when (not $ v `S.member` alreadySeen st) $ do
     m <- getModuleOf libpath v
@@ -104,7 +98,7 @@ addDef libpath v = do
     st' <- get
     let dependencies = maybe S.empty id (M.lookup v (modDeps m))
     put st' {alreadySeen = S.insert v (alreadySeen st')}
-    S.foldl' (\a x -> a >> addDef libpath x) (return ()) dependencies
+    S.foldl' (\a x -> a >> addDef libpath pkgid x) (return ()) dependencies
 
     -- addDef _definitely_ updates the state, so refresh once again
     st'' <- get

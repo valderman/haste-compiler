@@ -15,17 +15,21 @@ type Reorderable = Bool
 
 newtype Shared a = Shared Lbl deriving (Eq, Show)
 
-data Name = Name String (Maybe String) deriving (Eq, Ord, Show)
+data Name = Name String (Maybe (String, String)) deriving (Eq, Ord, Show)
 
 class HasModule a where
   moduleOf :: a -> Maybe String
+  pkgOf    :: a -> Maybe String
 
 instance HasModule Name where
-  moduleOf (Name _ mmod) = mmod
+  moduleOf (Name _ mmod) = fmap snd mmod
+  pkgOf (Name _ mmod)    = fmap fst mmod
 
 instance HasModule Var where
   moduleOf (Foreign _)    = Nothing
   moduleOf (Internal n _) = moduleOf n
+  pkgOf (Foreign _)       = Nothing
+  pkgOf (Internal n _)    = pkgOf n
 
 -- | Representation of variables. Parametrized because we sometimes want to
 --   disallow foreign vars.
@@ -104,6 +108,7 @@ type Fingerprint = String
 --   definitions, and a bunch of definitions.
 data Module = Module {
     modFingerprint :: !Fingerprint,
+    modPackageId   :: !String,
     modName        :: !String,
     modDeps        :: !(M.Map Name (S.Set Name)),
     modDefs        :: !(M.Map Name (AST Exp))
@@ -113,6 +118,7 @@ data Module = Module {
 foreignModule :: Module
 foreignModule = Module {
     modFingerprint = "",
+    modPackageId   = "",
     modName        = "",
     modDeps        = M.empty,
     modDefs        = M.empty
@@ -121,7 +127,8 @@ foreignModule = Module {
 -- | An LHS that's guaranteed to not ever be read, enabling the pretty
 --   printer to ignore assignments to it.
 blackHole :: LHS
-blackHole = LhsExp $ Var $ Internal (Name "" (Just "$blackhole")) ""
+blackHole =
+  LhsExp $ Var $ Internal (Name "" (Just ("$blackhole", "$blackhole"))) ""
 
 -- | An AST with local jumps.
 data AST a = AST {

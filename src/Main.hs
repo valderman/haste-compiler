@@ -2,6 +2,7 @@ module Main (main) where
 import GHC
 import GHC.Paths (libdir)
 import HscMain
+import Outputable (showPpr)
 import DynFlags hiding (flags)
 import TidyPgm
 import CorePrep
@@ -142,7 +143,8 @@ compiler cmdargs = do
         when (performLink cfg) $ liftIO $ do
           flip mapM_ files' $ \file -> do
             logStr $ "Linking " ++ outFile cfg file
-            link cfg file
+            let pkgid = showPpr dynflags $ thisPackage dynflags'
+            link cfg pkgid file
             case useGoogleClosure cfg of 
               Just clopath -> closurize clopath $ outFile cfg file
               _            -> return ()
@@ -191,7 +193,8 @@ compile cfg dynflags modSummary = do
         HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
         _          -> do
           (pgm, name) <- prepare dynflags modSummary
-          let theCode = generate cfg fp name pgm
+          let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
+              theCode = generate cfg fp pkgid name pgm
           liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
           liftIO $ writeModule targetpath theCode
   where
