@@ -13,6 +13,7 @@ type Arity = Int
 type Comment = String
 type Reorderable = Bool
 
+-- | Shared statements.
 newtype Shared a = Shared Lbl deriving (Eq, Show)
 
 data Name = Name String (Maybe (String, String)) deriving (Eq, Ord, Show)
@@ -31,8 +32,7 @@ instance HasModule Var where
   pkgOf (Foreign _)       = Nothing
   pkgOf (Internal n _)    = pkgOf n
 
--- | Representation of variables. Parametrized because we sometimes want to
---   disallow foreign vars.
+-- | Representation of variables.
 data Var where
   Foreign  :: String -> Var
   Internal :: Name -> Comment -> Var
@@ -102,10 +102,13 @@ data Stm where
 -- | Case alternatives - an expression to match and a branch.
 type Alt = (Exp, Stm)
 
+-- | Module fingerprint, containing a hash of compiler options and other things
+--   that may be used to determine whether the module needs recompiling or not.
 type Fingerprint = String
 
--- | Represents a module. A module has a name, a dependency map of all its
---   definitions, and a bunch of definitions.
+-- | Represents a module. A module has a name, a fingerprint, an owning
+--   package, a dependency map of all its definitions, and a bunch of
+--   definitions.
 data Module = Module {
     modFingerprint :: !Fingerprint,
     modPackageId   :: !String,
@@ -178,6 +181,7 @@ lblNamespace :: Word64
 lblNamespace = unsafePerformIO $ randomIO
 
 {-# NOINLINE lblFor #-}
+-- | Produce a local reference to the given statement.
 lblFor :: Stm -> AST Lbl
 lblFor s = do
     (r, s') <- freshRef

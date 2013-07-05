@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleInstances, GADTs, OverloadedStrings #-}
-module Data.JSTarget.Print where
+module Data.JSTarget.Print () where
 import Prelude hiding (LT, GT)
 import Data.JSTarget.AST
 import Data.JSTarget.Op
