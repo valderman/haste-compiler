@@ -4,6 +4,7 @@ import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import System.FilePath
 import System.Directory
+import System.IO
 import Control.Applicative
 import Data.JSTarget
 import Data.Binary
@@ -21,7 +22,9 @@ readModuleFingerprint :: FilePath -> String -> String -> IO Fingerprint
 readModuleFingerprint basepath pkgid modname = do
     x <- doesFileExist path
     let path' = if x then path else syspath 
-    decode <$> B.readFile path'
+    withFile path' ReadMode $ \h -> do
+      fp <- decode <$> B.hGetContents h
+      return $! fp
   where
     path = moduleFilePath "" "" modname
     syspath = moduleFilePath basepath pkgid modname

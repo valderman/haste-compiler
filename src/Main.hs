@@ -14,6 +14,7 @@ import GhcMonad
 import System.Environment (getArgs)
 import Control.Monad (when)
 import Haste
+import Haste.Util (showOutputable)
 import Args
 import ArgSpecs
 import System.FilePath (addExtension)
@@ -174,9 +175,11 @@ closurize cloPath file = do
 
 -- | Generate a unique fingerprint for the compiler, command line arguments,
 --   etc.
-genFingerprint :: [String] -> Fingerprint
-genFingerprint args =
+genFingerprint :: String -> FilePath -> [String] -> Fingerprint
+genFingerprint modname targetpath args =
   md5sum $ B.pack $ show [
+      modname,
+      targetpath,
       show hasteVersion,
       show ghcVersion,
       show bootVer,
@@ -186,7 +189,7 @@ genFingerprint args =
 -- | Compile a module into a .jsmod intermediate file.
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
-    fp <- liftIO $ fmap genFingerprint getArgs
+    fp <- liftIO $ fmap (genFingerprint myName targetpath) getArgs
     should_recompile <- liftIO $ shouldRecompile fp modSummary targetpath
     when should_recompile $ do
       case ms_hsc_src modSummary of
@@ -202,19 +205,24 @@ compile cfg dynflags modSummary = do
     targetpath = targetLibPath cfg
 
 shouldRecompile :: Fingerprint -> ModSummary -> FilePath -> IO Bool
-shouldRecompile fp ms path = do return True
-{-    exists <- isFile fpPath
+shouldRecompile _ _ _ = return True
+{-
+shouldRecompile fp ms path = do
+    exists <- isFile fpPath
     if exists
       then do
-        fp' <- readModuleFingerprint path file
+        fp' <- readModuleFingerprint path pkgid modname
         jsmtime <- getModified fpPath
         return $ ms_hs_date ms > jsmtime || fp /= fp'
       else do
         return True
   where
-    file   = moduleNameSlashes (ms_mod_name ms) ++ ".jsmod"
-    path'  = path ++ "/" ++ file
-    fpPath = fromString path' -}
+    modname = moduleNameString $ ms_mod_name ms
+    file    = moduleNameSlashes (ms_mod_name ms) ++ ".jsmod"
+    path'   = path ++ "/" ++ pkgid ++ "/" ++ file
+    pkgid   = showOutputable $ modulePackageId $ ms_mod ms
+    fpPath  = fromString path'
+-}
 
 -- | Do everything required to get a list of STG bindings out of a module.
 prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName)
