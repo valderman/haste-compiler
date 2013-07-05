@@ -3,17 +3,29 @@ Haste
 
 A compiler to generate Javascript code from Haskell.
 
-
-Building
+Features
 --------
 
-First, make sure that you are running GHC 7.6.x. Pre-7.6 versions will refuse
-to compile due to changes in GHC.
+* Generates small, fast programs
+* Supports all GHC extensions except Template Haskell
+* Uses standard Haskell libraries
+* Cabal integration
+* Concurrency and MVars with Haste.Concurrent
+* Unboxed arrays, ByteArrays, StableNames and other low level features
+* Low-level DOM base library
+* Easy integration with Google's Closure compiler
+* Simple, one-step build; no need for error prone Rube Goldberg machines of
+  Vagrant, VirtualBox, GHC sources and other black magic
 
-Second, clone haste-compiler and install it using `cabal install`.
 
-Now run `./buildlibs.sh` to build the standard libraries. GHC sources are no
-longer needed.
+Installation
+------------
+
+Building Haste from source is easy:
+
+    $ cabal install && ./buildlibs.sh
+
+Done! Happy web development!
 
 You should probably run the test suite first though, to verify that everything
 is working. To do that, execute `./runtests.sh` in the Haste root directory.
@@ -80,7 +92,7 @@ Libraries
 ---------
 
 Haste is able to use standard Haskell libraries. However, some primitive
-operations are still not implemented, which means that any code making 
+operations are still not implemented which means that any code making use 
 of them will give you a compiler warning, then die at runtime with an angry
 error. This is currently being worked on.
 
@@ -96,8 +108,7 @@ replacement for GHC that generates relatively lean code.
 Known issues
 ------------
 
-* No 64-bit math. Use Integer if you need large integers, use Double if you
-  want as fast math as possible (yes, even for integer math.)
+* No 64-bit math yet. Use `Integer` if you need large integers.
 
 * Not all GHC primops are implemented; if you encounter an unimplemented
   primop, I'd be happy if you'd report it together with a small test case that
