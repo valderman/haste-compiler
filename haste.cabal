@@ -9,8 +9,8 @@ Build-Type:     Simple
 Author:         Anton Ekblad <anton@ekblad.cc>
 Copyright:      Anton Ekblad <anton@ekblad.cc>
 Maintainer:     Anton Ekblad <anton@ekblad.cc>
-Homepage:       http://ekblad.cc
-Bug-reports:    http://ekblad.cc
+Homepage:       http://github.com/valderman/haste-compiler
+Bug-reports:    http://github.com/valderman/haste-compiler/issues
 Stability:      Experimental
 
 Data-Dir:
