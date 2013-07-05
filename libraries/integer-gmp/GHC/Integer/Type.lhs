@@ -16,7 +16,7 @@ import GHC.Prim (
     quotInt#, remInt#, negateInt#,
     (==#), (/=#), (<=#), (>=#), (<#), (>#), (*#), (-#),
     mulIntMayOflo#, addIntC#, subIntC#,
-    and#, or#, xor#
+    and#, or#, xor#, powerFloat#, timesFloat#, (*##), (**##)
  )
 
 import GHC.Integer.GMP.Prim (
@@ -417,21 +417,17 @@ negateInteger (J# i)            = J# (negateInteger# i)
 \begin{code}
 {-# NOINLINE encodeFloatInteger #-}
 encodeFloatInteger :: Integer -> Int# -> Float#
-encodeFloatInteger i@(S# _) j = encodeFloatInteger (toBig i) j
-encodeFloatInteger m@(J# _) e =
-    toFloat# m#
-  where
-    e' = (S# 1# `shiftLInteger` e)
-    m# = case m `timesInteger` e' of J# m# -> m#
+encodeFloatInteger (S# m) e =
+  int2Float# m `timesFloat#` (2.0# `powerFloat#` (int2Float# e))
+encodeFloatInteger (J# m) e =
+  toFloat# m `timesFloat#` (2.0# `powerFloat#` (int2Float# e))
 
 {-# NOINLINE encodeDoubleInteger #-}
 encodeDoubleInteger :: Integer -> Int# -> Double#
-encodeDoubleInteger i@(S# _) j = encodeDoubleInteger (toBig i) j
-encodeDoubleInteger m@(J# _) e =
-    toDouble# m#
-  where
-    e' = (S# 1# `shiftLInteger` e)
-    m# = case m `timesInteger` e' of J# m# -> m#
+encodeDoubleInteger (S# m) e =
+  int2Double# m *## (2.0## **## (int2Double# e))
+encodeDoubleInteger (J# m) e =
+  toDouble# m *## (2.0## **## (int2Double# e))
 
 {-# NOINLINE decodeDoubleInteger #-}
 decodeDoubleInteger :: Double# -> (# Integer, Int# #)
