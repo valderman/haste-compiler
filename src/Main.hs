@@ -88,7 +88,7 @@ callVanillaGHC args = do
 --   and exit.
 hasteMain :: [String] -> IO ()
 hasteMain args
-  | needsReboot == Dont =
+  | not needsReboot =
     compiler ("-O2" : args)
   | otherwise = do
     if "--unbooted" `elem` args
@@ -180,9 +180,7 @@ genFingerprint modname targetpath args =
   md5sum $ B.pack $ show [
       modname,
       targetpath,
-      show hasteVersion,
-      show ghcVersion,
-      show bootVer,
+      show bootVersion,
       show args
     ]
 

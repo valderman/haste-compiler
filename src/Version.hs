@@ -1,6 +1,6 @@
 -- | Contains version information for Haste.
-module Version (hasteVersion, ghcVersion, bootVer, needsReboot,
-                BootVer (..), RebuildInfo (..)) where
+module Version (hasteVersion, ghcVersion, bootVersion, needsReboot,
+                BootVer (..)) where
 import System.IO.Unsafe
 import Control.Applicative
 import System.Directory
@@ -14,29 +14,14 @@ hasteVersion = Version [0, 1] []
 ghcVersion :: String
 ghcVersion = cProjectVersion
 
--- | Describes the boot version of the code generator and standard library
---   respectively. When codegenVer changes, everything needs to be rebuilt
---   (or fetched). When libVer changes, only the FRP.Fursuit.* and Haste.*
---   modules need to be reinstalled.
-data BootVer = BootVer {
-    codegenVer :: Int,
-    libVer     :: Int
-  } deriving (Read, Show)
+bootVersion :: BootVer
+bootVersion = BootVer hasteVersion ghcVersion
 
-data RebuildInfo = Dont | Libs | Everything
-  deriving (Read, Show, Eq, Ord)
-
--- | The current boot version; if Haste is built with a boot version greater
---   than the one specified in its boot file, it needs to be rebooted.
-bootVer :: BootVer
-bootVer = BootVer {
-    codegenVer = 5,
-    libVer     = 0
-  }
+data BootVer = BootVer Version String deriving (Read, Show)
 
 -- | Returns which parts of Haste need rebooting. A change in the boot file
 --   format triggers a full reboot.
-needsReboot :: RebuildInfo
+needsReboot :: Bool
 needsReboot = unsafePerformIO $ do
   bootfile <- (++ "/booted") <$> getAppUserDataDirectory "haste"
   exists <- doesFileExist bootfile
@@ -46,11 +31,9 @@ needsReboot = unsafePerformIO $ do
       bootedVerString <- hGetLine fh
       hClose fh
       case reads bootedVerString of
-        [(BootVer bootedCG bootedLib, _)]
-          | codegenVer (bootVer) > bootedCG -> return Everything
-          | libVer (bootVer) > bootedLib    -> return Libs
-          | otherwise                       -> return Dont
+        [(BootVer hasteVer ghcVer, _)] ->
+          return $ hasteVer /= hasteVersion || ghcVer /= ghcVersion
         _ ->
-          return Everything
+          return True
     else
-      return Everything
+      return True

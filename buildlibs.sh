@@ -83,4 +83,4 @@ cd libraries/haste-lib
 haste-inst install --unbooted
 popd
 
-haste-boot --force --no-haste --no-base
+haste-boot --force --no-libs --no-closure

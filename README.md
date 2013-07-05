@@ -21,11 +21,17 @@ Features
 Installation
 ------------
 
-Building Haste from source is easy:
+You have two options for getting Haste: installing from Hackage or building
+from source. Installing the latest stable-ish version from cabal is easy:
 
-    $ cabal install && ./buildlibs.sh
+    $ cabal install haste-compiler
+    $ haste-boot
 
-Done! Happy web development!
+Building Haste from source is equally easy. After checking out the source,
+`cd` to the source tree and run:
+
+    $ cabal install
+    $ haste-boot --force --local
 
 You should probably run the test suite first though, to verify that everything
 is working. To do that, execute `./runtests.sh` in the Haste root directory.
@@ -34,6 +40,12 @@ The test suite uses the `nodejs` interpreter by default, but this may be
 modified by setting the `JS` environment variable as such:
 `JS=other-js-interpreter ./runtests.sh`. Other JavaScript interpreters may or
 may not work.
+
+Unfortunately, while Haste should in theory work well on Windows platforms,
+it has only been tested with GNU/Linux and Mac OS X, and the script that
+builds the standard library only works on *nix platforms.
+If you want to have a go at building the libraries on Windows, I suggest you
+take a look at the `buildlibs.sh` script.
 
 
 Usage
