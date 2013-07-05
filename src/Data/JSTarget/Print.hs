@@ -51,9 +51,11 @@ instance Pretty Exp where
   pp (Lit l) =
     pp l
   pp (Not ex) =
-    if expPrec (Not ex) > expPrec ex 
-       then "!(" .+. pp ex .+. ")"
-       else "!" .+. pp ex
+    case neg ex of
+      Just ex' -> pp ex'
+      _ -> if expPrec (Not ex) > expPrec ex
+             then "!(" .+. pp ex .+. ")"
+             else "!" .+. pp ex
   pp (BinOp op a b) =
     opParens op a b
   pp (Fun mname args body) = do
@@ -128,12 +130,21 @@ instance Pretty Stm where
   pp (NullRet) = do
     return ()
 
+neg :: Exp -> Maybe Exp
+neg (BinOp Eq a b)  = Just $ BinOp Neq a b
+neg (BinOp Neq a b) = Just $ BinOp Eq a b
+neg (BinOp GT a b)  = Just $ BinOp LTE a b
+neg (BinOp LT a b)  = Just $ BinOp GTE a b
+neg (BinOp GTE a b) = Just $ BinOp LT a b    
+neg (BinOp LTE a b) = Just $ BinOp GT a b
+neg _               = Nothing
+
 -- | Turn eligible case statements into if statements.
 prettyCase :: Exp -> Stm -> [Alt] -> PP ()
 prettyCase cond def [(con, branch)] = do
   case (def, branch) of
     (_, NullRet) -> do
-      line $ "if(" .+. pp (neg (test con)) .+. "){"
+      line $ "if(" .+. pp (neg' (test con)) .+. "){"
       indent $ pp def
       line "}"
     (NullRet, _) -> do
@@ -147,13 +158,7 @@ prettyCase cond def [(con, branch)] = do
       indent $ pp def
       line "}"
   where
-    neg (BinOp Eq a b)  = BinOp Neq a b
-    neg (BinOp Neq a b) = BinOp Eq a b
-    neg (BinOp GT a b)  = BinOp LTE a b
-    neg (BinOp LT a b)  = BinOp GTE a b
-    neg (BinOp GTE a b) = BinOp LT a b
-    neg (BinOp LTE a b) = BinOp GT a b
-    neg x               = Not x
+    neg' c = maybe (Not c) id $ neg c 
     test (Lit (LBool True))  = cond
     test (Lit (LBool False)) = Not cond
     test (Lit (LNum 0))      = Not cond
