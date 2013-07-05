@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module Haste.Monad (
-    JSGen, genJS, dependOn, getModName, addLocal, getCfg, continue, isolate
+    JSGen, genJS, dependOn, getModName, addLocal, getCfg, continue, isolate,
+    pushBind, popBind, getCurrentBinding
   ) where
 import Control.Monad.State
 import Data.JSTarget as J hiding (modName)
@@ -11,6 +12,7 @@ data GenState cfg = GenState {
     deps         :: !(S.Set Name),
     locals       :: !(S.Set Name),
     continuation :: !(AST Stm -> AST Stm),
+    bindStack    :: [Var],
     modName      :: String,
     config       :: cfg
   }
@@ -20,6 +22,7 @@ initialState = GenState {
     deps         = S.empty,
     locals       = S.empty,
     continuation = id,
+    bindStack    = [],
     modName      = undefined,
     config       = undefined
   }
@@ -63,11 +66,24 @@ genJS :: cfg         -- ^ Config to use for code generation.
       -> (a, S.Set J.Name, S.Set J.Name, AST Stm -> AST Stm)
 genJS cfg myModName (JSGen gen) =
   case runState gen initialState {modName = myModName, config = cfg} of
-    (a, GenState dependencies loc cont _ _) ->
+    (a, GenState dependencies loc cont _ _ _) ->
       (a, dependencies, loc, cont)
 
 getModName :: JSGen cfg String
 getModName = JSGen $ modName <$> get
+
+pushBind :: Var -> JSGen cfg ()
+pushBind v = JSGen $ do
+  st <- get
+  put st {bindStack = v : bindStack st}
+
+popBind :: JSGen cfg ()
+popBind = JSGen $ do
+  st <- get
+  put st {bindStack = tail $ bindStack st}
+
+getCurrentBinding :: JSGen cfg Var
+getCurrentBinding = JSGen $ fmap (head . bindStack) get
 
 -- | Add a new continuation onto the current one.
 continue :: (AST Stm -> AST Stm) -> JSGen cfg ()
@@ -82,7 +98,8 @@ isolate :: JSGen cfg a -> JSGen cfg (a, AST Stm -> AST Stm)
 isolate gen = do
   myMod <- getModName
   cfg <- getCfg
-  let (x, dep, loc, cont) = genJS cfg myMod gen
+  b <- getCurrentBinding
+  let (x, dep, loc, cont) = genJS cfg myMod (pushBind b >> gen)
   dependOn dep
   addLocal loc
   return (x, cont)

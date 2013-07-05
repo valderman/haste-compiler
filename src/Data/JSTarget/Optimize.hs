@@ -25,16 +25,19 @@ topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) = runTravM (inlineAssigns False ast) js
 
 -- | Attempt to turn two case branches into a ternary operator expression.
-tryTernary :: AST Exp
+tryTernary :: Var
+           -> AST Exp
            -> AST Exp
            -> (AST Stm -> AST Stm)
            -> [(AST Exp, AST Stm -> AST Stm)]
            -> Maybe (AST Exp)
-tryTernary scrut retEx def [(m, alt)] =
+tryTernary self scrut retEx def [(m, alt)] =
     case runTravM opt allJumps of
       AST (Just ex) js -> Just (AST ex js)
       _                -> Nothing
   where
+    selfOccurs (Exp (Var v)) = v == self
+    selfOccurs _             = False
     def' = def $ Return <$> retEx
     alt' = alt $ Return <$> retEx
     AST _ allJumps = scrut >> m >> def' >> alt'
@@ -44,12 +47,16 @@ tryTernary scrut retEx def [(m, alt)] =
       -- we have a pure expression suitable for use with ?:.
       def'' <- inlineAssignsLocal $ astCode def'
       alt'' <- inlineAssignsLocal $ astCode alt'
-      case (def'', alt'') of
-        (Return el, Return th) ->
+      -- If self occurs in either branch, we can't inline or we risk ruining
+      -- tail call elimination.
+      selfInDef <- occurrences (const True) selfOccurs def''
+      selfInAlt <- occurrences (const True) selfOccurs alt''
+      case (selfInDef + selfInAlt, def'', alt'') of
+        (Never, Return el, Return th) ->
           return $ Just $ IfEx (BinOp Eq (astCode scrut) (astCode m)) th el
         _ ->
           return Nothing
-tryTernary _ _ _ _ =
+tryTernary _ _ _ _ _ =
   Nothing
 
 -- | How many times does an expression satisfying the given predicate occur in

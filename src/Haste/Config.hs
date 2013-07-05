@@ -85,6 +85,9 @@ data Config = Config {
     verbose :: Bool,
     -- | Perform optimizations over the whole program at link time?
     wholeProgramOpts :: Bool,
+    -- | Allow the possibility that some tail recursion may not be optimized
+    --   in order to gain slightly smaller code?
+    sloppyTCE :: Bool,
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
@@ -107,6 +110,7 @@ defConfig = Config {
     multiplyIntOp    = safeMultiply,
     verbose          = False,
     wholeProgramOpts = False,
+    sloppyTCE        = False,
     useGoogleClosure = Nothing,
     jsExternals      = [],
     dynFlags         = tracingDynFlags

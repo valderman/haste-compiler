@@ -34,6 +34,10 @@ argSpecs = [
               info = "Run the Google Closure compiler on the output. "
                    ++ "Use --opt-google-closure=foo.jar to hint that foo.jar "
                    ++ "is the Closure compiler."},
+    ArgSpec { optName = "opt-sloppy-tce",
+              updateCfg = useSloppyTCE,
+              info = "Allow the possibility that some tail recursion may not "
+                     ++ "be optimized, to get\nslightly smaller code."},
     ArgSpec { optName = "opt-unsafe-ints",
               updateCfg = unsafeMath,
               info = "Enable all unsafe Int math optimizations. Equivalent to "
@@ -110,3 +114,7 @@ updateClosureCfg cfg _ =
 -- | Enable optimizations over the entire program.
 enableWholeProgramOpts :: Config -> [String] -> Config
 enableWholeProgramOpts cfg _ = cfg {wholeProgramOpts = True}
+
+-- | Enable sloppy TCE; see Config for more info.
+useSloppyTCE :: Config -> [String] -> Config
+useSloppyTCE cfg _ = cfg {sloppyTCE = True}

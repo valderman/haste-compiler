@@ -146,9 +146,11 @@ genBindRec b =
 genBind :: Bool -> Maybe Int -> StgBinding -> JSGen Config ()
 genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
   v' <- genVar v
+  pushBind v'
   when (not onTopLevel) $ do
     addLocal v'
   expr <- genRhs (isJust funsInRecGroup) rhs
+  popBind
   let expr' = optimizeFun v' expr
   continue $ newVar True v' expr'
 genBind _ _ (StgRec _) =
@@ -219,7 +221,9 @@ genCase t ex scrut alts = do
       (_, defAlt') <- genAlt scrut' res defAlt
       alts' <- mapM (genAlt scrut' res) otherAlts
       -- Use the ternary operator where possible.
-      case tryTernary scrutinee (varExp res) defAlt' alts' of
+      useSloppyTCE <- sloppyTCE `fmap` getCfg
+      self <- if useSloppyTCE then return blackHoleVar else getCurrentBinding
+      case tryTernary self scrutinee (varExp res) defAlt' alts' of
         Just ifEx -> do
           continue $ newVar (reorderableType scrut) scrut' ex'
           continue $ newVar True res ifEx

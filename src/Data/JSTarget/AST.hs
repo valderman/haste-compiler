@@ -128,7 +128,11 @@ foreignModule = Module {
 --   printer to ignore assignments to it.
 blackHole :: LHS
 blackHole =
-  LhsExp $ Var $ Internal (Name "" (Just ("$blackhole", "$blackhole"))) ""
+  LhsExp $ Var blackHoleVar
+
+-- | The variable of the blackHole LHS.
+blackHoleVar :: Var
+blackHoleVar = Internal (Name "" (Just ("$blackhole", "$blackhole"))) ""
 
 -- | An AST with local jumps.
 data AST a = AST {
