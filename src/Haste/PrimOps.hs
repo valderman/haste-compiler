@@ -78,6 +78,7 @@ genOp cfg op xs =
     WordSubOp ->  wordMath $ bOp Sub
     WordMulOp ->  wordMath $ callF "imul"
     WordQuotOp -> callF "quot"
+    WordQuotRemOp -> callF "quotRemI"
     WordRemOp ->  bOp Mod
     AndOp ->      wordMath $ bOp BitAnd
     OrOp ->       wordMath $ bOp BitOr
