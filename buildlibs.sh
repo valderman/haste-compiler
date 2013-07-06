@@ -1,5 +1,15 @@
 #!/bin/bash
 
+if [[ $1 == "" ]] ; then
+    echo "Usage: ./buildlibs.sh WORD_SIZE_IN_BITS"
+    echo "...or you could just use haste-boot like you're supposed to."
+    exit 1
+else
+    WORD_SIZE=$1
+fi
+
+GHC_OPTS=-DHASTE_HOST_WORD_SIZE_IN_BITS=$WORD_SIZE
+
 # Install builtin RTS package, and create some dirs.
 mkdir -p ~/.haste/haste-install/lib/ghc
 cp -rf include ~/.haste/
@@ -13,7 +23,7 @@ fi
 pushd .
 cd libraries/ghc-prim
 haste-inst configure --unbooted
-haste-inst build --unbooted --install-jsmods
+haste-inst build --unbooted --install-jsmods --ghc-options=$GHC_OPTS
 if [ $? != 0 ] ; then
   echo "Failed while building ghc-prim!"
   exit 1
@@ -34,8 +44,8 @@ popd
 # Install custom integer-gmp.
 pushd .
 cd libraries/integer-gmp
-haste-inst install --unbooted
-haste-inst install --unbooted
+haste-inst install --unbooted --ghc-options=$GHC_OPTS
+haste-inst install --unbooted --ghc-options=$GHC_OPTS
 if [ $? != 0 ] ; then
   echo "Failed while building integer-gmp!"
   exit 1
@@ -47,7 +57,7 @@ pushd .
 cd libraries/base
 baseversion=$(cat base.cabal|egrep '^version'|awk '{print $2}')
 haste-inst configure --unbooted
-haste-inst build --unbooted --install-jsmods
+haste-inst build --unbooted --install-jsmods --ghc-options=$GHC_OPTS
 if [ $? != 0 ] ; then
   echo "Failed while building base!"
   exit 1
@@ -80,7 +90,7 @@ popd
 # Install haste-lib.
 pushd .
 cd libraries/haste-lib
-haste-inst install --unbooted
+haste-inst install --unbooted --ghc-options=$GHC_OPTS
 popd
 
 haste-boot --force --no-libs --no-closure

@@ -5,6 +5,12 @@ import System.Process
 import System.IO.Unsafe
 import System.Directory
 import System.FilePath
+import Data.Bits (bitSize)
+import Foreign.C.Types (CInt)
+
+-- | Host word size in bits.
+hostWordSize :: Int
+hostWordSize = bitSize (undefined :: CInt)
 
 cabalDir :: FilePath
 cabalDir = unsafePerformIO $ getAppUserDataDirectory "cabal"

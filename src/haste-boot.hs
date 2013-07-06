@@ -54,7 +54,7 @@ bootHaste cfg tmpdir = do
     exists <- doesDirectoryExist hasteDir
     when exists $ do
       removeDirectoryRecursive hasteDir
-    _ <- system "bash ./buildlibs.sh"
+    _ <- system $ "bash ./buildlibs.sh " ++ show hostWordSize
     return ()
   when (getClosure cfg) $ do
     installClosure
