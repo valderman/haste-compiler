@@ -1,9 +1,12 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, GADTs,
              FlexibleInstances, OverloadedStrings #-}
-module Haste.Callback (setCallback, JSFun (..), mkCallback, Event (..),
-                       setTimeout, Callback (..)) where
+module Haste.Callback (
+    setCallback, setCallback', JSFun (..), mkCallback, Event (..),
+    setTimeout, setTimeout', Callback (..)
+  ) where
 import Haste.Prim
 import Haste.DOM
+import Haste.Concurrent.Monad
 import Data.String
 import Control.Monad.IO.Class
 
@@ -43,6 +46,9 @@ data Event a where
   OnKeyUp     :: Event (Int -> IO ())
   OnKeyDown   :: Event (Int -> IO ())
 
+asEvtTypeOf :: Event a -> a -> a
+asEvtTypeOf _ = id
+
 instance Eq (Event a) where
   a == b = evtName a == (evtName b :: String)
 
@@ -74,8 +80,24 @@ setCallback :: MonadIO m => Elem -> Event a -> a -> m Bool
 setCallback e evt f =
   liftIO $ jsSetCB e (evtName evt) (mkCallback $! f)
 
+-- | Like 'setCallback', but takes a callback in the CIO monad instead of IO.
+setCallback' :: (ToConcurrent a, MonadIO m)
+             => Elem
+             -> Event a
+             -> Async a
+             -> m Bool
+setCallback' e evt f =
+    liftIO $ jsSetCB e (evtName evt) (mkCallback $! f')
+  where
+    f' = asEvtTypeOf evt (async f)
+
 -- | Wrapper for window.setTimeout; execute the given computation after a delay
 --   given in milliseconds.
 setTimeout :: MonadIO m => Int -> IO () -> m ()
 setTimeout delay cb =
   liftIO $ jsSetTimeout delay (mkCallback $! cb)
+
+-- | Like 'setTimeout', but takes a callback in the CIO monad instead of IO.
+setTimeout' :: MonadIO m => Int -> CIO () -> m ()
+setTimeout' delay cb =
+  liftIO $ jsSetTimeout delay (mkCallback $! concurrent cb)
