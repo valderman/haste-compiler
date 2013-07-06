@@ -51,7 +51,9 @@ bootHaste cfg tmpdir = do
   when (getLibs cfg) $ do
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
-    removeDirectoryRecursive hasteDir
+    exists <- doesDirectoryExist hasteDir
+    when exists $ do
+      removeDirectoryRecursive hasteDir
     _ <- system "bash ./buildlibs.sh"
     return ()
   when (getClosure cfg) $ do
