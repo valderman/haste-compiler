@@ -23,7 +23,7 @@ Installation
 
 You have two options for getting Haste: installing from Hackage or from
 Github. In both cases, you need the development libraries for `libbz2`
-installed on your system.
+and `libcurl` installed on your system.
 Installing the latest stable-ish version from cabal is easy:
 
     $ cabal install haste-compiler
