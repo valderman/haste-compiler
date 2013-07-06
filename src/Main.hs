@@ -195,7 +195,7 @@ closurize cloPath file = do
 --   etc.
 genFingerprint :: String -> FilePath -> [String] -> Fingerprint
 genFingerprint modname targetpath args =
-  md5sum $ B.pack $ show [
+  {- md5sum $ B.pack $ -} show [
       modname,
       targetpath,
       show bootVersion,
