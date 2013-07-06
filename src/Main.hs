@@ -27,7 +27,6 @@ import Version
 import Data.Version
 import Data.List
 import Data.String
-import Data.Digest.OpenSSL.MD5
 import qualified Data.ByteString.Char8 as B
 import EnvUtils
 

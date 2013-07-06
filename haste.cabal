@@ -68,8 +68,7 @@ Executable hastec
         process,
         unix,
         random,
-        system-fileio,
-        nano-md5
+        system-fileio
     Main-Is:
         Main.hs
     Other-Modules:

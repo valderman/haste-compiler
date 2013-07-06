@@ -21,13 +21,15 @@ Features
 Installation
 ------------
 
-You have two options for getting Haste: installing from Hackage or building
-from source. Installing the latest stable-ish version from cabal is easy:
+You have two options for getting Haste: installing from Hackage or from
+Github. In both cases, you need the development libraries for `libbz2`
+installed on your system.
+Installing the latest stable-ish version from cabal is easy:
 
     $ cabal install haste-compiler
     $ haste-boot
 
-Building Haste from source is equally easy. After checking out the source,
+Building from Github source is equally easy. After checking out the source,
 `cd` to the source tree and run:
 
     $ cabal install
