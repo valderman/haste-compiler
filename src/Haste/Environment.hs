@@ -5,11 +5,11 @@ import System.IO.Unsafe
 import System.Directory
 import System.FilePath
 import Data.Bits (bitSize)
-import Foreign.C.Types (CInt)
+import Foreign.C.Types (CIntPtr)
 
 -- | Host word size in bits.
 hostWordSize :: Int
-hostWordSize = bitSize (undefined :: CInt)
+hostWordSize = bitSize (undefined :: CIntPtr)
 
 -- | Directory where cabal resides. Bundled JS files end up here.
 cabalDir :: FilePath
