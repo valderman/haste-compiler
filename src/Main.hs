@@ -20,7 +20,7 @@ import ArgSpecs
 import System.FilePath (addExtension)
 import System.IO
 import System.Process (runProcess, waitForProcess, rawSystem)
-import System.Exit (ExitCode (..))
+import System.Exit (ExitCode (..), exitFailure)
 import System.Directory (renameFile)
 import Filesystem (getModified, isFile)
 import Version
@@ -122,22 +122,22 @@ compiler cmdargs = do
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
       
-      -- GHC prints the error message itself, so...
-      let logAct = hPutStrLn stderr
-      defaultErrorHandler logAct defaultFlushOut $ runGhc (Just libdir) $ do
+      runGhc (Just libdir) $ handleSourceError (const $ liftIO exitFailure) $ do
         -- Handle dynamic GHC flags. Make sure __HASTE__ is #defined.
         let args = "-D__HASTE__" : map unLoc ghcargs'
         dynflags <- getSessionDynFlags
         (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)
         _ <- setSessionDynFlags dynflags' {ghcLink = NoLink,
                                            ghcMode = usedGhcMode}
-        let files' = map unLoc files
 
         -- Prepare and compile all needed targets.
-        ts <- mapM (flip guessTarget Nothing) files'
-        setTargets ts
-        _ <- load LoadAllTargets
-        deps <- depanal [] False
+        let files' = map unLoc files
+            printErrorAndDie e = printException e >> liftIO exitFailure
+        deps <- handleSourceError printErrorAndDie $ do
+          ts <- mapM (flip guessTarget Nothing) files'
+          setTargets ts
+          _ <- load LoadAllTargets
+          depanal [] False
         mapM_ (compile cfg dynflags') deps
         
         -- Link everything together into a .js file.
@@ -149,6 +149,25 @@ compiler cmdargs = do
             case useGoogleClosure cfg of 
               Just clopath -> closurize clopath $ outFile cfg file
               _            -> return ()
+
+-- | Do everything required to get a list of STG bindings out of a module.
+prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName)
+prepare dynflags theMod = do
+  env <- getSession
+  let name = moduleName $ ms_mod theMod
+  pgm <- parseModule theMod
+    >>= typecheckModule
+    >>= desugarModule
+    >>= liftIO . hscSimplify env . coreModule
+    >>= liftIO . tidyProgram env
+    >>= prepPgm env . fst
+    >>= liftIO . coreToStg dynflags
+  return (pgm, name)
+  where
+    prepPgm env tidy = liftIO $ do
+      prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
+      return prepd
+
 
 -- | Run Google Closure on a file.
 closurize :: FilePath -> FilePath -> IO ()
@@ -221,21 +240,3 @@ shouldRecompile fp ms path = do
     pkgid   = showOutputable $ modulePackageId $ ms_mod ms
     fpPath  = fromString path'
 -}
-
--- | Do everything required to get a list of STG bindings out of a module.
-prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName)
-prepare dynflags theMod = do
-  env <- getSession
-  let name = moduleName $ ms_mod theMod
-  pgm <- parseModule theMod
-    >>= typecheckModule
-    >>= desugarModule
-    >>= liftIO . hscSimplify env . coreModule
-    >>= liftIO . tidyProgram env
-    >>= prepPgm env . fst
-    >>= liftIO . coreToStg dynflags
-  return (pgm, name)
-  where
-    prepPgm env tidy = liftIO $ do
-      prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
-      return prepd
