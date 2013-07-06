@@ -55,7 +55,7 @@ Executable hastec
     Build-Depends:
         base,
         ghc-prim,
-        ghc >= 7.2,
+        ghc >= 7.6,
         mtl,
         binary,
         containers,
