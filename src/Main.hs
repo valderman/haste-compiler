@@ -15,6 +15,8 @@ import System.Environment (getArgs)
 import Control.Monad (when)
 import Haste
 import Haste.Util (showOutputable)
+import Haste.Environment
+import Haste.Version
 import Args
 import ArgSpecs
 import System.FilePath (addExtension)
@@ -23,12 +25,10 @@ import System.Process (runProcess, waitForProcess, rawSystem)
 import System.Exit (ExitCode (..), exitFailure)
 import System.Directory (renameFile)
 import Filesystem (getModified, isFile)
-import Version
 import Data.Version
 import Data.List
 import Data.String
 import qualified Data.ByteString.Char8 as B
-import EnvUtils
 
 logStr :: String -> IO ()
 logStr = hPutStrLn stderr

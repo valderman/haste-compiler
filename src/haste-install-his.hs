@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections #-}
 -- | haste-install-his; install all .hi files in a directory.
 module Main where
-import EnvUtils
+import Haste.Environment
 import System.FilePath
 import System.Directory
 import System.Environment

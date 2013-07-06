@@ -2,7 +2,7 @@
 module Main where
 import System.FilePath
 import System.Environment
-import EnvUtils
+import Haste.Environment
 import Data.List
 
 type Match = (String -> Bool, [String] -> [String])
@@ -18,7 +18,7 @@ cabal args = do
         ["--with-compiler=" ++ hasteBinary,
          "--with-hc-pkg=" ++ hastePkgBinary,
          "--with-hsc2hs=hsc2hs",
-         "--prefix=" ++ hasteDir </> "haste-install",
+         "--prefix=" ++ hasteInstDir,
          "--package-db=" ++ pkgDir]
 
 main :: IO ()

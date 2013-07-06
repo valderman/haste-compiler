@@ -2,6 +2,7 @@
 module ArgSpecs (argSpecs) where
 import Args
 import Haste.Config
+import Haste.Environment
 import Data.JSTarget.PP (debugPPOpts)
 
 argSpecs :: [ArgSpec Config]
@@ -14,7 +15,7 @@ argSpecs = [
               updateCfg = \cfg _ -> cfg {performLink   = False},
               info = "Don't perform linking."},
     ArgSpec { optName = "libinstall",
-              updateCfg = \cfg _ -> cfg {targetLibPath = sysLibPath,
+              updateCfg = \cfg _ -> cfg {targetLibPath = libDir,
                                          performLink   = False},
               info = "Install all compiled modules into the user's jsmod "
                      ++ "library\nrather than linking them together into a JS"
@@ -109,7 +110,7 @@ updateClosureCfg :: Config -> [String] -> Config
 updateClosureCfg cfg ['=':arg] =
   cfg {useGoogleClosure = Just arg}
 updateClosureCfg cfg _ =
-  cfg {useGoogleClosure = Just $ hastePath ++ "/compiler.jar"}
+  cfg {useGoogleClosure = Just closureCompiler}
 
 -- | Enable optimizations over the entire program.
 enableWholeProgramOpts :: Config -> [String] -> Config

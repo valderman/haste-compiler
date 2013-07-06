@@ -31,7 +31,7 @@ Data-Files:
 Executable haste-boot
     Main-Is: haste-boot.hs
     Other-Modules:
-        Version
+        Haste.Version
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     Build-Depends:
@@ -74,8 +74,9 @@ Executable hastec
     Other-Modules:
         Args
         ArgSpecs
-        Version
         Haste
+        Haste.Version
+        Haste.Environment
         Haste.Config
         Haste.Monad
         Haste.PrimOps

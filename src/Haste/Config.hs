@@ -1,16 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Haste.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startASAP,
-  startOnLoadComplete, appName, sysLibPath, hastePath, fastMultiply,
-  safeMultiply) where
+  startOnLoadComplete, fastMultiply, safeMultiply) where
 import Data.JSTarget
 import System.IO.Unsafe (unsafePerformIO)
-import System.Directory
-import System.FilePath (combine, replaceExtension)
+import System.FilePath (replaceExtension)
 import Paths_haste_compiler (getDataFileName)
 import DynFlags
 import Data.ByteString.Lazy.Builder
 import Data.Monoid
+import Haste.Environment
 
 type AppStart = Builder -> Builder
 
@@ -19,14 +18,6 @@ stdJSLibs = unsafePerformIO $ mapM getDataFileName [
     "rts.js", "stdlib.js", "MVar.js", "StableName.js", "Integer.js", "md5.js",
     "array.js", "pointers.js"
   ]
-
--- | Name of the application; decides which directories to keep app specific
---   data in.
-appName :: String
-appName = "haste"
-
-append :: FilePath -> FilePath -> FilePath
-append = flip combine
 
 -- | Execute the program as soon as it's loaded into memory.
 --   Evaluate the result of applying main, as we might get a thunk back if
@@ -40,12 +31,6 @@ startASAP mainSym =
 startOnLoadComplete :: AppStart
 startOnLoadComplete mainSym =
   "window.onload = function() {" <> startASAP mainSym <> "};"
-
-hastePath :: FilePath
-hastePath = unsafePerformIO $ getAppUserDataDirectory appName
-
-sysLibPath :: FilePath
-sysLibPath = append "lib" hastePath
 
 -- | Int op wrapper for strictly 32 bit (|0).
 strictly32Bits :: AST Exp -> AST Exp
@@ -100,7 +85,7 @@ data Config = Config {
 defConfig :: Config
 defConfig = Config {
     rtsLibs          = stdJSLibs,
-    libPath          = sysLibPath,
+    libPath          = libDir,
     targetLibPath    = ".",
     appStart         = startOnLoadComplete,
     ppOpts           = def,

@@ -8,7 +8,7 @@ import System.Environment
 import System.IO
 import Control.Concurrent
 import Data.List
-import EnvUtils
+import Haste.Environment
 
 main :: IO ()
 main = do
@@ -78,8 +78,6 @@ fixPaths pkgname pkgtext =
     fixPath str
       | isKey "library-dirs:" str =
         "library-dirs: " ++ importDir </> pkgname
-{-      | isKey "include-dirs:" str =
-        "include-dirs: " ++ importDir </> pkgname -}
       | isKey "import-dirs:" str =
         "import-dirs: " ++ importDir </> pkgname
       | isKey "pkgroot:" str =
@@ -94,5 +92,5 @@ fixPaths pkgname pkgtext =
     isKey key str =
       and $ zipWith (==) key str
     
-    importDir = hasteDir </> "haste-install" </> "lib"
-    pkgRoot   = hasteDir </> "haste-install"
+    importDir = libDir
+    pkgRoot   = hasteInstDir

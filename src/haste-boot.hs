@@ -1,7 +1,5 @@
 import Prelude hiding (read)
-import Version
 import System.Process
-import System.FilePath
 import System.Directory
 import Network.Curl.Download.Lazy
 import Network.Curl.Opts
@@ -13,7 +11,8 @@ import System.Environment (getArgs)
 import System.IO.Temp
 import Control.Monad
 import qualified Codec.Archive.Zip as Zip
-import EnvUtils
+import Haste.Environment
+import Haste.Version
 
 data Cfg = Cfg {
     getLibs      :: Bool,
@@ -58,7 +57,7 @@ bootHaste cfg tmpdir = do
     return ()
   when (getClosure cfg) $ do
     installClosure
-  Prelude.writeFile (hasteDir </> "booted") (show bootVersion)
+  Prelude.writeFile bootFile (show bootVersion)
 
 fetchLibs :: FilePath -> IO ()
 fetchLibs tmpdir = do
@@ -84,7 +83,7 @@ installClosure = do
       let cloArch = Zip.toArchive closure'
       case Zip.findEntryByPath "compiler.jar" cloArch of
         Just compiler ->
-          BS.writeFile (hasteDir ++ "/compiler.jar")
+          BS.writeFile closureCompiler
                        (Zip.fromEntry compiler)
         _ ->
           putStrLn "Couldn't unpack Closure compiler; continuing without."

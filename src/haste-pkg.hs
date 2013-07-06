@@ -3,7 +3,7 @@ module Main where
 import Control.Monad
 import System.Environment
 import System.Directory
-import EnvUtils
+import Haste.Environment
 
 main = do
   args <- getArgs
