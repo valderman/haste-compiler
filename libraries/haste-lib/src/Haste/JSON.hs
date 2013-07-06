@@ -5,7 +5,7 @@
 --   the parser is implemented entirely in Javascript, and works with any
 --   browser that supports JSON.parse; IE does this from version 8 and up, and
 --   everyone else has done it since just about forever.
-module Haste.JSON (JSON (..), encode, decode, (!), (~>)) where
+module Haste.JSON (JSON (..), encodeJSON, decodeJSON, (!), (~>)) where
 import Haste
 import Haste.Prim
 import Data.String as S
@@ -68,8 +68,8 @@ instance JSONLookup (Maybe JSON) where
   (Just (Dict m)) ~> key = lookup key m
   _               ~> _   = Nothing
 
-encode :: JSON -> JSString
-encode = catJSStr "" . enc []
+encodeJSON :: JSON -> JSString
+encodeJSON = catJSStr "" . enc []
   where
     comma   = ","
     openbr  = "["
@@ -98,8 +98,8 @@ encode = catJSStr "" . enc []
       | otherwise =
         opencu : closecu : acc
 
-decode :: JSString -> Maybe JSON
-decode = fromPtr . jsParseJSON
+decodeJSON :: JSString -> Maybe JSON
+decodeJSON = fromPtr . jsParseJSON
 
 instance Show JSON where
-  show = fromJSStr . encode
+  show = fromJSStr . encodeJSON

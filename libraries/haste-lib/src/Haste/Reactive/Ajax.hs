@@ -28,5 +28,7 @@ ajaxSig :: MonadIO m => Signal URL -> Signal [(Key, Val)] -> m (Signal String)
 ajaxSig requrl kvs = liftIO $ async (ajax <$> requrl <*> kvs)
   where
     ajax url kv p = do
-      textRequest GET url kv $ \text -> do
-        write p text
+      textRequest GET url kv $ \mtext -> do
+        case mtext of
+          Just text -> write p text
+          _         -> return ()

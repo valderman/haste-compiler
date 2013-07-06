@@ -30,6 +30,8 @@ Library
         Haste.Random
         Haste.Reactive.DOM
         Haste.Reactive.Ajax
+        Haste.Concurrent.Monad
+        Haste.Concurrent.Ajax
     Build-Depends:
         integer-gmp,
         base == 4.6.0.1,

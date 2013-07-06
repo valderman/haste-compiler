@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
--- | XMLHttpRequest support. IE6 and older are not supported.
+-- | Low level XMLHttpRequest support. IE6 and older are not supported.
 module Haste.Ajax (Method (..), URL, Key, Val, textRequest, textRequest_,
                    jsonRequest, jsonRequest_) where
 import Haste
@@ -10,9 +10,8 @@ foreign import ccall ajaxReq :: JSString    -- method
                              -> JSString    -- url
                              -> Bool        -- async?
                              -> JSString    -- POST data
-                             -> JSFun (JSString -> IO ())
-                             -> IO JSString -- result if sync,
-                                            -- otherwise empty
+                             -> JSFun (Maybe JSString -> IO ())
+                             -> IO ()
 
 data Method = GET | POST deriving Show
 type URL = String
@@ -24,13 +23,13 @@ textRequest :: MonadIO m
             => Method
             -> URL
             -> [(Key, Val)]
-            -> (String -> IO ())
+            -> (Maybe String -> IO ())
             -> m ()
 textRequest m url kv cb = do
   _ <- liftIO $ ajaxReq (toJSStr $ show m) url' True "" cb'
   return ()
   where
-    cb' = mkCallback $ cb . fromJSStr
+    cb' = mkCallback $ cb . fmap fromJSStr
     kv' = map (\(k,v) -> (toJSStr k, toJSStr v)) kv
     url' = if null kv
              then toJSStr url
@@ -41,7 +40,7 @@ textRequest_ :: MonadIO m
              => Method
              -> JSString
              -> [(JSString, JSString)]
-             -> (JSString -> IO ())
+             -> (Maybe JSString -> IO ())
              -> m ()
 textRequest_ m url kv cb = liftIO $ do
   _ <- ajaxReq (toJSStr $ show m) url' True "" (mkCallback cb)
@@ -71,7 +70,7 @@ jsonRequest_ m url kv cb = liftIO $ do
   _ <- ajaxReq (toJSStr $ show m) url' True "" cb'
   return ()
   where
-    cb' = mkCallback $ cb . decode
+    cb' = mkCallback $ \mjson -> cb (mjson >>= decodeJSON)
     url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
 
 toQueryString :: [(JSString, JSString)] -> JSString
