@@ -60,7 +60,7 @@ Executable hastec
         binary,
         containers,
         data-default,
-        bytestring,
+        bytestring >= 0.10.0.0,
         filepath,
         directory,
         array,
