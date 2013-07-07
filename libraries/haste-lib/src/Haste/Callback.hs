@@ -2,7 +2,7 @@
              FlexibleInstances, OverloadedStrings #-}
 module Haste.Callback (
     setCallback, setCallback', JSFun (..), mkCallback, Event (..),
-    setTimeout, setTimeout', Callback (..)
+    setTimeout, setTimeout', Callback (..), onEvent, onEvent'
   ) where
 import Haste.Prim
 import Haste.DOM
@@ -75,12 +75,20 @@ evtName evt =
     OnFocus     -> "focus"
     OnBlur      -> "blur"
 
+-- | Friendlier name for @setCallback@.
+onEvent :: MonadIO m => Elem -> Event a -> a -> m Bool
+onEvent = setCallback
+
+-- | Friendlier name for @setCallback'@.
+onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event a -> Async a -> m Bool
+onEvent' = setCallback'
+
 -- | Set a callback for the given event.
 setCallback :: MonadIO m => Elem -> Event a -> a -> m Bool
 setCallback e evt f =
   liftIO $ jsSetCB e (evtName evt) (mkCallback $! f)
 
--- | Like 'setCallback', but takes a callback in the CIO monad instead of IO.
+-- | Like @setCallback@, but takes a callback in the CIO monad instead of IO.
 setCallback' :: (ToConcurrent a, MonadIO m)
              => Elem
              -> Event a

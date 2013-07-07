@@ -1,10 +1,12 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
 module Haste.DOM (Elem (..), PropID, ElemID,
-                  newElem, elemById, setProp, getProp, withElem,
-                  addChild, addChildBefore, removeChild, clearChildren,
-                  getChildBefore, getLastChild, getChildren, setChildren,
-                  getStyle, setStyle) where
+                  newElem, elemById, setProp, getProp, getValue,
+                  withElem, withElems, addChild, addChildBefore, removeChild,
+                  clearChildren, getChildBefore, getLastChild, getChildren,
+                  setChildren, getStyle, setStyle) where
 import Haste.Prim
+import Haste.JSType
+import Data.Maybe (isNothing, fromJust)
 import Control.Monad.IO.Class
 
 newtype Elem = Elem JSAny
@@ -64,6 +66,10 @@ newElem = liftIO . jsCreateElem . toJSStr
 setProp :: MonadIO m => Elem -> PropID -> String -> m ()
 setProp e prop val = liftIO $ jsSet e (toJSStr prop) (toJSStr val)
 
+-- | Get the value property of an element; a handy shortcut.
+getValue :: (MonadIO m, JSType a) => Elem -> m (Maybe a)
+getValue e = liftIO $ fromJSString `fmap` jsGet e "value"
+
 -- | Get a property of an element.
 getProp :: MonadIO m => Elem -> PropID -> m String
 getProp e prop = liftIO $ fromJSStr `fmap` jsGet e (toJSStr prop)
@@ -87,6 +93,20 @@ withElem e act = do
   case me' of
     Just e' -> act e'
     _       -> error $ "No element with ID " ++ e ++ " could be found!"
+
+-- | Perform an IO action over several elements. Throws an error if some of the
+--   elements are not found.
+withElems :: MonadIO m => [ElemID] -> ([Elem] -> m a) -> m a
+withElems es act = do
+    mes <- mapM elemById es
+    if any isNothing mes
+      then error $ "Elements with the following IDs could not be found: "
+                 ++ show (findElems es mes)
+      else act $ map fromJust mes
+  where
+    findElems (i:is) (Nothing:mes) = i : findElems is mes
+    findElems (_:is) (_:mes)       = findElems is mes
+    findElems _ _                  = []
 
 -- | Remove all children from the given element.
 clearChildren :: MonadIO m => Elem -> m ()
