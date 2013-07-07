@@ -134,5 +134,8 @@ Executable haste-copy-pkg
         base,
         filepath,
         directory,
-        process
+        process,
+        temporary,
+        time,
+        transformers
     default-language: Haskell98

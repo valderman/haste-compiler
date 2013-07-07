@@ -4,7 +4,7 @@ module Control.Shell (
     Shell, shell,
     mayFail,
     withEnv, getEnv, lookupEnv,
-    run, run_, runInteractive,
+    run, run_, run', runInteractive,
     cd, cpDir, pwd, ls, mkdir, rmdir, inDirectory, isDirectory,
     withHomeDirectory, inHomeDirectory, withAppDirectory, inAppDirectory,
     isFile, rm, mv, cp, file, mtime,
@@ -53,6 +53,7 @@ instance Functor Shell where
 -- | Enable the user to use 'file "foo" >>= fmap reverse >>= file "bar"' as
 --   syntax for reading the file 'foo', reversing the contents and writing the
 --   result to 'bar'.
+--   Note that this uses lazy IO in the form of read/writeFile.
 class File a where
   file :: FilePath -> a
 
@@ -104,26 +105,24 @@ exHandler = return . Left . show
 --   commands.
 run :: String -> [String] -> String -> Shell String
 run p args stdin = do
-  (Just inp, Just out, pid) <- runP p args Proc.CreatePipe Proc.CreatePipe
-  exCode <- liftIO $ do
+  (Just inp, Just out, _) <- runP p args Proc.CreatePipe Proc.CreatePipe
+  liftIO $ do
     IO.hPutStr inp stdin
-    IO.hFlush inp
-    Proc.waitForProcess pid
-  case exCode of
-    Exit.ExitFailure ec -> fail (show ec)
-    _                   -> liftIO $ IO.hGetContents out
+    IO.hClose inp
+    IO.hGetContents out
 
--- | Like @run@, but echoes the program's text output to the screen instead of
---   returning it.
+-- | Like @run@, but echoes the command's text output to the screen instead of
+--   returning it. Waits for the command to complete before returning.
 run_ :: String -> [String] -> String -> Shell ()
 run_ p args stdin = do
   (Just inp, _, pid) <- runP p args Proc.CreatePipe Proc.Inherit
   exCode <- liftIO $ do
     IO.hPutStr inp stdin
-    IO.hFlush inp
+    IO.hClose inp
     Proc.waitForProcess pid
   case exCode of
-    Exit.ExitFailure ec -> fail (show ec)
+    Exit.ExitFailure ec -> fail $ "Command '" ++ p ++ "' failed with error " 
+                                ++" code " ++ show ec
     _                   -> return ()
 
 -- | Create a process. Helper for @run@ and friends.
@@ -146,6 +145,19 @@ runP p args stdin stdout = Shell $ \env -> do
         Proc.close_fds    = False,
         Proc.create_group = False
       }
+
+-- | Run a command and wait for it to terminate before returning its output.
+run' :: String -> [String] -> String -> Shell String
+run' p args stdin = do
+  (Just inp, Just out, pid) <- runP p args Proc.Inherit Proc.Inherit
+  exCode <- liftIO $ do
+    IO.hPutStr inp stdin
+    IO.hClose inp
+    Proc.waitForProcess pid
+  case exCode of
+    Exit.ExitFailure ec -> fail $ "Command '" ++ p ++ "' failed with error " 
+                                ++" code " ++ show ec
+    _                   -> liftIO $ IO.hGetContents out
 
 -- | Run an interactive process.
 runInteractive :: String -> [String] -> Shell ()
