@@ -89,6 +89,10 @@ For more information on how Haste works, see
 [the Haste Report](http://ekblad.cc/hastereport.pdf "Haste Report"),
 though beware that parts of Haste may have changed quite a bit.
 
+You should also have a look at the documentation and/or source code for
+`haste-lib`, which resides in the `libraries/haste-lib` directory, and the
+small programs in the `examples` directory, to get started.
+
 
 Reactive web EDSL
 -----------------
