@@ -44,11 +44,9 @@ modified by setting the `JS` environment variable as such:
 `JS=other-js-interpreter ./runtests.sh`. Other JavaScript interpreters may or
 may not work.
 
-Unfortunately, while Haste should in theory work well on Windows platforms,
-it has only been tested with GNU/Linux and Mac OS X, and the script that
-builds the standard library only works on *nix platforms.
-If you want to have a go at building the libraries on Windows, I suggest you
-take a look at the `buildlibs.sh` script.
+Haste has been tested to work on Windows and OSX platforms, but is primarily
+developed on GNU/Linux. As such, running on a GNU/Linux platform will likely
+get you less bugs.
 
 
 Usage
