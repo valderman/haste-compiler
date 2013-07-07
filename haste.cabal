@@ -69,7 +69,6 @@ Executable hastec
         array,
         ghc-paths,
         process,
-        unix,
         random,
         system-fileio
     Main-Is:
