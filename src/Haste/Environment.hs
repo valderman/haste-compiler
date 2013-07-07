@@ -23,9 +23,12 @@ cabalBinDir = cabalDir </> "bin"
 hasteDir :: FilePath
 hasteDir = unsafePerformIO $ getAppUserDataDirectory "haste"
 
--- | Base dir 
-libDir :: FilePath
-libDir = hasteInstDir </> "lib"
+jsmodDir :: FilePath
+jsmodDir = hasteDir </> "lib"
+
+-- | Directory containing library information. 
+pkgLibDir :: FilePath
+pkgLibDir = hasteInstDir </> "lib"
 
 -- | Base directory for haste-inst.
 hasteInstDir :: FilePath

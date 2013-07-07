@@ -47,7 +47,9 @@ Executable haste-boot
         curl,
         download-curl,
         filepath,
-        temporary
+        temporary,
+        time,
+        transformers
     Default-Language: Haskell98
 
 Executable hastec

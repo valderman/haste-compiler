@@ -9,7 +9,7 @@ main = do
   args <- getArgs
   pkgDirExists <- doesDirectoryExist pkgDir
   when (not pkgDirExists) $ do
-    createDirectoryIfMissing True libDir
+    createDirectoryIfMissing True pkgLibDir
     runAndWait "ghc-pkg" ["init", pkgDir] Nothing
   runAndWait "ghc-pkg" (packages ++ map userToGlobal args) Nothing
   where

@@ -15,7 +15,7 @@ argSpecs = [
               updateCfg = \cfg _ -> cfg {performLink   = False},
               info = "Don't perform linking."},
     ArgSpec { optName = "libinstall",
-              updateCfg = \cfg _ -> cfg {targetLibPath = libDir,
+              updateCfg = \cfg _ -> cfg {targetLibPath = jsmodDir,
                                          performLink   = False},
               info = "Install all compiled modules into the user's jsmod "
                      ++ "library\nrather than linking them together into a JS"

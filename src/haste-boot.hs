@@ -1,9 +1,9 @@
 import Prelude hiding (read)
-import System.Process
 import System.Directory
 import Network.Curl.Download.Lazy
 import Network.Curl.Opts
-import Data.ByteString.Lazy as BS hiding (putStrLn, unpack, elem)
+import Data.ByteString.Lazy as BS hiding
+  (putStrLn, unpack, elem, filter, zipWith, null, head, dropWhile)
 import Data.Version
 import Codec.Compression.BZip
 import Codec.Archive.Tar
@@ -13,6 +13,8 @@ import Control.Monad
 import qualified Codec.Archive.Zip as Zip
 import Haste.Environment
 import Haste.Version
+import Control.Shell
+import Data.Char (isDigit)
 
 data Cfg = Cfg {
     getLibs      :: Bool,
@@ -53,12 +55,12 @@ bootHaste cfg tmpdir = do
     exists <- doesDirectoryExist hasteDir
     when exists $ do
       removeDirectoryRecursive hasteDir
-    _ <- system $ "bash ./buildlibs.sh " ++ show hostWordSize
-    return ()
+    buildLibs
   when (getClosure cfg) $ do
     installClosure
   Prelude.writeFile bootFile (show bootVersion)
 
+-- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> IO ()
 fetchLibs tmpdir = do
     putStrLn "Downloading base libs from ekblad.cc"
@@ -66,12 +68,13 @@ fetchLibs tmpdir = do
     case res of
       Left err ->
         error $ "Unable to download base libs: " ++ err
-      Right file ->
-        unpack tmpdir . read . decompress $ file
+      Right f ->
+        unpack tmpdir . read . decompress $ f
   where
     mkUrl v =
       "http://ekblad.cc/haste-libs/haste-libs-" ++ showVersion v ++ ".tar.bz2"
 
+-- | Fetch and install the Closure compiler.
 installClosure :: IO ()
 installClosure = do
   putStrLn "Downloading Google Closure compiler..."
@@ -90,3 +93,52 @@ installClosure = do
   where
     closureURI =
       "http://closure-compiler.googlecode.com/files/compiler-latest.zip"
+
+-- | Build haste's base libs.
+buildLibs :: IO ()
+buildLibs = do
+    res <- shell $ do
+      -- Set up dirs and copy includes
+      mkdir True $ pkgLibDir
+      cpDir "include" hasteDir
+      run_ "haste-pkg" ["update", "libraries" </> "rts.pkg"] ""
+      
+      inDirectory "libraries" $ do
+        -- Install ghc-prim
+        inDirectory "ghc-prim" $ do
+          hasteInst ["configure"]
+          hasteInst ["build", "--install-jsmods", ghcOpts]
+          run_ "haste-install-his" ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
+          run_ "haste-pkg" ["update", "packageconfig"] ""
+        
+        -- Install integer-gmp twice, since it may misbehave the first time.
+        inDirectory "integer-gmp" $ do
+          hasteInst ["install", ghcOpts]
+          hasteInst ["install", ghcOpts]
+        
+        -- Install base
+        inDirectory "base" $ do
+          basever <- file "base.cabal" >>= return
+            . dropWhile (not . isDigit)
+            . head
+            . filter (not . null)
+            . filter (and . zipWith (==) "version")
+            . lines
+          hasteInst ["configure"]
+          hasteInst ["build", "--install-jsmods", ghcOpts]
+          let base = "base-" ++ basever
+              pkgdb = "--package-db=dist" </> "package.conf.inplace"
+          run_ "haste-install-his" [base, "dist" </> "build"] ""
+          run_ "haste-copy-pkg" [base, pkgdb] ""
+        
+        -- Install array, fursuit and haste-lib
+        forM_ ["array", "fursuit", "haste-lib"] $ \pkg -> do
+          inDirectory pkg $ hasteInst ["install"]
+    case res of
+      Left err -> error err
+      _        -> return ()
+  where
+    ghcOpts =
+      "--ghc-options=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize
+    hasteInst args =
+      run_ "haste-inst" ("--unbooted" : args) ""

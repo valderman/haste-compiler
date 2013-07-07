@@ -14,7 +14,7 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [package, dir] -> installFromDir (libDir </> package) dir
+    [package, dir] -> installFromDir (pkgLibDir </> package) dir
     _              -> putStrLn "Usage: haste-install-his pkgname dir"
 
 getHiFiles :: FilePath -> IO [FilePath]
@@ -34,7 +34,7 @@ installFromDir :: FilePath -> FilePath -> IO ()
 installFromDir base path = do
   hiFiles <- getHiFiles path
   when (not $ null hiFiles) $ do
-    createDirectoryIfMissing True (libDir </> base)
+    createDirectoryIfMissing True (pkgLibDir </> base)
   mapM_ (installHiFile base path) hiFiles
   getSubdirs path >>= mapM_ (\d -> installFromDir (base </> d) (path </> d))
 

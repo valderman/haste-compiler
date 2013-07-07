@@ -92,5 +92,5 @@ fixPaths pkgname pkgtext =
     isKey key str =
       and $ zipWith (==) key str
     
-    importDir = libDir
+    importDir = pkgLibDir
     pkgRoot   = hasteInstDir

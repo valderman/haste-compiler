@@ -48,9 +48,9 @@ fastMultiply = binOp Mul
 data Config = Config {
     -- | Runtime files to dump into the JS blob.
     rtsLibs :: [FilePath],
-    -- | Path to directory where system libraries are located.
+    -- | Path to directory where system jsmods are located.
     libPath :: FilePath,
-    -- | Write all modules to this path.
+    -- | Write all jsmods to this path.
     targetLibPath :: FilePath,
     -- | A function that takes the main symbol as its input and outputs the
     --   code that starts the program.
@@ -85,7 +85,7 @@ data Config = Config {
 defConfig :: Config
 defConfig = Config {
     rtsLibs          = stdJSLibs,
-    libPath          = libDir,
+    libPath          = jsmodDir,
     targetLibPath    = ".",
     appStart         = startOnLoadComplete,
     ppOpts           = def,
