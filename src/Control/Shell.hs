@@ -20,7 +20,6 @@ import qualified System.Process as Proc
 import qualified System.Directory as Dir
 import qualified System.Exit as Exit
 import qualified System.IO as IO
-import qualified Control.Concurrent as Conc
 import qualified Control.Exception as Ex
 import qualified System.IO.Temp as Temp
 import qualified System.Environment as Env
@@ -134,10 +133,10 @@ runP :: String
      -> Proc.StdStream
      -> Shell (Maybe IO.Handle, Maybe IO.Handle, Proc.ProcessHandle)
 runP p args stdin stdout = Shell $ \env -> do
-    (inp, out, _, pid) <- Proc.createProcess (cp env)
+    (inp, out, _, pid) <- Proc.createProcess (cproc env)
     return $ Right (inp, out, pid)
   where
-    cp env = Proc.CreateProcess {
+    cproc env = Proc.CreateProcess {
         Proc.cmdspec      = Proc.RawCommand p args,
         Proc.cwd          = Nothing,
         Proc.env          = Just env,
