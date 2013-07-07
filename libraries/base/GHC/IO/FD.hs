@@ -196,7 +196,7 @@ openFile filepath iomode non_blocking =
                   AppendMode    -> append_flags
 
 #ifdef mingw32_HOST_OS
-      binary_flags = o_BINARY
+      binary_flags = 0
 #else
       binary_flags = 0
 #endif
@@ -435,11 +435,11 @@ foreign import ccall safe "fdReady"
 
 isTerminal :: FD -> IO Bool
 isTerminal fd =
-#if defined(mingw32_HOST_OS)
-    is_console (fdFD fd) >>= return.toBool
-#else
+-- #if defined(mingw32_HOST_OS)
+--     is_console (fdFD fd) >>= return.toBool
+-- #else
     c_isatty (fdFD fd) >>= return.toBool
-#endif
+-- #endif
 
 setEcho :: FD -> Bool -> IO () 
 setEcho fd on = return () -- System.Posix.Internals.setEcho (fdFD fd) on
