@@ -47,12 +47,9 @@ Executable haste-boot
         filepath,
         temporary,
         time,
-        transformers
-    if os(linux) || os(windows)
-        Build-Depends: download
-    else
-        Build-Depends: curl, download-curl
-        Cpp-Options: -DDOWNLOAD_CURL
+        transformers,
+        network,
+        HTTP
     Default-Language: Haskell98
 
 Executable hastec

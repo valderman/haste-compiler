@@ -1,15 +1,12 @@
 {-# LANGUAGE CPP #-}
 import Prelude hiding (read)
 import System.Directory
-#ifdef DOWNLOAD_CURL
-import Network.Curl.Download.Lazy
-import Network.Curl.Opts
-#else
-import Network.Download
-#endif
-import Data.ByteString.Lazy as BS hiding
-  (putStrLn, unpack, elem, filter, zipWith, null, head, dropWhile)
+import Network.HTTP
+import Network.Browser hiding (err)
+import Network.URI
+import qualified Data.ByteString.Lazy as BS
 import Data.Version
+import Data.Maybe (fromJust)
 import Codec.Compression.BZip
 import Codec.Archive.Tar
 import System.Environment (getArgs)
@@ -21,15 +18,19 @@ import Haste.Version
 import Control.Shell
 import Data.Char (isDigit)
 
-downloadFile :: String -> IO (Either String ByteString)
-#ifdef DOWNLOAD_CURL
+downloadFile :: String -> IO (Either String BS.ByteString)
 downloadFile f = do
-  openLazyURIWithOpts [CurlFollowLocation True] f
-#else
-downloadFile f = do
-  bs <- openURI f
-  return $ fmap (\bs' -> BS.fromChunks [bs']) bs
-#endif
+  (_, rsp) <- Network.Browser.browse $ do
+    setAllowRedirects True
+    request $ Request {
+        rqURI = fromJust $ parseURI f,
+        rqMethod = GET,
+        rqHeaders = [],
+        rqBody = BS.empty
+      }
+  case rspCode rsp of 
+    (2, _, _) -> return $ Right $ rspBody rsp
+    _         -> return $ Left $ rspReason rsp
 
 data Cfg = Cfg {
     getLibs      :: Bool,
