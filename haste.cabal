@@ -33,6 +33,8 @@ Executable haste-boot
     Main-Is: haste-boot.hs
     Other-Modules:
         Haste.Version
+        Haste.Environment
+        Control.Shell
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     Build-Depends:
@@ -77,6 +79,7 @@ Executable hastec
         Args
         ArgSpecs
         Haste
+        Haste.Util
         Haste.Version
         Haste.Environment
         Haste.Config
@@ -86,6 +89,7 @@ Executable hastec
         Haste.Linker
         Haste.Builtins
         Haste.Errors
+        Haste.CodeGen
         Data.JSTarget
         Data.JSTarget.AST
         Data.JSTarget.Binary
@@ -129,6 +133,9 @@ Executable haste-install-his
 
 Executable haste-copy-pkg
     Main-Is: haste-copy-pkg.hs
+    Other-Modules:
+        Haste.Environment
+        Control.Shell
     Hs-Source-Dirs: src
     Build-Depends:
         base,
