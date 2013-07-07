@@ -26,14 +26,14 @@ textRequest :: MonadIO m
             -> (Maybe String -> IO ())
             -> m ()
 textRequest m url kv cb = do
-  _ <- liftIO $ ajaxReq (toJSStr $ show m) url' True "" cb'
+  _ <- liftIO $ ajaxReq (toJSString $ show m) url' True "" cb'
   return ()
   where
     cb' = mkCallback $ cb . fmap fromJSStr
-    kv' = map (\(k,v) -> (toJSStr k, toJSStr v)) kv
+    kv' = map (\(k,v) -> (toJSString k, toJSString v)) kv
     url' = if null kv
-             then toJSStr url
-             else catJSStr "?" [toJSStr url, toQueryString kv']
+             then toJSString url
+             else catJSStr "?" [toJSString url, toQueryString kv']
 
 -- | Same as 'textRequest' but deals with JSStrings instead of Strings.
 textRequest_ :: MonadIO m
@@ -43,7 +43,7 @@ textRequest_ :: MonadIO m
              -> (Maybe JSString -> IO ())
              -> m ()
 textRequest_ m url kv cb = liftIO $ do
-  _ <- ajaxReq (toJSStr $ show m) url' True "" (mkCallback cb)
+  _ <- ajaxReq (toJSString $ show m) url' True "" (mkCallback cb)
   return ()
   where
     url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
@@ -56,7 +56,9 @@ jsonRequest :: MonadIO m
             -> (Maybe JSON -> IO ())
             -> m ()
 jsonRequest m url kv cb = liftIO $ do
-  jsonRequest_ m (toJSStr url) (map (\(k,v) -> (toJSStr k, toJSStr v)) kv) cb
+  jsonRequest_ m (toJSString url)
+                 (map (\(k,v) -> (toJSString k, toJSString v)) kv)
+                 cb
 
 -- | Does the same thing as 'jsonRequest' but uses 'JSString's instead of
 --   Strings.
@@ -67,7 +69,7 @@ jsonRequest_ :: MonadIO m
              -> (Maybe JSON -> IO ())
              -> m ()
 jsonRequest_ m url kv cb = liftIO $ do
-  _ <- ajaxReq (toJSStr $ show m) url' True "" cb'
+  _ <- ajaxReq (toJSString $ show m) url' True "" cb'
   return ()
   where
     cb' = mkCallback $ \mjson -> cb (mjson >>= decodeJSON)

@@ -1,12 +1,12 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module Haste (alert, prompt, eval, round_, floor_, ceiling_, fromInt, writeLog, JSString,
-              catJSStr, toJSStr, fromJSStr,
-              module Haste.JSType,
+module Haste (JSString, alert, prompt, eval, writeLog, catJSStr, fromJSStr,
+              module Haste.JSType, module Haste.DOM,
               module Haste.Callback, module Haste.Random) where
 import Haste.Prim
 import Haste.Callback
 import Haste.Random
 import Haste.JSType
+import Haste.DOM
 import Control.Monad.IO.Class
 
 foreign import ccall jsAlert  :: JSString -> IO ()

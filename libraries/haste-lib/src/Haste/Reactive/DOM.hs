@@ -5,7 +5,6 @@
 module Haste.Reactive.DOM (clicked,valueOf,valueAt,ElemProp,elemProp) where
 import FRP.Fursuit
 import Haste
-import Haste.DOM
 import qualified Data.Map as M
 import System.IO.Unsafe (unsafePerformIO)
 import Data.IORef
