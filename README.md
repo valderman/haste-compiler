@@ -14,6 +14,7 @@ Features
 * Unboxed arrays, ByteArrays, StableNames and other low level features
 * Low-level DOM base library
 * Easy integration with Google's Closure compiler
+* Works on Windows, GNU/Linux and Mac OS X
 * Simple, one-step build; no need for error prone Rube Goldberg machines of
   Vagrant, VirtualBox, GHC sources and other black magic
 
