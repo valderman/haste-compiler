@@ -1,7 +1,12 @@
+{-# LANGUAGE CPP #-}
 import Prelude hiding (read)
 import System.Directory
+#ifdef DOWNLOAD_CURL
 import Network.Curl.Download.Lazy
 import Network.Curl.Opts
+#else
+import Network.Download
+#endif
 import Data.ByteString.Lazy as BS hiding
   (putStrLn, unpack, elem, filter, zipWith, null, head, dropWhile)
 import Data.Version
@@ -15,6 +20,16 @@ import Haste.Environment
 import Haste.Version
 import Control.Shell
 import Data.Char (isDigit)
+
+downloadFile :: String -> IO (Either String ByteString)
+#ifdef DOWNLOAD_CURL
+downloadFile f = do
+  openLazyURIWithOpts [CurlFollowLocation True] f
+#else
+downloadFile f = do
+  bs <- openURI f
+  return $ fmap (\bs' -> BS.fromChunks [bs']) bs
+#endif
 
 data Cfg = Cfg {
     getLibs      :: Bool,
@@ -64,7 +79,7 @@ bootHaste cfg tmpdir = do
 fetchLibs :: FilePath -> IO ()
 fetchLibs tmpdir = do
     putStrLn "Downloading base libs from ekblad.cc"
-    res <- openLazyURIWithOpts [CurlFollowLocation True] $ mkUrl hasteVersion
+    res <- downloadFile $ mkUrl hasteVersion
     case res of
       Left err ->
         error $ "Unable to download base libs: " ++ err
@@ -78,7 +93,7 @@ fetchLibs tmpdir = do
 installClosure :: IO ()
 installClosure = do
   putStrLn "Downloading Google Closure compiler..."
-  closure <- openLazyURIWithOpts [CurlFollowLocation True] closureURI
+  closure <- downloadFile closureURI
   case closure of
     Left _ ->
       putStrLn "Couldn't download Closure compiler; continuing without."

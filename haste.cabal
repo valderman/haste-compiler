@@ -45,11 +45,15 @@ Executable haste-boot
         bzlib,
         zip-archive,
         curl,
-        download-curl,
         filepath,
         temporary,
         time,
         transformers
+    if !(os(linux) || os(windows))
+        Build-Depends: download-curl
+        Cpp-Options: -DDOWNLOAD_CURL=1
+    else
+        Build-Depends: download
     Default-Language: Haskell98
 
 Executable hastec
