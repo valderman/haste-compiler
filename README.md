@@ -22,11 +22,8 @@ Installation
 ------------
 
 You have two options for getting Haste: installing from Hackage or from
-Github. In both cases, you need the development libraries for `libbz2` and
-`libz` installed on your system. If you're a mac user, you will also need
-the development libraries for `libcurl`. Finally, you will need to add Cabal's
-bin directory, usually `~/.cabal/bin`, to your `$PATH` if you haven't already
-done so.
+Github. In both cases, you need to add add Cabal's bin directory, usually
+`~/.cabal/bin`, to your `$PATH` if you haven't already done so.
 
 Then, installing the latest stable-ish version from cabal is easy:
 
