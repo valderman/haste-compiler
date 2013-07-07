@@ -33,7 +33,6 @@ module GHC.Handle {-# DEPRECATED "use GHC.IO.Handle instead" #-} (
   stdin, stdout, stderr,
   IOMode(..), openFile, openBinaryFile, 
 --  fdToHandle_stat,
-  fdToHandle, fdToHandle',
   hFileSize, hSetFileSize, hIsEOF, isEOF, hLookAhead, hLookAhead_, 
   hSetBuffering, hSetBinaryMode,
   hFlush, hDuplicate, hDuplicateTo,

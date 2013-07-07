@@ -77,7 +77,6 @@ import Data.Typeable
 import Control.Monad
 import Data.Maybe
 import Foreign.Safe
-import System.Posix.Internals hiding (FD)
 
 import Foreign.C
 
@@ -787,6 +786,8 @@ hLookAhead_ handle_@Handle__{..} = do
 
 -- ---------------------------------------------------------------------------
 -- debugging
+
+c_write _ _ _ = return ()
 
 debugIO :: String -> IO ()
 debugIO s

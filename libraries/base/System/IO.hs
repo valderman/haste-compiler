@@ -245,7 +245,6 @@ import Foreign.C.Error
 import Foreign.C.String
 #endif
 import Foreign.C.Types
-import System.Posix.Internals
 import System.Posix.Types
 #endif
 
@@ -312,6 +311,13 @@ import IO
 import NHC.IOExtras (fixIO, hPutBuf, hGetBuf)
 import NHC.FFI (Ptr)
 #endif
+
+o_BINARY = 0
+o_RDWR = 0
+o_NOCTTY = 0
+o_CREAT = 0
+o_NONBLOCK = 0
+o_EXCL = 0
 
 -- -----------------------------------------------------------------------------
 -- Standard IO
@@ -546,7 +552,8 @@ openBinaryTempFileWithDefaultPermissions tmp_dir template
 openTempFile' :: String -> FilePath -> String -> Bool -> CMode
               -> IO (FilePath, Handle)
 openTempFile' loc tmp_dir template binary mode = do
-  pid <- c_getpid
+  -- pid <- undefined -- c_getpid
+  let pid = 0
   findTempName pid
   where
     -- We split off the last extension, so we can use .foo.ext files
@@ -569,29 +576,8 @@ openTempFile' loc tmp_dir template binary mode = do
 #ifndef __NHC__
 #endif
 
-#if defined(__NHC__)
     findTempName x = do h <- openFile filepath ReadWriteMode
                         return (filepath, h)
-#elif defined(__GLASGOW_HASKELL__)
-    findTempName x = do
-      r <- openNewFile filepath binary mode
-      case r of
-        FileExists -> findTempName (x + 1)
-        OpenNewError errno -> ioError (errnoToIOError loc errno Nothing (Just tmp_dir))
-        NewFileCreated fd -> do
-          (fD,fd_type) <- FD.mkFD fd ReadWriteMode Nothing{-no stat-}
-                               False{-is_socket-}
-                               True{-is_nonblock-}
-
-          enc <- getLocaleEncoding
-          h <- mkHandleFromFD fD fd_type filepath ReadWriteMode False{-set non-block-} (Just enc)
-
-          return (filepath, h)
-#else
-         h <- fdToHandle fd `onException` c_close fd
-         return (filepath, h)
-#endif
-
       where
         filename        = prefix ++ show x ++ suffix
         filepath        = tmp_dir `combine` filename
@@ -602,10 +588,6 @@ openTempFile' loc tmp_dir template binary mode = do
                   | null a = b
                   | last a == pathSeparator = a ++ b
                   | otherwise = a ++ [pathSeparator] ++ b
-
-#if __HUGS__
-        fdToHandle fd   = openFd (fromIntegral fd) False ReadWriteMode binary
-#endif
 
 #if defined(__GLASGOW_HASKELL__)
 data OpenNewFileResult
@@ -622,8 +604,9 @@ openNewFile filepath binary mode = do
         | otherwise = 0
 
       oflags = oflags1 .|. binary_flags
-  fd <- withFilePath filepath $ \ f ->
-          c_open f oflags mode
+{-  fd <- withFilePath filepath $ \ f ->
+          c_open f oflags mode-}
+  let fd = -1
   if fd < 0
     then do
       errno <- getErrno

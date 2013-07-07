@@ -42,8 +42,6 @@ import Foreign.Marshal (alloca, allocaBytes)
 import Foreign.Marshal.Array (allocaArray)
 import Foreign.Ptr (castPtr)
 import Foreign.Storable (peek, peekElemOff, poke)
-import System.Posix.Internals (c_close, c_pipe, c_read, c_write,
-                               setCloseOnExec, setNonBlockingFD)
 import System.Posix.Types (Fd)
 
 #if defined(HAVE_EVENTFD)
@@ -58,6 +56,14 @@ data ControlMessage = CMsgWakeup
                     | CMsgSignal {-# UNPACK #-} !(ForeignPtr Word8)
                                  {-# UNPACK #-} !Signal
     deriving (Eq, Show)
+
+c_close _ = return 0 
+c_pipe _ = return 0
+c_read _ _ _ = return 0
+c_write _ _ _ = return 0
+setCloseOnExec _ = return ()
+setNonBlockingFD _ _ = return ()
+
 
 -- | The structure used to tell the IO manager thread what to do.
 data Control = W {

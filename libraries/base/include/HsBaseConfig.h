@@ -373,9 +373,6 @@
 /* Define to 1 if you have the <sys/timeb.h> header file. */
 #define HAVE_SYS_TIMEB_H 1
 
-/* Define to 1 if you have the <sys/times.h> header file. */
-#define HAVE_SYS_TIMES_H 1
-
 /* Define to 1 if you have the <sys/time.h> header file. */
 #define HAVE_SYS_TIME_H 1
 

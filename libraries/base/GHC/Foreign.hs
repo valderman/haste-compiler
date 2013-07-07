@@ -49,7 +49,6 @@ import Control.Monad
 import Data.Tuple (fst)
 import Data.Maybe
 
-import {-# SOURCE #-} System.Posix.Internals (puts)
 import GHC.Show ( show )
 
 import Foreign.Marshal.Alloc
@@ -65,6 +64,7 @@ import GHC.IO.Exception
 import GHC.IO.Buffer
 import GHC.IO.Encoding.Types
 
+puts _ = return ()
 
 c_DEBUG_DUMP :: Bool
 c_DEBUG_DUMP = False

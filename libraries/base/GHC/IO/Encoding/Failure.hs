@@ -32,8 +32,6 @@ import GHC.Show
 import GHC.Num
 import GHC.Real ( fromIntegral )
 
---import System.Posix.Internals
-
 import Data.Maybe
 
 

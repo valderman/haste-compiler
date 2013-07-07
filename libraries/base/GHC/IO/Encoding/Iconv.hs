@@ -44,14 +44,13 @@ import GHC.Num
 import GHC.Show
 import GHC.Real
 import System.IO.Unsafe (unsafePerformIO)
-import System.Posix.Internals
 
 c_DEBUG_DUMP :: Bool
 c_DEBUG_DUMP = False
 
 iconv_trace :: String -> IO ()
 iconv_trace s
- | c_DEBUG_DUMP = puts s
+ | c_DEBUG_DUMP = return () -- puts s
  | otherwise    = return ()
 
 -- -----------------------------------------------------------------------------
