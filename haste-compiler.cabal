@@ -39,7 +39,7 @@ Executable haste-boot
     GHC-Options: -Wall -O2
     Build-Depends:
         ghc,
-        base,
+        base < 5,
         directory,
         process,
         bytestring,
@@ -58,7 +58,7 @@ Executable hastec
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     Build-Depends:
-        base,
+        base < 5,
         ghc-prim,
         ghc >= 7.6,
         mtl,
@@ -105,7 +105,7 @@ Executable haste-inst
     Main-Is: haste-inst.hs
     Hs-Source-Dirs: src
     Build-Depends:
-        base,
+        base < 5,
         filepath,
         process,
         directory
@@ -115,7 +115,7 @@ Executable haste-pkg
     Main-Is: haste-pkg.hs
     Hs-Source-Dirs: src
     Build-Depends:
-        base,
+        base < 5,
         process,
         filepath,
         directory
@@ -125,7 +125,7 @@ Executable haste-install-his
     Main-Is: haste-install-his.hs
     Hs-Source-Dirs: src
     Build-Depends:
-        base,
+        base < 5,
         filepath,
         directory,
         process
@@ -138,7 +138,7 @@ Executable haste-copy-pkg
         Control.Shell
     Hs-Source-Dirs: src
     Build-Depends:
-        base,
+        base < 5,
         filepath,
         directory,
         process,
