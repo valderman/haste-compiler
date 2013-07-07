@@ -1,15 +1,12 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
     TypeSynonymInstances, FlexibleInstances, OverlappingInstances #-}
-module Haste.Prim (JSString, toJSStr, fromJSStr, NumberRep (..), JSAny,
+module Haste.Prim (JSString, toJSStr, fromJSStr, JSAny,
                    Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
 import Unsafe.Coerce
 import GHC.CString
-import GHC.Types
 import GHC.Prim
-import GHC.Word
 import Data.String
-import Data.Int (Int32)
 
 foreign import ccall _str :: JSString
 foreign import ccall strEq :: JSString -> JSString -> Bool
@@ -58,56 +55,3 @@ instance IsString JSString where
 -- | Defined in lib/rts.js
 fromJSStr :: JSString -> String
 fromJSStr s = s `seq` []
-
-class NumberRep a where
-  -- | Convert any type with a Number representation to a 32-bit signed integer.
-  round_ :: a -> Int
-  -- | @'floor_' x@ converts any type with a Number representation to the greatest 32-bit signed integer not greater than @x@
-  floor_ :: a -> Int
-  -- | @'ceiling_' x@ converts any type with a Number representation to the least 32-bit signed integer not lesser than @x@
-  ceiling_ :: a -> Int
-  -- | Create any type with a Number representation from a 32-bit signed integer.
-  fromInt :: Int -> a
-  fromInt = unsafeCoerce#
-
-instance NumberRep Double where
-  round_ (D# d) = I# (jsRound d)
-  floor_ (D# d) = I# (jsFloor d)
-  ceiling_ (D# d) = I# (jsCeiling d)
-instance NumberRep Float where
-  round_ (F# f) = I# (unsafeCoerce# (jsRound (unsafeCoerce# f)))
-  floor_ (F# f) = I# (unsafeCoerce# (jsFloor (unsafeCoerce# f)))
-  ceiling_ (F# f) = I# (unsafeCoerce# (jsCeiling (unsafeCoerce# f)))
-instance NumberRep Int where
-  round_ = id
-  floor_ = id
-  ceiling_ = id
-instance NumberRep Int32 where
-  round_ = unsafeCoerce#
-  floor_ = unsafeCoerce#
-  ceiling_ = unsafeCoerce#
-instance NumberRep Word where
-  round_ (W# w) = I# (word2Int# w)
-  floor_ (W# w) = I# (word2Int# w)
-  ceiling_ (W# w) = I# (word2Int# w)
-  fromInt (I# i) = W# (int2Word# i)
-instance NumberRep Word32 where
-  round_ (W32# w) = I# (word2Int# (unsafeCoerce# w))
-  floor_ (W32# w) = I# (word2Int# (unsafeCoerce# w))
-  ceiling_ (W32# w) = I# (word2Int# (unsafeCoerce# w))
-  fromInt (I# i) = W32# (int2Word# i)
-
-{-# NOINLINE jsRound #-}
--- | Defined in lib/rts.js
-jsRound :: Double# -> Int#
-jsRound x = unsafeCoerce# x
-
-{-# NOINLINE jsFloor #-}
--- | Defined in lib/rts.js
-jsFloor :: Double# -> Int#
-jsFloor x = unsafeCoerce# x
-
-{-# NOINLINE jsCeiling #-}
--- | Defined in lib/rts.js
-jsCeiling :: Double# -> Int#
-jsCeiling x = unsafeCoerce# x

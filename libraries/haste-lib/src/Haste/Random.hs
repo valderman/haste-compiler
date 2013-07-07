@@ -1,6 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module Haste.Random (Random (..), Seed, next, mkSeed, newSeed) where
-import Haste.Prim
+import Haste.JSType
 import Data.Int
 import Data.Word
 import Data.List (unfoldr)
@@ -12,7 +12,7 @@ newtype Seed = Seed Int
 
 -- | Create a new seed from an integer.
 mkSeed :: Int -> Seed
-mkSeed = Seed . fromInt
+mkSeed = Seed . convert
 
 -- | Generate a new seed using Javascript's PRNG.
 newSeed :: MonadIO m => m Seed
@@ -20,7 +20,7 @@ newSeed = liftIO $ do
   x <- jsRand
   s <- jsRand
   let sign = if s > 0.5 then 1 else -1
-  return . mkSeed . round_ $ x*sign*2147483647
+  return . mkSeed . round $ x*sign*2147483647
 
 -- | Generate the next seed in the sequence.
 next :: Seed -> Seed
@@ -53,22 +53,22 @@ instance Random Int where
 
 instance Random Int32 where
   randomR (l,h) seed =
-    case randomR (round_ l, round_ h) seed of
-      (n, s) -> (fromInt n, s)
+    case randomR (convert l :: Int, convert h) seed of
+      (n, s) -> (convert n, s)
 
 instance Random Word where
   randomR (l,h) seed =
-    case randomR (round_ l, round_ h) seed of
-      (n, s) -> (fromInt $ round_ n, s)
+    case randomR (convert l :: Int, convert h) seed of
+      (n, s) -> (convert n, s)
 
 instance Random Word32 where
   randomR (l,h) seed =
-    case randomR (round_ l, round_ h) seed of
-      (n, s) -> (fromInt $ round_ n, s)
+    case randomR (convert l :: Int, convert h) seed of
+      (n, s) -> (convert  n, s)
 
 instance Random Double where
   randomR (low, high) seed =
     (f * (high-low) + low, s)
     where
       (n, s) = randomR (0, 2000000001 :: Int) seed
-      f      = fromInt n / 2000000000
+      f      = convert n / 2000000000
