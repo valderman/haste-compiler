@@ -1,12 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Tests.DoubleDiv where
-
-#ifdef __HASTE__
-import Haste
-str = toString . (round_ :: Double -> Int)
-#else
 str = show . (round :: Double -> Int)
-#endif
 
 {-# NOINLINE a #-}
 a :: Double
