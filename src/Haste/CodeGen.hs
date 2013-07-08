@@ -423,14 +423,14 @@ genLit l = do
     MachStr s           -> return . lit $ hexifyString s
     MachInt n
       | n > 2147483647 ||
-        n < -2147483648 -> do warn Normal (constFail "Int" n)
+        n < -2147483648 -> do warn Verbose (constFail "Int" n)
                               return $ truncInt n
       | otherwise       -> return . litN $ fromIntegral n
     MachFloat f         -> return . litN $ fromRational f
     MachDouble d        -> return . litN $ fromRational d
     MachChar c          -> return . litN $ fromIntegral $ ord c
     MachWord w
-      | w > 0xffffffff  -> do warn Normal (constFail "Word" w)
+      | w > 0xffffffff  -> do warn Verbose (constFail "Word" w)
                               return $ truncWord w
       | otherwise       -> return . litN $ fromIntegral w
     MachWord64 w        -> return . litN $ fromIntegral w
