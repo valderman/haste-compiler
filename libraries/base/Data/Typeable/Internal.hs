@@ -128,7 +128,7 @@ mkTyCon high# low# pkg modl name
   = TyCon (Fingerprint (mkw64# high#) (mkw64# low#)) pkg modl name
 
 mkw64# :: Word# -> Word64
-mkw64# w = fromIntegral (W# w)
+mkw64# w = W64# (unsafeCoerce# w)
 #endif
 
 -- | Applies a type constructor to a sequence of types

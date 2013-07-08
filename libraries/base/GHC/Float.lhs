@@ -36,6 +36,7 @@ module GHC.Float( module GHC.Float, Float(..), Double(..), Float#, Double#
 #include "ieee-flpt.h"
 
 import Data.Maybe
+import GHC.HasteWordInt
 
 import Data.Bits
 import GHC.Base
@@ -226,7 +227,7 @@ instance  Real Float  where
           (# m#, e# #)
             | e# >=# 0#                                 ->
                     (smallInteger m# `shiftLInteger` e#) :% 1
-            | (int2Word# m# `and#` 1##) `eqWord#` 0##   ->
+            | (i2w m# `and#` 1##) `eqWord#` 0##   ->
                     case elimZerosInt# m# (negateInt# e#) of
                       (# n, d# #) -> n :% shiftLInteger 1 d#
             | otherwise                                 ->

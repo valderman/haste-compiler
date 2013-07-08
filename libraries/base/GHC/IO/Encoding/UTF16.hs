@@ -39,6 +39,7 @@ module GHC.IO.Encoding.UTF16 (
   utf16le_encode,
   ) where
 
+import GHC.HasteWordInt
 import GHC.Base
 import GHC.Real
 import GHC.Num
@@ -341,8 +342,8 @@ utf16le_encode
 chr2 :: Word16 -> Word16 -> Char
 chr2 (W16# a#) (W16# b#) = C# (chr# (upper# +# lower# +# 0x10000#))
     where
-      !x# = word2Int# a#
-      !y# = word2Int# b#
+      !x# = w2i a#
+      !y# = w2i b#
       !upper# = uncheckedIShiftL# (x# -# 0xD800#) 10#
       !lower# = y# -# 0xDC00#
 {-# INLINE chr2 #-}

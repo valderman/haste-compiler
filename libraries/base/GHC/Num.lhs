@@ -19,6 +19,7 @@
 -- #hide
 module GHC.Num (module GHC.Num, module GHC.Integer) where
 
+import GHC.HasteWordInt
 import GHC.Base
 import GHC.Integer
 
@@ -108,7 +109,7 @@ instance Num Word where
     (W# x#) + (W# y#)      = W# (x# `plusWord#` y#)
     (W# x#) - (W# y#)      = W# (x# `minusWord#` y#)
     (W# x#) * (W# y#)      = W# (x# `timesWord#` y#)
-    negate (W# x#)         = W# (int2Word# (negateInt# (word2Int# x#)))
+    negate (W# x#)         = W# (i2w (negateInt# (w2i x#)))
     abs x                  = x
     signum 0               = 0
     signum _               = 1

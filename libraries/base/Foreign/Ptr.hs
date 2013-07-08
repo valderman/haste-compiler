@@ -58,6 +58,7 @@ module Foreign.Ptr (
 #endif
  ) where
 
+import GHC.HasteWordInt
 #ifdef __GLASGOW_HASKELL__
 import GHC.Ptr
 import GHC.Base
@@ -124,11 +125,11 @@ INTEGRAL_TYPE(IntPtr,tyConIntPtr,"IntPtr",Int)
 
 -- | casts a @Ptr@ to a @WordPtr@
 ptrToWordPtr :: Ptr a -> WordPtr
-ptrToWordPtr (Ptr a#) = WordPtr (W# (int2Word# (addr2Int# a#)))
+ptrToWordPtr (Ptr a#) = WordPtr (W# (i2w (addr2Int# a#)))
 
 -- | casts a @WordPtr@ to a @Ptr@
 wordPtrToPtr :: WordPtr -> Ptr a
-wordPtrToPtr (WordPtr (W# w#)) = Ptr (int2Addr# (word2Int# w#))
+wordPtrToPtr (WordPtr (W# w#)) = Ptr (int2Addr# (w2i w#))
 
 -- | casts a @Ptr@ to an @IntPtr@
 ptrToIntPtr :: Ptr a -> IntPtr

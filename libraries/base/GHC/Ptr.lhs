@@ -32,6 +32,7 @@ import GHC.Show
 import GHC.Num
 import GHC.List ( length, replicate )
 import Numeric          ( showHex )
+import GHC.HasteWordInt
 
 #include "MachDeps.h"
 
@@ -156,7 +157,7 @@ castPtrToFunPtr (Ptr addr) = FunPtr addr
 -- Show instances for Ptr and FunPtr
 
 instance Show (Ptr a) where
-   showsPrec _ (Ptr a) rs = pad_out (showHex (wordToInteger(int2Word#(addr2Int# a))) "")
+   showsPrec _ (Ptr a) rs = pad_out (showHex (wordToInteger(i2w(addr2Int# a))) "")
      where
         -- want 0s prefixed to pad it out to a fixed length.
        pad_out ls = 

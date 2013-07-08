@@ -21,6 +21,7 @@
 -- #hide
 module GHC.Real where
 
+import GHC.HasteWordInt
 import GHC.Base
 import GHC.Num
 import GHC.List
@@ -326,7 +327,7 @@ instance Integral Word where
         | i# >=# 0#             = smallInteger i#
         | otherwise             = wordToInteger x#
         where
-        !i# = word2Int# x#
+        !i# = w2i x#
 
 instance Enum Word where
     succ x
@@ -336,11 +337,11 @@ instance Enum Word where
         | x /= minBound = x - 1
         | otherwise     = predError "Word"
     toEnum i@(I# i#)
-        | i >= 0        = W# (int2Word# i#)
+        | i >= 0        = W# (i2w i#)
         | otherwise     = toEnumError "Word" i (minBound::Word, maxBound::Word)
     fromEnum x@(W# x#)
         | x <= fromIntegral (maxBound::Int)
-                        = I# (word2Int# x#)
+                        = I# (w2i x#)
         | otherwise     = fromEnumError "Word" x
     enumFrom            = integralEnumFrom
     enumFromThen        = integralEnumFromThen
@@ -469,8 +470,8 @@ fromIntegral = fromInteger . toInteger
     #-}
 
 {-# RULES
-"fromIntegral/Int->Word"  fromIntegral = \(I# x#) -> W# (int2Word# x#)
-"fromIntegral/Word->Int"  fromIntegral = \(W# x#) -> I# (word2Int# x#)
+"fromIntegral/Int->Word"  fromIntegral = \(I# x#) -> W# (i2w x#)
+"fromIntegral/Word->Int"  fromIntegral = \(W# x#) -> I# (w2i x#)
 "fromIntegral/Word->Word" fromIntegral = id :: Word -> Word
     #-}
 

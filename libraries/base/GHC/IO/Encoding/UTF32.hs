@@ -38,6 +38,7 @@ module GHC.IO.Encoding.UTF32 (
   utf32le_encode,
   ) where
 
+import GHC.HasteWordInt
 import GHC.Base
 import GHC.Real
 import GHC.Num
@@ -307,10 +308,10 @@ chr4 :: Word8 -> Word8 -> Word8 -> Word8 -> Char
 chr4 (W8# x1#) (W8# x2#) (W8# x3#) (W8# x4#) =
     C# (chr# (z1# +# z2# +# z3# +# z4#))
     where
-      !y1# = word2Int# x1#
-      !y2# = word2Int# x2#
-      !y3# = word2Int# x3#
-      !y4# = word2Int# x4#
+      !y1# = w2i x1#
+      !y2# = w2i x2#
+      !y3# = w2i x3#
+      !y4# = w2i x4#
       !z1# = uncheckedIShiftL# y1# 24#
       !z2# = uncheckedIShiftL# y2# 16#
       !z3# = uncheckedIShiftL# y3# 8#

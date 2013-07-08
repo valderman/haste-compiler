@@ -31,6 +31,7 @@ import Data.Bits
 import GHC.IntWord64
 #endif
 
+import GHC.HasteWordInt
 import GHC.Base
 import GHC.Enum
 import GHC.Num
@@ -136,10 +137,10 @@ instance Bits Int8 where
     {-# INLINE bit #-}
     {-# INLINE testBit #-}
 
-    (I8# x#) .&.   (I8# y#)   = I8# (word2Int# (int2Word# x# `and#` int2Word# y#))
-    (I8# x#) .|.   (I8# y#)   = I8# (word2Int# (int2Word# x# `or#`  int2Word# y#))
-    (I8# x#) `xor` (I8# y#)   = I8# (word2Int# (int2Word# x# `xor#` int2Word# y#))
-    complement (I8# x#)       = I8# (word2Int# (int2Word# x# `xor#` int2Word# (-1#)))
+    (I8# x#) .&.   (I8# y#)   = I8# (w2i (i2w x# `and#` i2w y#))
+    (I8# x#) .|.   (I8# y#)   = I8# (w2i (i2w x# `or#`  i2w y#))
+    (I8# x#) `xor` (I8# y#)   = I8# (w2i (i2w x# `xor#` i2w y#))
+    complement (I8# x#)       = I8# (w2i (i2w x# `xor#` i2w (-1#)))
     (I8# x#) `shift` (I# i#)
         | i# >=# 0#           = I8# (narrow8Int# (x# `iShiftL#` i#))
         | otherwise           = I8# (x# `iShiftRA#` negateInt# i#)
@@ -151,14 +152,14 @@ instance Bits Int8 where
         | i'# ==# 0#
         = I8# x#
         | otherwise
-        = I8# (narrow8Int# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
+        = I8# (narrow8Int# (w2i ((x'# `uncheckedShiftL#` i'#) `or#`
                                        (x'# `uncheckedShiftRL#` (8# -# i'#)))))
         where
-        !x'# = narrow8Word# (int2Word# x#)
-        !i'# = word2Int# (int2Word# i# `and#` 7##)
+        !x'# = narrow8Word# (i2w x#)
+        !i'# = w2i (i2w i# `and#` 7##)
     bitSize  _                = 8
     isSigned _                = True
-    popCount (I8# x#)         = I# (word2Int# (popCnt8# (int2Word# x#)))
+    popCount (I8# x#)         = I# (w2i (popCnt8# (i2w x#)))
     bit                       = bitDefault
     testBit                   = testBitDefault
 
@@ -291,10 +292,10 @@ instance Bits Int16 where
     {-# INLINE bit #-}
     {-# INLINE testBit #-}
 
-    (I16# x#) .&.   (I16# y#)  = I16# (word2Int# (int2Word# x# `and#` int2Word# y#))
-    (I16# x#) .|.   (I16# y#)  = I16# (word2Int# (int2Word# x# `or#`  int2Word# y#))
-    (I16# x#) `xor` (I16# y#)  = I16# (word2Int# (int2Word# x# `xor#` int2Word# y#))
-    complement (I16# x#)       = I16# (word2Int# (int2Word# x# `xor#` int2Word# (-1#)))
+    (I16# x#) .&.   (I16# y#)  = I16# (w2i (i2w x# `and#` i2w y#))
+    (I16# x#) .|.   (I16# y#)  = I16# (w2i (i2w x# `or#`  i2w y#))
+    (I16# x#) `xor` (I16# y#)  = I16# (w2i (i2w x# `xor#` i2w y#))
+    complement (I16# x#)       = I16# (w2i (i2w x# `xor#` i2w (-1#)))
     (I16# x#) `shift` (I# i#)
         | i# >=# 0#            = I16# (narrow16Int# (x# `iShiftL#` i#))
         | otherwise            = I16# (x# `iShiftRA#` negateInt# i#)
@@ -306,19 +307,19 @@ instance Bits Int16 where
         | i'# ==# 0#
         = I16# x#
         | otherwise
-        = I16# (narrow16Int# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
+        = I16# (narrow16Int# (w2i ((x'# `uncheckedShiftL#` i'#) `or#`
                                          (x'# `uncheckedShiftRL#` (16# -# i'#)))))
         where
-        !x'# = narrow16Word# (int2Word# x#)
-        !i'# = word2Int# (int2Word# i# `and#` 15##)
+        !x'# = narrow16Word# (i2w x#)
+        !i'# = w2i (i2w i# `and#` 15##)
     bitSize  _                 = 16
     isSigned _                 = True
-    popCount (I16# x#)         = I# (word2Int# (popCnt16# (int2Word# x#)))
+    popCount (I16# x#)         = I# (w2i (popCnt16# (i2w x#)))
     bit                        = bitDefault
     testBit                    = testBitDefault
 
 {-# RULES
-"fromIntegral/Word8->Int16"  fromIntegral = \(W8# x#) -> I16# (word2Int# x#)
+"fromIntegral/Word8->Int16"  fromIntegral = \(W8# x#) -> I16# (w2i x#)
 "fromIntegral/Int8->Int16"   fromIntegral = \(I8# x#) -> I16# x#
 "fromIntegral/Int16->Int16"  fromIntegral = id :: Int16 -> Int16
 "fromIntegral/a->Int16"      fromIntegral = \x -> case fromIntegral x of I# x# -> I16# (narrow16Int# x#)
@@ -451,10 +452,10 @@ instance Bits Int32 where
     {-# INLINE bit #-}
     {-# INLINE testBit #-}
 
-    (I32# x#) .&.   (I32# y#)  = I32# (word2Int# (int2Word# x# `and#` int2Word# y#))
-    (I32# x#) .|.   (I32# y#)  = I32# (word2Int# (int2Word# x# `or#`  int2Word# y#))
-    (I32# x#) `xor` (I32# y#)  = I32# (word2Int# (int2Word# x# `xor#` int2Word# y#))
-    complement (I32# x#)       = I32# (word2Int# (int2Word# x# `xor#` int2Word# (-1#)))
+    (I32# x#) .&.   (I32# y#)  = I32# (w2i (i2w x# `and#` i2w y#))
+    (I32# x#) .|.   (I32# y#)  = I32# (w2i (i2w x# `or#`  i2w y#))
+    (I32# x#) `xor` (I32# y#)  = I32# (w2i (i2w x# `xor#` i2w y#))
+    complement (I32# x#)       = I32# (w2i (i2w x# `xor#` i2w (-1#)))
     (I32# x#) `shift` (I# i#)
         | i# >=# 0#            = I32# (narrow32Int# (x# `iShiftL#` i#))
         | otherwise            = I32# (x# `iShiftRA#` negateInt# i#)
@@ -467,20 +468,20 @@ instance Bits Int32 where
         | i'# ==# 0#
         = I32# x#
         | otherwise
-        = I32# (narrow32Int# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
+        = I32# (narrow32Int# (w2i ((x'# `uncheckedShiftL#` i'#) `or#`
                                          (x'# `uncheckedShiftRL#` (32# -# i'#)))))
         where
-        !x'# = narrow32Word# (int2Word# x#)
-        !i'# = word2Int# (int2Word# i# `and#` 31##)
+        !x'# = narrow32Word# (i2w x#)
+        !i'# = w2i (i2w i# `and#` 31##)
     bitSize  _                 = 32
     isSigned _                 = True
-    popCount (I32# x#)         = I# (word2Int# (popCnt32# (int2Word# x#)))
+    popCount (I32# x#)         = I# (w2i (popCnt32# (i2w x#)))
     bit                        = bitDefault
     testBit                    = testBitDefault
 
 {-# RULES
-"fromIntegral/Word8->Int32"  fromIntegral = \(W8# x#) -> I32# (word2Int# x#)
-"fromIntegral/Word16->Int32" fromIntegral = \(W16# x#) -> I32# (word2Int# x#)
+"fromIntegral/Word8->Int32"  fromIntegral = \(W8# x#) -> I32# (w2i x#)
+"fromIntegral/Word16->Int32" fromIntegral = \(W16# x#) -> I32# (w2i x#)
 "fromIntegral/Int8->Int32"   fromIntegral = \(I8# x#) -> I32# x#
 "fromIntegral/Int16->Int32"  fromIntegral = \(I16# x#) -> I32# x#
 "fromIntegral/Int32->Int32"  fromIntegral = id :: Int32 -> Int32
@@ -667,7 +668,7 @@ instance Bits Int64 where
                                 (x'# `uncheckedShiftRL64#` (64# -# i'#))))
         where
         !x'# = int64ToWord64# x#
-        !i'# = word2Int# (int2Word# i# `and#` 63##)
+        !i'# = w2i (i2w i# `and#` 63##)
     bitSize  _                 = 64
     isSigned _                 = True
     popCount (I64# x#)         = popCount (W64# (int64ToWord64# x#))
@@ -694,7 +695,7 @@ a `iShiftRA64#` b | b >=# 64# = if a `ltInt64#` (intToInt64# 0#)
 "fromIntegral/Word->Int64"   fromIntegral = \(W#   x#) -> I64# (word64ToInt64# (wordToWord64# x#))
 "fromIntegral/Word64->Int64" fromIntegral = \(W64# x#) -> I64# (word64ToInt64# x#)
 "fromIntegral/Int64->Int"    fromIntegral = \(I64# x#) -> I#   (int64ToInt# x#)
-"fromIntegral/Int64->Word"   fromIntegral = \(I64# x#) -> W#   (int2Word# (int64ToInt# x#))
+"fromIntegral/Int64->Word"   fromIntegral = \(I64# x#) -> W#   (i2w (int64ToInt# x#))
 "fromIntegral/Int64->Word64" fromIntegral = \(I64# x#) -> W64# (int64ToWord64# x#)
 "fromIntegral/Int64->Int64"  fromIntegral = id :: Int64 -> Int64
   #-}

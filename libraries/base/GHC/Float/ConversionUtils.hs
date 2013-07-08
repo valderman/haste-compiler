@@ -22,6 +22,7 @@
 -- #hide
 module GHC.Float.ConversionUtils ( elimZerosInteger, elimZerosInt# ) where
 
+import GHC.HasteWordInt
 import GHC.Base
 import GHC.Integer
 #if WORD_SIZE_IN_BITS < 64
@@ -35,7 +36,7 @@ default ()
 #define TO64    integerToInt64
 
 toByte64# :: Int64# -> Int#
-toByte64# i = word2Int# (and# 255## (int2Word# (int64ToInt# i)))
+toByte64# i = w2i (and# 255## (i2w (int64ToInt# i)))
 
 -- Double mantissae have 53 bits, too much for Int#
 elim64# :: Int64# -> Int# -> (# Integer, Int# #)
@@ -73,7 +74,7 @@ zeroCount i =
       BA ba -> indexInt8Array# ba i
 
 toByte# :: Int# -> Int#
-toByte# i = word2Int# (and# 255## (int2Word# i))
+toByte# i = w2i (and# 255## (i2w i))
 
 
 data BA = BA ByteArray#

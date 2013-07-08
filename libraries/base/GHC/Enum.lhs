@@ -633,11 +633,7 @@ instance Bounded Word where
 
     -- use unboxed literals for maxBound, because GHC doesn't optimise
     -- (fromInteger 0xffffffff :: Word).
-#if WORD_SIZE_IN_BITS == 32
-    maxBound = W# (int2Word# 0xFFFFFFFF#)
-#else
-    maxBound = W# (int2Word# 0xFFFFFFFFFFFFFFFF#)
-#endif
+    maxBound = W# 0xFFFFFFFF##
 \end{code}
 
 

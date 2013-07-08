@@ -53,6 +53,7 @@ module Data.Bits (
 #include "MachDeps.h"
 #endif
 
+import GHC.HasteWordInt
 #ifdef __GLASGOW_HASKELL__
 import GHC.Enum
 import GHC.Num
@@ -273,13 +274,13 @@ instance Bits Int where
 
     testBit = testBitDefault
 
-    (I# x#) .&.   (I# y#)  = I# (word2Int# (int2Word# x# `and#` int2Word# y#))
+    (I# x#) .&.   (I# y#)  = I# (w2i (i2w x# `and#` i2w y#))
 
-    (I# x#) .|.   (I# y#)  = I# (word2Int# (int2Word# x# `or#`  int2Word# y#))
+    (I# x#) .|.   (I# y#)  = I# (w2i (i2w x# `or#`  i2w y#))
 
-    (I# x#) `xor` (I# y#)  = I# (word2Int# (int2Word# x# `xor#` int2Word# y#))
+    (I# x#) `xor` (I# y#)  = I# (w2i (i2w x# `xor#` i2w y#))
 
-    complement (I# x#)     = I# (word2Int# (int2Word# x# `xor#` int2Word# (-1#)))
+    complement (I# x#)     = I# (w2i (i2w x# `xor#` i2w (-1#)))
 
     (I# x#) `shift` (I# i#)
         | i# >=# 0#        = I# (x# `iShiftL#` i#)
@@ -291,15 +292,15 @@ instance Bits Int where
 
     {-# INLINE rotate #-} 	-- See Note [Constant folding for rotate]
     (I# x#) `rotate` (I# i#) =
-        I# (word2Int# ((x'# `uncheckedShiftL#` i'#) `or#`
+        I# (w2i ((x'# `uncheckedShiftL#` i'#) `or#`
                        (x'# `uncheckedShiftRL#` (wsib -# i'#))))
       where
-        !x'# = int2Word# x#
-        !i'# = word2Int# (int2Word# i# `and#` int2Word# (wsib -# 1#))
+        !x'# = i2w x#
+        !i'# = w2i (i2w i# `and#` i2w (wsib -# 1#))
         !wsib = WORD_SIZE_IN_BITS#   {- work around preprocessor problem (??) -}
     bitSize  _             = WORD_SIZE_IN_BITS
 
-    popCount (I# x#) = I# (word2Int# (popCnt# (int2Word# x#)))
+    popCount (I# x#) = I# (w2i (popCnt# (i2w x#)))
 
 #else /* !__GLASGOW_HASKELL__ */
 
@@ -369,11 +370,11 @@ instance Bits Word where
         | i'# ==# 0# = W# x#
         | otherwise  = W# ((x# `uncheckedShiftL#` i'#) `or#` (x# `uncheckedShiftRL#` (wsib -# i'#)))
         where
-        !i'# = word2Int# (int2Word# i# `and#` int2Word# (wsib -# 1#))
+        !i'# = w2i (i2w i# `and#` i2w (wsib -# 1#))
         !wsib = WORD_SIZE_IN_BITS#  {- work around preprocessor problem (??) -}
     bitSize  _               = WORD_SIZE_IN_BITS
     isSigned _               = False
-    popCount (W# x#)         = I# (word2Int# (popCnt# x#))
+    popCount (W# x#)         = I# (w2i (popCnt# x#))
     bit                      = bitDefault
     testBit                  = testBitDefault
 #endif

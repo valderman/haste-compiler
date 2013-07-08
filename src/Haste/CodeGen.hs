@@ -79,10 +79,32 @@ genAST cfg modname binds =
     myModName = moduleNameString modname
     depsAndCode (_, ds, locs, stm) = (ds S.\\ locs, stm nullRet)
 
+-- | Check for builtins that should generate inlined code. At this point only
+--   w2i and i2w.
+genInlinedBuiltin :: Var.Var -> [StgArg] -> JSGen Config (Maybe (AST Exp))
+genInlinedBuiltin f [x] = do
+    x' <- genArg x
+    return $ case (modname, varname) of
+      (Just "GHC.HasteWordInt", "w2i") ->
+        Just $ binOp BitAnd x' (litN 0xffffffff)
+      (Just "GHC.HasteWordInt", "i2w") ->
+        Just $ binOp ShrL x' (litN 0)
+      _ ->
+        Nothing
+  where
+    modname = moduleNameString . moduleName <$> nameModule_maybe (Var.varName f)
+    varname = occNameString $ nameOccName $ Var.varName f
+genInlinedBuiltin _ _ =
+  return Nothing
+
+
 -- | Generate code for an STG expression.
 genEx :: StgExpr -> JSGen Config (AST Exp)
 genEx (StgApp f xs) = do
-  genApp f xs
+  mex <- genInlinedBuiltin f xs
+  case mex of
+    Just ex -> return ex
+    _       -> genApp f xs
 genEx (StgLit l) = do
   genLit l
 genEx (StgConApp con args) = do
@@ -289,7 +311,7 @@ genVar :: Var.Var -> JSGen Config J.Var
 genVar v | hasRepresentation v = do
   case toBuiltin v of
     Just v' -> return v'
-    _         -> do
+    _       -> do
       mymod <- getModName
       v' <- return $ toJSVar mymod v Nothing
       dependOn v'

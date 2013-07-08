@@ -195,6 +195,7 @@ Library {
         Unsafe.Coerce
     other-modules:
         GHC.HastePrim
+        GHC.HasteWordInt
         Control.Monad.ST.Imp
         Control.Monad.ST.Lazy.Imp
         Foreign.ForeignPtr.Imp

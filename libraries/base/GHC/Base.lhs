@@ -105,6 +105,7 @@ module GHC.Base
   ) 
         where
 
+import GHC.HasteWordInt
 import GHC.Types
 import GHC.Classes
 import GHC.CString
@@ -790,8 +791,8 @@ a `iShiftRL#` b | b >=# WORD_SIZE_IN_BITS# = 0#
 #endif
 
 {-# RULES
-"int2Word2Int"  forall x#. int2Word# (word2Int# x#) = x#
-"word2Int2Word" forall x#. word2Int# (int2Word# x#) = x#
+"int2Word2Int"  forall x#. i2w (w2i x#) = x#
+"word2Int2Word" forall x#. w2i (i2w x#) = x#
   #-}
 
 

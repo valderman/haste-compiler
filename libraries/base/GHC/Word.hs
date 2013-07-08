@@ -32,6 +32,7 @@ import Data.Bits
 import GHC.IntWord64
 #endif
 
+import GHC.HasteWordInt
 import GHC.Base
 import GHC.Enum
 import GHC.Num
@@ -59,7 +60,7 @@ instance Num Word8 where
     (W8# x#) + (W8# y#)    = W8# (narrow8Word# (x# `plusWord#` y#))
     (W8# x#) - (W8# y#)    = W8# (narrow8Word# (x# `minusWord#` y#))
     (W8# x#) * (W8# y#)    = W8# (narrow8Word# (x# `timesWord#` y#))
-    negate (W8# x#)        = W8# (narrow8Word# (int2Word# (negateInt# (word2Int# x#))))
+    negate (W8# x#)        = W8# (narrow8Word# (i2w (negateInt# (w2i x#))))
     abs x                  = x
     signum 0               = 0
     signum _               = 1
@@ -77,9 +78,9 @@ instance Enum Word8 where
         | otherwise     = predError "Word8"
     toEnum i@(I# i#)
         | i >= 0 && i <= fromIntegral (maxBound::Word8)
-                        = W8# (int2Word# i#)
+                        = W8# (i2w i#)
         | otherwise     = toEnumError "Word8" i (minBound::Word8, maxBound::Word8)
-    fromEnum (W8# x#)   = I# (word2Int# x#)
+    fromEnum (W8# x#)   = I# (w2i x#)
     enumFrom            = boundedEnumFrom
     enumFromThen        = boundedEnumFromThen
 
@@ -104,7 +105,7 @@ instance Integral Word8 where
     divMod  (W8# x#) y@(W8# y#)
         | y /= 0                  = (W8# (x# `quotWord#` y#), W8# (x# `remWord#` y#))
         | otherwise               = divZeroError
-    toInteger (W8# x#)            = smallInteger (word2Int# x#)
+    toInteger (W8# x#)            = smallInteger (w2i x#)
 
 instance Bounded Word8 where
     minBound = 0
@@ -141,10 +142,10 @@ instance Bits Word8 where
         | otherwise  = W8# (narrow8Word# ((x# `uncheckedShiftL#` i'#) `or#`
                                           (x# `uncheckedShiftRL#` (8# -# i'#))))
         where
-        !i'# = word2Int# (int2Word# i# `and#` 7##)
+        !i'# = w2i (i2w i# `and#` 7##)
     bitSize  _                = 8
     isSigned _                = False
-    popCount (W8# x#)         = I# (word2Int# (popCnt8# x#))
+    popCount (W8# x#)         = I# (w2i (popCnt8# x#))
     bit                       = bitDefault
     testBit                   = testBitDefault
 
@@ -202,7 +203,7 @@ instance Num Word16 where
     (W16# x#) + (W16# y#)  = W16# (narrow16Word# (x# `plusWord#` y#))
     (W16# x#) - (W16# y#)  = W16# (narrow16Word# (x# `minusWord#` y#))
     (W16# x#) * (W16# y#)  = W16# (narrow16Word# (x# `timesWord#` y#))
-    negate (W16# x#)       = W16# (narrow16Word# (int2Word# (negateInt# (word2Int# x#))))
+    negate (W16# x#)       = W16# (narrow16Word# (i2w (negateInt# (w2i x#))))
     abs x                  = x
     signum 0               = 0
     signum _               = 1
@@ -220,9 +221,9 @@ instance Enum Word16 where
         | otherwise     = predError "Word16"
     toEnum i@(I# i#)
         | i >= 0 && i <= fromIntegral (maxBound::Word16)
-                        = W16# (int2Word# i#)
+                        = W16# (i2w i#)
         | otherwise     = toEnumError "Word16" i (minBound::Word16, maxBound::Word16)
-    fromEnum (W16# x#)  = I# (word2Int# x#)
+    fromEnum (W16# x#)  = I# (w2i x#)
     enumFrom            = boundedEnumFrom
     enumFromThen        = boundedEnumFromThen
 
@@ -247,7 +248,7 @@ instance Integral Word16 where
     divMod  (W16# x#) y@(W16# y#)
         | y /= 0                    = (W16# (x# `quotWord#` y#), W16# (x# `remWord#` y#))
         | otherwise                 = divZeroError
-    toInteger (W16# x#)             = smallInteger (word2Int# x#)
+    toInteger (W16# x#)             = smallInteger (w2i x#)
 
 instance Bounded Word16 where
     minBound = 0
@@ -284,10 +285,10 @@ instance Bits Word16 where
         | otherwise  = W16# (narrow16Word# ((x# `uncheckedShiftL#` i'#) `or#`
                                             (x# `uncheckedShiftRL#` (16# -# i'#))))
         where
-        !i'# = word2Int# (int2Word# i# `and#` 15##)
+        !i'# = w2i (i2w i# `and#` 15##)
     bitSize  _                = 16
     isSigned _                = False
-    popCount (W16# x#)        = I# (word2Int# (popCnt16# x#))
+    popCount (W16# x#)        = I# (w2i (popCnt16# x#))
     bit                       = bitDefault
     testBit                   = testBitDefault
 
@@ -379,7 +380,7 @@ instance Num Word32 where
     (W32# x#) + (W32# y#)  = W32# (narrow32Word# (x# `plusWord#` y#))
     (W32# x#) - (W32# y#)  = W32# (narrow32Word# (x# `minusWord#` y#))
     (W32# x#) * (W32# y#)  = W32# (narrow32Word# (x# `timesWord#` y#))
-    negate (W32# x#)       = W32# (narrow32Word# (int2Word# (negateInt# (word2Int# x#))))
+    negate (W32# x#)       = W32# (narrow32Word# (i2w (negateInt# (w2i x#))))
     abs x                  = x
     signum 0               = 0
     signum _               = 1
@@ -397,19 +398,19 @@ instance Enum Word32 where
 #if WORD_SIZE_IN_BITS > 32
           && i <= fromIntegral (maxBound::Word32)
 #endif
-                        = W32# (int2Word# i#)
+                        = W32# (i2w i#)
         | otherwise     = toEnumError "Word32" i (minBound::Word32, maxBound::Word32)
 #if WORD_SIZE_IN_BITS == 32
     fromEnum x@(W32# x#)
         | x <= fromIntegral (maxBound::Int)
-                        = I# (word2Int# x#)
+                        = I# (w2i x#)
         | otherwise     = fromEnumError "Word32" x
     enumFrom            = integralEnumFrom
     enumFromThen        = integralEnumFromThen
     enumFromTo          = integralEnumFromTo
     enumFromThenTo      = integralEnumFromThenTo
 #else
-    fromEnum (W32# x#)  = I# (word2Int# x#)
+    fromEnum (W32# x#)  = I# (w2i x#)
     enumFrom            = boundedEnumFrom
     enumFromThen        = boundedEnumFromThen
 #endif
@@ -440,9 +441,9 @@ instance Integral Word32 where
         | i# >=# 0#                 = smallInteger i#
         | otherwise                 = wordToInteger x#
         where
-        !i# = word2Int# x#
+        !i# = w2i x#
 #else
-                                    = smallInteger (word2Int# x#)
+                                    = smallInteger (w2i x#)
 #endif
 
 instance Bits Word32 where
@@ -468,10 +469,10 @@ instance Bits Word32 where
         | otherwise  = W32# (narrow32Word# ((x# `uncheckedShiftL#` i'#) `or#`
                                             (x# `uncheckedShiftRL#` (32# -# i'#))))
         where
-        !i'# = word2Int# (int2Word# i# `and#` 31##)
+        !i'# = w2i (i2w i# `and#` 31##)
     bitSize  _                = 32
     isSigned _                = False
-    popCount (W32# x#)        = I# (word2Int# (popCnt32# x#))
+    popCount (W32# x#)        = I# (w2i (popCnt32# x#))
     bit                       = bitDefault
     testBit                   = testBitDefault
 
@@ -546,11 +547,11 @@ instance Enum Word64 where
         | x /= minBound = x - 1
         | otherwise     = predError "Word64"
     toEnum i@(I# i#)
-        | i >= 0        = W64# (wordToWord64# (int2Word# i#))
+        | i >= 0        = W64# (wordToWord64# (i2w i#))
         | otherwise     = toEnumError "Word64" i (minBound::Word64, maxBound::Word64)
     fromEnum x@(W64# x#)
         | x <= fromIntegral (maxBound::Int)
-                        = I# (word2Int# (word64ToWord# x#))
+                        = I# (w2i (word64ToWord# x#))
         | otherwise     = fromEnumError "Word64" x
     enumFrom            = integralEnumFrom
     enumFromThen        = integralEnumFromThen
@@ -599,7 +600,7 @@ instance Bits Word64 where
         | otherwise  = W64# ((x# `uncheckedShiftL64#` i'#) `or64#`
                              (x# `uncheckedShiftRL64#` (64# -# i'#)))
         where
-        !i'# = word2Int# (int2Word# i# `and#` 63##)
+        !i'# = w2i (i2w i# `and#` 63##)
     bitSize  _                = 64
     isSigned _                = False
     
@@ -630,7 +631,7 @@ a `shiftRL64#` b | b >=# 64#  = wordToWord64# 0##
 {-# RULES
 "fromIntegral/Int->Word64"    fromIntegral = \(I#   x#) -> W64# (int64ToWord64# (intToInt64# x#))
 "fromIntegral/Word->Word64"   fromIntegral = \(W#   x#) -> W64# (wordToWord64# x#)
-"fromIntegral/Word64->Int"    fromIntegral = \(W64# x#) -> I#   (word2Int# (word64ToWord# x#))
+"fromIntegral/Word64->Int"    fromIntegral = \(W64# x#) -> I#   (w2i (word64ToWord# x#))
 "fromIntegral/Word64->Word"   fromIntegral = \(W64# x#) -> W#   (word64ToWord# x#)
 "fromIntegral/Word64->Word64" fromIntegral = id :: Word64 -> Word64
   #-}
