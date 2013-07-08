@@ -487,7 +487,7 @@ x@(J# _) `xorInteger` y@(S# _) = x `xorInteger` toBig y
 {-# NOINLINE complementInteger #-}
 complementInteger :: Integer -> Integer
 complementInteger (S# x)
-    = S# (word2Int# (int2Word# x `xor#` int2Word# (0# -# 1#)))
+    = S# (word2Int# (int2Word# x `xor#` 0xffffffff##))
 complementInteger (J# d)
     = J# (complementInteger# d)
 
