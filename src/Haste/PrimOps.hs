@@ -211,6 +211,13 @@ genOp cfg op xs =
     ReadMutVarOp -> callF "rMV"
     WriteMutVarOp -> callF "wMV"
     
+    -- TVars - since there's no parallelism and no preemption, TVars behave
+    -- just like normal IORefs.
+    NewTVarOp   -> callF "nMV"
+    ReadTVarOp  -> callF "rMV"
+    WriteTVarOp -> callF "wMV"
+    SameTVarOp  -> bOp Eq
+
     -- Pointer ops
     WriteOffAddrOp_Char    -> writeOffAddr xs "i8"  1
     WriteOffAddrOp_Int     -> writeOffAddr xs "i32" 4
@@ -266,6 +273,11 @@ genOp cfg op xs =
     MakeStableNameOp  -> callF "makeStableName"
     EqStableNameOp    -> callF "eqStableName"
     StableNameToIntOp -> Right $ head xs
+
+    -- Stable pointers - all pointers are stable in JS!
+    MakeStablePtrOp   -> Right $ head xs
+    EqStablePtrOp     -> Right $ head xs
+    DeRefStablePtrOp  -> Right $ head xs
 
     -- Exception masking
     -- There's only one thread anyway, so async exceptions can't happen.
