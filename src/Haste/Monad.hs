@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances #-}
 module Haste.Monad (
     JSGen, genJS, dependOn, getModName, addLocal, getCfg, continue, isolate,
-    pushBind, popBind, getCurrentBinding
+    pushBind, popBind, getCurrentBinding, whenCfg
   ) where
 import Control.Monad.State
 import Data.JSTarget as J hiding (modName)
@@ -106,3 +106,8 @@ isolate gen = do
 
 getCfg :: JSGen cfg cfg
 getCfg = JSGen $ fmap config get
+
+whenCfg :: (cfg -> Bool) -> JSGen cfg () -> JSGen cfg ()
+whenCfg p act = do
+  cfg <- getCfg
+  when (p cfg) act

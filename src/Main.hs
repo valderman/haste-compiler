@@ -106,9 +106,8 @@ allSupported args =
 -- | The main compiler driver.
 compiler :: [String] -> IO ()
 compiler cmdargs = do
-  let cmdargs' | "--opt-all" `elem` cmdargs = "-O2" : cmdargs
-               | "--opt-all-unsafe" `elem` cmdargs = "-O2" : cmdargs
-               | otherwise                  = cmdargs
+  let cmdargs' | "-debug" `elem` cmdargs = "--trace-primops":cmdargs
+               | otherwise               = cmdargs
       argRes = handleArgs defConfig argSpecs cmdargs'
       usedGhcMode = if "-c" `elem` cmdargs then OneShot else CompManager
 

@@ -8,11 +8,11 @@ import Data.JSTarget.PP (debugPPOpts)
 argSpecs :: [ArgSpec Config]
 argSpecs = [
     ArgSpec { optName = "debug",
-              updateCfg = \cfg _ -> cfg {ppOpts  = debugPPOpts},
+              updateCfg = \cfg _ -> cfg {ppOpts = debugPPOpts},
               info = "Output indented, fairly readable code, with all " ++
                      "external names included in comments."},
     ArgSpec { optName = "dont-link",
-              updateCfg = \cfg _ -> cfg {performLink   = False},
+              updateCfg = \cfg _ -> cfg {performLink = False},
               info = "Don't perform linking."},
     ArgSpec { optName = "libinstall",
               updateCfg = \cfg _ -> cfg {targetLibPath = jsmodDir,
@@ -68,6 +68,11 @@ argSpecs = [
     ArgSpec { optName = "start=asap",
               updateCfg = \cfg _ -> cfg {appStart = startASAP},
               info = "Start program immediately instead of on document load."},
+    ArgSpec { optName = "trace-primops",
+              updateCfg = \cfg _ -> cfg {tracePrimops = True,
+                                         rtsLibs = debugLib : rtsLibs cfg},
+              info = "Turn on run-time tracing of primops. Also turned on by "
+                   ++ "-debug."},
     ArgSpec { optName = "verbose",
               updateCfg = \cfg _ -> cfg {verbose = True},
               info = "Display even the most obnoxious warnings."},

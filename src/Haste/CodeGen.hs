@@ -125,11 +125,13 @@ genEx (StgOpApp op args _) = do
   cfg <- getCfg
   let theOp = case op of
         StgPrimOp op' ->
-          genOp cfg op' args'
+          maybeTrace cfg (showOutputable op') args' <$> genOp cfg op' args'
         StgPrimCallOp (PrimCall f _) ->
-          Right $ callForeign (unpackFS f) args'
+          Right $ maybeTrace cfg fs args' $ callForeign fs args'
+          where fs = unpackFS f
         StgFCallOp (CCall (CCallSpec (StaticTarget f _ _) _ _)) _t ->
-          Right $ callForeign (unpackFS f) args'
+          Right $ maybeTrace cfg fs args' $ callForeign fs args'
+          where fs = unpackFS f
         _ ->
           error $ "Tried to generate unsupported dynamic foreign call!"
   case theOp of
@@ -149,6 +151,13 @@ genEx (StgTick _ _ ex) = do
   genEx ex
 genEx (StgLam _ _) = do
   error "StgLam caught during code generation - that's impossible!"
+
+-- | Trace the given expression, if tracing is on.
+maybeTrace :: Config -> String -> [AST Exp] -> AST Exp -> AST Exp
+maybeTrace cfg msg args ex =
+  if tracePrimops cfg
+    then callForeign "__h_trace" [lit msg, array args, ex]
+    else ex
 
 genBindRec :: StgBinding -> JSGen Config ()
 genBindRec bs@(StgRec _) = do

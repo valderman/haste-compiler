@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Haste.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startASAP,
-  startOnLoadComplete, fastMultiply, safeMultiply) where
+  startOnLoadComplete, fastMultiply, safeMultiply, debugLib) where
 import Data.JSTarget
 import System.IO.Unsafe (unsafePerformIO)
 import System.FilePath (replaceExtension)
@@ -18,6 +18,9 @@ stdJSLibs = unsafePerformIO $ mapM getDataFileName [
     "rts.js", "stdlib.js", "MVar.js", "StableName.js", "Integer.js", "md5.js",
     "array.js", "pointers.js"
   ]
+
+debugLib :: FilePath
+debugLib = unsafePerformIO $ getDataFileName "debug.js"
 
 -- | Execute the program as soon as it's loaded into memory.
 --   Evaluate the result of applying main, as we might get a thunk back if
@@ -73,6 +76,8 @@ data Config = Config {
     -- | Allow the possibility that some tail recursion may not be optimized
     --   in order to gain slightly smaller code?
     sloppyTCE :: Bool,
+    -- | Turn on run-time tracing of primops?
+    tracePrimops :: Bool,
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
@@ -96,6 +101,7 @@ defConfig = Config {
     verbose          = False,
     wholeProgramOpts = False,
     sloppyTCE        = False,
+    tracePrimops     = False,
     useGoogleClosure = Nothing,
     jsExternals      = [],
     dynFlags         = tracingDynFlags
