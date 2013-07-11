@@ -1,7 +1,11 @@
 #!/bin/bash
 
 if [[ $JS == "" ]] ; then
-    JS=nodejs
+    if [[ $(which nodejs) != "" ]] ; then
+      JS=nodejs
+    else
+      JS=node
+    fi
 fi
 
 runTest() {
