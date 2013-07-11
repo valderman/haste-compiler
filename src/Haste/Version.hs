@@ -10,7 +10,7 @@ import Config (cProjectVersion)
 import Haste.Environment (hasteDir)
 
 hasteVersion :: Version
-hasteVersion = Version [0, 2] []
+hasteVersion = Version [0, 2, 1] []
 
 ghcVersion :: String
 ghcVersion = cProjectVersion
