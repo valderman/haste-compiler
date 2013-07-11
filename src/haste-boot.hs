@@ -127,9 +127,8 @@ buildLibs = do
           run_ "haste-install-his" ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
           run_ "haste-pkg" ["update", "packageconfig"] ""
         
-        -- Install integer-gmp twice, since it may misbehave the first time.
+        -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do
-          hasteInst ["install", ghcOpts]
           hasteInst ["install", ghcOpts]
         
         -- Install base
