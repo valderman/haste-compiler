@@ -56,8 +56,10 @@ instance Pretty Exp where
       _ -> if expPrec (Not ex) > expPrec ex
              then "!(" .+. pp ex .+. ")"
              else "!" .+. pp ex
-  pp (BinOp op a b) =
-    opParens op a b
+  pp bop@(BinOp _ _ _) =
+    case norm bop of
+      BinOp op a b -> opParens op a b
+      ex           -> pp ex
   pp (Fun mname args body) = do
       "function" .+. lambdaname .+. "(" .+. ppList sep args .+. "){" .+. newl
       indent $ pp body
@@ -196,9 +198,20 @@ opParens Sub (Lit (LNum 0)) b =
 opParens op a b = do
   let bparens = case b of
                   Lit (LNum n) | n < 0 -> \x -> "(".+. pp x .+. ")"
-                  _                          -> parens
-  parens a >> put (string7 $ show op) >> bparens b
+                  _                          -> parensR
+  parensL a .+. put (string7 $ show op) .+. bparens b
   where
-    parens x = if expPrec x < opPrec op
-               then "(" .+. pp x .+. ")"
-               else pp x
+    parensL x = if expPrec x < opPrec op
+                  then "(" .+. pp x .+. ")"
+                  else pp x
+    parensR x = if expPrec x <= opPrec op
+                  then "(" .+. pp x .+. ")"
+                  else pp x
+
+-- | Normalize an operator expression by shifting parentheses to the left for
+--   all associative operators.
+norm :: Exp -> Exp
+norm (BinOp op a (BinOp op' b c)) | op == op' && opIsAssoc op =
+  norm (BinOp op (BinOp op a b) c)
+norm e =
+  e

@@ -66,3 +66,14 @@ opPrec BitXor = 24
 opPrec BitOr  = 23
 opPrec And    = 20
 opPrec Or     = 10
+
+-- | Is the given operator associative?
+opIsAssoc :: BinOp -> Bool
+opIsAssoc Mul    = True
+opIsAssoc Add    = True
+opIsAssoc BitAnd = True
+opIsAssoc BitOr  = True
+opIsAssoc BitXor = True
+opIsAssoc And    = True
+opIsAssoc Or     = True
+opIsAssoc _      = False
