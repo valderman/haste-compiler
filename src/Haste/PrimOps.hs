@@ -276,7 +276,7 @@ genOp cfg op xs =
 
     -- Stable pointers - all pointers are stable in JS!
     MakeStablePtrOp   -> Right $ head xs
-    EqStablePtrOp     -> Right $ head xs
+    EqStablePtrOp     -> bOp Eq
     DeRefStablePtrOp  -> Right $ head xs
 
     -- Exception masking
