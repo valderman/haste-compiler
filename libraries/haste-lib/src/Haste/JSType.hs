@@ -122,8 +122,3 @@ fromString = fromJSString . toJSStr
 
 convert :: (JSNum a, JSNum b) => a -> b
 convert = fromNumber . toNumber
-
-{-
-TODO:
-  JS-native round
--}
