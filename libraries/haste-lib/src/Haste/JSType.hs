@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, ForeignFunctionInterface, MagicHash, 
-             OverlappingInstances, TypeSynonymInstances, FlexibleInstances, 
-             EmptyDataDecls, UnliftedFFITypes, UndecidableInstances #-}
+             TypeSynonymInstances, FlexibleInstances, EmptyDataDecls,
+             UnliftedFFITypes, UndecidableInstances #-}
 -- | Efficient conversions to and from JS native types.
 module Haste.JSType (
     JSType (..), JSNum (..), toString, fromString, convert
@@ -79,17 +79,34 @@ instance JSNum Double
 
 
 -- JSType instances
+instance JSType Int
+instance JSType Int8
+instance JSType Int16
+instance JSType Int32
+instance JSType Word
+instance JSType Word8
+instance JSType Word16
+instance JSType Word32
+instance JSType Float
+instance JSType Double
 
-instance JSNum a => JSType a
-
-instance JSType String where
-  toJSString   = toJSStr
-  fromJSString = Just . fromJSStr
+-- This is completely insane, but GHC for some reason pukes when we try to
+-- use the constructors of the actual integers, so we coerce them into this
+-- isomorphic type to work with them instead.
+data Dummy = Small Int# | Big ByteArray#
 
 instance JSType Integer where
-  toJSString (S# n) = toJSString (I# n)
-  toJSString (J# n) = jsIToString n
-  fromJSString s    = Just (J# (jsStringToI s))
+  toJSString n =
+    case unsafeCoerce# n of
+      Small n' -> toJSString (I# n')
+      Big n'   -> jsIToString n'
+  fromJSString s =
+    case jsStringToI s of
+      n -> Just (unsafeCoerce# (Big n))
+
+instance JSType String where
+  toJSString     = toJSStr
+  fromJSString   = Just . fromJSStr
 
 instance JSType () where
   toJSString _ = toJSStr "()"
