@@ -423,7 +423,8 @@ genDataConTag d = do
   case (n, m) of
     ("True", "GHC.Types")  -> lit True
     ("False", "GHC.Types") -> lit False
-    _                      -> lit (fromIntegral $ dataConTag d :: Double)
+    _                      ->
+      lit (fromIntegral (dataConTag d - fIRST_TAG) :: Double)
 
 -- | Generate literals.
 genLit :: L.Literal -> JSGen Config (AST Exp)
