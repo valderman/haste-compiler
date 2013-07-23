@@ -30,7 +30,7 @@ import TyCon
 import BasicTypes
 -- AST stuff
 import Data.JSTarget as J
-import Data.JSTarget.AST (Exp (..), Stm (..), LHS (..), Lit (..))
+import Data.JSTarget.AST (Exp (..), Stm (..), LHS (..))
 -- General Haste stuff
 import Haste.Config
 import Haste.Monad
@@ -116,7 +116,7 @@ genEx (StgConApp con args) = do
     _             -> mkCon tag args' stricts'
   where
     -- Always inline bools
-    mkCon l@(AST (Lit (LBool _)) _) _ _ = return l
+    mkCon l _ _ | isEnumerationDataCon con = return l
     mkCon tag as ss = return $ array (tag : zipWith evaluate as ss)
     evaluate arg True = eval arg
     evaluate arg _    = arg
@@ -267,16 +267,8 @@ genCase t ex scrut alts = do
     getTag s = index s (litN 0)
     cmp = case t of
       PrimAlt _ -> id
-      AlgAlt tc -> if tyConIsBoolean tc then id else getTag
+      AlgAlt tc -> if isEnumerationTyCon tc then id else getTag
       _         -> getTag
-
-    tyConIsBoolean tc =
-      case (n, m) of
-        ("Bool", "GHC.Types")  -> True
-        _                      -> False
-      where
-        n = occNameString $ nameOccName $ tyConName tc
-        m = moduleNameString $ moduleName $ nameModule $ tyConName tc
 
 
 -- | Split a list of StgAlts into (default, [rest]). Since all case expressions
@@ -400,14 +392,11 @@ genArg (StgLitArg l)  = genLit l
 --   (constructor, field strictness annotations).
 genDataCon :: DataCon -> JSGen Config (AST Exp, [Bool])
 genDataCon dc = do
-  let tagexp = genDataConTag dc
-      tag    = astCode tagexp
-  case tag of
-    (Lit (LBool _)) ->
-      return (tagexp, [])
-    _ ->
-      return (tagexp, map strict (dataConRepStrictness dc))
+  if isEnumerationDataCon dc
+    then return (tagexp, [])
+    else return (tagexp, map strict (dataConRepStrictness dc))
   where
+    tagexp = genDataConTag dc
     strict MarkedStrict = True
     strict _            = False
 
@@ -464,6 +453,10 @@ genApp f xs = do
       else return $ call arity f' xs'
   where
     arity = arityInfo $ idInfo f
+
+-- | Does this data constructor create an enumeration type?
+isEnumerationDataCon :: DataCon -> Bool
+isEnumerationDataCon = isEnumerationTyCon . dataConTyCon    
 
 -- | Returns True if the given Var is an unboxed tuple with a single element
 --   after any represenationless elements are discarded.
