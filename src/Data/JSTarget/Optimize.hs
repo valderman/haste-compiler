@@ -88,7 +88,7 @@ replaceEx trav old new =
 inlineAssigns :: JSTrav ast => Bool -> ast -> TravM ast
 inlineAssigns blackholeOK ast = do
     inlinable <- gatherInlinable ast
-    mapJS (const True) return (inl inlinable) ast
+    mapJS (const True) inlEx (inl inlinable) ast
   where
     varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
     varOccurs _ _                  = False
@@ -117,6 +117,11 @@ inlineAssigns blackholeOK ast = do
         else do
           return keep
     inl _ stm = return stm
+
+    inlEx (Index (Arr xs) (Lit (LNum n))) =
+      return $ xs !! truncate n
+    inlEx x =
+      return x
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
 --   exactly once.
