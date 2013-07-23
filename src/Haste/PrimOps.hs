@@ -290,6 +290,8 @@ genOp cfg op xs =
     AtomicallyOp   -> Right $ callSaturated (xs !! 0) []
     -- Get the data constructor tag from a value.
     DataToTagOp    -> callF "dataToTag"
+    -- Basically unsafeCoerce :: Int# -> <enumeration type>
+    TagToEnumOp    -> Right $ head xs
     TouchOp        -> Right $ defState
     RaiseOp        -> callF "die"
     RaiseIOOp      -> callF "die"
