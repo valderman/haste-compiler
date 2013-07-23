@@ -55,9 +55,9 @@ type IO (), you have to call it as A(cb, [whatever]), NOT just A(cb, [])!
 
 Finally, the FFI doesn't do any nice marshalling for us here, so if you want to
 pass a primitive value back into your function, you have to wrap it back up
-in a data constructor again. Thus, pass [1, 42] rather than 42, [1, "hi!"]
+in a data constructor again. Thus, pass [0, 42] rather than 42, [0, "hi!"]
 rather than just "hi!" and so on. Assuming f :: Int -> JSString -> IO (), you
-would call f as A(f, [[1,42], [1,"Hi!"], 0]).
+would call f as A(f, [[0,42], [0,"Hi!"], 0]).
 
 
 
@@ -71,14 +71,14 @@ If you still insist, remember the following:
 
 * A foreign function that takes a value of type Ptr a as an argument or
   returns such a value will unwrap it for you; the value
-  toPtr (Just 42) :: Ptr (Maybe Int) will thus look like [2, [1,42]]
+  toPtr (Just 42) :: Ptr (Maybe Int) will thus look like [1, [1,42]]
   to JS under such circumstances - no extra data constructors anywhere.
 
 * Ptr values that are embedded within something else will NOT be unwrapped in
   this manner.
   Thus, the value toPtr (Just (toPtr 42)) :: Ptr (Maybe (Ptr Int)) will look
-  like this: [2, [1, [1, 42]]]
-  The outermost Just data constructor (2) is not wrapped, while the [1, 42]
+  like this: [1, [0, [0, 42]]]
+  The outermost Just data constructor (1) is not wrapped, while the [0, 42]
   that denotes 42 :: Int is wrapped in an extra data constructor signifying
   the Ptr part.
 
@@ -106,5 +106,5 @@ function jspure(val) {
 
 // jscallme :: (JSString -> IO ()) -> IO ()
 function jscallme(callback) {
-    A(callback, [[1,'Hi, Haskell!'], 0]); // Note the A() and wrapped argument
+    A(callback, [[0,'Hi, Haskell!'], 0]); // Note the A() and wrapped argument
 }
