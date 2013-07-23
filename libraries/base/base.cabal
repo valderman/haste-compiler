@@ -203,9 +203,6 @@ Library {
     include-dirs: include
     includes:    HsBase.h
     install-includes:    HsBase.h HsBaseConfig.h EventConfig.h WCsubst.h consUtils.h Typeable.h
-    if os(windows) {
-        extra-libraries: wsock32, user32, shell32
-    }
     if !os(windows) {
         exposed-modules:
             GHC.Event

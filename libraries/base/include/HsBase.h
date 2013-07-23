@@ -84,14 +84,8 @@
 #if HAVE_SYS_TIMEB_H && !defined(__FreeBSD__)
 #include <sys/timeb.h>
 #endif
-#if HAVE_WINDOWS_H
-#include <windows.h>
-#endif
 #if HAVE_SYS_TIMES_H
 #include <sys/times.h>
-#endif
-#if HAVE_WINSOCK_H && defined(__MINGW32__)
-#include <winsock.h>
 #endif
 #if HAVE_LIMITS_H
 #include <limits.h>
