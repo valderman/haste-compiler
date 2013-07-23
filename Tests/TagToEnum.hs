@@ -13,14 +13,18 @@ foo = 1
 bar :: Int
 bar = 2
 
+tagToEnumB :: Int -> Bool
+tagToEnumB (I# x) = tagToEnum# x
+
+tagToEnum :: Int -> D
+tagToEnum (I# x) = tagToEnum# x
+
+dataToTag :: a -> Int
+dataToTag x = I# (dataToTag# x)
+
 runTest :: IO (D, D, Bool, D)
 runTest = do
-    return (tagToEnum# foo',
-            tagToEnum# bar',
-            tagToEnum# foo',
-            tagToEnum# (dataToTag# A))
-  where
-    {-# NOINLINE foo' #-}
-    !(I# foo') = foo
-    {-# NOINLINE bar' #-}
-    !(I# bar') = bar
+    return (tagToEnum foo,
+            tagToEnum bar,
+            tagToEnumB foo,
+            tagToEnum $ dataToTag A)
