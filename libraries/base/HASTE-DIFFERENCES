@@ -30,3 +30,4 @@ This file sums up the differences.
     System/Environment/ExecutablePath.hsc
     System/IO.hs
 * Remove references to windows.h, winsock.h, wsock32, user32 and shell32.
+  (HsBase.h, base.cabal)
