@@ -1,9 +1,11 @@
 module Tests.StableNames where
 import System.Mem.StableName
 
+{-# NOINLINE foo #-}
 foo :: Int
 foo = 10
 
+{-# NOINLINE bar #-}
 bar :: Int
 bar = 11
 
