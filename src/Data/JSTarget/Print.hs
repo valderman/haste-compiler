@@ -160,11 +160,11 @@ prettyCase cond def [(con, branch)] = do
       indent $ pp def
       line "}"
   where
-    neg' c = maybe (Not c) id $ neg c 
     test (Lit (LBool True))  = cond
     test (Lit (LBool False)) = Not cond
     test (Lit (LNum 0))      = Not cond
     test c                   = BinOp Eq cond c
+    neg' c = maybe (Not c) id (neg c)
 prettyCase _ def [] = do
   pp def
 prettyCase cond def alts = do
@@ -209,9 +209,16 @@ opParens op a b = do
                   else pp x
 
 -- | Normalize an operator expression by shifting parentheses to the left for
---   all associative operators.
+--   all associative operators and eliminating comparisons with true/false.
 norm :: Exp -> Exp
 norm (BinOp op a (BinOp op' b c)) | op == op' && opIsAssoc op =
   norm (BinOp op (BinOp op a b) c)
-norm e =
-  e
+norm (BinOp Eq a (Lit (LBool True)))   = norm a
+norm (BinOp Eq (Lit (LBool True)) b)   = norm b
+norm (BinOp Eq a (Lit (LBool False)))  = Not (norm a)
+norm (BinOp Eq (Lit (LBool False)) b)  = Not (norm b)
+norm (BinOp Neq a (Lit (LBool True)))  = Not (norm a)
+norm (BinOp Neq (Lit (LBool True)) b)  = Not (norm b)
+norm (BinOp Neq a (Lit (LBool False))) = norm a
+norm (BinOp Neq (Lit (LBool False)) b) = norm b
+norm e = e
