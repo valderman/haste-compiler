@@ -221,6 +221,7 @@ genOp cfg op xs =
     SameTVarOp  -> bOp Eq
 
     -- Pointer ops
+    ReallyUnsafePtrEqualityOp -> bOp Eq
     WriteOffAddrOp_Char    -> writeOffAddr xs "i8"  1
     WriteOffAddrOp_Int     -> writeOffAddr xs "i32" 4
     WriteOffAddrOp_Int8    -> writeOffAddr xs "i8"  1
@@ -288,6 +289,7 @@ genOp cfg op xs =
     MaskStatus              -> Right $ litN 0
 
     -- Misc. ops
+    DelayOp        -> Right $ defState
     SeqOp          -> Right $ callForeign "E" [head xs]
     AtomicallyOp   -> Right $ callSaturated (xs !! 0) []
     -- Get the data constructor tag from a value.
