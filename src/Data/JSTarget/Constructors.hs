@@ -84,7 +84,26 @@ foldApp ex =
 
 -- | Create a thunk.
 thunk :: AST Stm -> AST Exp
-thunk stm = callForeign "T" [Fun Nothing [] <$> stm]
+thunk stm@(AST s js) =
+  case s of
+    (Return ex) | not $ evaluates ex ->
+      AST ex js
+    _ ->
+      callForeign "new T" [Fun Nothing [] <$> stm]
+
+-- | Returns True if the given expression causes evaluation by appearing
+--   outside a closure, otherwise False.
+evaluates :: Exp -> Bool
+evaluates (Var _)        = False
+evaluates (Lit _)        = False
+evaluates (Not ex)       = evaluates ex
+evaluates (BinOp _ a b)  = evaluates a || evaluates b
+evaluates (Fun _ _ _)    = False
+evaluates (Call _ _ _ _) = True
+evaluates (Index a b)    = evaluates a || evaluates b
+evaluates (Arr xs)       = any evaluates xs
+evaluates (AssignEx a b) = evaluates a || evaluates b
+evaluates (IfEx c a b)   = evaluates c || evaluates a || evaluates b
 
 -- | Evaluate an expression that may or may not be a thunk.
 eval :: AST Exp -> AST Exp
