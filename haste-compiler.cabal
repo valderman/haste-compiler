@@ -29,6 +29,7 @@ Data-Files:
     md5.js
     array.js
     pointers.js
+    unicode.js
     debug.js
 
 Executable haste-boot
