@@ -20,12 +20,10 @@ argSpecs = [
               info = "Install all compiled modules into the user's jsmod "
                      ++ "library\nrather than linking them together into a JS"
                      ++ "blob."},
-    -- The opt-all enabling -O2 thing is handled directly in main! :(
     ArgSpec { optName = "opt-all",
               updateCfg = optAllSafe,
               info = "Enable all safe optimizations. "
-                     ++ "Equivalent to -O2 --opt-whole-program "
-                     ++ "--opt-google-closure."},
+                     ++ "Equivalent to -O2 --opt-google-closure."},
     ArgSpec { optName = "opt-all-unsafe",
               updateCfg = optAllUnsafe,
               info = "Enable all safe and unsafe optimizations.\n"
@@ -108,7 +106,7 @@ optAllUnsafe = optAllSafe ||| unsafeMath
 
 -- | Enable all safe optimizations.
 optAllSafe :: Config -> [String] -> Config
-optAllSafe = updateClosureCfg ||| enableWholeProgramOpts
+optAllSafe = updateClosureCfg
 
 -- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> [String] -> Config
