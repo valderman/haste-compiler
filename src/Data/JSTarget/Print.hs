@@ -34,6 +34,7 @@ instance Pretty Lit where
       fixQuotes ('\\':xs)     = '\\':'\\' : fixQuotes xs
       fixQuotes ('"':xs)      = '\\':'"'  : fixQuotes xs
       fixQuotes ('\'':xs)     = '\\':'\'' : fixQuotes xs
+      fixQuotes ('\r':xs)     = '\\':'r'  : fixQuotes xs
       fixQuotes ('\n':xs)     = '\\':'n'  : fixQuotes xs
       fixQuotes (x:xs)        = x : fixQuotes xs
       fixQuotes _             = []
