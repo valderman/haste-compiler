@@ -140,14 +140,6 @@ optimizeThunks ast =
       return ex
 
 
--- | Introduce n new vars.
-newVars :: Int -> [Var]
-newVars n =
-    map newVar [1..n]
-  where
-    newVar i = Internal (Name ("_e_" ++ show i) Nothing) ""
-
-
 -- | Unpack the given expression if it's a thunk.
 fromThunk :: Exp -> Maybe Stm
 fromThunk (Call _ Fast (Var (Foreign "new T")) [body]) =

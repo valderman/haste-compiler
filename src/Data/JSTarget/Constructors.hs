@@ -76,11 +76,22 @@ callSaturated f xs = Call 0 Fast <$> f <*> sequence xs
 --   if they turn out to be saturated.
 foldApp :: Exp -> Exp
 foldApp (Call arity Normal (Call _ Normal f args) args') =
-  foldApp (Call arity Normal f (args ++ args'))
-foldApp (Call arity Normal f args) | arity == 0 =
-  Call arity Fast f args
+  Call arity Normal (foldApp f) (args ++ args')
+foldApp (Call 0 Normal f args) =
+  Call 0 Fast f args
+foldApp (Call arity Normal f args) | arity > 0 =
+    Fun Nothing newargs $ Return $ Call arity Fast f (args ++ map Var newargs)
+  where
+    newargs = newVars "_fa_" arity
 foldApp ex =
   ex
+
+-- | Introduce n new vars.
+newVars :: String -> Int -> [Var]
+newVars prefix n =
+    map newVar [1..n]
+  where
+    newVar i = Internal (Name (prefix ++ show i) Nothing) ""
 
 -- | Create a thunk.
 thunk :: AST Stm -> AST Exp
