@@ -70,6 +70,8 @@ data Config = Config {
     -- | A function that takes the main symbol as its input and outputs the
     --   code that starts the program.
     appStart :: AppStart,
+    -- | Wrap the program in its own namespace?
+    wrapProg :: Bool,
     -- | Options to the pretty printer.
     ppOpts :: PPOpts,
     -- | A function that takes the name of the a target as its input and
@@ -105,6 +107,7 @@ defConfig = Config {
     libPath          = jsmodDir,
     targetLibPath    = ".",
     appStart         = startOnLoadComplete,
+    wrapProg         = False,
     ppOpts           = def,
     outFile          = flip replaceExtension "js",
     performLink      = True,

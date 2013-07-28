@@ -63,6 +63,10 @@ argSpecs = [
     ArgSpec { optName = "out=",
               updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
               info = "Write the JS blob to <arg>."},
+    ArgSpec { optName = "separate-namespace",
+              updateCfg = \cfg _ -> cfg {wrapProg = True},
+              info = "Wrap the program in its own namespace? "
+                     ++ "Off by default since it may hurt performance."},
     ArgSpec { optName = "start=",
               updateCfg = \cfg str -> cfg {appStart = startCustom (head str)},
               info = "Specify how the Haste application will launch. Can be "
