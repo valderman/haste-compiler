@@ -63,9 +63,13 @@ argSpecs = [
     ArgSpec { optName = "out=",
               updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
               info = "Write the JS blob to <arg>."},
-    ArgSpec { optName = "start=asap",
-              updateCfg = \cfg _ -> cfg {appStart = startASAP},
-              info = "Start program immediately instead of on document load."},
+    ArgSpec { optName = "start=",
+              updateCfg = \cfg str -> cfg {appStart = startCustom (head str)},
+              info = "Specify how the Haste application will launch. Can be "
+                     ++ "either asap, onload or a custom string "
+                     ++ "containing the character sequence '%%', which will "
+                     ++ "be replaced with the program's entry point function. "
+                     ++ "The default is onload."},
     ArgSpec { optName = "trace-primops",
               updateCfg = \cfg _ -> cfg {tracePrimops = True,
                                          rtsLibs = debugLib : rtsLibs cfg},

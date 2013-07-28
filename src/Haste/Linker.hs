@@ -23,14 +23,21 @@ link cfg pkgid target = do
   ds <- getAllDefs (libPath cfg) pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
   let (progText, mainSym') = prettyProg (ppOpts cfg) mainSym myDefs
-      callMain = appStart cfg mainSym'
+      callMain = string7 "return function(){A(" <> mainSym'
+                                                <> string7 ", [0]);};"
+      launchApp = appStart cfg (string7 "hasteMain")
   
-  rtslibs <- mapM readFile $ rtsLibs cfg ++ jsExternals cfg
+  rtslibs <- mapM readFile $ rtsLibs cfg
+  extlibs <- mapM readFile $ jsExternals cfg
   B.writeFile (outFile cfg target)
-    $ toLazyByteString 
-    $ stringUtf8 (unlines rtslibs)
+    $ toLazyByteString
+    $  stringUtf8 (unlines extlibs)
+    <> string7 "var hasteMain = (function() {"
+    <> stringUtf8 (unlines rtslibs)
     <> progText
     <> callMain
+    <> string7 "})();\n"
+    <> launchApp
 
 -- | Generate a sequence of all assignments needed to run Main.main.
 getAllDefs :: FilePath -> String -> Name -> IO (AST Stm)

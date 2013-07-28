@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Haste.Config (
-  Config (..), AppStart, defConfig, stdJSLibs, startASAP,
-  startOnLoadComplete, fastMultiply, safeMultiply, debugLib) where
+  Config (..), AppStart, defConfig, stdJSLibs, startCustom, fastMultiply,
+  safeMultiply, debugLib) where
 import Data.JSTarget
 import System.IO.Unsafe (unsafePerformIO)
 import System.FilePath (replaceExtension)
@@ -28,12 +28,24 @@ debugLib = unsafePerformIO $ getDataFileName "debug.js"
 --   as well always do it this way, to simplify the config a bit.
 startASAP :: AppStart
 startASAP mainSym =
-  "A(" <> mainSym <> ", [0]);"
+  mainSym <> "();"
+
+-- | Launch the application using a custom command.
+startCustom :: String -> AppStart
+startCustom "onload" = startOnLoadComplete
+startCustom "asap"   = startASAP
+startCustom str      = insertSym str
+
+-- | Replace the first occurrence of %% with Haste's entry point symbol.
+insertSym :: String -> AppStart
+insertSym ('%':'%':str) sym = sym <> stringUtf8 str
+insertSym (c:str) sym       = charUtf8 c <> insertSym str sym
+insertSym [] _              = string7 ""
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart
 startOnLoadComplete mainSym =
-  "window.onload = function() {" <> startASAP mainSym <> "};"
+  "window.onload = " <> mainSym <> ";"
 
 -- | Int op wrapper for strictly 32 bit (|0).
 strictly32Bits :: AST Exp -> AST Exp
