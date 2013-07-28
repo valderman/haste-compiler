@@ -91,6 +91,15 @@ thunk stm@(AST s js) =
     _ ->
       callForeign "new T" [Fun Nothing [] <$> stm]
 
+-- | Unpack the given expression if it's a thunk without internal bindings.
+fromThunk :: AST Exp -> Maybe (AST Exp)
+fromThunk (AST (Call 0 Fast (Var (Foreign "new T")) [body]) js) =
+  case body of
+    Fun Nothing [] (Return ex) -> Just (AST ex js)
+    _                          -> Nothing
+fromThunk _ =
+  Nothing
+
 -- | Returns True if the given expression causes evaluation by appearing
 --   outside a closure, otherwise False.
 evaluates :: Exp -> Bool

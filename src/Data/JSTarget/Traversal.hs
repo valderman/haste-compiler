@@ -237,6 +237,26 @@ instance JSTrav a => JSTrav (Shared a) where
       then getRef lbl >>= foldJS tr f acc >>= \acc' -> f acc' (Label lbl)
       else f acc (Label lbl)
 
+-- | Returns the final statement of a line of statements.
+finalStm :: Stm -> TravM Stm
+finalStm = go
+  where
+    go (Case _ _ _ (Shared next)) = getRef next >>= go
+    go (Forever s)                = go s
+    go (Assign _ _ next)          = go next
+    go (Jump (Shared next))       = getRef next >>= go
+    go s@(Return _)               = return s
+    go (Cont)                     = return Cont
+    go (NullRet)                  = return NullRet
+
+-- | Returns statement's returned expression, if any.
+finalExp :: Stm -> TravM (Maybe Exp)
+finalExp stm = do
+  end <- finalStm stm
+  case end of
+    Return ex -> return $ Just ex
+    _         -> return Nothing
+
 class Pred a where
   (.|.) :: a -> a -> a
   (.&.) :: a -> a -> a

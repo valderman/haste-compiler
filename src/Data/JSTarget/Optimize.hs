@@ -19,6 +19,7 @@ optimizeFun f (AST ast js) =
     shrinkCase ast
     >>= inlineAssigns True
     >>= inlineReturns
+    >>= optimizeThunks
     >>= tailLoopify f
 
 topLevelInline :: AST Stm -> AST Stm
@@ -85,6 +86,8 @@ replaceEx trav old new =
 --   things horribly.
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
+--
+--   TODO: don't inline thunks into functions!
 inlineAssigns :: JSTrav ast => Bool -> ast -> TravM ast
 inlineAssigns blackholeOK ast = do
     inlinable <- gatherInlinable ast
@@ -122,6 +125,45 @@ inlineAssigns blackholeOK ast = do
       return $ xs !! truncate n
     inlEx x =
       return x
+
+
+-- | Optimize thunks in the following ways:
+--   A(thunk(return f), xs)
+--     => A(f, xs)
+optimizeThunks :: JSTrav ast => ast -> TravM ast
+optimizeThunks ast =
+    mapJS (const True) optEx return ast
+  where
+    optEx (Call arity Normal f args) | Just f' <- fromThunkEx f =
+      return $ Call arity Normal f' args
+    optEx ex =
+      return ex
+
+
+-- | Introduce n new vars.
+newVars :: Int -> [Var]
+newVars n =
+    map newVar [1..n]
+  where
+    newVar i = Internal (Name ("_e_" ++ show i) Nothing) ""
+
+
+-- | Unpack the given expression if it's a thunk.
+fromThunk :: Exp -> Maybe Stm
+fromThunk (Call _ Fast (Var (Foreign "new T")) [body]) =
+  case body of
+    Fun Nothing [] (b) -> Just b
+    _                  -> Nothing
+fromThunk _ =
+  Nothing
+
+-- | Unpack the given expression if it's a thunk without internal bindings.
+fromThunkEx :: Exp -> Maybe Exp
+fromThunkEx ex =
+  case fromThunk ex of
+    Just (Return ex') -> Just ex'
+    _                 -> Nothing
+
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
 --   exactly once.
