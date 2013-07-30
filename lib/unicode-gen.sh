@@ -337,20 +337,20 @@ function unipred_s(m) {
 	Make these rules as close to Hugs as possible.
 */
 
-u_iswcntrl = unipred(GENCAT_CC);
-u_iswprint = unipred(
+var u_iswcntrl = unipred(GENCAT_CC);
+var u_iswprint = unipred(
   GENCAT_MC | GENCAT_NO | GENCAT_SK | GENCAT_ME | GENCAT_ND |
   GENCAT_PO | GENCAT_LT | GENCAT_PC | GENCAT_SM | GENCAT_ZS |
   GENCAT_LU | GENCAT_PD | GENCAT_SO | GENCAT_PE | GENCAT_PF |
   GENCAT_PS | GENCAT_SC | GENCAT_LL | GENCAT_LM | GENCAT_PI |
   GENCAT_NL | GENCAT_MN | GENCAT_LO);
 
-u_iswspace = unipred_s(GENCAT_ZS);
-u_iswupper = unipred(GENCAT_LU | GENCAT_LT);
-u_iswlower = unipred(GENCAT_LL);
-u_iswalpha = unipred(GENCAT_LL | GENCAT_LU | GENCAT_LT | GENCAT_LM | GENCAT_LO);
-u_iswdigit = unipred(GENCAT_ND);
-u_iswalnum = unipred(
+var u_iswspace = unipred_s(GENCAT_ZS);
+var u_iswupper = unipred(GENCAT_LU | GENCAT_LT);
+var u_iswlower = unipred(GENCAT_LL);
+var u_iswalpha = unipred(GENCAT_LL | GENCAT_LU | GENCAT_LT | GENCAT_LM | GENCAT_LO);
+var u_iswdigit = unipred(GENCAT_ND);
+var u_iswalnum = unipred(
 	GENCAT_LT | GENCAT_LU | GENCAT_LL | GENCAT_LM | GENCAT_LO |
 	GENCAT_MC | GENCAT_ME | GENCAT_MN | GENCAT_NO | GENCAT_ND | GENCAT_NL);
 
@@ -364,9 +364,9 @@ function caseconv(getDist) {
 	}
 };
 
-u_towupper = caseconv(function(x) { return x.updist; });
-u_towlower = caseconv(function(x) { return x.lowdist; });
-u_towtitle = caseconv(function(x) { return x.titledist; });
+var u_towupper = caseconv(function(x) { return x.updist; });
+var u_towlower = caseconv(function(x) { return x.lowdist; });
+var u_towtitle = caseconv(function(x) { return x.titledist; });
 
 function u_gencat(c) {
 	return getrule(allchars, NUM_BLOCKS, c).catnumber;
