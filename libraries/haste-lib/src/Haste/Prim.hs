@@ -26,6 +26,9 @@ instance Eq JSString where
 instance Ord JSString where
   compare a b = fromPtr (strOrd a b)
 
+instance Show JSString where
+  show = fromJSStr
+
 -- | In normal Haskell, we use Storable for data that can be pointed to. When
 --   we compile to JS, however, anything can be "pointed" to and nothing needs
 --   to be stored.
