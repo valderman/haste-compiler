@@ -4,6 +4,9 @@ import Args
 import Haste.Config
 import Haste.Environment
 import Data.JSTarget.PP (debugPPOpts)
+import Data.List (isSuffixOf)
+import System.IO.Unsafe (unsafePerformIO)
+import Paths_haste_compiler (getDataFileName)
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [
@@ -11,6 +14,10 @@ argSpecs = [
               updateCfg = \cfg _ -> cfg {ppOpts = debugPPOpts},
               info = "Output indented, fairly readable code, with all " ++
                      "external names included in comments."},
+    ArgSpec { optName = "full-unicode",
+              updateCfg = \cfg _ -> fullUnicode cfg,
+              info = "Enable full Unicode support. Will bloat your output by "
+                     ++ " 10-150 KB depending on usage and other options."},
     ArgSpec { optName = "dont-link",
               updateCfg = \cfg _ -> cfg {performLink = False},
               info = "Don't perform linking."},
@@ -130,3 +137,13 @@ enableWholeProgramOpts cfg _ = cfg {wholeProgramOpts = True}
 -- | Enable sloppy TCE; see Config for more info.
 useSloppyTCE :: Config -> [String] -> Config
 useSloppyTCE cfg _ = cfg {sloppyTCE = True}
+
+-- | Save some space and performance by using degenerate implementations of
+--   the Unicode functions.
+fullUnicode :: Config -> Config
+fullUnicode cfg =
+    cfg {rtsLibs = unicode : filter (not . (cheap `isSuffixOf`)) libs}
+  where
+    libs = rtsLibs cfg
+    unicode = unsafePerformIO $ getDataFileName "unicode.js"
+    cheap = unsafePerformIO $ getDataFileName "cheap-unicode.js"

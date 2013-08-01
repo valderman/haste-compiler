@@ -30,6 +30,7 @@ Data-Files:
     array.js
     pointers.js
     unicode.js
+    cheap-unicode.js
     debug.js
 
 Executable haste-boot
