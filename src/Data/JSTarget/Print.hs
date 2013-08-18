@@ -8,6 +8,11 @@ import Data.JSTarget.PP as PP
 import Data.ByteString.Lazy.Builder
 import Data.Monoid
 import Control.Monad
+import Data.List
+import Data.Char
+import Numeric (showHex)
+
+import Debug.Trace
 
 instance Pretty Var where
   pp (Foreign name) =
@@ -29,18 +34,35 @@ instance Pretty Lit where
   pp (LNum d)  = put d
   pp (LStr s)  = "\"" .+. put (fixQuotes s) .+. "\""
     where
-      fixQuotes ('\\':'x':xs) = '\\':'x'  : fixQuotes xs
-      fixQuotes ('\\':'u':xs) = '\\':'u'  : fixQuotes xs
-      fixQuotes ('\\':xs)     = '\\':'\\' : fixQuotes xs
-      fixQuotes ('"':xs)      = '\\':'"'  : fixQuotes xs
-      fixQuotes ('\'':xs)     = '\\':'\'' : fixQuotes xs
-      fixQuotes ('\r':xs)     = '\\':'r'  : fixQuotes xs
-      fixQuotes ('\n':xs)     = '\\':'n'  : fixQuotes xs
-      fixQuotes (x:xs)        = x : fixQuotes xs
+      fixQuotes ('\\':xs) = "\\\\" ++ fixQuotes xs
+      fixQuotes ('"':xs)  = '\\':'"'  : fixQuotes xs
+      fixQuotes ('\'':xs) = '\\':'\'' : fixQuotes xs
+      fixQuotes ('\r':xs) = '\\':'r'  : fixQuotes xs
+      fixQuotes ('\n':xs) = '\\':'n' : fixQuotes xs
+      fixQuotes (x:xs)
+        | ord x <= 127 = x : fixQuotes xs
+        | otherwise    = toHex x ++ fixQuotes xs
       fixQuotes _             = []
   pp (LBool b) = put b
   pp (LInt n)  = put n
   pp (LNull)   = "null"
+
+-- | Generate a Haskell \uXXXX escape sequence for a char if it's >127.
+toHex :: Char -> String
+toHex c =
+  case ord c of
+    n | n < 127   -> [c]
+      | otherwise -> "\\u" ++ exactlyFour (showHex (n `rem` 65536) "")
+
+-- | Truncate and pad a string to exactly four characters. '0' is used for padding.
+exactlyFour :: String -> String
+exactlyFour s =
+    pad (4-len) $ drop (len-4) s
+  where
+    len = length s
+    pad 0 cs = cs
+    pad n cs = '0' : pad (n-1) cs
+
 
 -- | Default separator; comma followed by space, if spaces are enabled.
 sep :: PP ()

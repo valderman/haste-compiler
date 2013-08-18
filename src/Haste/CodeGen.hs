@@ -17,7 +17,7 @@ import Var (Var, varType, varName)
 import IdInfo (arityInfo, IdDetails (..))
 import Id (Id, idInfo, idDetails, isLocalId, isGlobalId)
 import Literal as L
-import FastString (unpackFS, FastString)
+import FastString (unpackFS)
 import ForeignCall (CCallTarget (..), ForeignCall (..), CCallSpec (..))
 import PrimOp (PrimCall (..))
 import OccName
@@ -419,7 +419,7 @@ genDataConTag d = do
 genLit :: L.Literal -> JSGen Config (AST Exp)
 genLit l = do
   case l of
-    MachStr s           -> return . lit $ hexifyString s
+    MachStr s           -> return . lit $ unpackFS s
     MachInt n
       | n > 2147483647 ||
         n < -2147483648 -> do warn Verbose (constFail "Int" n)
@@ -477,26 +477,3 @@ reorderableType v =
       _              -> typeHasRep t
   where
     t = varType v
-
--- | Generate a JS \xXX or \uXXXX escape sequence for a char if it's >127.
-toHex :: Char -> String
-toHex c =
-  case ord c of
-    n | n < 127   -> [c]
-      | otherwise -> toHex' (n `rem` 65536)
-  where
-    toHex' n =
-      case toH "" n of
-        s@(_:_:[]) -> "\\x" ++ s
-        s          -> "\\u" ++ s
-
-    toH s 0 = s
-    toH s n = case n `quotRem` 16 of
-                (next, ch) -> toH (i2h ch : s) next
-
-    i2h n | n < 10    = chr (n + 48)
-          | otherwise = chr (n + 87)
-
--- | Escape all non-ASCII characters in the given string.
-hexifyString :: FastString -> String
-hexifyString = concatMap toHex . unpackFS
