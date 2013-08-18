@@ -59,6 +59,22 @@ in a data constructor again. Thus, pass [0, 42] rather than 42, [0, "hi!"]
 rather than just "hi!" and so on. Assuming f :: Int -> JSString -> IO (), you
 would call f as A(f, [[0,42], [0,"Hi!"], 0]).
 
+On the Haskell side, the FFI doesn't like us passing raw functions around, so
+you need to wrap your callbacks using the Ptr type. Here's a small example:
+
+-- ffitest.hs
+foreign import ccall js_callFunction :: Int -> Ptr (Int -> IO ()) -> IO ()
+
+callFunction :: Int -> (Int -> IO ()) -> IO ()
+callFunction n f = js_callFunction n (toPtr f)
+
+// ffitest.js
+function js_callFunction(n, f) {
+  A(f, [n, 0]);
+}
+
+...and don't forget to compile with --with-js=ffitest.js
+
 
 
 ** Ptr and Haskell data structures
