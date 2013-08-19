@@ -46,7 +46,7 @@ clicked eid = unlessExists eid OnClick clickedIO
   where
     clickedIO = withElem eid $ \e -> do
       (p,s) <- pipe ()
-      _ <- setCallback e OnClick (const $ write p ())
+      _ <- setCallback e OnClick (\_ _ -> write p ())
       return s
 
 -- | The value property of the given element, updated whenever an onchange
