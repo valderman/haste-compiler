@@ -16,7 +16,7 @@ type AppStart = Builder -> Builder
 stdJSLibs :: [FilePath]
 stdJSLibs = unsafePerformIO $ mapM getDataFileName [
     "rts.js", "stdlib.js", "MVar.js", "StableName.js", "Integer.js", "md5.js",
-    "array.js", "pointers.js", "cheap-unicode.js"
+    "array.js", "pointers.js", "cheap-unicode.js", "Canvas.js"
   ]
 
 debugLib :: FilePath
