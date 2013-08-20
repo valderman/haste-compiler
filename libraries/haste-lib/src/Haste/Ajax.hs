@@ -14,7 +14,6 @@ foreign import ccall ajaxReq :: JSString    -- method
                              -> IO ()
 
 data Method = GET | POST deriving Show
-type URL = String
 type Key = String
 type Val = String
 

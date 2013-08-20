@@ -1,5 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls #-}
-module Haste (JSString, alert, prompt, eval, writeLog, catJSStr, fromJSStr,
+module Haste (JSString, JSAny, URL,
+              alert, prompt, eval, writeLog, catJSStr, fromJSStr,
               module Haste.JSType, module Haste.DOM,
               module Haste.Callback, module Haste.Random) where
 import Haste.Prim
@@ -14,6 +15,8 @@ foreign import ccall jsLog    :: JSString -> IO ()
 foreign import ccall jsPrompt :: JSString -> IO JSString
 foreign import ccall jsEval   :: JSString -> IO JSString
 foreign import ccall jsCat    :: Ptr [JSString] -> JSString -> JSString
+
+type URL = String
 
 -- | Javascript alert() function.
 alert :: MonadIO m => String -> m ()

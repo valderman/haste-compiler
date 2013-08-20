@@ -1,6 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
 module Haste.DOM (Elem (..), PropID, ElemID,
-                  newElem, elemById, setProp, getProp, getValue,
+                  newElem, elemById, setProp, getProp, setProp', getProp',
+                  getValue,
                   withElem, withElems, addChild, addChildBefore, removeChild,
                   clearChildren, getChildBefore, getLastChild, getChildren,
                   setChildren, getStyle, setStyle) where
@@ -66,6 +67,10 @@ newElem = liftIO . jsCreateElem . toJSStr
 setProp :: MonadIO m => Elem -> PropID -> String -> m ()
 setProp e prop val = liftIO $ jsSet e (toJSStr prop) (toJSStr val)
 
+-- | Set a property of the given element, JSString edition.
+setProp' :: MonadIO m => Elem -> PropID -> JSString -> m ()
+setProp' e prop val = liftIO $ jsSet e (toJSStr prop) val
+
 -- | Get the value property of an element; a handy shortcut.
 getValue :: (MonadIO m, JSType a) => Elem -> m (Maybe a)
 getValue e = liftIO $ fromJSString `fmap` jsGet e "value"
@@ -73,6 +78,10 @@ getValue e = liftIO $ fromJSString `fmap` jsGet e "value"
 -- | Get a property of an element.
 getProp :: MonadIO m => Elem -> PropID -> m String
 getProp e prop = liftIO $ fromJSStr `fmap` jsGet e (toJSStr prop)
+
+-- | Get a property of an element, JSString edition.
+getProp' :: MonadIO m => Elem -> PropID -> m JSString
+getProp' e prop = liftIO $ jsGet e (toJSStr prop)
 
 -- | Get a CSS style property of an element.
 getStyle :: MonadIO m => Elem -> PropID -> m String
