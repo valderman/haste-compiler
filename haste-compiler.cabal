@@ -32,6 +32,7 @@ Data-Files:
     unicode.js
     cheap-unicode.js
     debug.js
+    Canvas.js
 
 Executable haste-boot
     Main-Is: haste-boot.hs
