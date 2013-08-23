@@ -7,10 +7,9 @@ Description:    Base libraries for haste-compiler. Only useful for web developme
 Cabal-Version:  >= 1.10
 Build-Type:     Simple
 Author:         Anton Ekblad <anton@ekblad.cc>
-Copyright:      Anton Ekblad <anton@ekblad.cc>
-Maintainer:     Anton Ekblad <anton@ekblad.cc>
-Homepage:       http://ekblad.cc
-Bug-reports:    http://ekblad.cc
+Maintainer:     anton@ekblad.cc
+Homepage:       http://github.com/valderman/haste-compiler
+Bug-reports:    http://github.com/valderman/haste-compiler/issues
 Stability:      Experimental
 
 Library
