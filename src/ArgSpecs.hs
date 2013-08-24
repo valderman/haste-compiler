@@ -5,8 +5,7 @@ import Haste.Config
 import Haste.Environment
 import Data.JSTarget.PP (debugPPOpts)
 import Data.List (isSuffixOf)
-import System.IO.Unsafe (unsafePerformIO)
-import Paths_haste_compiler (getDataFileName)
+import System.FilePath ((</>))
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [
@@ -145,5 +144,5 @@ fullUnicode cfg =
     cfg {rtsLibs = unicode : filter (not . (cheap `isSuffixOf`)) libs}
   where
     libs = rtsLibs cfg
-    unicode = unsafePerformIO $ getDataFileName "unicode.js"
-    cheap = unsafePerformIO $ getDataFileName "cheap-unicode.js"
+    unicode = jsDir </> "unicode.js"
+    cheap = jsDir </> "cheap-unicode.js"

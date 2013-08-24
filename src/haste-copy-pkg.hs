@@ -22,7 +22,7 @@ main = do
 copyFromDB :: [String] -> String -> Shell ()
 copyFromDB pkgdbs package = do
   pkgdesc <- run "ghc-pkg" (["describe", package] ++ pkgdbs) ""
-  run_ "haste-pkg" ["update", "-", "--force"] (fixPaths package pkgdesc)
+  run_ hastePkgBinary ["update", "-", "--force"] (fixPaths package pkgdesc)
 
 -- | Hack a config to work with Haste.
 fixPaths :: String -> String -> String

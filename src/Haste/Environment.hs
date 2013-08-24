@@ -1,42 +1,62 @@
+{-# LANGUAGE CPP #-}
 -- | Paths, host bitness and other environmental information about Haste.
-module Haste.Environment where
+module Haste.Environment (hasteDir, jsmodDir, hasteInstDir, pkgDir, pkgLibDir,
+                          jsDir, hostWordSize, runAndWait, hasteBinary,
+                          hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
+                          hasteCopyPkgBinary, closureCompiler) where
 import System.Process
 import System.IO.Unsafe
-import System.Directory
 import System.FilePath
 import Data.Bits (bitSize)
 import Foreign.C.Types (CIntPtr)
+import System.Environment.Executable
+import System.Directory
+import Paths_haste_compiler
+
+-- | The directory where the currently residing binary lives.
+currentBinDir :: FilePath
+currentBinDir = dropFileName . unsafePerformIO $ getExecutablePath
+
+#if defined(PORTABLE) || defined(PORTABLE_COMPILER)
+hasteBinDir :: FilePath
+hasteBinDir = currentBinDir
+
+jsDir :: FilePath
+jsDir = hasteBinDir </> "js"
+#else
+hasteBinDir :: FilePath
+hasteBinDir = unsafePerformIO $ getBinDir
+
+jsDir :: FilePath
+jsDir = unsafePerformIO $ getDataDir
+#endif
+
+#if defined(PORTABLE)
+hasteDir :: FilePath
+hasteDir = hasteBinDir
+#else
+hasteDir :: FilePath
+hasteDir = unsafePerformIO $ getAppUserDataDirectory "haste"
+#endif
+
+jsmodDir :: FilePath
+jsmodDir = hasteDir </> "jsmods"
+
+-- | Base directory for haste-inst.
+hasteInstDir :: FilePath
+hasteInstDir = hasteDir </> "libraries"
+
+-- | Directory housing package information.
+pkgDir :: FilePath
+pkgDir = hasteDir </> "packages"
 
 -- | Host word size in bits.
 hostWordSize :: Int
 hostWordSize = bitSize (undefined :: CIntPtr)
 
--- | Directory where cabal resides. Bundled JS files end up here.
-cabalDir :: FilePath
-cabalDir = unsafePerformIO $ getAppUserDataDirectory "cabal"
-
--- | Cabal dir for binaries.
-cabalBinDir :: FilePath
-cabalBinDir = cabalDir </> "bin"
-
--- | Directory housing hi files, jsmods and other stuff Haste spits out.
-hasteDir :: FilePath
-hasteDir = unsafePerformIO $ getAppUserDataDirectory "haste"
-
-jsmodDir :: FilePath
-jsmodDir = hasteDir </> "lib"
-
 -- | Directory containing library information. 
 pkgLibDir :: FilePath
 pkgLibDir = hasteInstDir </> "lib"
-
--- | Base directory for haste-inst.
-hasteInstDir :: FilePath
-hasteInstDir = hasteDir </> "haste-install"
-
--- | Directory housing package information.
-pkgDir :: FilePath
-pkgDir = hasteDir </> "haste-pkg"
 
 -- | Run a process and wait for its completion.
 runAndWait :: FilePath -> [String] -> Maybe FilePath -> IO ()
@@ -45,6 +65,7 @@ runAndWait file args workDir = do
   _ <- waitForProcess h
   return ()
 
+{-
 -- | Find an executable.
 locateBinary :: String -> [FilePath] -> IO (Either String FilePath)
 locateBinary progname (c:cs) = do
@@ -55,21 +76,34 @@ locateBinary progname (c:cs) = do
 locateBinary progname _ = do
   return $ Left $ "No " ++ progname ++ " executable found; aborting!"
 
--- | Find a binary that's probably in Cabal's bin directory.
+-- | Find a binary.
 binaryPath :: FilePath -> FilePath
 binaryPath exe = unsafePerformIO $ do
-  b <- locateBinary exe [exe, cabalBinDir </> exe]
+  b <- locateBinary exe [exe, currentBinDir </> exe, cabalBinDir </> exe]
   case b of
     Left err   -> error err
     Right path -> return path
+-}
 
 -- | The main Haste compiler binary.
 hasteBinary :: FilePath
-hasteBinary = binaryPath "hastec"
+hasteBinary = hasteBinDir </> "hastec"
 
 -- | Binary for haste-pkg.
 hastePkgBinary :: FilePath
-hastePkgBinary = binaryPath "haste-pkg"
+hastePkgBinary = hasteBinDir </> "haste-pkg"
+
+-- | Binary for haste-copy-pkg.
+hasteCopyPkgBinary :: FilePath
+hasteCopyPkgBinary = hasteBinDir </> "haste-copy-pkg"
+
+-- | Binary for haste-pkg.
+hasteInstBinary :: FilePath
+hasteInstBinary = hasteBinDir </> "haste-inst"
+
+-- | Binary for haste-install-his.
+hasteInstHisBinary :: FilePath
+hasteInstHisBinary = hasteBinDir </> "haste-install-his"
 
 -- | JAR for Closure compiler.
 closureCompiler :: FilePath

@@ -3,9 +3,7 @@ module Haste.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, debugLib) where
 import Data.JSTarget
-import System.IO.Unsafe (unsafePerformIO)
-import System.FilePath (replaceExtension)
-import Paths_haste_compiler (getDataFileName)
+import System.FilePath (replaceExtension, (</>))
 import DynFlags
 import Data.ByteString.Lazy.Builder
 import Data.Monoid
@@ -14,13 +12,13 @@ import Haste.Environment
 type AppStart = Builder -> Builder
 
 stdJSLibs :: [FilePath]
-stdJSLibs = unsafePerformIO $ mapM getDataFileName [
+stdJSLibs = map (jsDir </>)  [
     "rts.js", "stdlib.js", "MVar.js", "StableName.js", "Integer.js", "md5.js",
     "array.js", "pointers.js", "cheap-unicode.js", "Canvas.js"
   ]
 
 debugLib :: FilePath
-debugLib = unsafePerformIO $ getDataFileName "debug.js"
+debugLib = jsDir </> "debug.js"
 
 -- | Execute the program as soon as it's loaded into memory.
 --   Evaluate the result of applying main, as we might get a thunk back if

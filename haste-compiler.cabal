@@ -10,7 +10,7 @@ Description:    This package provides a featureful compiler from Haskell to
                 Bug reports are highly appreciated.
 Category:       Javascript, Compiler, Web
 Cabal-Version:  >= 1.10
-Build-Type:     Simple
+Build-Type:     Custom
 Author:         Anton Ekblad <anton@ekblad.cc>
 Maintainer:     anton@ekblad.cc
 Homepage:       http://github.com/valderman/haste-compiler
@@ -34,6 +34,18 @@ Data-Files:
     debug.js
     Canvas.js
 
+Flag portable
+    Description:
+        Install Haste and its package database into a self-contained directory.
+        Primarily useful for installation onto a USB stick.
+    Default: False
+
+Flag portable-compiler
+    Description:
+        Install Haste into a self-contained directory. Package databases are
+        still local to each user. Primarily useful for global installs.
+    Default: False
+
 Executable haste-boot
     Main-Is: haste-boot.hs
     Other-Modules:
@@ -41,7 +53,10 @@ Executable haste-boot
         Haste.Environment
         Control.Shell
     Hs-Source-Dirs: src
-    GHC-Options: -Wall -O2
+    if flag(portable-compiler)
+        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         ghc,
         base < 5,
@@ -56,12 +71,17 @@ Executable haste-boot
         time,
         transformers,
         network,
-        HTTP
+        HTTP,
+        executable-path
     Default-Language: Haskell98
 
 Executable hastec
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
+    if flag(portable-compiler)
+        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         ghc-prim,
@@ -77,7 +97,8 @@ Executable hastec
         ghc-paths,
         process,
         random,
-        system-fileio
+        system-fileio,
+        executable-path
     Main-Is:
         Main.hs
     Other-Modules:
@@ -109,31 +130,46 @@ Executable hastec
 Executable haste-inst
     Main-Is: haste-inst.hs
     Hs-Source-Dirs: src
+    if flag(portable-compiler)
+        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         filepath,
         process,
-        directory
+        directory,
+        executable-path
     default-language: Haskell98
 
 Executable haste-pkg
     Main-Is: haste-pkg.hs
     Hs-Source-Dirs: src
+    if flag(portable-compiler)
+        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         process,
         filepath,
-        directory
+        directory,
+        executable-path
     default-language: Haskell98
 
 Executable haste-install-his
     Main-Is: haste-install-his.hs
     Hs-Source-Dirs: src
+    if flag(portable-compiler)
+        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         filepath,
         directory,
-        process
+        process,
+        executable-path
     default-language: Haskell98
 
 Executable haste-copy-pkg
@@ -142,6 +178,10 @@ Executable haste-copy-pkg
         Haste.Environment
         Control.Shell
     Hs-Source-Dirs: src
+    if flag(portable-compiler)
+        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         filepath,
@@ -149,5 +189,6 @@ Executable haste-copy-pkg
         process,
         temporary,
         time,
-        transformers
+        transformers,
+        executable-path
     default-language: Haskell98

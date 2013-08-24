@@ -1,5 +1,7 @@
 #!/bin/bash
 
+hastec=hastec
+
 if [[ $JS == "" ]] ; then
     if [[ $(which nodejs) != "" ]] ; then
       JS=nodejs
@@ -16,18 +18,18 @@ runTest() {
     ghc_output=`runghc -DTEST_MODULE=$module TestDriver.hs`
 
     if [[ $quiet == 1 ]] ; then
-        hastec --start=asap -O0 -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp > /dev/null 2>&1
+        $hastec --start=asap -O0 -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp > /dev/null 2>&1
     else
-        hastec -O0 --verbose --debug --start=asap -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp
+        $hastec -O0 --verbose --debug --start=asap -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp
     fi
     echo "if(typeof print == 'undefined') {print = console.log}" > TestDriver.js
     cat TestDriver.tmp >> TestDriver.js
     haste_output=`$JS TestDriver.js`
 
     if [[ $quiet == 1 ]] ; then
-        hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp > /dev/null 2>&1
+        $hastec -O2 --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp > /dev/null 2>&1
     else
-        hastec -O2 --verbose --debug --start=asap -DO2 -DTEST_MODULE=$module --out=TestDriver.tmp TestDriver.hs
+        $hastec -O2 --verbose --debug --start=asap -DO2 -DTEST_MODULE=$module --out=TestDriver.tmp TestDriver.hs
     fi
     echo "if(typeof print == 'undefined') {print = console.log}" > TestDriver.O2.js
     cat TestDriver.tmp >> TestDriver.O2.js

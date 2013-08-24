@@ -68,9 +68,12 @@ bootHaste cfg tmpdir = do
   when (getLibs cfg) $ do
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
-    exists <- doesDirectoryExist hasteDir
-    when exists $ do
-      removeDirectoryRecursive hasteDir
+    exists <- doesDirectoryExist hasteInstDir
+    when exists $ removeDirectoryRecursive hasteInstDir
+    exists <- doesDirectoryExist jsmodDir
+    when exists $ removeDirectoryRecursive jsmodDir
+    exists <- doesDirectoryExist pkgDir
+    when exists $ removeDirectoryRecursive pkgDir
     buildLibs
   when (getClosure cfg) $ do
     installClosure
@@ -117,15 +120,15 @@ buildLibs = do
       -- Set up dirs and copy includes
       mkdir True $ pkgLibDir
       cpDir "include" hasteDir
-      run_ "haste-pkg" ["update", "libraries" </> "rts.pkg"] ""
+      run_ hastePkgBinary ["update", "libraries" </> "rts.pkg"] ""
       
       inDirectory "libraries" $ do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
           hasteInst ["configure"]
           hasteInst ["build", "--install-jsmods", ghcOpts]
-          run_ "haste-install-his" ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
-          run_ "haste-pkg" ["update", "packageconfig"] ""
+          run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
+          run_ hastePkgBinary ["update", "packageconfig"] ""
         
         -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do
@@ -143,8 +146,8 @@ buildLibs = do
           hasteInst ["build", "--install-jsmods", ghcOpts]
           let base = "base-" ++ basever
               pkgdb = "--package-db=dist" </> "package.conf.inplace"
-          run_ "haste-install-his" [base, "dist" </> "build"] ""
-          run_ "haste-copy-pkg" [base, pkgdb] ""
+          run_ hasteInstHisBinary [base, "dist" </> "build"] ""
+          run_ hasteCopyPkgBinary [base, pkgdb] ""
         
         -- Install array, fursuit and haste-lib
         forM_ ["array", "fursuit", "haste-lib"] $ \pkg -> do
@@ -156,4 +159,4 @@ buildLibs = do
     ghcOpts =
       "--ghc-options=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize
     hasteInst args =
-      run_ "haste-inst" ("--unbooted" : args) ""
+      run_ hasteInstBinary ("--unbooted" : args) ""
