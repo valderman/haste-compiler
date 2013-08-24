@@ -1,9 +1,10 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings,
-             TypeSynonymInstances, FlexibleInstances #-}
+             TypeSynonymInstances, FlexibleInstances, GADTs #-}
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
   -- Types
   Bitmap, Canvas, Shape, Picture, Point, Vector, Rect (..), Color (..),
+  AnyImageBuffer (..),
   -- Classes
   ImageBuffer (..), BitmapSource (..),
   -- Obtaining a canvas for drawing
@@ -84,6 +85,13 @@ instance BitmapSource URL where
 
 instance BitmapSource Elem where
   loadBitmap = return . Bitmap
+
+data AnyImageBuffer where
+  AnyImageBuffer :: ImageBuffer a => a -> AnyImageBuffer
+
+instance ImageBuffer AnyImageBuffer where
+  draw (AnyImageBuffer buf) = draw buf
+  drawClipped (AnyImageBuffer buf) = drawClipped buf
 
 -- | Get the HTML element associated with the given bitmap.
 bitmapElem :: Bitmap -> Elem
