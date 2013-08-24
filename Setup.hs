@@ -13,10 +13,12 @@ main = defaultMainWithHooks $ simpleUserHooks {
          let dirname = "haste-compiler"
              exes = map fst $ executableConfigs buildinfo
              builddir = buildDir buildinfo
-             outdir = dirname
+             outdir = builddir </> dirname
              datadir = dataDir $ localPkgDescr buildinfo
              jsfiles = dataFiles $ localPkgDescr buildinfo
          
+         dirExists <- doesDirectoryExist outdir
+         when dirExists $ removeDirectoryRecursive outdir
          createDirectoryIfMissing True (outdir </> "js")
          
          -- Copy executables

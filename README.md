@@ -68,8 +68,8 @@ the `portable` flag:
     $ cabal configure -f portable
     $ cabal build
 
-Haste will be compiled into a directory called `haste-compiler` in your working
-directory, which can be renamed and moved around however you like.
+Haste will be compiled into dist/build/haste-compiler, which can then be
+renamed and moved around however you like.
 
 
 Usage
