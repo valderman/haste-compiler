@@ -60,10 +60,7 @@ valueAt eid evt = filterMapS fromString $ unlessExists eid evt valueAtIO
   where
     valueAtIO = withElem eid $ \e -> do
       str <- getProp e "value"
-      (src, sig) <- case read str of
-        Just x -> pipe x
-        _      -> error $ "Bad initial value in valueAt: " ++ str
-  
+      (src, sig) <- pipe str
       success <- setCallback e evt $ constCallback $ do
         getProp e "value" >>= write src
 
