@@ -70,7 +70,7 @@ callFunction n f = js_callFunction n (toPtr f)
 
 // ffitest.js
 function js_callFunction(n, f) {
-  A(f, [n, 0]);
+  A(f, [[0, n], 0]);
 }
 
 ...and don't forget to compile with --with-js=ffitest.js
