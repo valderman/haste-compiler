@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 import Distribution.Simple
 import Distribution.Simple.Setup
 import Distribution.Simple.LocalBuildInfo
@@ -8,10 +9,12 @@ import System.FilePath
 
 main = defaultMainWithHooks $ simpleUserHooks {
     postBuild = \args buildflags pkgdesc buildinfo -> do
-       when (buildinfo `has` "portable" || buildinfo `has` "portable-compiler") $ do
+       when (buildinfo `has` "portable" ||
+             buildinfo `has` "portable-compiler") $ do
          -- Figure out paths
          let dirname = "haste-compiler"
-             exes = map fst $ executableConfigs buildinfo
+             exes = [ exeName exe ++ fromPathTemplate (progSuffix buildinfo)
+                    | exe <- executables pkgdesc]
              builddir = buildDir buildinfo
              outdir = builddir </> dirname
              datadir = dataDir $ localPkgDescr buildinfo
