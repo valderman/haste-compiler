@@ -16,12 +16,19 @@ main = defaultMainWithHooks $ simpleUserHooks {
              exes = [ exeName exe ++ fromPathTemplate (progSuffix buildinfo)
                     | exe <- executables pkgdesc]
              builddir = buildDir buildinfo
-             outdir = builddir </> dirname
+             outdir = dirname
              datadir = dataDir $ localPkgDescr buildinfo
              jsfiles = dataFiles $ localPkgDescr buildinfo
+             hastedirfile = ".hastedir" -- does Haste "own" this directory?
          
          dirExists <- doesDirectoryExist outdir
-         when dirExists $ removeDirectoryRecursive outdir
+         isHasteDir <- doesFileExist (outdir </> hastedirfile)
+         when (dirExists && not isHasteDir) $
+           error $ "The output directory " ++ outdir ++ " already exists, "
+                 ++ "and doesn't seem to be a Haste installation."
+         when (dirExists && isHasteDir) $
+           removeDirectoryRecursive outdir
+             
          createDirectoryIfMissing True (outdir </> "js")
          
          -- Copy executables
@@ -31,6 +38,9 @@ main = defaultMainWithHooks $ simpleUserHooks {
          -- Copy libs
          forM_ jsfiles $ \js -> do
            copyFile (datadir </> js) (outdir </> "js" </> js)
+         
+         -- Mark the directory as ours
+         writeFile (outdir </> ".hastedir") ""
   }
 
 has :: LocalBuildInfo -> String -> Bool
