@@ -131,10 +131,10 @@ brackets of the Strathclyde Haskell Enhancement
 A note about security
 ---------------------
 
-As described in haskell/cabal#936, Cabal is not entirely secure, and as
-haste-boot uses Cabal this obviously extends to Haste as well. If this
-troubles you, you can take the following steps in order to obtain a trusted
-Haste installation:
+As described in https://github.com/haskell/cabal/issues/936,
+Cabal is not entirely secure, and as haste-boot uses Cabal this obviously extends
+to Haste as well. If this troubles you, you can take the following steps in order
+to obtain a trusted Haste installation:
 
 * Install Haste from GitHub (don't forget to use HTTPS!) and run `haste-boot`
   as usual.
