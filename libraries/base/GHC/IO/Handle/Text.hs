@@ -193,62 +193,11 @@ hGetChar handle =
 
 hGetLine :: Handle -> IO String
 hGetLine h =
-  wantReadableHandle_ "hGetLine" h $ \ handle_ -> do
-     hGetLineBuffered handle_
-
-hGetLineBuffered :: Handle__ -> IO String
-hGetLineBuffered handle_@Handle__{..} = do
-  buf <- readIORef haCharBuffer
-  hGetLineBufferedLoop handle_ buf []
-
-hGetLineBufferedLoop :: Handle__
-                     -> CharBuffer -> [String]
-                     -> IO String
-hGetLineBufferedLoop handle_@Handle__{..}
-        buf@Buffer{ bufL=r0, bufR=w, bufRaw=raw0 } xss =
-  let
-        -- find the end-of-line character, if there is one
-        loop raw r
-           | r == w = return (False, w)
-           | otherwise =  do
-                (c,r') <- readCharBuf raw r
-                if c == '\n'
-                   then return (True, r) -- NB. not r': don't include the '\n'
-                   else loop raw r'
-  in do
-  (eol, off) <- loop raw0 r0
-
-  debugIO ("hGetLineBufferedLoop: r=" ++ show r0 ++ ", w=" ++ show w ++ ", off=" ++ show off)
-
-  (xs,r') <- if haInputNL == CRLF
-                then unpack_nl raw0 r0 off ""
-                else do xs <- unpack raw0 r0 off ""
-                        return (xs,off)
-
-  -- if eol == True, then off is the offset of the '\n'
-  -- otherwise off == w and the buffer is now empty.
-  if eol -- r' == off
-        then do writeIORef haCharBuffer (bufferAdjustL (off+1) buf)
-                return (concat (reverse (xs:xss)))
-        else do
-             let buf1 = bufferAdjustL r' buf
-             maybe_buf <- maybeFillReadBuffer handle_ buf1
-             case maybe_buf of
-                -- Nothing indicates we caught an EOF, and we may have a
-                -- partial line to return.
-                Nothing -> do
-                     -- we reached EOF.  There might be a lone \r left
-                     -- in the buffer, so check for that and
-                     -- append it to the line if necessary.
-                     -- 
-                     let pre = if not (isEmptyBuffer buf1) then "\r" else ""
-                     writeIORef haCharBuffer buf1{ bufL=0, bufR=0 }
-                     let str = concat (reverse (pre:xs:xss))
-                     if not (null str)
-                        then return str
-                        else ioe_EOF
-                Just new_buf ->
-                     hGetLineBufferedLoop handle_ new_buf (xs:xss)
+    go ""
+  where
+    go buf = do
+      [c] <- jshRead h 1
+      if c == '\n' then return (reverse buf) else go (c:buf)
 
 maybeFillReadBuffer :: Handle__ -> CharBuffer -> IO (Maybe CharBuffer)
 maybeFillReadBuffer handle_ buf
