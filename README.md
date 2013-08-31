@@ -128,6 +128,25 @@ brackets of the Strathclyde Haskell Enhancement
 (https://personal.cis.strath.ac.uk/~conor/pub/she/) quite useful.
 
 
+A note about security
+---------------------
+
+As described in haskell/cabal#936, Cabal is not entirely secure, and as
+haste-boot uses Cabal this obviously extends to Haste as well. If this
+troubles you, you can take the following steps in order to obtain a trusted
+Haste installation:
+
+* Install Haste from GitHub (don't forget to use HTTPS!) and run `haste-boot`
+  as usual.
+* Install `deepseq`, `containers`, `monads-tf` and `transformers` from a source
+  you trust, in that order, forcing reinstalls as necessary.
+* Manually reinstall `fursuit` and `haste-lib` from the same source tree you
+  installed Haste from, in that order.
+
+That said, if you're comfortable trusting random Internet people
+(me, for instance), trusting Cabal shouldn't really be a big deal.
+
+
 Libraries
 ---------
 
