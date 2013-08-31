@@ -61,6 +61,8 @@ import GHC.Num
 import GHC.Show
 import GHC.List
 
+import Haste.Handle
+
 -- ---------------------------------------------------------------------------
 -- Simple input operations
 
@@ -468,10 +470,7 @@ getSomeCharacters handle_@Handle__{..} buf@Buffer{..} =
 --  * 'isPermissionError' if another system resource limit would be exceeded.
 
 hPutChar :: Handle -> Char -> IO ()
-hPutChar handle c = do
-    c `seq` return ()
-    wantWritableHandle "hPutChar" handle $ \ handle_  -> do
-     hPutcBuffered handle_ c
+hPutChar handle c = jshWrite handle [c]
 
 hPutcBuffered :: Handle__ -> Char -> IO ()
 hPutcBuffered handle_@Handle__{..} c = do
@@ -529,35 +528,11 @@ hPutcBuffered handle_@Handle__{..} c = do
 --  * 'isPermissionError' if another system resource limit would be exceeded.
 
 hPutStr :: Handle -> String -> IO ()
-hPutStr handle str = hPutStr' handle str False
+hPutStr handle str = jshWrite handle str
 
 -- | The same as 'hPutStr', but adds a newline character.
 hPutStrLn :: Handle -> String -> IO ()
-hPutStrLn handle str = hPutStr' handle str True
-  -- An optimisation: we treat hPutStrLn specially, to avoid the
-  -- overhead of a single putChar '\n', which is quite high now that we
-  -- have to encode eagerly.
-
-hPutStr' :: Handle -> String -> Bool -> IO ()
-hPutStr' handle str add_nl =
-  do
-    (buffer_mode, nl) <-
-         wantWritableHandle "hPutStr" handle $ \h_ -> do
-                       bmode <- getSpareBuffer h_
-                       return (bmode, haOutputNL h_)
-
-    case buffer_mode of
-       (NoBuffering, _) -> do
-            hPutChars handle str        -- v. slow, but we don't care
-            when add_nl $ hPutChar handle '\n'
-       (LineBuffering, buf) -> do
-            writeBlocks handle True  add_nl nl buf str
-       (BlockBuffering _, buf) -> do
-            writeBlocks handle False add_nl nl buf str
-
-hPutChars :: Handle -> [Char] -> IO ()
-hPutChars _      [] = return ()
-hPutChars handle (c:cs) = hPutChar handle c >> hPutChars handle cs
+hPutStrLn handle str = jshWrite handle str >> jshWrite handle "\n"
 
 getSpareBuffer :: Handle__ -> IO (BufferMode, CharBuffer)
 getSpareBuffer Handle__{haCharBuffer=ref, 

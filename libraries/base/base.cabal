@@ -196,6 +196,7 @@ Library {
     other-modules:
         GHC.HastePrim
         GHC.HasteWordInt
+        Haste.Handle
         Control.Monad.ST.Imp
         Control.Monad.ST.Lazy.Imp
         Foreign.ForeignPtr.Imp

@@ -34,6 +34,7 @@ import GHC.IO.Handle
 import GHC.IO.Handle.Types
 import GHC.IO.Handle.Internals
 import qualified GHC.IO.FD as FD
+import qualified Haste.Handle
 
 -- ---------------------------------------------------------------------------
 -- Standard Handles
@@ -45,37 +46,15 @@ import qualified GHC.IO.FD as FD
 
 -- | A handle managing input from the Haskell program's standard input channel.
 stdin :: Handle
-{-# NOINLINE stdin #-}
-stdin = unsafePerformIO $ do
-   -- ToDo: acquire lock
-   setBinaryMode FD.stdin
-   enc <- getLocaleEncoding
-   mkHandle FD.stdin "<stdin>" ReadHandle True (Just enc)
-                nativeNewlineMode{-translate newlines-}
-                (Just stdHandleFinalizer) Nothing
+stdin = Haste.Handle.stdin
 
 -- | A handle managing output to the Haskell program's standard output channel.
 stdout :: Handle
-{-# NOINLINE stdout #-}
-stdout = unsafePerformIO $ do
-   -- ToDo: acquire lock
-   setBinaryMode FD.stdout
-   enc <- getLocaleEncoding
-   mkHandle FD.stdout "<stdout>" WriteHandle True (Just enc)
-                nativeNewlineMode{-translate newlines-}
-                (Just stdHandleFinalizer) Nothing
+stdout = Haste.Handle.stdout
 
 -- | A handle managing output to the Haskell program's standard error channel.
 stderr :: Handle
-{-# NOINLINE stderr #-}
-stderr = unsafePerformIO $ do
-    -- ToDo: acquire lock
-   setBinaryMode FD.stderr
-   enc <- getLocaleEncoding
-   mkHandle FD.stderr "<stderr>" WriteHandle False{-stderr is unbuffered-} 
-                (Just enc)
-                nativeNewlineMode{-translate newlines-}
-                (Just stdHandleFinalizer) Nothing
+stderr = Haste.Handle.stderr
 
 stdHandleFinalizer :: FilePath -> MVar Handle__ -> IO ()
 stdHandleFinalizer fp m = do

@@ -33,6 +33,7 @@ Data-Files:
     cheap-unicode.js
     debug.js
     Canvas.js
+    Handle.js
 
 Flag portable
     Description:
