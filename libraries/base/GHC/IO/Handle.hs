@@ -70,6 +70,8 @@ import Data.Maybe
 import Data.Typeable
 import Control.Monad
 
+import Haste.Handle
+
 -- ---------------------------------------------------------------------------
 -- Closing a handle
 
@@ -290,7 +292,7 @@ hGetEncoding hdl =
 --    or retained under these circumstances.
 
 hFlush :: Handle -> IO () 
-hFlush handle = wantWritableHandle "hFlush" handle flushWriteBuffer
+hFlush handle = jshFlush handle
 
 -- | The action 'hFlushAll' @hdl@ flushes all buffered data in @hdl@,
 -- including any buffered read data.  Buffered read data is flushed

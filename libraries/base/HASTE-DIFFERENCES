@@ -32,4 +32,4 @@ This file sums up the differences.
 * Remove references to windows.h, winsock.h, wsock32, user32 and shell32.
   (HsBase.h, base.cabal)
 * Haste-specific implementation of handles for stdin/out/err.
-  (GHC.IO.Handle.Text, GHC.IO.Handle.FD, Haste.Handle)
+  (GHC.IO.Handle, GHC.IO.Handle.Text, GHC.IO.Handle.FD, Haste.Handle)
