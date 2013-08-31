@@ -262,6 +262,10 @@ genOp cfg op xs =
     AddrGeOp               ->
         Right $ binOp Sub (litN 0) $ callForeign "addrLT" [a, b]
       where (a:b:_) = xs
+    Addr2IntOp             ->
+        Right $ index x (lit "off")
+      where
+        (x:_) = xs
 
     -- MVars
     NewMVarOp     -> callF "newMVar"
