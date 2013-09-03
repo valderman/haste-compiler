@@ -1,9 +1,7 @@
 // jQuery object selector. Note that the FFI marshals Int, Double, JSString,
 // Ptr-wrapped types and other primitives for us, so there's no need to do
 // anything special with such arguments or return values.
-function js_jquery(str) {
-    return $(str);
-}
+var js_jquery = $;
 
 function js_click(obj, callback) {
     // Callbacks must be called using the A() Haste RTS operation, taking a
