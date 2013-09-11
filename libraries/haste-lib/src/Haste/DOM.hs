@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
 module Haste.DOM (Elem (..), PropID, ElemID,
-                  newElem, elemById, setProp, getProp, setProp', getProp',
-                  getValue,
+                  newElem, newTextElem,
+                  elemById, setProp, getProp, setProp', getProp', getValue,
                   withElem, withElems, addChild, addChildBefore, removeChild,
                   clearChildren, getChildBefore, getLastChild, getChildren,
                   setChildren, getStyle, setStyle) where
@@ -20,6 +20,7 @@ foreign import ccall jsGetStyle :: Elem -> JSString -> IO JSString
 foreign import ccall jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsFind :: JSString -> IO (Ptr (Maybe Elem))
 foreign import ccall jsCreateElem :: JSString -> IO Elem
+foreign import ccall jsCreateTextNode :: JSString -> IO Elem
 foreign import ccall jsAppendChild :: Elem -> Elem -> IO ()
 foreign import ccall jsGetLastChild :: Elem -> IO (Ptr (Maybe Elem))
 foreign import ccall jsGetChildren :: Elem -> IO (Ptr [Elem])
@@ -62,6 +63,10 @@ setChildren e ch = liftIO $ jsSetChildren e (toPtr ch)
 -- | Create an element.
 newElem :: MonadIO m => String -> m Elem
 newElem = liftIO . jsCreateElem . toJSStr
+
+-- | Create a text node.
+newTextElem :: MonadIO m => String -> m Elem
+newTextElem = liftIO . jsCreateTextNode . toJSStr
 
 -- | Set a property of the given element.
 setProp :: MonadIO m => Elem -> PropID -> String -> m ()
