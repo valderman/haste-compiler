@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns, CPP #-}
 -- | Pipes are the only way to cause a 'Signal' to fire from the outside.
-module FRP.Fursuit.Pipe (pipe, emptyPipe, write) where
+module FRP.Fursuit.Pipe (Pipe, pipe, emptyPipe, write) where
 import Data.IORef
 import FRP.Fursuit.Signal
 import qualified Data.IntMap as M
