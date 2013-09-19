@@ -211,7 +211,7 @@ genOp cfg op xs =
     ReadMutVarOp -> callF "rMV"
     WriteMutVarOp -> callF "wMV"
     SameMutVarOp -> bOp Eq
-    AtomicModifyMutVarOp -> Right $ callSaturated (xs !! 1) [(xs !! 0)]
+    AtomicModifyMutVarOp -> callF "mMV"
     
     -- TVars - since there's no parallelism and no preemption, TVars behave
     -- just like normal IORefs.
