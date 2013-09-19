@@ -13,7 +13,7 @@ main = defaultMainWithHooks $ simpleUserHooks {
              buildinfo `has` "portable-compiler") $ do
          -- Figure out paths
          let dirname = "haste-compiler"
-             exes = [ exeName exe ++ fromPathTemplate (progSuffix buildinfo)
+             exes = [ exeName exe
                     | exe <- executables pkgdesc]
              builddir = buildDir buildinfo
              outdir = dirname
@@ -33,7 +33,11 @@ main = defaultMainWithHooks $ simpleUserHooks {
          
          -- Copy executables
          forM_ exes $ \exe -> do
-           copyFile (builddir </> exe </> exe) (outdir </> exe)
+           exists <- doesFileExist $ builddir </> exe </> exe
+           if exists
+             then copyFile (builddir </> exe </> exe) (outdir </> exe)
+             else copyFile (builddir </> exe </> exe <.> "exe")
+                           (outdir </> exe <.> "exe")
          
          -- Copy libs
          forM_ jsfiles $ \js -> do
