@@ -26,10 +26,6 @@ toBuiltin v =
       Just $ foreignVar "unFoldrCStr"
 
     -- Primitive needs of the Haste standard library
-    (Just "Haste.Prim", "toJSStr") ->
-      Just $ foreignVar "toJSStr"
-    (Just "Haste.Prim", "fromJSStr") ->
-      Just $ foreignVar "fromJSStr"
     (Just "Haste.Prim", "jsRound") ->
       Just $ foreignVar "Math.round"
     (Just "Haste.Prim", "jsCeiling") ->

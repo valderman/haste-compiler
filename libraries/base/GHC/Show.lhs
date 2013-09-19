@@ -453,5 +453,5 @@ instance Show Integer where
     showList = showList__ (showsPrec 0)
 
 integerToString :: Integer -> String -> String
-integerToString n s = fromJSStr (unsafeCoerce# (integerToJSString n)) ++ s
+integerToString n s = unsafeCoerce# (fromJSStr# (integerToJSString n)) ++ s
 \end{code}

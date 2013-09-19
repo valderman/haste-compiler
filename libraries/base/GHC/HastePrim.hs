@@ -5,7 +5,8 @@
              MagicHash #-}
 -- | Haste primitives used in various places in the haxxored base.
 module GHC.HastePrim (
-    JSString, jsShowD, jsShowF, jsShowW, jsShowI, fromJSStr, toJSStr
+    JSString, jsShowD, jsShowF, jsShowW, jsShowI,
+    fromJSStr, toJSStr, fromJSStr#, toJSStr#
   ) where
 import GHC.Prim
 import GHC.Base
@@ -22,21 +23,21 @@ foreign import prim "toJSStr"   toJSStr# :: Dontcare# -> JSString
 
 -- fromJSStr# returns [Char], but FFI won't let us do that, so...
 fromJSStr :: JSString -> String
-fromJSStr s = unsafeCoerce# (fromJSStr# (unsafeCoerce# (I# (unsafeCoerce# s))))
+fromJSStr s =
+  case unsafeCoerce# s of
+    I# s' -> (unsafeCoerce# (fromJSStr# (unsafeCoerce# s')))
 
 toJSStr :: String -> JSString
-toJSStr s =
-  case unsafeCoerce# (toJSStr# (unsafeCoerce# s)) of
-    I# jsstr -> unsafeCoerce# jsstr
+toJSStr s = unsafeCoerce# (I# (unsafeCoerce# (toJSStr# (unsafeCoerce# s))))
 
 jsShowD :: Double -> String
-jsShowD d = fromJSStr (jsShowD# d)
+jsShowD d = unsafeCoerce# (fromJSStr# (jsShowD# d))
 
 jsShowF :: Float -> String
-jsShowF f = fromJSStr (jsShowF# f)
+jsShowF f = unsafeCoerce# (fromJSStr# (jsShowF# f))
 
 jsShowW :: Word -> String
-jsShowW w = fromJSStr (jsShowW# w)
+jsShowW w = unsafeCoerce# (fromJSStr# (jsShowW# w))
 
 jsShowI :: Int -> String
-jsShowI i = fromJSStr (jsShowI# i)
+jsShowI i = unsafeCoerce# (fromJSStr# (jsShowI# i))

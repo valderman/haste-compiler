@@ -21,10 +21,10 @@ foreign import ccall jsFlushHandle :: JSHandle -> IO ()
 jshRead :: Handle -> Int -> IO String
 jshRead h len = do
   str <- jsReadHandle (unsafeCoerce# h) len
-  return (fromJSStr (unsafeCoerce# (fromPtr str)))
+  return (fromJSStr (unsafeCoerce# str))
 
 jshWrite :: Handle -> String -> IO ()
-jshWrite h s = jsWriteHandle (unsafeCoerce# h) (toPtr (unsafeCoerce# (toJSStr s)))
+jshWrite h s = jsWriteHandle (unsafeCoerce# h) (unsafeCoerce# (toJSStr s))
 
 jshFlush :: Handle -> IO ()
 jshFlush h = jsFlushHandle (unsafeCoerce# h)

@@ -49,7 +49,8 @@ fingerprintFingerprints = md5 . concat . map showFingerprint
 
 showFingerprint :: Fingerprint -> String
 showFingerprint (Fingerprint (W64# a) (W64# b)) =
-    fromJSStr (md5# (jsShow# a)) ++ fromJSStr (md5# (jsShow# b))
+    unsafeCoerce# (fromJSStr# (md5# (jsShow# a))) ++
+    unsafeCoerce# (fromJSStr# (md5# (jsShow# b)))
 
 -- This is duplicated in compiler/utils/Fingerprint.hsc
 fingerprintString :: String -> Fingerprint
@@ -63,7 +64,7 @@ md5 :: String -> Fingerprint
 md5 str =
     Fingerprint w64_1 w64_2
   where
-    md5sum = fromJSStr (md5# (toJSStr str))
+    md5sum = unsafeCoerce# (fromJSStr# (md5# (toJSStr# (unsafeCoerce# str))))
     (s1, rest')   = splitAt 8 md5sum
     (s2, rest'')  = splitAt 8 rest'
     (s3, rest''') = splitAt 8 rest''

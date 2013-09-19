@@ -6,9 +6,9 @@ import Foreign.Ptr
 import Unsafe.Coerce
 import GHC.CString
 import GHC.Prim
+import qualified GHC.HastePrim as HP
 import Data.String
 
-foreign import ccall _str :: JSString
 foreign import ccall strEq :: JSString -> JSString -> Bool
 foreign import ccall strOrd :: JSString -> JSString -> Ptr Ordering
 
@@ -41,20 +41,20 @@ fromPtr ptr =
   case unsafeCoerce ptr of
     FakePtr val -> val
 
+{-
 {-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
 {-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
 {-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) = toPtr (unsafeCoerce# s) #-}
 {-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) = toPtr (unsafeCoerce# s) #-}
+-}
 
 {-# NOINLINE toJSStr #-}
--- | Defined in lib/rts.js
 toJSStr :: String -> JSString
-toJSStr s = s `seq` _str
+toJSStr = unsafeCoerce# HP.toJSStr
 
 instance IsString JSString where
   fromString = toJSStr
 
 {-# NOINLINE fromJSStr #-}
--- | Defined in lib/rts.js
 fromJSStr :: JSString -> String
-fromJSStr s = s `seq` []
+fromJSStr = unsafeCoerce# HP.fromJSStr

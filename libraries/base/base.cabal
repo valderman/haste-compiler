@@ -96,6 +96,7 @@ Library {
                              GHC.Windows
     }
     exposed-modules:
+        GHC.HastePrim,
         Control.Applicative,
         Control.Arrow,
         Control.Category,
@@ -194,7 +195,6 @@ Library {
         Text.Show.Functions
         Unsafe.Coerce
     other-modules:
-        GHC.HastePrim
         GHC.HasteWordInt
         Haste.Handle
         Control.Monad.ST.Imp
