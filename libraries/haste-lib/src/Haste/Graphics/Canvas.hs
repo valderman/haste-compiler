@@ -3,7 +3,7 @@
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
   -- Types
-  Bitmap, Canvas, Shape, Picture, Point, Vector, Rect (..), Color (..),
+  Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..),
   AnyImageBuffer (..),
   -- Classes
   ImageBuffer (..), BitmapSource (..),
@@ -20,7 +20,7 @@ module Haste.Graphics.Canvas (
   -- Using shapes
   stroke, fill, clip,
   -- Creating shapes
-  line, path, rect,
+  line, path, rect, circle, arc,
   -- Working with text
   font, text
   ) where
@@ -50,6 +50,11 @@ foreign import ccall jsDrawImageClipped :: Ctx -> Elem
                                         -> IO ()
 foreign import ccall jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
 foreign import ccall jsClip :: Ctx -> IO ()
+foreign import ccall jsArc :: Ctx
+                           -> Double -> Double
+                           -> Double
+                           -> Double -> Double
+                           -> IO ()
 foreign import ccall jsCanvasToDataURL :: Elem -> IO JSString
 
 newtype Bitmap = Bitmap Elem
@@ -97,12 +102,23 @@ instance ImageBuffer AnyImageBuffer where
 bitmapElem :: Bitmap -> Elem
 bitmapElem (Bitmap e) = e
 
+-- | A point in the plane.
 type Point = (Double, Double)
+
+-- | A two dimensional vector.
 type Vector = (Double, Double)
+
+-- | An angle, given in radians.
+type Angle = Double
+
+-- | A rectangle.
 data Rect = Rect {rect_x :: Double,
                   rect_y :: Double,
                   rect_w :: Double,
                   rect_h :: Double}
+
+-- | A color, specified using its red, green and blue components, with an
+--   optional alpha component.
 data Color = RGB Int Int Int
            | RGBA Int Int Int Double
 
@@ -285,6 +301,18 @@ line p1 p2 = path [p1, p2]
 -- | Draw a rectangle between the two given points.
 rect :: Point -> Point -> Shape ()
 rect (x1, y1) (x2, y2) = path [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)]
+
+-- | Draw a circle shape.
+circle :: Point -> Double -> Shape ()
+circle center radius = arc center radius 0 (2*pi)
+
+-- | Draw an arc. An arc is specified as a drawn portion of an imaginary
+--   circle with a center point, a radius, a starting angle and an ending
+--   angle.
+--   For instance, @arc (0, 0) 10 0 pi@ will draw a half circle centered at
+--   (0, 0), with a radius of 10 pixels.
+arc :: Point -> Double -> Angle -> Angle -> Shape ()
+arc (x, y) radius from to = Shape $ \ctx -> jsArc ctx x y radius from to
 
 -- | Draw a picture using a certain font. Obviously only affects text.
 font :: String -> Picture () -> Picture ()
