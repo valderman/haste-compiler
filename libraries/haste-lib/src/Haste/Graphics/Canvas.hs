@@ -33,8 +33,8 @@ import Haste.DOM
 foreign import ccall jsHasCtx2D :: Elem -> IO Bool
 foreign import ccall jsGetCtx2D :: Elem -> IO Ctx
 foreign import ccall jsBeginPath :: Ctx -> IO ()
-foreign import ccall jsMoveTo :: Ctx -> Int -> Int -> IO ()
-foreign import ccall jsLineTo :: Ctx -> Int -> Int -> IO ()
+foreign import ccall jsMoveTo :: Ctx -> Double -> Double -> IO ()
+foreign import ccall jsLineTo :: Ctx -> Double -> Double -> IO ()
 foreign import ccall jsStroke :: Ctx -> IO ()
 foreign import ccall jsFill :: Ctx -> IO ()
 foreign import ccall jsRotate :: Ctx -> Double -> IO ()
@@ -43,12 +43,12 @@ foreign import ccall jsScale :: Ctx -> Double -> Double -> IO ()
 foreign import ccall jsPushState :: Ctx -> IO ()
 foreign import ccall jsPopState :: Ctx -> IO ()
 foreign import ccall jsResetCanvas :: Elem -> IO ()
-foreign import ccall jsDrawImage :: Ctx -> Elem -> Int -> Int -> IO ()
+foreign import ccall jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
 foreign import ccall jsDrawImageClipped :: Ctx -> Elem
-                                        -> Int -> Int
-                                        -> Int -> Int -> Int -> Int 
+                                        -> Double -> Double
+                                        -> Double -> Double -> Double -> Double 
                                         -> IO ()
-foreign import ccall jsDrawText :: Ctx -> JSString -> Int -> Int -> IO ()
+foreign import ccall jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
 foreign import ccall jsClip :: Ctx -> IO ()
 foreign import ccall jsCanvasToDataURL :: Elem -> IO JSString
 
@@ -97,12 +97,12 @@ instance ImageBuffer AnyImageBuffer where
 bitmapElem :: Bitmap -> Elem
 bitmapElem (Bitmap e) = e
 
-type Point = (Int, Int)
+type Point = (Double, Double)
 type Vector = (Double, Double)
-data Rect = Rect {rect_x :: Int,
-                  rect_y :: Int,
-                  rect_w :: Int,
-                  rect_h :: Int}
+data Rect = Rect {rect_x :: Double,
+                  rect_y :: Double,
+                  rect_w :: Double,
+                  rect_h :: Double}
 data Color = RGB Int Int Int
            | RGBA Int Int Int Double
 
