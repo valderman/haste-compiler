@@ -23,7 +23,10 @@ optimizeFun f (AST ast js) =
     >>= tailLoopify f
 
 topLevelInline :: AST Stm -> AST Stm
-topLevelInline (AST ast js) = runTravM (inlineAssigns False ast) js
+topLevelInline (AST ast js) =
+  flip runTravM js $ do
+    inlineAssigns False ast
+    >>= optimizeThunks
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -110,8 +113,8 @@ inlineAssigns blackholeOK ast = do
                 Once | mayReorder -> do
                   replaceEx (not <$> isShared) (Var lhs) ex next
                 -- Don't inline lambdas, but use less verbose syntax.
-                _     | Fun Nothing vs body <- ex,
-                        Internal lhsname _ <- lhs -> do
+                _    | Fun Nothing vs body <- ex,
+                       Internal lhsname _ <- lhs -> do
                   return $ Assign blackHole (Fun (Just lhsname) vs body) next
                 _ -> do
                   return keep
@@ -130,12 +133,16 @@ inlineAssigns blackholeOK ast = do
 -- | Optimize thunks in the following ways:
 --   A(thunk(return f), xs)
 --     => A(f, xs)
+--   E(thunk(return x))
+--     => x
 optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
   where
-    optEx (Call arity Normal f args) | Just f' <- fromThunkEx f =
-      return $ Call arity Normal f' args
+    optEx (Call _ _ (Var (Foreign "E")) [x]) | Just x' <- fromThunkEx x =
+      return x'
+    optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
+      return $ Call arity calltype f' args
     optEx ex =
       return ex
 
