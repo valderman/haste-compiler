@@ -48,13 +48,11 @@ fromPtr ptr =
 {-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) = toPtr (unsafeCoerce# s) #-}
 -}
 
-{-# NOINLINE toJSStr #-}
 toJSStr :: String -> JSString
 toJSStr = unsafeCoerce# HP.toJSStr
 
 instance IsString JSString where
   fromString = toJSStr
 
-{-# NOINLINE fromJSStr #-}
 fromJSStr :: JSString -> String
 fromJSStr = unsafeCoerce# HP.fromJSStr
