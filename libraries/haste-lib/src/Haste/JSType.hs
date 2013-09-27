@@ -12,13 +12,13 @@ import GHC.Integer.GMP.Internals
 import GHC.Types (Int (..))
 import Haste.Prim (JSString, toJSStr, fromJSStr)
 
-foreign import ccall "Number" jsNumber        :: JSString -> Double
-foreign import ccall "String" jsString        :: Double -> JSString
-foreign import ccall jsRound     :: Double -> Int
-foreign import ccall "I_toInt" jsIToInt       :: ByteArray# -> Int
-foreign import ccall "I_toString" jsIToString :: ByteArray# -> JSString
+foreign import ccall "Number" jsNumber          :: JSString -> Double
+foreign import ccall "String" jsString          :: Double -> JSString
+foreign import ccall jsRound                    :: Double -> Int
+foreign import ccall "I_toInt" jsIToInt         :: ByteArray# -> Int
+foreign import ccall "I_toString" jsIToString   :: ByteArray# -> JSString
 foreign import ccall "I_fromString" jsStringToI :: JSString -> ByteArray#
-foreign import ccall "I_fromNumber" jsNumToI  :: ByteArray# -> ByteArray#
+foreign import ccall "I_fromNumber" jsNumToI    :: ByteArray# -> ByteArray#
 
 data JSNumber
 
@@ -87,8 +87,18 @@ instance JSType Word
 instance JSType Word8
 instance JSType Word16
 instance JSType Word32
-instance JSType Float
-instance JSType Double
+
+instance JSType Float where
+  fromJSString s =
+    case jsNumber s of
+      d | isNaN d   -> Nothing
+        | otherwise -> Just (unsafeCoerce# d)
+
+instance JSType Double where
+  fromJSString s =
+    case jsNumber s of
+      d | isNaN d   -> Nothing
+        | otherwise -> Just d
 
 -- This is completely insane, but GHC for some reason pukes when we try to
 -- use the constructors of the actual integers, so we coerce them into this
