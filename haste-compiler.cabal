@@ -47,6 +47,10 @@ Flag portable-compiler
         still local to each user. Primarily useful for global installs.
     Default: False
 
+source-repository head
+    type:       git
+    location:   https://github.com/valderman/haste-compiler.git
+
 Executable haste-boot
     Main-Is: haste-boot.hs
     Other-Modules:
