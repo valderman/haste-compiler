@@ -41,12 +41,10 @@ fromPtr ptr =
   case unsafeCoerce ptr of
     FakePtr val -> val
 
-{-
 {-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
 {-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
 {-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) = toPtr (unsafeCoerce# s) #-}
 {-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) = toPtr (unsafeCoerce# s) #-}
--}
 
 toJSStr :: String -> JSString
 toJSStr = unsafeCoerce# HP.toJSStr
