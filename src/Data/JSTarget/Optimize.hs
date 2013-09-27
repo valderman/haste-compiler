@@ -18,15 +18,19 @@ optimizeFun f (AST ast js) =
   flip runTravM js $ do
     shrinkCase ast
     >>= inlineAssigns True
+    >>= optimizeArrays
     >>= inlineReturns
     >>= optimizeThunks
+    >>= optimizeArrays
     >>= tailLoopify f
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
   flip runTravM js $ do
     inlineAssigns False ast
+    >>= optimizeArrays
     >>= optimizeThunks
+    >>= optimizeArrays
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -94,7 +98,7 @@ replaceEx trav old new =
 inlineAssigns :: JSTrav ast => Bool -> ast -> TravM ast
 inlineAssigns blackholeOK ast = do
     inlinable <- gatherInlinable ast
-    mapJS (const True) inlEx (inl inlinable) ast
+    mapJS (const True) return (inl inlinable) ast
   where
     varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
     varOccurs _ _                  = False
@@ -124,6 +128,12 @@ inlineAssigns blackholeOK ast = do
           return keep
     inl _ stm = return stm
 
+
+-- | Turn occurrences of [a,b][1] into b.
+optimizeArrays :: JSTrav ast => ast -> TravM ast
+optimizeArrays ast =
+    mapJS (const True) inlEx return ast
+  where
     inlEx (Index (Arr xs) (Lit (LNum n))) =
       return $ xs !! truncate n
     inlEx x =
