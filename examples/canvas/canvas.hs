@@ -25,7 +25,7 @@ data State = State {
 --   separated by a one pixel border.
 drawTile :: Bitmap -> Int -> Point -> Picture ()
 drawTile tileset tile pt = do
-    drawClipped tileset pt (Rect (1+tx*17) (1+ty*17) 16 16)
+    drawClipped tileset pt (Rect (1+convert tx*17) (1+convert ty*17) 16 16)
   where
     (ty, tx) = quotRem tile 11
 
@@ -41,7 +41,7 @@ writeTile m@(Tilemap _ _ (w, _)) (x, y) t = do
 -- | Draw an entire tile map.
 drawMap :: Tilemap -> Picture ()
 drawMap (Tilemap m ts (w, h)) = do
-  sequence_ [drawTile ts (m ! (y*w+x)) (x*16, y*16) |
+  sequence_ [drawTile ts (m ! (y*w+x)) (convert x*16, convert y*16) |
              x <- [0 .. w-1], y <- [0 .. h-1]]
 
 -- | Draw a tilemap, then draw a semi-transparent square over the tile that's
@@ -51,8 +51,8 @@ drawMapWithSel tilemap (x, y) = do
     drawMap tilemap
     color (RGBA 255 255 255 0.5) . fill $ rect (x', y') (x'+16, y'+16)
   where
-    x' = x*16
-    y' = y*16
+    x' = convert $ x*16
+    y' = convert $ y*16
 
 -- | Create a tilemap using the specified tileset, dimensions and default tile.
 createMap :: Bitmap -> Int -> Int -> Int -> Tilemap
