@@ -171,7 +171,7 @@ prepare dynflags theMod = do
 #if __GLASGOW_HASKELL__ >= 706
       prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
 #else
-      prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
+      prepd <- corePrepPgm env (cg_binds tidy) (cg_tycons tidy)
 #endif
       return prepd
 
