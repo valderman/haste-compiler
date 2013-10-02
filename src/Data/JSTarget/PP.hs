@@ -13,10 +13,10 @@ import Control.Monad
 import Control.Applicative
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
-import Data.ByteString.Lazy.Builder
-import Data.ByteString.Lazy.Builder.ASCII
 import Data.JSTarget.AST (AST (..), Name (..), JumpTable, Lbl, Stm)
 import Data.JSTarget.Traversal (JSTrav)
+import Blaze.ByteString.Builder
+import Blaze.ByteString.Builder.Char.Utf8 as B
 
 -- | Pretty-printing options
 data PPOpts = PPOpts {
@@ -36,6 +36,10 @@ type NameSupply = (FinalName, M.Map Name FinalName)
 
 emptyNS :: NameSupply
 emptyNS = (FinalName 0, M.empty)
+
+intDec = B.fromString . show
+doubleDec = B.fromString . show
+integerDec = B.fromString . show
 
 newtype PP a = PP {unPP :: PPOpts
                         -> IndentLvl
@@ -120,16 +124,16 @@ prettyProg opts mainSym (AST ast js) = runPP opts js $ do
 -- | Turn a FinalName into a Builder.
 buildFinalName :: FinalName -> Builder
 buildFinalName (FinalName 0) =
-    string7 "_0"
+    B.fromString "_0"
 buildFinalName (FinalName fn) =
-    char7 '_' <> go fn mempty
+    fromChar '_' <> go fn mempty
   where
       arrLen = 62
       chars = listArray (0,arrLen-1)
               $ "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
       go 0 acc = acc
       go n acc = let (rest, ix) = n `quotRem` arrLen 
-                 in go rest (char7 (chars ! ix) <> acc)
+                 in go rest (fromChar (chars ! ix) <> acc)
 
 -- | Indent the given builder another step.
 indent :: PP a -> PP a
@@ -144,9 +148,9 @@ class Buildable a where
 instance Buildable Builder where
   put x = PP $ \_ _ ns _ b -> (ns, b <> x, ())
 instance Buildable String where
-  put = put . stringUtf8
+  put = put . B.fromString
 instance Buildable Char where
-  put = put . char7
+  put = put . fromChar
 instance Buildable Int where
   put = put . intDec
 instance Buildable Double where
@@ -157,7 +161,7 @@ instance Buildable Double where
 instance Buildable Integer where
   put = put . integerDec
 instance Buildable Bool where
-  put x = put $ if x then string7 "true" else string7 "false"
+  put x = put $ if x then B.fromString "true" else B.fromString "false"
 
 -- | Emit indentation up to the current level.
 ind :: PP ()
@@ -186,10 +190,10 @@ ppList _ _ =
   return ()
 
 instance IsString Builder where
-  fromString = stringUtf8
+  fromString = B.fromString
 
 instance IsString (PP ()) where
-  fromString = put . stringUtf8
+  fromString = put . B.fromString
 
 -- | Pretty-printer class. Each part of the AST needs an instance of this.
 class Pretty a where

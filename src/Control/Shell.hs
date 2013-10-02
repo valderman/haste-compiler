@@ -7,7 +7,7 @@ module Control.Shell (
     run, run_, run', runInteractive,
     cd, cpDir, pwd, ls, mkdir, rmdir, inDirectory, isDirectory,
     withHomeDirectory, inHomeDirectory, withAppDirectory, inAppDirectory,
-    isFile, rm, mv, cp, file, mtime,
+    isFile, rm, mv, cp, file,
     withTempFile, withTempDirectory, inTempDirectory,
     module System.FilePath,
   ) where
@@ -217,10 +217,6 @@ ls :: FilePath -> Shell [FilePath]
 ls dir = do
   contents <- liftIO $ Dir.getDirectoryContents dir
   return [f | f <- contents, f /= ".", f /= ".."]
-
--- | Get the last time the given file was modified in UTC.
-mtime :: FilePath -> Shell UTCTime
-mtime = liftIO . Dir.getModificationTime
 
 -- | Create a directory. Optionally create any required missing directories as
 --   well.

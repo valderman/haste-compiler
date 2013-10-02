@@ -5,7 +5,8 @@ module Haste.Config (
 import Data.JSTarget
 import System.FilePath (replaceExtension, (</>))
 import DynFlags
-import Data.ByteString.Lazy.Builder
+import Blaze.ByteString.Builder
+import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
 import Haste.Environment
 
@@ -36,9 +37,9 @@ startCustom str      = insertSym str
 
 -- | Replace the first occurrence of %% with Haste's entry point symbol.
 insertSym :: String -> AppStart
-insertSym ('%':'%':str) sym = sym <> stringUtf8 str
-insertSym (c:str) sym       = charUtf8 c <> insertSym str sym
-insertSym [] _              = string7 ""
+insertSym ('%':'%':str) sym = sym <> fromString str
+insertSym (c:str) sym       = fromChar c <> insertSym str sym
+insertSym [] _              = fromString ""
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart

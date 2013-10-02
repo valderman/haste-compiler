@@ -8,7 +8,8 @@ import Control.Monad.State.Strict
 import Control.Applicative
 import Data.JSTarget
 import qualified Data.ByteString.Lazy as B
-import Data.ByteString.Lazy.Builder
+import Blaze.ByteString.Builder
+import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
 
 -- | The program entry point.
@@ -23,8 +24,8 @@ link cfg pkgid target = do
   ds <- getAllDefs (libPath cfg) pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
   let (progText, mainSym') = prettyProg (ppOpts cfg) mainSym myDefs
-      callMain = string7 "A(" <> mainSym' <> string7 ", [0]);"
-      launchApp = appStart cfg (string7 "hasteMain")
+      callMain = fromString "A(" <> mainSym' <> fromString ", [0]);"
+      launchApp = appStart cfg (fromString "hasteMain")
   
   rtslibs <- mapM readFile $ rtsLibs cfg
   extlibs <- mapM readFile $ jsExternals cfg
@@ -33,18 +34,19 @@ link cfg pkgid target = do
     $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp
   where
     assembleProg True extlibs rtslibs progText callMain launchApp =
-      stringUtf8 (unlines extlibs)
-      <> string7 "var hasteMain = function() {"
-      <> stringUtf8 (unlines rtslibs)
+      fromString (unlines extlibs)
+      <> fromString "var hasteMain = function() {"
+      <> fromString (unlines rtslibs)
       <> progText
       <> callMain
-      <> string7 "};\n"
+      <> fromString "};\n"
       <> launchApp
     assembleProg _ extlibs rtslibs progText callMain launchApp =
-      stringUtf8 (unlines extlibs)
-      <> stringUtf8 (unlines rtslibs)
+      fromString (unlines extlibs)
+      <> fromString (unlines rtslibs)
       <> progText
-      <> string7 "\nvar hasteMain = function() {" <> callMain <> string7 "};"
+      <> fromString "\nvar hasteMain = function() {" <> callMain
+                                                     <> fromString "};"
       <> launchApp
 
 
