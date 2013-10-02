@@ -400,6 +400,9 @@ typeHasRep t =
 genArg :: StgArg -> JSGen Config (AST Exp)
 genArg (StgVarArg v)  = varExp <$> genVar v
 genArg (StgLitArg l)  = genLit l
+#if __GLASGOW_HASKELL__ < 706
+genArg (StgTypeArg t) = warn Normal "Generated StgTypeArg as 0!" >> litN 0
+#endif
 
 -- | Generate code for data constructor creation. Returns a pair of
 --   (constructor, field strictness annotations).
