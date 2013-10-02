@@ -188,7 +188,8 @@ lblFor s = do
     AST r (M.singleton r s')
   where
     freshRef = return $! unsafePerformIO $! do
-      r <- atomicModifyIORef' nextLbl (\lbl -> (lbl+1, Lbl lblNamespace lbl))
+      r <- atomicModifyIORef nextLbl $ \lbl ->
+        lbl `seq` (lbl+1, Lbl lblNamespace lbl)
       -- We need to depend on s, or GHC will hoist us out of lblFor, possibly
       -- causing circular dependencies between expressions.
       return (r, s)
