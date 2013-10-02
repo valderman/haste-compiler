@@ -4,7 +4,6 @@ module Haste.Config (
   safeMultiply, debugLib) where
 import Data.JSTarget
 import System.FilePath (replaceExtension, (</>))
-import DynFlags
 import Blaze.ByteString.Builder
 import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
@@ -94,9 +93,7 @@ data Config = Config {
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
     -- | Any external Javascript to link into the JS bundle.
-    jsExternals :: [FilePath],
-    -- | Dynamic flags used for compilation.
-    dynFlags :: DynFlags
+    jsExternals :: [FilePath]
   }
 
 -- | Default compiler configuration.
@@ -117,6 +114,5 @@ defConfig = Config {
     sloppyTCE        = False,
     tracePrimops     = False,
     useGoogleClosure = Nothing,
-    jsExternals      = [],
-    dynFlags         = tracingDynFlags
+    jsExternals      = []
   }
