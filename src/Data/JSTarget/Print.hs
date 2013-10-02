@@ -5,15 +5,11 @@ import Prelude hiding (LT, GT)
 import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Data.JSTarget.PP as PP
-import Blaze.ByteString.Builder
 import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
 import Control.Monad
-import Data.List
 import Data.Char
 import Numeric (showHex)
-
-import Debug.Trace
 
 instance Pretty Var where
   pp (Foreign name) =
