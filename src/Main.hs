@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Main (main) where
 import GHC
 import GHC.Paths (libdir)
@@ -142,7 +143,11 @@ compiler cmdargs = do
         when (performLink cfg) $ liftIO $ do
           flip mapM_ files' $ \file -> do
             logStr $ "Linking " ++ outFile cfg file
+#if __GLASGOW_HASKELL__ >= 706
             let pkgid = showPpr dynflags $ thisPackage dynflags'
+#else
+            let pkgid = showPpr $ thisPackage dynflags'
+#endif
             link cfg pkgid file
             case useGoogleClosure cfg of 
               Just clopath -> closurize clopath $ outFile cfg file
@@ -163,7 +168,11 @@ prepare dynflags theMod = do
   return (pgm, name)
   where
     prepPgm env tidy = liftIO $ do
+#if __GLASGOW_HASKELL__ >= 706
       prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
+#else
+      prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
+#endif
       return prepd
 
 
@@ -210,7 +219,11 @@ compile cfg dynflags modSummary = do
         HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
         _          -> do
           (pgm, name) <- prepare dynflags modSummary
+#if __GLASGOW_HASKELL__ >= 706
           let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
+#else
+          let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
+#endif
               theCode = generate cfg fp pkgid name pgm
           liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
           liftIO $ writeModule targetpath theCode
