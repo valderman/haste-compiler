@@ -70,10 +70,14 @@ main = do
         then hasteMain args
         else callVanillaGHC args
   where
+#if __GLASGOW_HASKELL__ >= 706
     packageDBArgs = ["-no-global-package-db",
                      "-no-user-package-db",
                      "-package-db " ++ pkgDir]
-
+#else
+    packageDBArgs = ["-no-user-package-conf",
+                     "-package-conf " ++ pkgDir]
+#endif
 -- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
