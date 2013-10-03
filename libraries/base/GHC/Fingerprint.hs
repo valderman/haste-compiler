@@ -58,7 +58,13 @@ fingerprintString = md5
 
 foreign import ccall unsafe "md5" md5# :: JSString -> JSString
 foreign import ccall unsafe "jsShowI" jsShow# :: Word64# -> JSString
+#if __GLASGOW_HASKELL__ >= 706
 foreign import ccall unsafe "parseInt" parseInt# :: JSString -> Word
+#else
+foreign import ccall unsafe "parseInt" _parseInt# :: JSString -> Int
+parseInt# :: JSString -> Word
+parseInt# = unsafeCoerce# _parseInt#
+#endif
 
 md5 :: String -> Fingerprint
 md5 str =

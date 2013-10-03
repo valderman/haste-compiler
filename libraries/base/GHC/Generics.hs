@@ -1,3 +1,6 @@
+#if __GLASGOW_HASKELL__ < 706
+module GHC.Generics where
+#else
 {-# LANGUAGE Trustworthy            #-}
 {-# LANGUAGE NoImplicitPrelude      #-}
 {-# LANGUAGE EmptyDataDecls         #-}
@@ -270,3 +273,4 @@ instance Generic Char where
   type Rep Char = D1 D_Char (C1 C_Char (S1 NoSelector (Rec0 Char)))
   from x = M1 (M1 (M1 (K1 x)))
   to (M1 (M1 (M1 (K1 x)))) = x
+#endif

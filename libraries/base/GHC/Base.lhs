@@ -669,6 +669,11 @@ quotInt, remInt, divInt, modInt :: Int -> Int -> Int
 (I# x) `divInt`   (I# y) = I# (x `divInt#`  y)
 (I# x) `modInt`   (I# y) = I# (x `modInt#`  y)
 
+#if __GLASGOW_HASKELL < 706
+quotRemInt# :: Int# -> Int# -> (# Int#, Int# #)
+quotRemInt# x y = (# quotInt# x y, remInt# x y #)
+#endif
+
 quotRemInt :: Int -> Int -> (Int, Int)
 (I# x) `quotRemInt` (I# y) = case x `quotRemInt#` y of
                              (# q, r #) ->

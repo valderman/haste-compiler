@@ -1,3 +1,6 @@
+#if __GLASGOW_HASKELL__ < 706
+module GHC.TypeLits where
+#else
 {-# LANGUAGE DataKinds #-}              -- to declare the kinds
 {-# LANGUAGE KindSignatures #-}         -- (used all over)
 {-# LANGUAGE TypeFamilies #-}           -- for declaring operators + sing family
@@ -185,3 +188,4 @@ instance Show (IsEven n) where
   show (IsOdd  x) = "(2 * " ++ show x ++ " + 1)"
 
 
+#endif

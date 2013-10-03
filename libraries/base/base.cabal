@@ -223,7 +223,7 @@ Library {
     }
     -- We need to set the package name to base (without a version number)
     -- as it's magic.
-    ghc-options: -package-name base
+    ghc-options: -package-name base -XCPP
     nhc98-options: -H4M -K3M
     extensions: CPP
 }

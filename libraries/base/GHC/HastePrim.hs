@@ -16,7 +16,12 @@ type JSString = ByteArray#
 type Dontcare# = ByteArray#
 foreign import ccall "jsShow"   jsShowD# :: Double -> JSString
 foreign import ccall "jsShow"   jsShowF# :: Float -> JSString
+#if __GLASGOW_HASKELL__ >= 706
 foreign import ccall "jsShowI"  jsShowW# :: Word -> JSString
+#else
+jsShowW# :: Word -> JSString
+jsShowW# = unsafeCoerce# jsShowI#
+#endif
 foreign import ccall "jsShowI"  jsShowI# :: Int -> JSString
 foreign import prim "fromJSStr" fromJSStr# :: JSString -> Dontcare#
 foreign import prim "toJSStr"   toJSStr# :: Dontcare# -> JSString

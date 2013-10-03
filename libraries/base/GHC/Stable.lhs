@@ -48,7 +48,11 @@ which can treat it as an opaque reference to a Haskell value.
 A value of type @StablePtr a@ is a stable pointer to a Haskell
 expression of type @a@.
 -}
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsStablePtr" #-} StablePtr a = StablePtr (StablePtr# a)
+#else
+data StablePtr a = StablePtr (StablePtr# a)
+#endif
 
 -- |
 -- Create a stable pointer referring to the given Haskell value.

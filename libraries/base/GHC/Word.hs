@@ -50,7 +50,11 @@ import GHC.Float ()     -- for RealFrac methods
 -- Word8 is represented in the same way as Word. Operations may assume
 -- and must ensure that it holds only values from its logical range.
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsWord8" #-} Word8 = W8# Word# deriving (Eq, Ord)
+#else
+data Word8 = W8# Word# deriving (Eq, Ord)
+#endif
 -- ^ 8-bit unsigned integer type
 
 instance Show Word8 where
@@ -193,7 +197,11 @@ instance Bits Word8 where
 -- Word16 is represented in the same way as Word. Operations may assume
 -- and must ensure that it holds only values from its logical range.
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsWord16" #-} Word16 = W16# Word# deriving (Eq, Ord)
+#else
+data Word16 = W16# Word# deriving (Eq, Ord)
+#endif
 -- ^ 16-bit unsigned integer type
 
 instance Show Word16 where
@@ -373,7 +381,11 @@ instance Bits Word16 where
 
 #endif
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsWord32" #-} Word32 = W32# Word# deriving (Eq, Ord)
+#else
+data Word32 = W32# Word# deriving (Eq, Ord)
+#endif
 -- ^ 32-bit unsigned integer type
 
 instance Num Word32 where
@@ -516,7 +528,11 @@ instance Read Word32 where
 -- type Word64
 ------------------------------------------------------------------------
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsWord64" #-} Word64 = W64# Word64#
+#else
+data Word64 = W64# Word64#
+#endif
 -- ^ 64-bit unsigned integer type
 
 instance Eq Word64 where

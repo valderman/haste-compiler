@@ -302,6 +302,11 @@ instance  Integral Int  where
 instance Real Word where
     toRational x = toInteger x % 1
 
+#if __GLASGOW_HASKELL__ < 706
+quotRemWord# :: Word# -> Word# -> (# Word#, Word# #)
+quotRemWord# x y = (# quotWord# x y, remWord# x y #)
+#endif
+
 instance Integral Word where
     quot    (W# x#) y@(W# y#)
         | y /= 0                = W# (x# `quotWord#` y#)

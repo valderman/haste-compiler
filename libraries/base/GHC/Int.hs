@@ -51,7 +51,11 @@ import GHC.Float ()     -- for RealFrac methods
 -- Int8 is represented in the same way as Int. Operations may assume
 -- and must ensure that it holds only values from its logical range.
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsInt8" #-} Int8 = I8# Int# deriving (Eq, Ord)
+#else
+data Int8 = I8# Int# deriving (Eq, Ord)
+#endif
 -- ^ 8-bit signed integer type
 
 instance Show Int8 where
@@ -206,7 +210,11 @@ instance Bits Int8 where
 -- Int16 is represented in the same way as Int. Operations may assume
 -- and must ensure that it holds only values from its logical range.
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsInt16" #-} Int16 = I16# Int# deriving (Eq, Ord)
+#else
+data Int16 = I16# Int# deriving (Eq, Ord)
+#endif
 -- ^ 16-bit signed integer type
 
 instance Show Int16 where
@@ -361,12 +369,12 @@ instance Bits Int16 where
 ------------------------------------------------------------------------
 
 -- Int32 is represented in the same way as Int.
-#if WORD_SIZE_IN_BITS > 32
--- Operations may assume and must ensure that it holds only values
--- from its logical range.
-#endif
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsInt32" #-} Int32 = I32# Int# deriving (Eq, Ord)
+#else
+data Int32 = I32# Int# deriving (Eq, Ord)
+#endif
 -- ^ 32-bit signed integer type
 
 instance Show Int32 where
@@ -535,7 +543,11 @@ instance Ix Int32 where
 -- type Int64
 ------------------------------------------------------------------------
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsInt64" #-} Int64 = I64# Int64#
+#else
+data Int64 = I64# Int64#
+#endif
 -- ^ 64-bit signed integer type
 
 instance Eq Int64 where

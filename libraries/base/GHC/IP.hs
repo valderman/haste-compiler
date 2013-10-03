@@ -1,3 +1,6 @@
+#if __GLASGOW_HASKELL__ < 706
+module GHC.IP where
+#else
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE KindSignatures #-}
@@ -12,3 +15,4 @@ class IP (x :: Symbol) a | x -> a where
   ip :: a
 
 
+#endif

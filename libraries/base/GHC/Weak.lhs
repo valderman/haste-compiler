@@ -100,6 +100,11 @@ data Weak v = Weak (Weak# v)
 #include "Typeable.h"
 INSTANCE_TYPEABLE1(Weak,weakTc,"Weak")
 
+#if __GLASGOW_HASKELL__ < 706
+mkWeakNoFinalizer# :: o -> b -> State# RealWorld -> (# State# RealWorld, Weak# b #)
+mkWeakNoFinalizer# k v s = mkWeak# k v (unsafeCoerce# 0#) s
+#endif
+
 -- | Establishes a weak pointer to @k@, with value @v@ and a finalizer.
 --
 -- This is the most general interface for building a weak pointer.

@@ -531,10 +531,15 @@ threadCapability (ThreadId t) = IO $ \s ->
 -- caller must use @deRefWeak@ first to determine whether the thread
 -- still exists.
 --
+#if __GLASGOW_HASKELL__ >= 706
 mkWeakThreadId :: ThreadId -> IO (Weak ThreadId)
 mkWeakThreadId t@(ThreadId t#) = IO $ \s ->
    case mkWeakNoFinalizer# t# t s of
       (# s1, w #) -> (# s1, Weak w #)
+#else
+mkWeakThreadId :: ThreadId -> IO (Weak ThreadId)
+mkWeakThreadId t@(ThreadId t#) = mkWeak (unsafeCoerce# t#) t Nothing
+#endif
 \end{code}
 
 
