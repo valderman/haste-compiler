@@ -146,11 +146,7 @@ buildLibs = do
           hasteInst ["configure"]
           hasteInst ["build", "--install-jsmods", ghcOpts]
           let base = "base-" ++ basever
-#if __GLASGOW_HASKELL__ >= 706
               pkgdb = "--package-db=dist" </> "package.conf.inplace"
-#else
-              pkgdb = "--package-conf=dist" </> "package.conf.inplace"
-#endif
           run_ hasteInstHisBinary [base, "dist" </> "build"] ""
           run_ hasteCopyPkgBinary [base, pkgdb] ""
         

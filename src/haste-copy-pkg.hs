@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -- | haste-copy-pkg; copy a package from file or GHC package DB and fix up its
 --   paths.
 module Main where
@@ -9,7 +10,12 @@ import Control.Shell
 main :: IO ()
 main = do
   args <- getArgs
-  let (pkgdbs, pkgs) = partition ("--package-db=" `isPrefixOf`) args
+  let (dbs, pkgs) = partition ("--package-db=" `isPrefixOf`) args
+#if __GLASGOW_HASKELL__ < 706
+      pkgdbs = map (("--package-conf" ++) . drop 12) dbs
+#else
+      pkgdbs = dbs
+#endif
   if null args
     then do
       putStrLn "Usage: haste-copy-pkg [--package-db=foo.conf] <packages>"
