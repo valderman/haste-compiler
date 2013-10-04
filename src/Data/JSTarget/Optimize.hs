@@ -23,6 +23,7 @@ optimizeFun f (AST ast js) =
     >>= optimizeThunks
     >>= optimizeArrays
     >>= tailLoopify f
+    >>= ifReturnToTernary
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
@@ -129,6 +130,16 @@ inlineAssigns blackholeOK ast = do
     inl _ stm = return stm
 
 
+-- | Turn if(foo) {return bar;} else {return baz;} into return foo ? bar : baz.
+ifReturnToTernary :: JSTrav ast => ast -> TravM ast
+ifReturnToTernary ast = do
+    mapJS (const True) return opt ast
+  where
+    opt (Case cond (Return el) [(ex, Return th)] _) =
+      pure $ Return $ IfEx (BinOp Eq cond ex) th el
+    opt stm =
+      pure stm
+
 -- | Turn occurrences of [a,b][1] into b.
 optimizeArrays :: JSTrav ast => ast -> TravM ast
 optimizeArrays ast =
@@ -176,18 +187,20 @@ fromThunkEx ex =
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
 --   exactly once.
+--   TODO: always inline assigns that are just aliases!
 gatherInlinable :: JSTrav ast => ast -> TravM (M.Map Var Occs)
-gatherInlinable =
-    fmap (M.filter (< Lots)) . foldJS (\_ _ -> True) countOccs M.empty
+gatherInlinable ast = do
+    m <- foldJS (\_ _->True) countOccs (M.empty) ast
+    return (M.filter (< Lots) m)
   where
     updVar (Just occs) = Just (occs+Once)
     updVar _           = Just Once
     updVarAss (Just o) = Just o
     updVarAss _        = Just Never
     countOccs m (Exp (Var v@(Internal _ _))) =
-      pure $ M.alter updVar v m
+      pure (M.alter updVar v m)
     countOccs m (Stm (Assign (NewVar _ v) _ _)) =
-      pure $ M.alter updVarAss v m
+      pure (M.alter updVarAss v m)
     countOccs m _ =
       pure m
 

@@ -277,6 +277,10 @@ isLambda :: ASTNode -> Bool
 isLambda (Exp (Fun _ _ _)) = True
 isLambda _                 = False
 
+isJump :: ASTNode -> Bool
+isJump (Stm (Jump _)) = True
+isJump _              = False
+
 -- | Counts occurrences. Use ints or something for a more exact count.
 data Occs = Never | Once | Lots deriving (Eq, Show)
 
