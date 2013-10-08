@@ -304,7 +304,13 @@ rect (x1, y1) (x2, y2) = path [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)]
 
 -- | Draw a circle shape.
 circle :: Point -> Double -> Shape ()
-circle center radius = arc center radius 0 (2*pi)
+circle (x, y) radius = Shape $ \ctx -> do
+  jsMoveTo ctx (x+radius) y
+  jsArc ctx x y radius 0 twoPi
+
+{-# INLINE twoPi #-}
+twoPi :: Double
+twoPi = 2*pi
 
 -- | Draw an arc. An arc is specified as a drawn portion of an imaginary
 --   circle with a center point, a radius, a starting angle and an ending
