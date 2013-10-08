@@ -20,6 +20,7 @@ optimizeFun f (AST ast js) =
     >>= inlineAssigns True
     >>= optimizeArrays
     >>= inlineReturns
+    >>= zapJSStringConversions
     >>= optimizeThunks
     >>= optimizeArrays
     >>= tailLoopify f
@@ -148,6 +149,24 @@ optimizeArrays ast =
     inlEx (Index (Arr xs) (Lit (LNum n))) =
       return $ xs !! truncate n
     inlEx x =
+      return x
+
+
+-- | Turn toJSStr(unCStr(x)) into x, since rewrite rules absolutely refuse
+--   to work with unpackCString#.
+--   Also turn T(unCStr(x)) into unCStr(x) whenever x is a literal, since
+--   unCStr is evaluated lazily anyway.
+zapJSStringConversions :: JSTrav ast => ast -> TravM ast
+zapJSStringConversions ast =
+    mapJS (const True) opt return ast
+  where
+    opt (Call _ _ (Var (Foreign "toJSStr"))
+       [Call _ _ (Var (Foreign "unCStr")) [x]]) =
+      return x
+    opt (Call _ _ (Var (Foreign "new T"))
+         [Fun _ [] (Return x@(Call _ _ (Var (Foreign "unCStr")) [Lit _]))]) =
+      return x
+    opt x =
       return x
 
 
