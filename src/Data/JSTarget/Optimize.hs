@@ -175,12 +175,15 @@ zapJSStringConversions ast =
 --     => A(f, xs)
 --   E(thunk(return x))
 --     => x
+--   E(\x ... -> ...)
+--     => \x ... -> ...
 optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
   where
-    optEx (Call _ _ (Var (Foreign "E")) [x]) | Just x' <- fromThunkEx x =
-      return x'
+    optEx (Call _ _ (Var (Foreign "E")) [x])
+      | Just x' <- fromThunkEx x = return x'
+      | Fun _ _ _ <- x           = return x
     optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
       return $ Call arity calltype f' args
     optEx ex =
@@ -330,7 +333,7 @@ tailLoopify f fun@(Fun mname args body) = do
       else do
         return fun
   where
-    isTailRec (Stm (Return (Call 0 _ (Var f') _))) = f == f'
+    isTailRec (Stm (Return (Call _ _ (Var f') _))) = f == f'
     isTailRec _                                    = False
     
     -- Only traverse until we find a closure
@@ -339,7 +342,7 @@ tailLoopify f fun@(Fun mname args body) = do
     isClosure acc _               = pure acc
 
     -- Assign any changed vars, then loop.
-    replaceByAssign end as (Return (Call 0 _ (Var f') as')) | f == f' = do
+    replaceByAssign end as (Return (Call _ _ (Var f') as')) | f == f' = do
       let (first, second) = foldr assignUnlessEqual (id, end) (zip as as')
       return $ first second
     replaceByAssign _ _ stm =
