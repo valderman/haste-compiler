@@ -106,6 +106,24 @@ You should also have a look at the documentation and/or source code for
 small programs in the `examples` directory, to get started.
 
 
+Base library and documentation
+------------------------------
+
+It is possible to build Haddock documentation for `haste-lib` using
+`standalone-haddock`:
+
+    cabal install standalone-haddock
+    standalone-haddock --package-db ~/.haste/packages -o doc path/to/fursuit path/to/haste-lib
+
+Since `standalone-haddock` seems to have some trouble with modules exporting
+modules, you may want to comment out the `Other-Modules` line in
+`fursuit.cabal` and `haste-lib.cabal` beforehand, effectively exporting all
+modules in those packages.
+
+Or you could just look at [the online docs](http://ekblad.cc/haste-doc).
+It may or may not be up to date with the current Haste version.
+
+
 Reactive web EDSL
 -----------------
 
