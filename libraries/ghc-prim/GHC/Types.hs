@@ -1,4 +1,4 @@
-{-# LANGUAGE NoImplicitPrelude, TypeFamilies #-}
+{-# LANGUAGE CPP, NoImplicitPrelude, TypeFamilies #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  GHC.Types
@@ -28,7 +28,11 @@ infixr 5 :
 
 data [] a = [] | a : [a]
 
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsBool" #-} Bool = False | True
+#else
+data Bool = False | True
+#endif
 
 {- | The character type 'Char' is an enumeration whose values represent
 Unicode (or equivalently ISO\/IEC 10646) characters (see
@@ -41,25 +45,45 @@ To convert a 'Char' to or from the corresponding 'Int' value defined
 by Unicode, use 'Prelude.toEnum' and 'Prelude.fromEnum' from the
 'Prelude.Enum' class respectively (or equivalently 'ord' and 'chr').
 -}
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsChar" #-} Char = C# Char#
+#else
+data Char = C# Char#
+#endif
 
 -- | A fixed-precision integer type with at least the range @[-2^29 .. 2^29-1]@.
 -- The exact range for a given implementation can be determined by using
 -- 'Prelude.minBound' and 'Prelude.maxBound' from the 'Prelude.Bounded' class.
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsInt" #-} Int = I# Int#
+#else
+data Int = I# Int#
+#endif
 
 -- |A 'Word' is an unsigned integral type, with the same size as 'Int'.
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsWord" #-} Word = W# Word#
+#else
+data Word = W# Word#
+#endif
 
 -- | Single-precision floating point numbers.
 -- It is desirable that this type be at least equal in range and precision
 -- to the IEEE single-precision type.
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsFloat" #-} Float = F# Float#
+#else
+data Float = F# Float#
+#endif
 
 -- | Double-precision floating point numbers.
 -- It is desirable that this type be at least equal in range and precision
 -- to the IEEE double-precision type.
+#if __GLASGOW_HASKELL__ >= 706
 data {-# CTYPE "HsDouble" #-} Double = D# Double#
+#else
+data Double = D# Double#
+#endif
 
 data Ordering = LT | EQ | GT
 
