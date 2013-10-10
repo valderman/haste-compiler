@@ -60,17 +60,6 @@ handy for global installations. To do this, check out the source and run:
     $ cabal configure -f portable-compiler
     $ cabal build
 
-You can also install Haste, its runtime system *and* your package database into
-a single directory, making it completely self-contained. This may be useful if,
-for instance, you want to install Haste to a USB stick. To do this, simply use
-the `portable` flag:
-
-    $ cabal configure -f portable
-    $ cabal build
-
-Haste will be compiled into dist/build/haste-compiler, which can then be
-renamed and moved around however you like.
-
 
 Usage
 -----
