@@ -118,7 +118,7 @@ instance Ord TyCon where
 -- TyCon for a derived Typeable instance will end up being statically
 -- allocated.
 
-#if HASTE_HOST_WORD_SIZE_IN_BITS < 64 && __GLASGOW_HASKELL__ >= 706
+#if HASTE_HOST_WORD_SIZE_IN_BITS < 64
 mkTyCon :: Word64# -> Word64# -> String -> String -> String -> TyCon
 mkTyCon high# low# pkg modl name
   = TyCon (Fingerprint (W64# high#) (W64# low#)) pkg modl name

@@ -16,8 +16,8 @@ data TyCon
 
 #include "MachDeps.h"
 
-#if HASTE_HOST_WORD_SIZE_IN_BITS < 64 && __GLASGOW_HASKELL__ >= 706
-mkTyCon :: a -> a -> String -> String -> String -> TyCon
+#if HASTE_HOST_WORD_SIZE_IN_BITS < 64
+mkTyCon :: Word64# -> Word64# -> String -> String -> String -> TyCon
 #else
 mkTyCon :: Word#   -> Word#   -> String -> String -> String -> TyCon
 #endif
