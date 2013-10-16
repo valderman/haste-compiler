@@ -128,7 +128,7 @@ Reactive web EDSL
 -----------------
 
 Haste comes with a basic, environment for writing client side web applications
-in a reactive fashion. See Fursuit for more information.
+in a reactive fashion. See [Fursuit](https://github.com/valderman/fursuit) for more information.
 
 As the reactive library relies heavily on Applicative, you may find the idiom
 brackets of the Strathclyde Haskell Enhancement
