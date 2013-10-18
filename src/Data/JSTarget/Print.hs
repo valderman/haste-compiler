@@ -213,8 +213,8 @@ opParens Sub a (Lit (LNum n)) | n < 0 =
   opParens Add a (Lit (LNum (-n)))
 opParens Sub (Lit (LNum 0)) b =
   case b of
-    BinOp _ _ _ -> "-(" .+. pp b .+. ")"
-    _           -> "-" .+. pp b
+    BinOp _ _ _ -> " -(" .+. pp b .+. ")"
+    _           -> " -" .+. pp b
 opParens op a b = do
   let bparens = case b of
                   Lit (LNum n) | n < 0 -> \x -> "(".+. pp x .+. ")"
