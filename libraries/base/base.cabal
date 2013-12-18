@@ -186,6 +186,7 @@ Library {
         System.Mem.StableName,
         System.Mem.Weak,
         System.Posix.Types,
+        System.Posix.Internals,
         Text.ParserCombinators.ReadP,
         Text.ParserCombinators.ReadPrec,
         Text.Printf,
