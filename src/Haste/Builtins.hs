@@ -10,7 +10,7 @@ toBuiltin v =
     (Just "GHC.Prim", "coercionToken#") ->
       Just $ foreignVar "coercionToken"
     (Just "GHC.Prim", "realWorld#") ->
-      Just $ foreignVar "realWorld"
+      Just $ foreignVar "_"
     (Just "GHC.Err", "error") ->
       Just $ foreignVar "err"
 
