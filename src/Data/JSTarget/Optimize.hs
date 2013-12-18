@@ -17,7 +17,7 @@ optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ast js) =
   flip runTravM js $ do
     shrinkCase ast
-    >>= inlineAssigns True
+    >>= inlineAssigns
     >>= optimizeArrays
     >>= inlineReturns
     >>= zapJSStringConversions
@@ -29,7 +29,7 @@ optimizeFun f (AST ast js) =
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
   flip runTravM js $ do
-    inlineAssigns False ast
+    inlineAssigns ast
     >>= optimizeArrays
     >>= optimizeThunks
     >>= optimizeArrays
@@ -97,8 +97,8 @@ replaceEx trav old new =
 --   care about the assignment side effect.
 --
 --   TODO: don't inline thunks into functions!
-inlineAssigns :: JSTrav ast => Bool -> ast -> TravM ast
-inlineAssigns blackholeOK ast = do
+inlineAssigns :: JSTrav ast => ast -> TravM ast
+inlineAssigns ast = do
     inlinable <- gatherInlinable ast
     mapJS (const True) return (inl inlinable) ast
   where
@@ -112,9 +112,6 @@ inlineAssigns blackholeOK ast = do
           case M.lookup lhs m of
             Just occ | occ == occursLocal ->
               case occ of
-                -- Never-used symbols don't need assignment.
-                Never | blackholeOK -> do
-                  return (Assign blackHole ex next)
                 -- Inline of any non-lambda value
                 Once | mayReorder -> do
                   replaceEx (not <$> isShared) (Var lhs) ex next
