@@ -19,7 +19,8 @@ cabal args = do
          "--with-hc-pkg=" ++ hastePkgBinary,
          "--with-hsc2hs=hsc2hs",
          "--prefix=" ++ hasteInstDir,
-         "--package-db=" ++ pkgDir]
+         "--package-db=" ++ pkgDir,
+         "-fhaste-inst"]
 
 main :: IO ()
 main = do

@@ -12,6 +12,11 @@ Homepage:       http://github.com/valderman/haste-compiler
 Bug-reports:    http://github.com/valderman/haste-compiler/issues
 Stability:      Experimental
 
+Flag haste-inst {
+    Description: The package is built using haste-inst
+    Default: False
+}
+
 Library
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
@@ -34,11 +39,17 @@ Library
         Haste.Concurrent.Ajax
     Build-Depends:
         integer-gmp,
-        base == 4.6.0.1,
-        array == 0.4.0.1,
         transformers,
         monads-tf,
         ghc-prim,
         fursuit,
         containers
+    if flag(haste-inst)
+        Build-Depends:
+            base == 4.6.0.1,
+            array == 0.4.0.1
+    else
+        Build-Depends:
+            base,
+            array
     Default-Language: Haskell98
