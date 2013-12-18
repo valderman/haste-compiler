@@ -111,7 +111,7 @@ installClosure = do
           putStrLn "Couldn't unpack Closure compiler; continuing without."
   where
     closureURI =
-      "http://closure-compiler.googlecode.com/files/compiler-latest.zip"
+      "http://dl.google.com/closure-compiler/compiler-latest.zip"
 
 -- | Build haste's base libs.
 buildLibs :: IO ()
