@@ -17,7 +17,9 @@
 
 module GHC.IO.Handle.FD ( 
   stdin, stdout, stderr,
-  openFile, openBinaryFile, openFileBlocking, isEOF
+  openFile, openBinaryFile, openFileBlocking,
+  mkHandleFromFD, fdToHandle, fdToHandle',
+  isEOF
  ) where
 
 import GHC.Base
@@ -34,6 +36,7 @@ import GHC.IO.Handle
 import GHC.IO.Handle.Types
 import GHC.IO.Handle.Internals
 import qualified GHC.IO.FD as FD
+import qualified System.Posix.Internals as Posix
 import qualified Haste.Handle
 
 -- ---------------------------------------------------------------------------
@@ -163,3 +166,12 @@ openBinaryFile fp m = error "No file IO! Sorry!"
 
 dEFAULT_OPEN_IN_BINARY_MODE :: Bool
 dEFAULT_OPEN_IN_BINARY_MODE = False
+
+mkHandleFromFD :: FD.FD -> IODeviceType -> FilePath -> IOMode -> Bool -> Maybe TextEncoding -> IO Handle
+mkHandleFromFD = error "mkHandleFromFD not implemented"
+
+fdToHandle' :: CInt -> Maybe IODeviceType -> Bool -> FilePath -> IOMode -> Bool -> IO Handle
+fdToHandle' = error "fdToHandle' not implemented"
+
+fdToHandle :: Posix.FD -> IO Handle
+fdToHandle = error "fdToHandle not implemented"
