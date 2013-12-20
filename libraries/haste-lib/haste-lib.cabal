@@ -28,7 +28,8 @@ Library
         Haste.DOM
         Haste.Prim
         Haste.Concurrent
-        Haste.Graphics.Canvas
+        Haste.Graphics.Canvas,
+        Haste.Foreign
     Other-Modules:
         Haste.JSType
         Haste.Callback

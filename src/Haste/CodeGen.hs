@@ -317,7 +317,7 @@ genResultVar v = (\mn -> toJSVar mn v (Just "#result")) <$> getModName
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
 genVar :: Var.Var -> JSGen Config J.Var
-genVar v = do
+genVar v | hasRepresentation v = do
   case toBuiltin v of
     Just v' -> return v'
     _       -> do
@@ -325,6 +325,8 @@ genVar v = do
       v' <- return $ toJSVar mymod v Nothing
       dependOn v'
       return v'
+genVar _ = do
+  return $ foreignVar "_"
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String
