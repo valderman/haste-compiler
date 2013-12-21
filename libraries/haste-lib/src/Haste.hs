@@ -2,12 +2,14 @@
 module Haste (JSString, JSAny, URL,
               alert, prompt, eval, writeLog, catJSStr, fromJSStr,
               module Haste.JSType, module Haste.DOM,
-              module Haste.Callback, module Haste.Random) where
+              module Haste.Callback, module Haste.Random,
+              module Haste.Foreign) where
 import Haste.Prim
 import Haste.Callback
 import Haste.Random
 import Haste.JSType
 import Haste.DOM
+import Haste.Foreign
 import Control.Monad.IO.Class
 
 foreign import ccall jsAlert  :: JSString -> IO ()
