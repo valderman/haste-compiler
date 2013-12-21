@@ -106,6 +106,22 @@ You should also have a look at the documentation and/or source code for
 small programs in the `examples` directory, to get started.
 
 
+Interfacing with Javascript
+---------------------------
+
+When writing programs you will probably want to use some native Javascript
+in your program; bindings to native libraries, for instance. There are two ways
+of doing this. You can either use the GHC FFI as described in
+`doc/js-externals.txt`, or you can use the Fay-like `ffi` function:
+
+    addTwo :: Int -> Int -> IO Int
+    addTwo = ffi "(function(x, y) {return x + y;})"
+
+The `ffi` function is a little bit safer than the GHC FFI in that it enforces
+some type invariants on values returned from JS, and is more convenient. It is,
+however, quite a bit slower due to its dynamic nature.
+
+
 Base library and documentation
 ------------------------------
 
