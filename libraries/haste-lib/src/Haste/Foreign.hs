@@ -53,13 +53,21 @@ instance Marshal Word32 where
   pack x = convert (unsafePack x :: Double)
 instance Marshal () where
   pack _   = ()
-  unpack _ = case unsafeCoerce (0 :: Int) of Dummy x -> x
+  unpack _ = unpack (0 :: Double)
 instance Marshal String where
   pack = fromJSStr . pack
   unpack = unpack . toJSStr
 instance Marshal Unpacked where
   pack = id
   unpack = id
+instance Marshal Bool where
+  unpack True  = jsTrue
+  unpack False = jsFalse
+  pack x = if pack x > (0 :: Double) then True else False
+
+jsTrue, jsFalse :: Unpacked
+jsTrue = unsafePerformIO $ ffi "true"
+jsFalse = unsafePerformIO $ ffi "false"
 
 class FFI a where
   type T a
