@@ -83,7 +83,7 @@ setProp' e prop val = liftIO $ jsSet e prop val
 
 -- | Set an attribute of the given element.
 setAttr :: MonadIO m => Elem -> PropID -> String -> m ()
-setAttr e prop val = liftIO $ js_setAttr e (toJSStr prop) (toJSStr val)
+setAttr e prop val = liftIO $ jsSetAttr e (toJSStr prop) (toJSStr val)
 
 -- | Get the value property of an element; a handy shortcut.
 getValue :: (MonadIO m, JSType a) => Elem -> m (Maybe a)
@@ -99,7 +99,7 @@ getProp' e prop = liftIO $ jsGet e prop
 
 -- | Get an attribute of an element.
 getAttr :: MonadIO m => Elem -> PropID -> m String
-getAttr e prop = liftIO $ fromJSStr `fmap` js_getAttr e (toJSStr prop)
+getAttr e prop = liftIO $ fromJSStr `fmap` jsGetAttr e (toJSStr prop)
 
 -- | Get a CSS style property of an element.
 getStyle :: MonadIO m => Elem -> PropID -> m String
