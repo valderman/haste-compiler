@@ -2,10 +2,11 @@
 module Haste.DOM (
     Elem (..), PropID, ElemID,
     newElem, newTextElem,
-    elemById, setProp, getProp, setProp', getProp', getValue,
-    withElem, withElems, addChild, addChildBefore, removeChild,
-    clearChildren, getChildBefore, getLastChild, getChildren,
-    setChildren, getStyle, setStyle, getStyle', setStyle'
+    elemById, setProp, getProp, setAttr, getAttr, setProp',
+    getProp', getValue, withElem , withElems, addChild,
+    addChildBefore, removeChild, clearChildren , getChildBefore,
+    getLastChild, getChildren, setChildren , getStyle, setStyle,
+    getStyle', setStyle'
   ) where
 import Haste.Prim
 import Haste.JSType
@@ -18,6 +19,8 @@ type ElemID = String
 
 foreign import ccall jsGet :: Elem -> JSString -> IO JSString
 foreign import ccall jsSet :: Elem -> JSString -> JSString -> IO ()
+foreign import ccall jsGetAttr :: Elem -> JSString -> IO JSString
+foreign import ccall jsSetAttr :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsGetStyle :: Elem -> JSString -> IO JSString
 foreign import ccall jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsFind :: JSString -> IO (Ptr (Maybe Elem))
@@ -78,6 +81,10 @@ setProp e prop val = liftIO $ jsSet e (toJSStr prop) (toJSStr val)
 setProp' :: MonadIO m => Elem -> JSString -> JSString -> m ()
 setProp' e prop val = liftIO $ jsSet e prop val
 
+-- | Set an attribute of the given element.
+setAttr :: MonadIO m => Elem -> PropID -> String -> m ()
+setAttr e prop val = liftIO $ jsSetAttr e (toJSStr prop) (toJSStr val)
+
 -- | Get the value property of an element; a handy shortcut.
 getValue :: (MonadIO m, JSType a) => Elem -> m (Maybe a)
 getValue e = liftIO $ fromJSString `fmap` jsGet e "value"
@@ -89,6 +96,10 @@ getProp e prop = liftIO $ fromJSStr `fmap` jsGet e (toJSStr prop)
 -- | Get a property of an element, JSString edition.
 getProp' :: MonadIO m => Elem -> JSString -> m JSString
 getProp' e prop = liftIO $ jsGet e prop
+
+-- | Get an attribute of an element.
+getAttr :: MonadIO m => Elem -> PropID -> m String
+getAttr e prop = liftIO $ fromJSStr `fmap` jsGetAttr e (toJSStr prop)
 
 -- | Get a CSS style property of an element.
 getStyle :: MonadIO m => Elem -> PropID -> m String
