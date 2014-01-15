@@ -32,6 +32,7 @@ Library
         Haste.Foreign
         Haste.Serialize
         Haste.Parsing
+        Haste.WebSockets
     Other-Modules:
         Haste.JSType
         Haste.Callback
