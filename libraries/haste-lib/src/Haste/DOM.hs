@@ -38,6 +38,8 @@ foreign import ccall jsClearChildren :: Elem -> IO ()
 #else
 jsGet = error "Tried to use jsGet on server side!"
 jsSet = error "Tried to use jsSet on server side!"
+jsGetAttr = error "Tried to use jsGetAttr on server side!"
+jsSetAttr = error "Tried to use jsSetAttr on server side!"
 jsGetStyle = error "Tried to use jsGetStyle on server side!"
 jsSetStyle = error "Tried to use jsSetStyle on server side!"
 jsFind = error "Tried to use jsFind on server side!"
