@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, GADTs,
-             FlexibleInstances, OverloadedStrings #-}
+             FlexibleInstances, OverloadedStrings, CPP #-}
 module Haste.Callback (
     setCallback, setCallback', JSFun (..), mkCallback, Event (..),
     setTimeout, setTimeout', Callback (..), onEvent, onEvent'
@@ -12,8 +12,15 @@ import Control.Monad.IO.Class
 
 newtype JSFun a = JSFun (Ptr a)
 
+#ifdef __HASTE__
 foreign import ccall jsSetCB :: Elem -> JSString -> JSFun a -> IO Bool
 foreign import ccall jsSetTimeout :: Int -> JSFun a -> IO ()
+#else
+jsSetCB :: Elem -> JSString -> JSFun a -> IO Bool
+jsSetCB = error "Tried to use jsSetCB on server side!"
+jsSetTimeout :: Int -> JSFun a -> IO ()
+jsSetTimeout = error "Tried to use jsSetTimeout on server side!"
+#endif
 
 -- | Turn a computation into a callback that can be passed to a JS
 --   function.

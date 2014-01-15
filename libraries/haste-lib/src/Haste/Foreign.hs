@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeSynonymInstances,
-             FlexibleInstances, TypeFamilies #-}
+             FlexibleInstances, TypeFamilies, CPP #-}
 -- | Create functions on the fly from JS strings.
 --   Slower but more flexible alternative to the standard FFI.
 module Haste.Foreign (FFI, Marshal (..), Unpacked, ffi) where
@@ -10,8 +10,15 @@ import Data.Int
 import System.IO.Unsafe
 import Unsafe.Coerce
 
+#ifdef __HASTE__
 foreign import ccall eval :: JSString -> IO (Ptr a)
 foreign import ccall "String" jsString :: Double -> JSString
+#else
+eval :: JSString -> IO (Ptr a)
+eval = error "Tried to use eval on server side!"
+jsString :: Double -> JSString
+jsString = error "Tried to use jsString on server side!"
+#endif
 
 -- | Opaque type representing a raw, unpacked JS value. The constructors have
 --   no meaning, but are only there to make sure GHC doesn't optimize the low

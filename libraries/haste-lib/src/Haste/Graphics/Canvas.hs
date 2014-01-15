@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings,
-             TypeSynonymInstances, FlexibleInstances, GADTs #-}
+             TypeSynonymInstances, FlexibleInstances, GADTs, CPP #-}
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
   -- Types
@@ -30,6 +30,7 @@ import Haste
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
 import Haste.DOM
 
+#ifdef __HASTE__
 foreign import ccall jsHasCtx2D :: Elem -> IO Bool
 foreign import ccall jsGetCtx2D :: Elem -> IO Ctx
 foreign import ccall jsBeginPath :: Ctx -> IO ()
@@ -56,6 +57,27 @@ foreign import ccall jsArc :: Ctx
                            -> Double -> Double
                            -> IO ()
 foreign import ccall jsCanvasToDataURL :: Elem -> IO JSString
+#else
+jsHasCtx2D = error "Tried to use Canvas in native code!"
+jsGetCtx2D = error "Tried to use Canvas in native code!"
+jsBeginPath = error "Tried to use Canvas in native code!"
+jsMoveTo = error "Tried to use Canvas in native code!"
+jsLineTo = error "Tried to use Canvas in native code!"
+jsStroke = error "Tried to use Canvas in native code!"
+jsFill = error "Tried to use Canvas in native code!"
+jsRotate = error "Tried to use Canvas in native code!"
+jsTranslate = error "Tried to use Canvas in native code!"
+jsScale = error "Tried to use Canvas in native code!"
+jsPushState = error "Tried to use Canvas in native code!"
+jsPopState = error "Tried to use Canvas in native code!"
+jsResetCanvas = error "Tried to use Canvas in native code!"
+jsDrawImage = error "Tried to use Canvas in native code!"
+jsDrawImageClipped = error "Tried to use Canvas in native code!"
+jsDrawText = error "Tried to use Canvas in native code!"
+jsClip = error "Tried to use Canvas in native code!"
+jsArc = error "Tried to use Canvas in native code!"
+jsCanvasToDataURL = error "Tried to use Canvas in native code!"
+#endif
 
 newtype Bitmap = Bitmap Elem
 

@@ -1,22 +1,26 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
-    TypeSynonymInstances, FlexibleInstances, OverlappingInstances #-}
+    TypeSynonymInstances, FlexibleInstances, OverlappingInstances, CPP #-}
 module Haste.Prim (JSString, toJSStr, fromJSStr, JSAny,
                    Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
 import Unsafe.Coerce
 import GHC.CString
 import GHC.Prim
-import qualified GHC.HastePrim as HP
 import Data.String
+#ifdef __HASTE__
+import qualified GHC.HastePrim as HP
+#endif
 
+type JSAny = Ptr Haste.Prim.Any
+data Any
+
+#ifdef __HASTE__
 foreign import ccall strEq :: JSString -> JSString -> Bool
 foreign import ccall strOrd :: JSString -> JSString -> Ptr Ordering
 
 -- | "Pointers" need to be wrapped in a data constructor.
 data FakePtr a = FakePtr a
 
-type JSAny = Ptr Haste.Prim.Any
-data Any
 type JSString = Ptr JSChr
 data JSChr
 
@@ -54,3 +58,35 @@ instance IsString JSString where
 
 fromJSStr :: JSString -> String
 fromJSStr = unsafeCoerce# HP.fromJSStr
+
+#else
+
+-- | JSStrings are represented as normal strings server-side; should probably
+--   be changed to ByteString or Text.
+newtype JSString = JSString String
+
+instance IsString JSString where
+  fromString = JSString
+
+instance Eq JSString where
+  (JSString a) == (JSString b) = a == b
+
+instance Ord JSString where
+  (JSString a) `compare` (JSString b) = a `compare` b
+
+instance Show JSString where
+  show = fromJSStr
+
+toJSStr :: String -> JSString
+toJSStr = JSString
+
+fromJSStr :: JSString -> String
+fromJSStr (JSString s) = s
+
+toPtr :: a -> Ptr a
+toPtr = error "toPtr used in native code!"
+
+fromPtr :: Ptr a -> a
+fromPtr = error "fromPtr used in native code!"
+
+#endif

@@ -30,6 +30,8 @@ Library
         Haste.Concurrent
         Haste.Graphics.Canvas,
         Haste.Foreign
+        Haste.Serialize
+        Haste.Parsing
     Other-Modules:
         Haste.JSType
         Haste.Callback
@@ -52,5 +54,6 @@ Library
     else
         Build-Depends:
             base,
-            array
+            array,
+            random
     Default-Language: Haskell98

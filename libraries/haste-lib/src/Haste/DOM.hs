@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
+{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, CPP #-}
 module Haste.DOM (
     Elem (..), PropID, ElemID,
     newElem, newTextElem,
@@ -17,6 +17,7 @@ newtype Elem = Elem JSAny
 type PropID = String
 type ElemID = String
 
+#ifdef __HASTE__
 foreign import ccall jsGet :: Elem -> JSString -> IO JSString
 foreign import ccall jsSet :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsGetAttr :: Elem -> JSString -> IO JSString
@@ -34,6 +35,23 @@ foreign import ccall jsAddChildBefore :: Elem -> Elem -> Elem -> IO ()
 foreign import ccall jsGetChildBefore :: Elem -> IO (Ptr (Maybe Elem))
 foreign import ccall jsKillChild :: Elem -> Elem -> IO ()
 foreign import ccall jsClearChildren :: Elem -> IO ()
+#else
+jsGet = error "Tried to use jsGet on server side!"
+jsSet = error "Tried to use jsSet on server side!"
+jsGetStyle = error "Tried to use jsGetStyle on server side!"
+jsSetStyle = error "Tried to use jsSetStyle on server side!"
+jsFind = error "Tried to use jsFind on server side!"
+jsCreateElem = error "Tried to use jsCreateElem on server side!"
+jsCreateTextNode = error "Tried to use jsCreateTextNode on server side!"
+jsAppendChild = error "Tried to use jsAppendChild on server side!"
+jsGetLastChild = error "Tried to use jsGetLastChild on server side!"
+jsGetChildren = error "Tried to use jsGetChildren on server side!"
+jsSetChildren = error "Tried to use jsSetChildren on server side!"
+jsAddChildBefore = error "Tried to use jsAddChildBefore on server side!"
+jsGetChildBefore = error "Tried to use jsGetChildBefore on server side!"
+jsKillChild = error "Tried to use jsKillChild on server side!"
+jsClearChildren = error "Tried to use jsClearChildren on server side!"
+#endif
 
 -- | Append the first element as a child of the second element.
 addChild :: MonadIO m => Elem -> Elem -> m ()

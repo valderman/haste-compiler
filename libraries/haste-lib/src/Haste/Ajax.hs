@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
+{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, CPP #-}
 -- | Low level XMLHttpRequest support. IE6 and older are not supported.
 module Haste.Ajax (Method (..), URL, Key, Val, textRequest, textRequest_,
                    jsonRequest, jsonRequest_) where
@@ -6,12 +6,17 @@ import Haste
 import Haste.JSON
 import Control.Monad.IO.Class
 
+#ifdef __HASTE__
 foreign import ccall ajaxReq :: JSString    -- method
                              -> JSString    -- url
                              -> Bool        -- async?
                              -> JSString    -- POST data
                              -> JSFun (Maybe JSString -> IO ())
                              -> IO ()
+#else
+ajaxReq :: JSString -> JSString -> Bool -> JSString -> JSFun (Maybe JSString -> IO ()) -> IO ()
+ajaxReq = error "Tried to use ajaxReq in native code!"
+#endif
 
 data Method = GET | POST deriving Show
 type Key = String

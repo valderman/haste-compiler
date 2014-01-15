@@ -1,12 +1,20 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE ForeignFunctionInterface, CPP #-}
 module Haste.Random (Random (..), Seed, next, mkSeed, newSeed) where
 import Haste.JSType
 import Data.Int
 import Data.Word
 import Data.List (unfoldr)
 import Control.Monad.IO.Class
+#ifndef __HASTE__
+import System.Random (randomIO)
+#endif
 
+#ifdef __HASTE__
 foreign import ccall jsRand :: IO Double
+#else
+jsRand :: IO Double
+jsRand = randomIO
+#endif
 
 newtype Seed = Seed Int
 
