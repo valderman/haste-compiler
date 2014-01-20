@@ -125,16 +125,8 @@ however, quite a bit slower due to its dynamic nature.
 Base library and documentation
 ------------------------------
 
-It is possible to build Haddock documentation for `haste-lib` using
-`standalone-haddock`:
-
-    cabal install standalone-haddock
-    standalone-haddock --package-db ~/.haste/packages -o doc path/to/fursuit path/to/haste-lib
-
-Since `standalone-haddock` seems to have some trouble with modules exporting
-modules, you may want to comment out the `Other-Modules` line in
-`fursuit.cabal` and `haste-lib.cabal` beforehand, effectively exporting all
-modules in those packages.
+You can build your own set of docs for haste-lib and fursuit by running
+`cabal haddock` in their respective directories as with any other package.
 
 Or you could just look at [the online docs](http://ekblad.cc/haste-doc).
 It may or may not be up to date with the current Haste version.
