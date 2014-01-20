@@ -469,7 +469,7 @@ genLit l = do
       | w > 0xffffffff  -> do warn Verbose (constFail "Word" w)
                               return $ truncWord w
       | otherwise       -> return . litN $ fromIntegral w
-    MachWord64 w        -> return . litN $ fromIntegral w
+    MachWord64 w        -> return $ word64 w
     MachNullAddr        -> return $ litN 0
     MachInt64 n         -> return $ int64 n
     LitInteger n _      -> return $ lit n
@@ -480,6 +480,10 @@ genLit l = do
     truncInt n  = litN . fromIntegral $ (fromIntegral n :: Int32)
     truncWord w = litN . fromIntegral $ (fromIntegral w :: Word32)
     int64 n = callForeign "new Long" [lit lo, lit hi]
+      where
+        lo = n .&. 0xffffffff
+        hi = n `shiftR` 32
+    word64 n = callForeign "I_fromBits" [array [lit lo, lit hi]]
       where
         lo = n .&. 0xffffffff
         hi = n `shiftR` 32
