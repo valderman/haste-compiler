@@ -144,7 +144,7 @@ foreign import prim "I_complement" complementInteger#
 foreign import prim "I_fromInt64" int64ToInteger#
   :: Int64# -> ByteArray#
 
-foreign import prim "I_fromInt64" word64ToInteger#
+foreign import prim "I_fromWord64" word64ToInteger#
   :: Word64# -> ByteArray#
 
 foreign import prim "I_toInt64"

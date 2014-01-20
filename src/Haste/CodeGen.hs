@@ -4,6 +4,7 @@ module Haste.CodeGen (generate) where
 import Control.Applicative
 import Control.Monad
 import Data.Int
+import Data.Bits
 import Data.Word
 import Data.Char
 import Data.List (partition, foldl')
@@ -29,7 +30,7 @@ import TysPrim
 import TyCon
 import BasicTypes
 -- AST stuff
-import Data.JSTarget as J
+import Data.JSTarget as J hiding ((.&.))
 import Data.JSTarget.AST (Exp (..), Stm (..), LHS (..))
 -- General Haste stuff
 import Haste.Config
@@ -108,13 +109,26 @@ genEx (StgApp f xs) = do
 genEx (StgLit l) = do
   genLit l
 genEx (StgConApp con args) = do
-  (tag, stricts) <- genDataCon con
-  (args', stricts') <- genArgsPair $ zip args stricts
-  -- Don't create unboxed tuples with a single element.
-  case (isUnboxedTupleCon con, args') of
-    (True, [arg]) -> return $ evaluate arg (head stricts')
-    _             -> mkCon tag args' stricts'
+  -- On 64 bit machines, GHC constructs small integers from Ints rather than
+  -- Int64, so we need to deal with it or be unable to reliably create Int64
+  -- or Integer values.
+  case (dataConNameModule con, args) of
+    (("S#", "GHC.Integer.Type"), [StgLitArg (MachInt n)]) | tooLarge n -> do
+      return $ mkInteger n
+    _ -> do
+      (tag, stricts) <- genDataCon con
+      (args', stricts') <- genArgsPair $ zip args stricts
+      -- Don't create unboxed tuples with a single element.
+      case (isUnboxedTupleCon con, args') of
+        (True, [arg]) -> return $ evaluate arg (head stricts')
+        _             -> mkCon tag args' stricts'
   where
+    mkInteger n =
+        array [litN 1, callForeign "I_fromBits" [array [lit lo, lit hi]]]
+      where
+        lo = n .&. 0xffffffff
+        hi = n `shiftR` 32
+    tooLarge n = n > 2147483647 || n < -2147483648
     -- Always inline bools
     mkCon l _ _ | isEnumerationDataCon con = return l
     mkCon tag as ss = return $ array (tag : zipWith evaluate as ss)
@@ -424,14 +438,19 @@ genDataCon dc = do
 --   IMPORTANT: remember to update the RTS if any changes are made to the
 --              constructor tag values!
 genDataConTag :: DataCon -> AST Exp
-genDataConTag d = do
-  let n = occNameString $ nameOccName $ dataConName d
-      m = moduleNameString $ moduleName $ nameModule $ dataConName d
-  case (n, m) of
+genDataConTag d =
+  case dataConNameModule d of
     ("True", "GHC.Types")  -> lit True
     ("False", "GHC.Types") -> lit False
     _                      ->
       lit (fromIntegral (dataConTag d - fIRST_TAG) :: Double)
+
+-- | Get the name and module of the given data constructor.
+dataConNameModule :: DataCon -> (String, String)
+dataConNameModule d =
+  (occNameString $ nameOccName $ dataConName d,
+   moduleNameString $ moduleName $ nameModule $ dataConName d)
+
 
 -- | Generate literals.
 genLit :: L.Literal -> JSGen Config (AST Exp)
@@ -452,14 +471,18 @@ genLit l = do
       | otherwise       -> return . litN $ fromIntegral w
     MachWord64 w        -> return . litN $ fromIntegral w
     MachNullAddr        -> return $ litN 0
-    MachInt64 n         -> return . litN $ fromIntegral n
-    LitInteger n _      -> return . lit  $ n
+    MachInt64 n         -> return $ int64 n
+    LitInteger n _      -> return $ lit n
     MachLabel _ _ _     -> return $ lit ":(" -- Labels point to machine code - ignore!
   where
     constFail t n = t ++ " literal " ++ show n ++ " doesn't fit in 32 bits;"
                     ++ " truncating!"
     truncInt n  = litN . fromIntegral $ (fromIntegral n :: Int32)
     truncWord w = litN . fromIntegral $ (fromIntegral w :: Word32)
+    int64 n = callForeign "new Long" [lit lo, lit hi]
+      where
+        lo = n .&. 0xffffffff
+        hi = n `shiftR` 32
 
 -- | Generate a function application.
 genApp :: Var.Var -> [StgArg] -> JSGen Config (AST Exp)

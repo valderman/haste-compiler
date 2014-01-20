@@ -26,6 +26,7 @@ Data-Files:
     MVar.js
     StableName.js
     Integer.js
+    Int64.js
     md5.js
     array.js
     pointers.js
