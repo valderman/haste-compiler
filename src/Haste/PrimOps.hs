@@ -298,6 +298,7 @@ genOp cfg op xs =
     MaskStatus              -> Right $ litN 0
 
     -- Misc. ops
+    PopCntOp       -> Right $ callForeign "popCnt" [head xs]
     DelayOp        -> Right $ defState
     SeqOp          -> Right $ callForeign "E" [head xs]
     AtomicallyOp   -> Right $ callSaturated (xs !! 0) []
