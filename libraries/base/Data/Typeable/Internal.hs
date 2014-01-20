@@ -74,6 +74,7 @@ import GHC.Ptr          ( Ptr, FunPtr )
 import GHC.Stable
 import GHC.Arr          ( Array, STArray )
 import Data.Int
+import GHC.IntWord64 (wordToWord64#)
 
 import GHC.Fingerprint.Type
 import {-# SOURCE #-} GHC.Fingerprint
@@ -128,7 +129,7 @@ mkTyCon high# low# pkg modl name
   = TyCon (Fingerprint (mkw64# high#) (mkw64# low#)) pkg modl name
 
 mkw64# :: Word# -> Word64
-mkw64# w = W64# (unsafeCoerce# w)
+mkw64# w = W64# (wordToWord64# w)
 #endif
 
 -- | Applies a type constructor to a sequence of types
