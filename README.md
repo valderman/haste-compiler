@@ -190,8 +190,6 @@ replacement for GHC that generates relatively lean code.
 Known issues
 ------------
 
-* No 64-bit math yet. Use `Integer` if you need large integers.
-
 * Not all GHC primops are implemented; if you encounter an unimplemented
   primop, I'd be happy if you'd report it together with a small test case that
   demonstrates the problem.
