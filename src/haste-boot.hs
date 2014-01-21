@@ -35,7 +35,8 @@ downloadFile f = do
 data Cfg = Cfg {
     getLibs      :: Bool,
     getClosure   :: Bool,
-    useLocalLibs :: Bool
+    useLocalLibs :: Bool,
+    tracePrimops :: Bool
   }
 
 main :: IO ()
@@ -51,10 +52,12 @@ main = do
                      then False
                      else forceBoot || needsReboot
       local     = elem "--local" args
+      trace     = elem "--trace-primops" args
       cfg = Cfg {
           getLibs      = libs,
           getClosure   = closure,
-          useLocalLibs = local
+          useLocalLibs = local,
+          tracePrimops = trace
         }
 
   when (needsReboot || forceBoot) $ do
@@ -74,7 +77,7 @@ bootHaste cfg tmpdir = do
     when exists $ removeDirectoryRecursive jsmodDir
     exists <- doesDirectoryExist pkgDir
     when exists $ removeDirectoryRecursive pkgDir
-    buildLibs
+    buildLibs cfg
   when (getClosure cfg) $ do
     installClosure
   Prelude.writeFile bootFile (show bootVersion)
@@ -114,8 +117,8 @@ installClosure = do
       "http://dl.google.com/closure-compiler/compiler-latest.zip"
 
 -- | Build haste's base libs.
-buildLibs :: IO ()
-buildLibs = do
+buildLibs :: Cfg -> IO ()
+buildLibs cfg = do
     res <- shell $ do
       -- Set up dirs and copy includes
       mkdir True $ pkgLibDir
@@ -126,14 +129,14 @@ buildLibs = do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
           hasteInst ["configure"]
-          hasteInst ["build", "--install-jsmods", ghcOpts]
+          hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
           run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
           run_ hastePkgBinary ["update", "packageconfig"] ""
         
         -- Install integer-gmp; double install shouldn't be needed anymore.
         run_ hasteCopyPkgBinary ["Cabal"] ""
         inDirectory "integer-gmp" $ do
-          hasteInst ["install", ghcOpts]
+          hasteInst ("install" : ghcOpts)
         
         -- Install base
         inDirectory "base" $ do
@@ -144,7 +147,7 @@ buildLibs = do
             . filter (and . zipWith (==) "version")
             . lines
           hasteInst ["configure"]
-          hasteInst ["build", "--install-jsmods", ghcOpts]
+          hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
           let base = "base-" ++ basever
               pkgdb = "--package-db=dist" </> "package.conf.inplace"
           run_ hasteInstHisBinary [base, "dist" </> "build"] ""
@@ -152,12 +155,14 @@ buildLibs = do
         
         -- Install array, fursuit and haste-lib
         forM_ ["array", "fursuit", "haste-lib"] $ \pkg -> do
-          inDirectory pkg $ hasteInst ["install"]
+          inDirectory pkg $ hasteInst ("install" : ghcOpts)
     case res of
       Left err -> error err
       _        -> return ()
   where
-    ghcOpts =
-      "--ghc-options=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize
+    ghcOpts = [
+        if tracePrimops cfg then "--ghc-option=-debug" else "",
+        "--ghc-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize
+      ]
     hasteInst args =
       run_ hasteInstBinary ("--unbooted" : args) ""

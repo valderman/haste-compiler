@@ -83,8 +83,7 @@ argSpecs = [
     ArgSpec { optName = "trace-primops",
               updateCfg = \cfg _ -> cfg {tracePrimops = True,
                                          rtsLibs = debugLib : rtsLibs cfg},
-              info = "Turn on run-time tracing of primops. Also turned on by "
-                   ++ "-debug."},
+              info = "Turn on run-time tracing of primops."},
     ArgSpec { optName = "verbose",
               updateCfg = \cfg _ -> cfg {verbose = True},
               info = "Display even the most obnoxious warnings."},
