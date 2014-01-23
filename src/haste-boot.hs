@@ -160,9 +160,9 @@ buildLibs cfg = do
       Left err -> error err
       _        -> return ()
   where
-    ghcOpts = [
-        if tracePrimops cfg then "--ghc-option=-debug" else "",
-        "--ghc-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize
+    ghcOpts = concat [
+        if tracePrimops cfg then ["--ghc-option=-debug"] else [],
+        ["--ghc-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
       ]
     hasteInst args =
       run_ hasteInstBinary ("--unbooted" : args) ""
