@@ -57,7 +57,6 @@ Executable haste-boot
     Other-Modules:
         Haste.Version
         Haste.Environment
-        Control.Shell
     Hs-Source-Dirs: src
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
@@ -78,7 +77,8 @@ Executable haste-boot
         transformers,
         network,
         HTTP,
-        executable-path
+        executable-path,
+        shellmate
     Default-Language: Haskell98
 
 Executable hastec
@@ -183,7 +183,6 @@ Executable haste-copy-pkg
     Main-Is: haste-copy-pkg.hs
     Other-Modules:
         Haste.Environment
-        Control.Shell
     Hs-Source-Dirs: src
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
@@ -197,5 +196,6 @@ Executable haste-copy-pkg
         temporary,
         time,
         transformers,
-        executable-path
+        executable-path,
+        shellmate
     default-language: Haskell98
