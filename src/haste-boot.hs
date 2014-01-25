@@ -10,17 +10,18 @@ import Data.Maybe (fromJust)
 import Codec.Compression.BZip
 import Codec.Archive.Tar
 import System.Environment (getArgs)
-import System.IO.Temp
+import System.Exit
 import Control.Monad
 import qualified Codec.Archive.Zip as Zip
 import Haste.Environment
 import Haste.Version
 import Control.Shell
 import Data.Char (isDigit)
+import Control.Monad.IO.Class (liftIO)
 
-downloadFile :: String -> IO (Either String BS.ByteString)
+downloadFile :: String -> Shell BS.ByteString
 downloadFile f = do
-  (_, rsp) <- Network.Browser.browse $ do
+  (_, rsp) <- liftIO $ Network.Browser.browse $ do
     setAllowRedirects True
     request $ Request {
         rqURI = fromJust $ parseURI f,
@@ -29,8 +30,8 @@ downloadFile f = do
         rqBody = BS.empty
       }
   case rspCode rsp of 
-    (2, _, _) -> return $ Right $ rspBody rsp
-    _         -> return $ Left $ rspReason rsp
+    (2, _, _) -> return $ rspBody rsp
+    _         -> fail $ "Failed to download " ++ f ++ ": " ++ rspReason rsp
 
 data Cfg = Cfg {
     getLibs      :: Bool,
@@ -61,104 +62,96 @@ main = do
         }
 
   when (needsReboot || forceBoot) $ do
-    if local
-      then bootHaste cfg "."
-      else withSystemTempDirectory "haste" $ bootHaste cfg
+    res <- shell $ if local
+                     then bootHaste cfg "."
+                     else withTempDirectory "haste" $ bootHaste cfg
+    case res of
+      Right _  -> return ()
+      Left err -> putStrLn err >> exitFailure
 
-bootHaste :: Cfg -> FilePath -> IO ()
-bootHaste cfg tmpdir = do
-  setCurrentDirectory tmpdir
+bootHaste :: Cfg -> FilePath -> Shell ()
+bootHaste cfg tmpdir = inDirectory tmpdir $ do
   when (getLibs cfg) $ do
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
-    exists <- doesDirectoryExist hasteInstDir
-    when exists $ removeDirectoryRecursive hasteInstDir
-    exists <- doesDirectoryExist jsmodDir
-    when exists $ removeDirectoryRecursive jsmodDir
-    exists <- doesDirectoryExist pkgDir
-    when exists $ removeDirectoryRecursive pkgDir
+    exists <- isDirectory hasteInstDir
+    when exists $ rmdir hasteInstDir
+    exists <- isDirectory jsmodDir
+    when exists $ rmdir jsmodDir
+    exists <- isDirectory pkgDir
+    when exists $ rmdir pkgDir
     buildLibs cfg
   when (getClosure cfg) $ do
     installClosure
-  Prelude.writeFile bootFile (show bootVersion)
+  file bootFile (show bootVersion)
 
 -- | Fetch the Haste base libs.
-fetchLibs :: FilePath -> IO ()
+fetchLibs :: FilePath -> Shell ()
 fetchLibs tmpdir = do
-    putStrLn "Downloading base libs from ekblad.cc"
-    res <- downloadFile $ mkUrl hasteVersion
-    case res of
-      Left err ->
-        error $ "Unable to download base libs: " ++ err
-      Right f ->
-        unpack tmpdir . read . decompress $ f
+    echo "Downloading base libs from ekblad.cc"
+    file <- downloadFile $ mkUrl hasteVersion
+    liftIO . unpack tmpdir . read . decompress $ file
   where
     mkUrl v =
       "http://ekblad.cc/haste-libs/haste-libs-" ++ showVersion v ++ ".tar.bz2"
 
 -- | Fetch and install the Closure compiler.
-installClosure :: IO ()
+installClosure :: Shell ()
 installClosure = do
-  putStrLn "Downloading Google Closure compiler..."
-  closure <- downloadFile closureURI
-  case closure of
-    Left _ ->
-      putStrLn "Couldn't download Closure compiler; continuing without."
-    Right closure' -> do
-      let cloArch = Zip.toArchive closure'
+    echo "Downloading Google Closure compiler..."
+    downloadAndUnpackClosure `orElse` do
+      echo "Couldn't install Closure compiler; continuing without."
+  where
+    downloadAndUnpackClosure = do
+      file <- downloadFile closureURI
+      let cloArch = Zip.toArchive file
       case Zip.findEntryByPath "compiler.jar" cloArch of
         Just compiler ->
-          BS.writeFile closureCompiler
-                       (Zip.fromEntry compiler)
+          liftIO $ BS.writeFile closureCompiler (Zip.fromEntry compiler)
         _ ->
-          putStrLn "Couldn't unpack Closure compiler; continuing without."
-  where
+          fail "Unable to unpack Closure compiler"
     closureURI =
       "http://dl.google.com/closure-compiler/compiler-latest.zip"
 
 -- | Build haste's base libs.
-buildLibs :: Cfg -> IO ()
+buildLibs :: Cfg -> Shell ()
 buildLibs cfg = do
-    res <- shell $ do
-      -- Set up dirs and copy includes
-      mkdir True $ pkgLibDir
-      cpDir "include" hasteDir
-      run_ hastePkgBinary ["update", "libraries" </> "rts.pkg"] ""
+    -- Set up dirs and copy includes
+    mkdir True $ pkgLibDir
+    cpDir "include" hasteDir
+    run_ hastePkgBinary ["update", "libraries" </> "rts.pkg"] ""
+    
+    inDirectory "libraries" $ do
+      -- Install ghc-prim
+      inDirectory "ghc-prim" $ do
+        hasteInst ["configure"]
+        hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
+        run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
+        run_ hastePkgBinary ["update", "packageconfig"] ""
       
-      inDirectory "libraries" $ do
-        -- Install ghc-prim
-        inDirectory "ghc-prim" $ do
-          hasteInst ["configure"]
-          hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
-          run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
-          run_ hastePkgBinary ["update", "packageconfig"] ""
-        
-        -- Install integer-gmp; double install shouldn't be needed anymore.
-        run_ hasteCopyPkgBinary ["Cabal"] ""
-        inDirectory "integer-gmp" $ do
-          hasteInst ("install" : ghcOpts)
-        
-        -- Install base
-        inDirectory "base" $ do
-          basever <- file "base.cabal" >>= return
-            . dropWhile (not . isDigit)
-            . head
-            . filter (not . null)
-            . filter (and . zipWith (==) "version")
-            . lines
-          hasteInst ["configure"]
-          hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
-          let base = "base-" ++ basever
-              pkgdb = "--package-db=dist" </> "package.conf.inplace"
-          run_ hasteInstHisBinary [base, "dist" </> "build"] ""
-          run_ hasteCopyPkgBinary [base, pkgdb] ""
-        
-        -- Install array, fursuit and haste-lib
-        forM_ ["array", "fursuit", "haste-lib"] $ \pkg -> do
-          inDirectory pkg $ hasteInst ("install" : ghcOpts)
-    case res of
-      Left err -> error err
-      _        -> return ()
+      -- Install integer-gmp; double install shouldn't be needed anymore.
+      run_ hasteCopyPkgBinary ["Cabal"] ""
+      inDirectory "integer-gmp" $ do
+        hasteInst ("install" : ghcOpts)
+      
+      -- Install base
+      inDirectory "base" $ do
+        basever <- file "base.cabal" >>= return
+          . dropWhile (not . isDigit)
+          . head
+          . filter (not . null)
+          . filter (and . zipWith (==) "version")
+          . lines
+        hasteInst ["configure"]
+        hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
+        let base = "base-" ++ basever
+            pkgdb = "--package-db=dist" </> "package.conf.inplace"
+        run_ hasteInstHisBinary [base, "dist" </> "build"] ""
+        run_ hasteCopyPkgBinary [base, pkgdb] ""
+      
+      -- Install array, fursuit and haste-lib
+      forM_ ["array", "fursuit", "haste-lib"] $ \pkg -> do
+        inDirectory pkg $ hasteInst ("install" : ghcOpts)
   where
     ghcOpts = concat [
         if tracePrimops cfg then ["--ghc-option=-debug"] else [],
