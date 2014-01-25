@@ -11,6 +11,7 @@ import Data.Bits (bitSize)
 import Foreign.C.Types (CIntPtr)
 import System.Environment.Executable
 import System.Directory
+import System.Exit
 import Paths_haste_compiler
 
 -- | The directory where the currently residing binary lives.
@@ -58,12 +59,15 @@ hostWordSize = bitSize (undefined :: CIntPtr)
 pkgLibDir :: FilePath
 pkgLibDir = hasteInstDir </> "lib"
 
--- | Run a process and wait for its completion.
+-- | Run a process and wait for its completion. Terminate with an error code
+--   if the process did not exit cleanly.
 runAndWait :: FilePath -> [String] -> Maybe FilePath -> IO ()
 runAndWait file args workDir = do
   h <- runProcess file args workDir Nothing Nothing Nothing Nothing
-  _ <- waitForProcess h
-  return ()
+  ec <- waitForProcess h
+  case ec of
+    ExitFailure _ -> exitFailure
+    _             -> return ()
 
 {-
 -- | Find an executable.
