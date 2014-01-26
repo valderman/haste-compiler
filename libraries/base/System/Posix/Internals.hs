@@ -382,9 +382,10 @@ s_issock _ = False
 #endif
 
 foreign import ccall unsafe "__hscore_bufsiz"  dEFAULT_BUFFER_SIZE :: Int
-foreign import capi  unsafe "stdio.h value SEEK_CUR" sEEK_CUR :: CInt
-foreign import capi  unsafe "stdio.h value SEEK_SET" sEEK_SET :: CInt
-foreign import capi  unsafe "stdio.h value SEEK_END" sEEK_END :: CInt
+sEEK_CUR, sEEK_SET, sEEK_END :: CInt
+sEEK_CUR = 0
+sEEK_SET = 1
+sEEK_END = 2
 
 {-
 Note: CSsize
