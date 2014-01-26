@@ -78,7 +78,7 @@ Executable haste-boot
         network,
         HTTP,
         executable-path,
-        shellmate
+        shellmate >= 0.1.1
     Default-Language: Haskell98
 
 Executable hastec
