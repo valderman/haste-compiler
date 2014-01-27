@@ -8,6 +8,7 @@ module Haste.Concurrent.Monad (
 import Control.Monad.IO.Class
 import Control.Monad.Cont.Class
 import Control.Monad
+import Control.Applicative
 import Data.IORef
 
 -- | Embed concurrent computations into non-concurrent ones.
@@ -44,6 +45,15 @@ newtype CIO a = C {unC :: (a -> Action) -> Action}
 instance Monad CIO where
   return x    = C $ \next -> next x
   (C m) >>= f = C $ \b -> m (\a -> unC (f a) b)
+
+instance Functor CIO where
+  fmap f m = do
+    x <- m
+    return $ f x
+
+instance Applicative CIO where
+  (<*>) = ap
+  pure  = return
 
 instance MonadIO CIO where
   liftIO m = C $ \next -> Atom (fmap next m)
