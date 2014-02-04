@@ -2,7 +2,7 @@
              FlexibleInstances, TypeFamilies, CPP #-}
 -- | Create functions on the fly from JS strings.
 --   Slower but more flexible alternative to the standard FFI.
-module Haste.Foreign (FFI, Marshal (..), Unpacked, ffi) where
+module Haste.Foreign (FFI, Marshal (..), Unpacked, ffi, export) where
 import Haste.Prim
 import Haste.JSType
 import Data.Word
@@ -79,14 +79,20 @@ jsFalse = unsafePerformIO $ ffi "false"
 class FFI a where
   type T a
   unpackify :: T a -> a
+  -- | TODO: although the @export@ function, which is the only user-visible
+  --         interface to @packify@, is type safe, the function itself is not.
+  --         This should be fixed ASAP!
+  packify :: a -> a
 
 instance Marshal a => FFI (IO a) where
   type T (IO a) = IO Unpacked
   unpackify = fmap pack
+  packify m = fmap (unsafeCoerce . unpack) m
 
 instance (Marshal a, FFI b) => FFI (a -> b) where
   type T (a -> b) = Unpacked -> T b
   unpackify f x = unpackify (f $! unpack x)
+  packify f x = packify (f $! pack (unsafeCoerce x))
 
 -- | Creates a function based on the given string of Javascript code. If this
 --   code is not well typed or is otherwise incorrect, your program may crash
@@ -102,6 +108,26 @@ instance (Marshal a, FFI b) => FFI (a -> b) where
 --   the argument marshalling is decided by the type signature.
 ffi :: FFI a => String -> a
 ffi = unpackify . unsafeEval
+
+-- | Export a symbol. That symbol may then be accessed from Javascript through
+--   Haste.name() as a normal function. Remember, however, that if you are
+--   using --with-js to include your JS, in conjunction with
+--   --opt-google-closure or any option that implies it, you will instead need
+--   to access your exports through Haste[\'name\'](), or Closure will mangle
+--   your function names.
+export :: FFI a => String -> a -> IO ()
+export name f =
+    ffi ("(function(s, f) {" ++
+         "  Haste[s] = function() {" ++
+         "      var args = Array.prototype.slice.call(arguments,0);" ++
+         "      args.push(0);" ++
+         "      return E(A(f, args));" ++
+         "    };" ++
+         "  return 0;" ++
+         "})") name f'
+  where
+    f' :: Unpacked
+    f' = unsafeCoerce $! packify f
 
 unsafeUnpack :: a -> Unpacked
 unsafeUnpack x =
