@@ -121,6 +121,37 @@ The `ffi` function is a little bit safer than the GHC FFI in that it enforces
 some type invariants on values returned from JS, and is more convenient. It is,
 however, quite a bit slower due to its dynamic nature.
 
+If you do not feel comfortable throwing out your entire legacy Javascript
+code base, you can export selected functions from your Haste program and call
+them from Javascript:
+
+fun.hs:
+
+    import Haste.Foreign
+    
+    fun :: Int -> String -> IO String
+    fun n s = return $ "The number is " ++ show n ++ " and the string is " ++ s
+    
+    main = do
+      export "fun" fun
+
+fun.js:
+
+    function mymain() {
+      console.log(Haste.fun(42, "hello"));
+    }
+
+...then compile with:
+
+    $ hastec '--start=%%(); mymain();' --with-js=fun.js fun.hs
+
+`fun.hs` will export the function `fun` when its `main` function is run.
+Our Javascript obviously needs to run after that, so we create our "real" main
+function in `fun.js`. Finally, we tell the compiler to start the program by
+first executing Haste's `main` function (the `%%` gets replaced by whatever
+name the compiler chooses for the Haste `main`) and then executing our own
+`mymain`.
+
 
 Base library and documentation
 ------------------------------
