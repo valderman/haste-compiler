@@ -2,8 +2,8 @@
 -- | XHaste Server monad.
 module XHaste.Server (
     Exportable,
-    Server, Useless, Export (..), Done (..),
-    liftIO, export, mkUseful, runServer
+    Server, Useless, Export (..), Done (..), CallID,
+    liftIO, export, mkUseful, runServer, (<.>)
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -16,9 +16,15 @@ type Nonce = Int
 type CallID = Int
 type Method = [JSON] -> IO JSON
 type Exports = M.Map CallID Method
-newtype Export a = Export CallID
 data Useless a = Useful (IO a) | Useless
 newtype Done = Done (IO ())
+
+data Export a = Export CallID [JSON]
+
+-- | Apply an exported function to an argument.
+--   TODO: look into making this Applicative.
+(<.>) :: Serialize a => Export (a -> b) -> a -> Export b
+(Export cid args) <.> arg = Export cid (toJSON arg:args)
 
 -- | Make a Useless value useful by extracting it. Only possible server-side,
 --   in the IO monad.
@@ -71,7 +77,7 @@ instance (Serialize a, Exportable b) => Exportable (a -> b) where
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> Server (Export a)
 export s = Server $ \cid exports ->
-    (Export cid, cid+1, M.insert cid (serializify s) exports)
+    (Export cid [], cid+1, M.insert cid (serializify s) exports)
 
 -- | Run a server computation. runServer never returns before the program
 --   terminates.
@@ -93,4 +99,6 @@ serverEventLoop exports = error "Not implemented!"
 -- * call/onServer should take care of data transmission as well. For instance,
 --   call Export (Bool -> IO Bool) -> Server (Bool -> IO Bool)
 --   call f = return $ \x -> send x >> waitForReturn
+--   If we have Export cid :: Export (Int -> Bool -> IO Int) coming in, we want
+--   \x y -> __call (Export cid) [toJSON x, toJSON y] out
 -- * runServer should go into its event loop after running s
