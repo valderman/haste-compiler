@@ -6,6 +6,7 @@ module Haste.WebSockets (
     withWebSocket, wsSend
   ) where
 import Haste
+import Haste.Foreign
 import Haste.Concurrent
 import Unsafe.Coerce
 

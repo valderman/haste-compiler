@@ -2,8 +2,7 @@
 module Haste (JSString, JSAny, URL,
               alert, prompt, eval, writeLog, catJSStr, fromJSStr,
               module Haste.JSType, module Haste.DOM,
-              module Haste.Callback, module Haste.Random,
-              module Haste.Foreign) where
+              module Haste.Callback, module Haste.Random) where
 import Haste.Prim
 import Haste.Callback
 import Haste.Random
