@@ -21,8 +21,8 @@ Library
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     Exposed-Modules:
-        XHaste
         Haste
+        Haste.App
         Haste.JSON
         Haste.Ajax
         Haste.Reactive
@@ -42,9 +42,9 @@ Library
         Haste.Reactive.Ajax
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
-        XHaste.Client
-        XHaste.Protocol
-        XHaste.Server
+        Haste.App.Client
+        Haste.App.Monad
+        Haste.App.Protocol
     Build-Depends:
         integer-gmp,
         transformers,

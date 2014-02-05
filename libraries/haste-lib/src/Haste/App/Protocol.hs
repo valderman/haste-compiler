@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
--- | XHaste client-server protocol.
-module XHaste.Protocol where
+-- | Haste.App client-server protocol.
+module Haste.App.Protocol where
 import Control.Applicative
 import Haste.Serialize
 import Haste.JSON

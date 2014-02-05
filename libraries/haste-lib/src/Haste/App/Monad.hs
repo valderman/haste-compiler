@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
--- | XHaste Server monad.
-module XHaste.Server (
+-- | Haste.App startup monad and configuration.
+module Haste.App.Monad (
     Exportable,
     App, Useless, Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
@@ -11,7 +11,7 @@ import Control.Monad (ap)
 import Haste.Serialize
 import Haste.JSON
 import qualified Data.Map as M
-import XHaste.Protocol
+import Haste.App.Protocol
 #ifndef __HASTE__
 import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)

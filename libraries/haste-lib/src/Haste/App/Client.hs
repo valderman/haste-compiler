@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
-module XHaste.Client (
+module Haste.App.Client (
     Client, runClient, onServer, liftCIO
   ) where
 import Haste
@@ -7,9 +7,8 @@ import Haste.Serialize
 import Haste.WebSockets hiding (Method)
 import Haste.JSON
 import Haste.Concurrent hiding (Method)
-import XHaste.Server
-import XHaste.Protocol
-import System.IO.Unsafe
+import Haste.App.Monad
+import Haste.App.Protocol
 
 data ClientState = ClientState {
     csWebSocket  :: WebSocket,
