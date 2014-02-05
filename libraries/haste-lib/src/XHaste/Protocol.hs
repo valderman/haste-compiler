@@ -22,7 +22,6 @@ instance Serialize ServerCall where
       ("args", Arr args)
     ]
   fromJSON d = do
-    args <- liftMaybe $ d ~> "args"
     ServerCall <$> (liftMaybe (d ~> "nonce") >>= fromJSON)
                <*> (liftMaybe (d ~> "method") >>= fromJSON)
                <*> case d ~> "args" of
