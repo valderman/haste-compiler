@@ -1,9 +1,9 @@
-{-# LANGUAGE CPP, TypeFamilies #-}
+{-# LANGUAGE CPP #-}
 -- | XHaste Server monad.
 module XHaste.Server (
     Exportable,
     Server, Useless, Export (..),
-    liftIO, export, mkUseful
+    liftIO, export, mkUseful, unS
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -14,9 +14,9 @@ import Unsafe.Coerce
 
 type Nonce = Int
 type CallID = Int
-data Method
-type Exports = M.Map Int Method
-newtype Export a = Export Int
+type Method = [JSON] -> IO JSON
+type Exports = M.Map CallID Method
+newtype Export a = Export CallID
 data Useless a = Useful (IO a) | Useless
 
 -- | Make a Useless value useful by extracting it. Only possible server-side,
@@ -35,7 +35,7 @@ instance Monad Server where
   return x = Server $ \cid exports -> (x, cid, exports)
   (Server m) >>= f = Server $ \cid exports ->
     case m cid exports of
-      (x, cid', exports') -> unS (f x) cid' exports
+      (x, cid', exports') -> unS (f x) cid' exports'
 
 instance Functor Server where
   fmap f m = m >>= return . f
@@ -56,31 +56,23 @@ liftIO = return . Useful
 -- | An exportable function is of the type
 --   (Serialize a, ..., Serialize result) => a -> ... -> IO result
 class Exportable a where
-  type T a
-  serializify :: T a -> a
+  serializify :: a -> [JSON] -> IO JSON
 
 instance Serialize a => Exportable (IO a) where
-  type T (IO a) = IO JSON
-  serializify = fmap (fromEither . fromJSON)
+  serializify m _ = fmap toJSON m
+
+instance (Serialize a, Exportable b) => Exportable (a -> b) where
+  serializify f (x:xs) = serializify (f $! fromEither $ fromJSON x) xs
     where
       fromEither (Right x) = x
       fromEither (Left e)  = error $ "Unable to deserialize data: " ++ e
 
-instance (Serialize a, Exportable b) => Exportable (a -> b) where
-  type T (a -> b) = JSON -> T b
-  serializify f x = serializify (f $! toJSON x)
-
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> Server (Export a)
 export s = Server $ \cid exports ->
-    (Export cid, cid+1, {-M.insert cid s'-} exports)
+    (Export cid, cid+1, M.insert cid (serializify s) exports)
 
 -- TODO:
--- * serializify should take care of data transmission. For instance, in the
---   remote table, a function \x -> return (not x) :: Bool -> IO Bool should
---   be represented as
---   (receive >>= (\x -> return (not x)) >>= returnToClient) :: IO ()
 -- * call/onServer should take care of data transmission as well. For instance,
 --   call Export (Bool -> IO Bool) -> Server (Bool -> IO Bool)
 --   call f = return $ \x -> send x >> waitForReturn
--- * export should add its argument to a global(?) lookup table
