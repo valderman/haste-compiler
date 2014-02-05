@@ -1,8 +1,10 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 -- | JSON serialization and de-serialization for Haste.
 module Haste.Serialize where
 import GHC.Float
 import GHC.Int
 import Haste.JSON
+import Haste.Prim (JSString, toJSStr, fromJSStr)
 
 class Serialize a where
   toJSON   :: a -> JSON
@@ -66,3 +68,16 @@ instance Serialize Bool where
   toJSON = Bool
   fromJSON (Bool x) = Right x
   fromJSON _        = Left "Tried to deserialize a non-Bool to a Bool"
+
+instance Serialize () where
+  toJSON _ = Dict []
+  fromJSON _ = Right ()
+
+instance Serialize String where
+  toJSON = toJSON . toJSStr
+  fromJSON s = fmap fromJSStr (fromJSON s)
+
+instance Serialize JSString where
+  toJSON = Str
+  fromJSON (Str s) = Right s
+  fromJSON _ = Left "Tried to deserialize a non-JSString to a JSString"
