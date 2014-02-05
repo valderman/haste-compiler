@@ -84,7 +84,9 @@ runClient_ url (Client m) = concurrent $ do
 -- | Launch a client from a Server computation. runClient never returns before
 --   the program terminates.
 runClient :: Client () -> Server Done
-runClient = return . Done . runClient_ "rpc"
+runClient m = do
+  url <- cfgURL `fmap` getAppConfig
+  return . Done $ runClient_ url m
 
 -- | Perform a server-side computation, blocking the client thread until said
 --   computation returns. All free variables in the server-side computation

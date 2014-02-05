@@ -2,6 +2,7 @@
 module XHaste (
   Exportable, Server, Useless, Export, Done,
   liftIO, export, mkUseful, runServer, (<.>),
+  AppCfg, cfgURL, cfgPort, defaultConfig,
   Client,
   runClient, onServer, liftCIO) where
 import XHaste.Client

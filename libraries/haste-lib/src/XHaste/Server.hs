@@ -3,7 +3,8 @@
 module XHaste.Server (
     Exportable,
     Server, Useless, Export (..), Done (..),
-    liftIO, export, mkUseful, runServer, (<.>)
+    AppCfg, defaultConfig, cfgURL, cfgPort,
+    liftIO, export, mkUseful, runServer, getAppConfig, (<.>)
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -18,6 +19,15 @@ import Network.WebSockets hiding (runServer)
 import qualified Network.WebSockets as WS (runServer)
 import qualified Data.ByteString.Char8 as BS
 #endif
+
+data AppCfg = AppCfg {
+    cfgURL  :: String,
+    cfgPort :: Int
+  }
+
+-- | Create a default configuration from an URL and a port number.
+defaultConfig :: String -> Int -> AppCfg
+defaultConfig = AppCfg
 
 type Method = [JSON] -> IO JSON
 type Exports = M.Map CallID Method
@@ -40,14 +50,14 @@ mkUseful _          = error "Useless values are only useful server-side!"
 -- | Server monad; allows for exporting functions, limited liftIO and
 --   launching the client.
 newtype Server a = Server {
-    unS :: CallID -> Exports -> (a, CallID, Exports)
+    unS :: AppCfg -> CallID -> Exports -> (a, CallID, Exports)
   }
 
 instance Monad Server where
-  return x = Server $ \cid exports -> (x, cid, exports)
-  (Server m) >>= f = Server $ \cid exports ->
-    case m cid exports of
-      (x, cid', exports') -> unS (f x) cid' exports'
+  return x = Server $ \_ cid exports -> (x, cid, exports)
+  (Server m) >>= f = Server $ \cfg cid exports ->
+    case m cfg cid exports of
+      (x, cid', exports') -> unS (f x) cfg cid' exports'
 
 instance Functor Server where
   fmap f m = m >>= return . f
@@ -81,26 +91,30 @@ instance (Serialize a, Exportable b) => Exportable (a -> b) where
 
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> Server (Export a)
-export s = Server $ \cid exports ->
+export s = Server $ \_ cid exports ->
     (Export cid [], cid+1, M.insert cid (serializify s) exports)
+
+-- | Returns the application configuration.
+getAppConfig :: Server AppCfg
+getAppConfig = Server $ \cfg cid exports -> (cfg, cid, exports)
 
 -- | Run a server computation. runServer never returns before the program
 --   terminates.
-runServer :: Server Done -> IO ()
-runServer (Server s) = do
+runServer :: AppCfg -> Server Done -> IO ()
+runServer cfg (Server s) = do
 #ifdef __HASTE__
     client
 #else
-    serverEventLoop exports
+    serverEventLoop cfg exports
 #endif
   where
-    (Done client, _, exports) = s 0 M.empty
+    (Done client, _, exports) = s cfg 0 M.empty
 
 #ifndef __HASTE__
 -- | Server's communication event loop. Handles dispatching API calls.
-serverEventLoop :: Exports -> IO ()
-serverEventLoop exports =
-    WS.runServer "0.0.0.0" 24601 $ \pending -> do
+serverEventLoop :: AppCfg -> Exports -> IO ()
+serverEventLoop cfg exports =
+    WS.runServer "0.0.0.0" (cfgPort cfg) $ \pending -> do
       conn <- acceptRequest pending
       recvLoop conn
   where
