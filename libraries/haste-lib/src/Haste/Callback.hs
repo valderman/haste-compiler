@@ -36,34 +36,34 @@ instance Callback (IO ()) where
 instance Callback (a -> IO ()) where
   constCallback = const
 
-data Event a where
-  OnLoad      :: Event (IO ())
-  OnUnload    :: Event (IO ())
-  OnChange    :: Event (IO ())
-  OnFocus     :: Event (IO ())
-  OnBlur      :: Event (IO ())
-  OnMouseMove :: Event ((Int, Int) -> IO ())
-  OnMouseOver :: Event ((Int, Int) -> IO ())
-  OnMouseOut  :: Event (IO ())
-  OnClick     :: Event (Int -> (Int, Int) -> IO ())
-  OnDblClick  :: Event (Int -> (Int, Int) -> IO ())
-  OnMouseDown :: Event (Int -> (Int, Int) -> IO ())
-  OnMouseUp   :: Event (Int -> (Int, Int) -> IO ())
-  OnKeyPress  :: Event (Int -> IO ())
-  OnKeyUp     :: Event (Int -> IO ())
-  OnKeyDown   :: Event (Int -> IO ())
+data Event m a where
+  OnLoad      :: Event m (m ())
+  OnUnload    :: Event m (m ())
+  OnChange    :: Event m (m ())
+  OnFocus     :: Event m (m ())
+  OnBlur      :: Event m (m ())
+  OnMouseMove :: Event m ((Int, Int) -> m ())
+  OnMouseOver :: Event m ((Int, Int) -> m ())
+  OnMouseOut  :: Event m (m ())
+  OnClick     :: Event m (Int -> (Int, Int) -> m ())
+  OnDblClick  :: Event m (Int -> (Int, Int) -> m ())
+  OnMouseDown :: Event m (Int -> (Int, Int) -> m ())
+  OnMouseUp   :: Event m (Int -> (Int, Int) -> m ())
+  OnKeyPress  :: Event m (Int -> m ())
+  OnKeyUp     :: Event m (Int -> m ())
+  OnKeyDown   :: Event m (Int -> m ())
 
-asEvtTypeOf :: Event a -> a -> a
+asEvtTypeOf :: Event m a -> a -> a
 asEvtTypeOf _ = id
 
-instance Eq (Event a) where
+instance Eq (Event m a) where
   a == b = evtName a == (evtName b :: String)
 
-instance Ord (Event a) where
+instance Ord (Event m a) where
   compare a b = compare (evtName a) (evtName b :: String)
 
 -- | The name of a given event.
-evtName :: IsString s => Event a -> s
+evtName :: IsString s => Event m a -> s
 evtName evt =
   case evt of
     OnLoad      -> "load"
@@ -83,22 +83,22 @@ evtName evt =
     OnBlur      -> "blur"
 
 -- | Friendlier name for @setCallback@.
-onEvent :: MonadIO m => Elem -> Event a -> a -> m Bool
+onEvent :: MonadIO m => Elem -> Event m a -> a -> m Bool
 onEvent = setCallback
 
 -- | Friendlier name for @setCallback'@.
-onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event a -> Async a -> m Bool
+onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event m a -> Async a -> m Bool
 onEvent' = setCallback'
 
 -- | Set a callback for the given event.
-setCallback :: MonadIO m => Elem -> Event a -> a -> m Bool
+setCallback :: MonadIO m => Elem -> Event m a -> a -> m Bool
 setCallback e evt f =
   liftIO $ jsSetCB e (evtName evt) (mkCallback $! f)
 
 -- | Like @setCallback@, but takes a callback in the CIO monad instead of IO.
 setCallback' :: (ToConcurrent a, MonadIO m)
              => Elem
-             -> Event a
+             -> Event m a
              -> Async a
              -> m Bool
 setCallback' e evt f =

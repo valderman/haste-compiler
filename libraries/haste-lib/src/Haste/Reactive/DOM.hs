@@ -11,7 +11,7 @@ import Data.IORef
 
 {-# NOINLINE eventHandlers #-}
 -- | Contains a list of all installed event handlers.
-eventHandlers :: JSType a => IORef (M.Map (ElemID, Event e) (Signal a))
+eventHandlers :: JSType a => IORef (M.Map (ElemID, Event IO e) (Signal a))
 eventHandlers = unsafePerformIO $ newIORef M.empty
 
 -- | Represents a property of a DOM object.
@@ -28,7 +28,7 @@ elemProp str =
     (_, [])     -> error "elemProp: No object attribute given!"
     (obj, attr) -> D obj (tail attr)
 
-unlessExists :: JSType a => ElemID -> Event e -> IO (Signal a) -> Signal a
+unlessExists :: JSType a => ElemID -> Event IO e -> IO (Signal a) -> Signal a
 unlessExists eid evt create = new $ do
   handlers <- readIORef eventHandlers
   case M.lookup (eid, evt) handlers of
@@ -55,7 +55,7 @@ valueOf :: JSType a  => ElemID -> Signal a
 valueOf e = e `valueAt` OnChange
 
 -- | The value property of the given element, triggered on a custom event.
-valueAt :: (JSType a, Callback e) => ElemID -> Event e -> Signal a
+valueAt :: (JSType a, Callback e) => ElemID -> Event IO e -> Signal a
 valueAt eid evt = filterMapS fromString $ unlessExists eid evt valueAtIO
   where
     valueAtIO = withElem eid $ \e -> do
