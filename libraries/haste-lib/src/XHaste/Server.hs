@@ -11,6 +11,13 @@ import Haste.Serialize
 import Haste.JSON
 import qualified Data.Map as M
 import XHaste.Protocol
+#ifndef __HASTE__
+import Control.Concurrent (forkIO)
+import Haste.Prim (toJSStr, fromJSStr)
+import Network.WebSockets hiding (runServer)
+import qualified Network.WebSockets as WS (runServer)
+import qualified Data.ByteString.Char8 as BS
+#endif
 
 type Method = [JSON] -> IO JSON
 type Exports = M.Map CallID Method
@@ -89,9 +96,36 @@ runServer (Server s) = do
   where
     (Done client, _, exports) = s 0 M.empty
 
+#ifndef __HASTE__
 -- | Server's communication event loop. Handles dispatching API calls.
 serverEventLoop :: Exports -> IO ()
-serverEventLoop exports = error "Not implemented!"
+serverEventLoop exports =
+    WS.runServer "0.0.0.0" 24601 $ \pending -> do
+      conn <- acceptRequest pending
+      recvLoop conn
+  where
+    encode = BS.pack . fromJSStr . encodeJSON . toJSON
+    recvLoop c = do
+      msg <- receiveData c
+      forkIO $ do
+        -- Parse JSON
+        case decodeJSON . toJSStr $ BS.unpack msg of
+          Just json -> do
+            -- Attempt to parse ServerCall from JSON and look up method
+            case fromJSON json of
+              Right (ServerCall nonce method args)
+                | Just m <- M.lookup method exports -> do
+                  result <- m args
+                  sendTextData c . encode $ ServerReply {
+                      srNonce = nonce,
+                      srResult = result
+                    }
+              _ -> do
+                error $ "Got bad method call: " ++ show json
+          _ -> do
+            error $ "Got bad JSON: " ++ BS.unpack msg
+      recvLoop c
+#endif
 
 -- TODO:
 -- * call/onServer should take care of data transmission as well. For instance,
