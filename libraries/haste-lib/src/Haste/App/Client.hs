@@ -9,6 +9,9 @@ import Haste.JSON
 import Haste.Concurrent hiding (Method)
 import Haste.App.Monad
 import Haste.App.Protocol
+import Control.Monad.IO.Class
+import Control.Applicative
+import Control.Monad (ap)
 
 data ClientState = ClientState {
     csWebSocket  :: WebSocket,
@@ -34,6 +37,13 @@ instance Monad Client where
     (cs', x) <- m cs
     unC (f x) cs'
   return x = Client $ \cs -> return (cs, x)
+
+instance Functor Client where
+  fmap f (Client m) = Client $ \cs -> fmap (fmap f) (m cs)
+
+instance Applicative Client where
+  (<*>) = ap
+  pure  = return
 
 -- | Lift a CIO action into the Client monad.
 liftCIO :: CIO a -> Client a
@@ -90,7 +100,7 @@ runClient m = do
 -- | Perform a server-side computation, blocking the client thread until said
 --   computation returns. All free variables in the server-side computation
 --   which originate in the Client monad must be serializable.
-onServer :: Serialize a => Export (IO a) -> Client a
+onServer :: Serialize a => Export (Server a) -> Client a
 onServer (Export cid args) = __call cid (reverse args)
 
 -- | Make a server-side call.

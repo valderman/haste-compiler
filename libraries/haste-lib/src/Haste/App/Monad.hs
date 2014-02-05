@@ -1,13 +1,14 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
 -- | Haste.App startup monad and configuration.
 module Haste.App.Monad (
     Exportable,
-    App, Useless, Export (..), Done (..),
+    App, Server, Useless (..), Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
-    liftIO, export, mkUseful, runApp, getAppConfig, (<.>)
+    liftServerIO, export, mkUseful, runApp, getAppConfig, (<.>), liftIO
   ) where
 import Control.Applicative
 import Control.Monad (ap)
+import Control.Monad.IO.Class
 import Haste.Serialize
 import Haste.JSON
 import qualified Data.Map as M
@@ -40,12 +41,6 @@ data Export a = Export CallID [JSON]
 (<.>) :: Serialize a => Export (a -> b) -> a -> Export b
 (Export cid args) <.> arg = Export cid (toJSON arg:args)
 
--- | Make a Useless value useful by extracting it. Only possible server-side,
---   in the IO monad.
-mkUseful :: Useless a -> IO a
-mkUseful (Useful m) = m
-mkUseful _          = error "Useless values are only useful server-side!"
-
 -- | Application monad; allows for exporting functions, limited liftIO and
 --   launching the client.
 newtype App a = App {
@@ -67,11 +62,11 @@ instance Applicative App where
 
 -- | Lift an IO action into the Server monad, the result of which can only be
 --   used server-side.
-liftIO :: IO a -> App (Useless a)
+liftServerIO :: IO a -> App (Useless a)
 #ifdef __HASTE__
-liftIO _ = return Useless
+liftServerIO _ = return Useless
 #else
-liftIO = return . Useful
+liftServerIO = return . Useful
 #endif
 
 -- | An exportable function is of the type
@@ -79,8 +74,8 @@ liftIO = return . Useful
 class Exportable a where
   serializify :: a -> [JSON] -> IO JSON
 
-instance Serialize a => Exportable (IO a) where
-  serializify m _ = fmap toJSON m
+instance Serialize a => Exportable (Server a) where
+  serializify (Server m) _ = fmap toJSON m
 
 instance (Serialize a, Exportable b) => Exportable (a -> b) where
   serializify f (x:xs) = serializify (f $! fromEither $ fromJSON x) xs
@@ -139,3 +134,14 @@ serverEventLoop cfg exports =
             error $ "Got bad JSON: " ++ BS.unpack msg
       recvLoop c
 #endif
+
+-- | Server monad for Haste.App. Allows redeeming Useless values, lifting IO
+--   actions, and not much more.
+newtype Server a = Server (IO a)
+  deriving (Functor, Applicative, Monad, MonadIO)
+
+-- | Make a Useless value useful by extracting it. Only possible server-side,
+--   in the IO monad.
+mkUseful :: Useless a -> Server a
+mkUseful (Useful m) = liftIO m
+mkUseful _          = error "Useless values are only useful server-side!"
