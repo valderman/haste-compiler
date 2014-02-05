@@ -80,8 +80,9 @@ instance Serialize a => Exportable (Server a) where
 instance (Serialize a, Exportable b) => Exportable (a -> b) where
   serializify f (x:xs) = serializify (f $! fromEither $ fromJSON x) xs
     where
-      fromEither (Right x) = x
-      fromEither (Left e)  = error $ "Unable to deserialize data: " ++ e
+      fromEither (Right val) = val
+      fromEither (Left e)    = error $ "Unable to deserialize data: " ++ e
+  serializify _ _      = error "The impossible happened in serializify!"
 
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> App (Export a)

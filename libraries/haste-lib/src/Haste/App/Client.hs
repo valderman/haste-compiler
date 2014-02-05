@@ -4,12 +4,10 @@ module Haste.App.Client (
   ) where
 import Haste
 import Haste.Serialize
-import Haste.WebSockets hiding (Method)
+import Haste.WebSockets
 import Haste.JSON
-import Haste.Concurrent hiding (Method)
 import Haste.App.Monad
 import Haste.App.Protocol
-import Control.Monad.IO.Class
 import Control.Applicative
 import Control.Monad (ap)
 
@@ -75,7 +73,7 @@ runClient_ url (Client m) = concurrent $ do
     -- When a message comes in, attempt to extract from it two members "nonce"
     -- and "result". Find the result MVar corresponding to the nonce and write
     -- the result to it, then discard the MVar.
-    handler rvars ws msg = do
+    handler rvars _ msg = do
       vs <- takeMVar rvars
       let res = do
             ServerReply nonce result <- liftMaybe (decodeJSON msg) >>= fromJSON
@@ -116,4 +114,4 @@ __call cid args = do
   res <- liftCIO (takeMVar mv)
   case fromJSON res of
     Right x -> return x
-    Left e  -> fail $ "Unable to decode JSON: " ++ show res
+    Left e  -> fail $ "Unable to decode JSON: " ++ e ++ " data: " ++ show res

@@ -3,11 +3,11 @@
 module Haste.Prim (JSString, toJSStr, fromJSStr, JSAny,
                    Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
+import Data.String
+#ifdef __HASTE__
 import Unsafe.Coerce
 import GHC.CString
 import GHC.Prim
-import Data.String
-#ifdef __HASTE__
 import qualified GHC.HastePrim as HP
 #endif
 

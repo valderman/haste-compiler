@@ -8,7 +8,6 @@ import Haste.Callback
 import Haste.Random
 import Haste.JSType
 import Haste.DOM
-import Haste.Foreign
 import Control.Monad.IO.Class
 #ifndef __HASTE__
 import Data.List (intercalate)

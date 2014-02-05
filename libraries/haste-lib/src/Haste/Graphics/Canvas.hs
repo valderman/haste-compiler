@@ -28,7 +28,6 @@ import Control.Applicative
 import Control.Monad.IO.Class
 import Haste
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
-import Haste.DOM
 
 #ifdef __HASTE__
 foreign import ccall jsHasCtx2D :: Elem -> IO Bool
@@ -328,7 +327,7 @@ rect (x1, y1) (x2, y2) = path [(x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)]
 circle :: Point -> Double -> Shape ()
 circle (x, y) radius = Shape $ \ctx -> do
   jsMoveTo ctx (x+radius) y
-  jsArc ctx x y radius 0 twoPi
+  jsArc ctx x y radius (0 :: Double) twoPi
 
 {-# INLINE twoPi #-}
 twoPi :: Double
