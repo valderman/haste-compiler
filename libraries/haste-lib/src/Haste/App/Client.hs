@@ -10,6 +10,7 @@ import Haste.App.Monad
 import Haste.App.Protocol
 import Control.Applicative
 import Control.Monad (ap)
+import Control.Monad.IO.Class
 
 data ClientState = ClientState {
     csWebSocket  :: WebSocket,
@@ -42,6 +43,11 @@ instance Functor Client where
 instance Applicative Client where
   (<*>) = ap
   pure  = return
+
+instance MonadIO Client where
+  liftIO m = Client $ \cs -> do
+    x <- liftIO m
+    return (cs, x)
 
 -- | Lift a CIO action into the Client monad.
 liftCIO :: CIO a -> Client a
