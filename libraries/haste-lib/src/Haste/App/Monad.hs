@@ -4,7 +4,7 @@ module Haste.App.Monad (
     Exportable,
     App, Server, Useless (..), Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
-    liftServerIO, export, mkUseful, runApp, getAppConfig, (<.>), liftIO
+    liftServerIO, export, mkUseful, runApp, getAppConfig, (<.>)
   ) where
 import Control.Applicative
 import Control.Monad (ap)

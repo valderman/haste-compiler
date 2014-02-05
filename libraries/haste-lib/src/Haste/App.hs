@@ -1,6 +1,6 @@
 -- | Type-safe client-server communication for Haste.
 module Haste.App (
-  Serialize, Exportable, App, Server, Useless, Export, Done,
+  MonadIO, Serialize, Exportable, App, Server, Useless, Export, Done,
   liftServerIO, export, runApp, (<.>), mkUseful,
   AppCfg, cfgURL, cfgPort, defaultConfig,
   Client,
@@ -8,3 +8,4 @@ module Haste.App (
 import Haste.App.Client
 import Haste.App.Monad
 import Haste.Serialize
+import Control.Monad.IO.Class
