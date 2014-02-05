@@ -2,7 +2,7 @@
 -- | XHaste Server monad.
 module XHaste.Server (
     Exportable,
-    Server, Useless, Export (..), Done (..), CallID,
+    Server, Useless, Export (..), Done (..),
     liftIO, export, mkUseful, runServer, (<.>)
   ) where
 import Control.Applicative
@@ -10,10 +10,8 @@ import Control.Monad (ap)
 import Haste.Serialize
 import Haste.JSON
 import qualified Data.Map as M
-import Unsafe.Coerce
+import XHaste.Protocol
 
-type Nonce = Int
-type CallID = Int
 type Method = [JSON] -> IO JSON
 type Exports = M.Map CallID Method
 data Useless a = Useful (IO a) | Useless

@@ -8,6 +8,7 @@ import Haste.WebSockets hiding (Method)
 import Haste.JSON
 import Haste.Concurrent hiding (Method)
 import XHaste.Server
+import XHaste.Protocol
 import System.IO.Unsafe
 
 data ClientState = ClientState {
@@ -66,17 +67,15 @@ runClient_ url (Client m) = concurrent $ do
     -- and "result". Find the result MVar corresponding to the nonce and write
     -- the result to it, then discard the MVar.
     handler rvars ws msg = do
-      let j = decodeJSON msg
       vs <- takeMVar rvars
       let res = do
-            nonce <- j ~> "nonce" >>= liftEither . fromJSON
-            result <- j ~> "result"
+            ServerReply nonce result <- liftMaybe (decodeJSON msg) >>= fromJSON
             (var, vs') <- case span (\(n, _) -> n /= nonce) vs of
-                            (xs, ((_, y):ys)) -> Just (y, xs ++ ys)
-                            _                 -> Nothing
+                            (xs, ((_, y):ys)) -> Right (y, xs ++ ys)
+                            _                 -> Left "Wrong nonce"
             return (var, result, vs')
       case res of
-        Just (resvar, result, vs') -> do
+        Right (resvar, result, vs') -> do
           putMVar resvar result
           putMVar rvars vs'
         _ -> do
@@ -86,10 +85,6 @@ runClient_ url (Client m) = concurrent $ do
 --   the program terminates.
 runClient :: Client () -> Server Done
 runClient = return . Done . runClient_ "rpc"
-
-liftEither :: Either a b -> Maybe b
-liftEither (Right x) = Just x
-liftEither _         = Nothing
 
 -- | Perform a server-side computation, blocking the client thread until said
 --   computation returns. All free variables in the server-side computation
@@ -102,9 +97,11 @@ __call :: Serialize a => CallID -> [JSON] -> Client a
 __call cid args = do
   ws <- get csWebSocket
   (nonce, mv) <- newResult
-  liftCIO . wsSend ws . encodeJSON $ Dict [("nonce", toJSON nonce),
-                                           ("method", toJSON cid),
-                                           ("args", Arr args)]
+  liftCIO . wsSend ws . encodeJSON . toJSON $ ServerCall {
+      scNonce = nonce,
+      scMethod = cid,
+      scArgs = args
+    }
   res <- liftCIO (takeMVar mv)
   case fromJSON res of
     Right x -> return x
