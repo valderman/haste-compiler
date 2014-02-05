@@ -21,6 +21,7 @@ Library
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     Exposed-Modules:
+        XHaste
         Haste
         Haste.JSON
         Haste.Ajax
@@ -41,6 +42,9 @@ Library
         Haste.Reactive.Ajax
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
+        XHaste.Client
+        XHaste.Protocol
+        XHaste.Server
     Build-Depends:
         integer-gmp,
         transformers,
@@ -56,5 +60,7 @@ Library
         Build-Depends:
             base,
             array,
-            random
+            random,
+            bytestring >= 0.9.2.1,
+            websockets >= 0.8
     Default-Language: Haskell98
