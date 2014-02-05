@@ -2,9 +2,9 @@
 -- | XHaste Server monad.
 module XHaste.Server (
     Exportable,
-    Server, Useless, Export (..), Done (..),
+    App, Useless, Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
-    liftIO, export, mkUseful, runServer, getAppConfig, (<.>)
+    liftIO, export, mkUseful, runApp, getAppConfig, (<.>)
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -15,8 +15,7 @@ import XHaste.Protocol
 #ifndef __HASTE__
 import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)
-import Network.WebSockets hiding (runServer)
-import qualified Network.WebSockets as WS (runServer)
+import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as BS
 #endif
 
@@ -47,28 +46,28 @@ mkUseful :: Useless a -> IO a
 mkUseful (Useful m) = m
 mkUseful _          = error "Useless values are only useful server-side!"
 
--- | Server monad; allows for exporting functions, limited liftIO and
+-- | Application monad; allows for exporting functions, limited liftIO and
 --   launching the client.
-newtype Server a = Server {
-    unS :: AppCfg -> CallID -> Exports -> (a, CallID, Exports)
+newtype App a = App {
+    unA :: AppCfg -> CallID -> Exports -> (a, CallID, Exports)
   }
 
-instance Monad Server where
-  return x = Server $ \_ cid exports -> (x, cid, exports)
-  (Server m) >>= f = Server $ \cfg cid exports ->
+instance Monad App where
+  return x = App $ \_ cid exports -> (x, cid, exports)
+  (App m) >>= f = App $ \cfg cid exports ->
     case m cfg cid exports of
-      (x, cid', exports') -> unS (f x) cfg cid' exports'
+      (x, cid', exports') -> unA (f x) cfg cid' exports'
 
-instance Functor Server where
+instance Functor App where
   fmap f m = m >>= return . f
 
-instance Applicative Server where
+instance Applicative App where
   (<*>) = ap
   pure  = return
 
 -- | Lift an IO action into the Server monad, the result of which can only be
 --   used server-side.
-liftIO :: IO a -> Server (Useless a)
+liftIO :: IO a -> App (Useless a)
 #ifdef __HASTE__
 liftIO _ = return Useless
 #else
@@ -90,18 +89,18 @@ instance (Serialize a, Exportable b) => Exportable (a -> b) where
       fromEither (Left e)  = error $ "Unable to deserialize data: " ++ e
 
 -- | Make a function available to the client as an API call.
-export :: Exportable a => a -> Server (Export a)
-export s = Server $ \_ cid exports ->
+export :: Exportable a => a -> App (Export a)
+export s = App $ \_ cid exports ->
     (Export cid [], cid+1, M.insert cid (serializify s) exports)
 
 -- | Returns the application configuration.
-getAppConfig :: Server AppCfg
-getAppConfig = Server $ \cfg cid exports -> (cfg, cid, exports)
+getAppConfig :: App AppCfg
+getAppConfig = App $ \cfg cid exports -> (cfg, cid, exports)
 
--- | Run a server computation. runServer never returns before the program
+-- | Run a Haste application. runApp never returns before the program
 --   terminates.
-runServer :: AppCfg -> Server Done -> IO ()
-runServer cfg (Server s) = do
+runApp :: AppCfg -> App Done -> IO ()
+runApp cfg (App s) = do
 #ifdef __HASTE__
     client
 #else

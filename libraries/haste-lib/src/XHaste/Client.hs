@@ -83,7 +83,7 @@ runClient_ url (Client m) = concurrent $ do
 
 -- | Launch a client from a Server computation. runClient never returns before
 --   the program terminates.
-runClient :: Client () -> Server Done
+runClient :: Client () -> App Done
 runClient m = do
   url <- cfgURL `fmap` getAppConfig
   return . Done $ runClient_ url m
