@@ -41,7 +41,7 @@ instance Serialize ServerReply where
     ]
   fromJSON d = do
     ServerReply <$> (liftMaybe (d ~> "nonce") >>= fromJSON)
-                <*> liftMaybe (d ~> "nonce")
+                <*> liftMaybe (d ~> "result")
 
 liftMaybe :: Maybe a -> Either String a
 liftMaybe (Just x) = Right x
