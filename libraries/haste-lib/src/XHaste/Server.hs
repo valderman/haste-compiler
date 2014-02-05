@@ -126,11 +126,3 @@ serverEventLoop exports =
             error $ "Got bad JSON: " ++ BS.unpack msg
       recvLoop c
 #endif
-
--- TODO:
--- * call/onServer should take care of data transmission as well. For instance,
---   call Export (Bool -> IO Bool) -> Server (Bool -> IO Bool)
---   call f = return $ \x -> send x >> waitForReturn
---   If we have Export cid :: Export (Int -> Bool -> IO Int) coming in, we want
---   \x y -> __call (Export cid) [toJSON x, toJSON y] out
--- * runServer should go into its event loop after running s
