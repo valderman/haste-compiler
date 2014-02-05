@@ -2,8 +2,8 @@
 -- | XHaste Server monad.
 module XHaste.Server (
     Exportable,
-    Server, Useless, Export (..),
-    liftIO, export, mkUseful, unS
+    Server, Useless, Export (..), Done (..),
+    liftIO, export, mkUseful, runServer
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -18,6 +18,7 @@ type Method = [JSON] -> IO JSON
 type Exports = M.Map CallID Method
 newtype Export a = Export CallID
 data Useless a = Useful (IO a) | Useless
+newtype Done = Done (IO ())
 
 -- | Make a Useless value useful by extracting it. Only possible server-side,
 --   in the IO monad.
@@ -72,7 +73,24 @@ export :: Exportable a => a -> Server (Export a)
 export s = Server $ \cid exports ->
     (Export cid, cid+1, M.insert cid (serializify s) exports)
 
+-- | Run a server computation. runServer never returns before the program
+--   terminates.
+runServer :: Server Done -> IO ()
+runServer (Server s) = do
+#ifdef __HASTE__
+    client
+#else
+    serverEventLoop exports
+#endif
+  where
+    (Done client, _, exports) = s 0 M.empty
+
+-- | Server's communication event loop. Handles dispatching API calls.
+serverEventLoop :: Exports -> IO ()
+serverEventLoop exports = error "Not implemented!"
+
 -- TODO:
 -- * call/onServer should take care of data transmission as well. For instance,
 --   call Export (Bool -> IO Bool) -> Server (Bool -> IO Bool)
 --   call f = return $ \x -> send x >> waitForReturn
+-- * runServer should go into its event loop after running s
