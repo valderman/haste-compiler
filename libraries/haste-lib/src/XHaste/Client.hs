@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module XHaste.Client (
-    Client, runClient, onServer
+    Client, runClient, onServer, liftCIO
   ) where
 import Haste
 import Haste.Serialize
