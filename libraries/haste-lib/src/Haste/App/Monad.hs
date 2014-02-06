@@ -15,7 +15,7 @@ import Haste.JSON
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Haste.App.Protocol
-import Data.Int
+import Data.Word
 import Control.Concurrent (ThreadId)
 import Data.IORef
 #ifndef __HASTE__
@@ -36,7 +36,7 @@ data AppCfg = AppCfg {
 defaultConfig :: String -> Int -> AppCfg
 defaultConfig = AppCfg
 
-type SessionID = Int64
+type SessionID = Word64
 type Sessions = S.Set SessionID
 type Method = [JSON] -> SessionID -> IORef Sessions -> IO JSON
 type Exports = M.Map CallID Method
@@ -53,15 +53,19 @@ data Export a = Export CallID [JSON]
 -- | Application monad; allows for exporting functions, limited liftIO,
 --   forkIO and launching the client.
 newtype App a = App {
-    unA :: AppCfg -> CallID -> Exports -> IO (a, CallID, Exports)
+    unA :: AppCfg
+        -> IORef Sessions
+        -> CallID
+        -> Exports
+        -> IO (a, CallID, Exports)
   }
 
 instance Monad App where
-  return x = App $ \_ cid exports -> return (x, cid, exports)
-  (App m) >>= f = App $ \cfg cid exports -> do
-    res <- m cfg cid exports
+  return x = App $ \_ _ cid exports -> return (x, cid, exports)
+  (App m) >>= f = App $ \cfg sessions cid exports -> do
+    res <- m cfg sessions cid exports
     case res of
-      (x, cid', exports') -> unA (f x) cfg cid' exports'
+      (x, cid', exports') -> unA (f x) cfg sessions cid' exports'
 
 instance Functor App where
   fmap f m = m >>= return . f
@@ -78,21 +82,26 @@ liftServerIO :: IO a -> App (Useless a)
           forall x. liftServerIO x = return Useless #-}
 liftServerIO _ = return Useless
 #else
-liftServerIO m = App $ \cfg cid exports -> do
+liftServerIO m = App $ \_ _ cid exports -> do
   x <- m
   return (Useful x, cid, exports)
 #endif
 
--- | Fork off an IO computation on the server. This may be useful for any tasks
---   that will keep running for as long as the server is running.
-forkServerIO :: IO () -> App (Useless ThreadId)
+-- | Fork off a Server computation not bound an API call.
+--   This may be useful for any tasks that will keep running for as long as
+--   the server is running.
+--
+--   Calling @getSessionID@ inside this computation will return 0, which will
+--   never be generated for an actual session. @getActiveSessions@ works as
+--   expected.
+forkServerIO :: Server () -> App (Useless ThreadId)
 #ifdef __HASTE__
 {-# RULES "throw away forkServerIO"
           forall x. forkServerIO x = return Useless #-}
 forkServerIO _ = return Useless
 #else
-forkServerIO m = App $ \_ cid exports -> do
-  tid <- forkIO m
+forkServerIO (Server m) = App $ \_ sessions cid exports -> do
+  tid <- forkIO $ m 0 sessions
   return (Useful tid, cid, exports)
 #endif
 
@@ -116,41 +125,41 @@ export :: Exportable a => a -> App (Export a)
 #ifdef __HASTE__
 {-# RULES "throw away exports"
           forall f. export f = export undefined #-}
-export _ = App $ \_ cid _ ->
+export _ = App $ \_ _ cid _ ->
     return (Export cid [], cid+1, undefined)
 #else
-export s = App $ \_ cid exports ->
+export s = App $ \_ _ cid exports ->
     return (Export cid [], cid+1, M.insert cid (serializify s) exports)
 #endif
 
 -- | Returns the application configuration.
 getAppConfig :: App AppCfg
-getAppConfig = App $ \cfg cid exports -> return (cfg, cid, exports)
+getAppConfig = App $ \cfg _ cid exports -> return (cfg, cid, exports)
 
 -- | Run a Haste application. runApp never returns before the program
 --   terminates.
 runApp :: AppCfg -> App Done -> IO ()
 runApp cfg (App s) = do
 #ifdef __HASTE__
-    (Done client, _, _) <- s cfg 0 undefined
+    (Done client, _, _) <- s cfg undefined 0 undefined
     client
 #else
-    (_, _, exports) <- s cfg 0 M.empty
-    serverEventLoop cfg exports
+    sessions <- newIORef S.empty
+    (_, _, exports) <- s cfg sessions 0 M.empty
+    serverEventLoop cfg sessions exports
 #endif
 
 #ifndef __HASTE__
 -- | Server's communication event loop. Handles dispatching API calls.
 --   TODO: we could consider terminating a client who gets bad data, as that is
 --         a sure side of outside interference.
-serverEventLoop :: AppCfg -> Exports -> IO ()
-serverEventLoop cfg exports = do
-    clients <- newIORef S.empty
+serverEventLoop :: AppCfg -> IORef Sessions -> Exports -> IO ()
+serverEventLoop cfg sessions exports = do
     WS.runServer "0.0.0.0" (cfgPort cfg) $ \pending -> do
       conn <- acceptRequest pending
-      sid <- randomIO
-      atomicModifyIORef clients $ \s -> (S.insert sid s, ())
-      clientLoop sid clients conn
+      sid <- randomRIO (1, 0xFFFFFFFFFFFFFFFF)
+      atomicModifyIORef sessions $ \s -> (S.insert sid s, ())
+      clientLoop sid sessions conn
   where
     encode = BS.pack . fromJSStr . encodeJSON . toJSON
     
