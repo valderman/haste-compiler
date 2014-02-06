@@ -4,7 +4,9 @@
 --   definitions. For simplicity, import one or the other, not both.
 module Haste.App (
   MonadIO, Serialize, Exportable, App, Server, Useless, Export, Done,
-  liftServerIO, export, runApp, (<.>), mkUseful, getSessionID,
+  Sessions, SessionID,
+  liftServerIO, forkServerIO, export, runApp,
+  (<.>), mkUseful, getSessionID, getActiveSessions,
   AppCfg, cfgURL, cfgPort, defaultConfig,
   Client,
   runClient, onServer, liftIO,

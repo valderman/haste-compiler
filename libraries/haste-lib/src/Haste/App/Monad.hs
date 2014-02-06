@@ -2,10 +2,10 @@
 -- | Haste.App startup monad and configuration.
 module Haste.App.Monad (
     Exportable,
-    App, Server, Useless (..), Export (..), Done (..),
+    App, Server, Sessions, SessionID, Useless (..), Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
     liftServerIO, forkServerIO, export, getAppConfig,
-    mkUseful, runApp, (<.>), getSessionID
+    mkUseful, runApp, (<.>), getSessionID, getActiveSessions
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -17,13 +17,13 @@ import qualified Data.Set as S
 import Haste.App.Protocol
 import Data.Int
 import Control.Concurrent (ThreadId)
+import Data.IORef
 #ifndef __HASTE__
 import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as BS
 import Control.Exception
-import Data.IORef
 import System.Random
 #endif
 
@@ -38,7 +38,7 @@ defaultConfig = AppCfg
 
 type SessionID = Int64
 type Sessions = S.Set SessionID
-type Method = [JSON] -> SessionID -> IO JSON
+type Method = [JSON] -> SessionID -> IORef Sessions -> IO JSON
 type Exports = M.Map CallID Method
 data Useless a = Useful a | Useless
 newtype Done = Done (IO ())
@@ -99,10 +99,10 @@ forkServerIO m = App $ \_ cid exports -> do
 -- | An exportable function is of the type
 --   (Serialize a, ..., Serialize result) => a -> ... -> IO result
 class Exportable a where
-  serializify :: a -> [JSON] -> (SessionID -> IO JSON)
+  serializify :: a -> [JSON] -> (SessionID -> IORef Sessions -> IO JSON)
 
 instance Serialize a => Exportable (Server a) where
-  serializify (Server m) _ = fmap toJSON . m
+  serializify (Server m) _ = \sid ss -> fmap toJSON (m sid ss)
 
 instance (Serialize a, Exportable b) => Exportable (a -> b) where
   serializify f (x:xs) = serializify (f $! fromEither $ fromJSON x) xs
@@ -170,7 +170,7 @@ serverEventLoop cfg exports = do
                 case fromJSON json of
                   Right (ServerCall nonce method args)
                     | Just m <- M.lookup method exports -> do
-                      result <- m args sid
+                      result <- m args sid sref
                       sendTextData c . encode $ ServerReply {
                           srNonce = nonce,
                           srResult = result
@@ -184,23 +184,23 @@ serverEventLoop cfg exports = do
 
 -- | Server monad for Haste.App. Allows redeeming Useless values, lifting IO
 --   actions, and not much more.
-newtype Server a = Server {unS :: SessionID -> IO a}
+newtype Server a = Server {unS :: SessionID -> IORef Sessions -> IO a}
 
 instance Functor Server where
-  fmap f (Server m) = Server $ \sid -> f <$> m sid
+  fmap f (Server m) = Server $ \sid ss -> f <$> m sid ss
 
 instance Applicative Server where
   (<*>) = ap
   pure  = return
 
 instance Monad Server where
-  return x = Server $ \_ -> return x
-  (Server m) >>= f = Server $ \sid -> do
-    Server m' <- f <$> m sid
-    m' sid
+  return x = Server $ \_ _ -> return x
+  (Server m) >>= f = Server $ \sid ss -> do
+    Server m' <- f <$> m sid ss
+    m' sid ss
 
 instance MonadIO Server where
-  liftIO m = Server $ \_ -> m
+  liftIO m = Server $ \_ _ -> m
 
 -- | Make a Useless value useful by extracting it. Only possible server-side,
 --   in the IO monad.
@@ -210,4 +210,8 @@ mkUseful _          = error "Useless values are only useful server-side!"
 
 -- | Returns the ID of the current session.
 getSessionID :: Server SessionID
-getSessionID = Server return
+getSessionID = Server $ \sid _ -> return sid
+
+-- | Return all currently active sessions.
+getActiveSessions :: Server Sessions
+getActiveSessions = Server $ \_ ss -> readIORef ss
