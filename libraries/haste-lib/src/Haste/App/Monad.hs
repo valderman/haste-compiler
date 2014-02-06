@@ -148,8 +148,9 @@ serverEventLoop cfg exports = do
     clients <- newIORef S.empty
     WS.runServer "0.0.0.0" (cfgPort cfg) $ \pending -> do
       conn <- acceptRequest pending
-      cid <- randomIO
-      clientLoop cid clients conn
+      sid <- randomIO
+      atomicModifyIORef clients $ \s -> (S.insert sid s, ())
+      clientLoop sid clients conn
   where
     encode = BS.pack . fromJSStr . encodeJSON . toJSON
     
