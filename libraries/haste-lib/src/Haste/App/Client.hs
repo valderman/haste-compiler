@@ -86,7 +86,7 @@ runClient_ url (Client m) = concurrent $ do
     handler rvars _ msg = do
       join . liftIO $ atomicModifyIORef rvars $ \vs ->
         let res = do
-              ServerReply nonce result <- liftMaybe (decodeJSON msg) >>= fromJSON
+              ServerReply nonce result <- decodeJSON msg >>= fromJSON
               (var, vs') <- case span (\(n, _) -> n /= nonce) vs of
                               (xs, ((_, y):ys)) -> Right (y, xs ++ ys)
                               _                 -> Left "Bad nonce!"

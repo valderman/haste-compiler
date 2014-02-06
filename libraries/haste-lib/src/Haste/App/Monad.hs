@@ -4,7 +4,7 @@ module Haste.App.Monad (
     Exportable,
     App, Server, Useless (..), Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
-    liftServerIO, export, mkUseful, runApp, getAppConfig, (<.>)
+    liftServerIO, export, mkUseful, runApp, getAppConfig, (<.>), getSessionID
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -12,12 +12,17 @@ import Control.Monad.IO.Class
 import Haste.Serialize
 import Haste.JSON
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Haste.App.Protocol
+import Data.Int
 #ifndef __HASTE__
 import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as BS
+import Control.Exception
+import Data.IORef
+import System.Random
 #endif
 
 data AppCfg = AppCfg {
@@ -29,7 +34,9 @@ data AppCfg = AppCfg {
 defaultConfig :: String -> Int -> AppCfg
 defaultConfig = AppCfg
 
-type Method = [JSON] -> IO JSON
+type SessionID = Int64
+type Sessions = S.Set SessionID
+type Method = [JSON] -> SessionID -> IO JSON
 type Exports = M.Map CallID Method
 data Useless a = Useful (IO a) | Useless
 newtype Done = Done (IO ())
@@ -72,10 +79,10 @@ liftServerIO = return . Useful
 -- | An exportable function is of the type
 --   (Serialize a, ..., Serialize result) => a -> ... -> IO result
 class Exportable a where
-  serializify :: a -> [JSON] -> IO JSON
+  serializify :: a -> [JSON] -> (SessionID -> IO JSON)
 
 instance Serialize a => Exportable (Server a) where
-  serializify (Server m) _ = fmap toJSON m
+  serializify (Server m) _ = fmap toJSON . m
 
 instance (Serialize a, Exportable b) => Exportable (a -> b) where
   serializify f (x:xs) = serializify (f $! fromEither $ fromJSON x) xs
@@ -107,42 +114,73 @@ runApp cfg (App s) = do
 
 #ifndef __HASTE__
 -- | Server's communication event loop. Handles dispatching API calls.
+--   TODO: we could consider terminating a client who gets bad data, as that is
+--         a sure side of outside interference.
 serverEventLoop :: AppCfg -> Exports -> IO ()
-serverEventLoop cfg exports =
+serverEventLoop cfg exports = do
+    clients <- newIORef S.empty
     WS.runServer "0.0.0.0" (cfgPort cfg) $ \pending -> do
       conn <- acceptRequest pending
-      recvLoop conn
+      cid <- randomIO
+      clientLoop cid clients conn
   where
     encode = BS.pack . fromJSStr . encodeJSON . toJSON
-    recvLoop c = do
-      msg <- receiveData c
-      forkIO $ do
-        -- Parse JSON
-        case decodeJSON . toJSStr $ BS.unpack msg of
-          Just json -> do
-            -- Attempt to parse ServerCall from JSON and look up method
-            case fromJSON json of
-              Right (ServerCall nonce method args)
-                | Just m <- M.lookup method exports -> do
-                  result <- m args
-                  sendTextData c . encode $ ServerReply {
-                      srNonce = nonce,
-                      srResult = result
-                    }
+    
+    exHandler :: SessionID -> IORef Sessions -> SomeException -> IO ()
+    exHandler deadsession sessionsref _ = do
+      atomicModifyIORef sessionsref $ \cs -> (S.delete deadsession cs, ())
+
+    clientLoop :: SessionID -> IORef Sessions -> Connection -> IO ()
+    clientLoop sid sref c = catch go (exHandler sid sref)
+      where
+        go = do
+          msg <- receiveData c
+          forkIO $ do
+            -- Parse JSON
+            case decodeJSON . toJSStr $ BS.unpack msg of
+              Right json -> do
+                -- Attempt to parse ServerCall from JSON and look up method
+                case fromJSON json of
+                  Right (ServerCall nonce method args)
+                    | Just m <- M.lookup method exports -> do
+                      result <- m args sid
+                      sendTextData c . encode $ ServerReply {
+                          srNonce = nonce,
+                          srResult = result
+                        }
+                  _ -> do
+                    error $ "Got bad method call: " ++ show json
               _ -> do
-                error $ "Got bad method call: " ++ show json
-          _ -> do
-            error $ "Got bad JSON: " ++ BS.unpack msg
-      recvLoop c
+                error $ "Got bad JSON: " ++ BS.unpack msg
+          go
 #endif
 
 -- | Server monad for Haste.App. Allows redeeming Useless values, lifting IO
 --   actions, and not much more.
-newtype Server a = Server (IO a)
-  deriving (Functor, Applicative, Monad, MonadIO)
+newtype Server a = Server {unS :: SessionID -> IO a}
+
+instance Functor Server where
+  fmap f (Server m) = Server $ \sid -> f <$> m sid
+
+instance Applicative Server where
+  (<*>) = ap
+  pure  = return
+
+instance Monad Server where
+  return x = Server $ \_ -> return x
+  (Server m) >>= f = Server $ \sid -> do
+    Server m' <- f <$> m sid
+    m' sid
+
+instance MonadIO Server where
+  liftIO m = Server $ \_ -> m
 
 -- | Make a Useless value useful by extracting it. Only possible server-side,
 --   in the IO monad.
 mkUseful :: Useless a -> Server a
 mkUseful (Useful m) = liftIO m
 mkUseful _          = error "Useless values are only useful server-side!"
+
+-- | Returns the ID of the current session.
+getSessionID :: Server SessionID
+getSessionID = Server return

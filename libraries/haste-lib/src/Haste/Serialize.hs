@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, OverloadedStrings #-}
 -- | JSON serialization and de-serialization for Haste.
 module Haste.Serialize where
 import GHC.Float
@@ -81,3 +81,22 @@ instance Serialize JSString where
   toJSON = Str
   fromJSON (Str s) = Right s
   fromJSON _ = Left "Tried to deserialize a non-JSString to a JSString"
+
+instance (Serialize a, Serialize b) => Serialize (a, b) where
+  toJSON (a, b) = Arr [toJSON a, toJSON b]
+  fromJSON (Arr [a, b]) = do
+    a' <- fromJSON a
+    b' <- fromJSON b
+    return (a', b')
+  fromJSON _ =
+    fail "Tried to deserialize a non-array into a pair!"
+
+instance Serialize a => Serialize (Maybe a) where
+  toJSON (Just x)  = Dict [("hasValue", toJSON True), ("value", toJSON x)]
+  toJSON (Nothing) = Dict [("hasValue", toJSON False)]
+  fromJSON d = do
+    hasVal <- (d ~> "hasValue") >>= fromJSON
+    case hasVal of
+      False -> return Nothing
+      _     -> Just `fmap` ((d ~> "value") >>= fromJSON)
+

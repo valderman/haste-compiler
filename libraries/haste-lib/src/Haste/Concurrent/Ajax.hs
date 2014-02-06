@@ -21,7 +21,10 @@ instance JSType a => AjaxData a where
 
 instance AjaxData JSON where
   encode = encodeJSON
-  decode = decodeJSON
+  decode x =
+    case decodeJSON x of
+      Right x' -> Just x'
+      _        -> Nothing
 
 -- | Make an Ajax GET request to a URL. The function will block until a
 --   response is received.

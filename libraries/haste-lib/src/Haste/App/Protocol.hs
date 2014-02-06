@@ -22,11 +22,11 @@ instance Serialize ServerCall where
       ("args", Arr args)
     ]
   fromJSON d = do
-    ServerCall <$> (liftMaybe (d ~> "nonce") >>= fromJSON)
-               <*> (liftMaybe (d ~> "method") >>= fromJSON)
+    ServerCall <$> ((d ~> "nonce") >>= fromJSON)
+               <*> ((d ~> "method") >>= fromJSON)
                <*> case d ~> "args" of
-                     Just (Arr args') -> pure args'
-                     _                -> fail "Args not an array!"
+                     Right (Arr args') -> pure args'
+                     _                 -> fail "Args not an array!"
 
 -- | A reply to a ServerCall.
 data ServerReply = ServerReply {
@@ -40,9 +40,5 @@ instance Serialize ServerReply where
       ("result", result)
     ]
   fromJSON d = do
-    ServerReply <$> (liftMaybe (d ~> "nonce") >>= fromJSON)
-                <*> liftMaybe (d ~> "result")
-
-liftMaybe :: Maybe a -> Either String a
-liftMaybe (Just x) = Right x
-liftMaybe _        = Left "liftMaybe failed"
+    ServerReply <$> ((d ~> "nonce") >>= fromJSON)
+                <*> (d ~> "result")
