@@ -7,8 +7,16 @@ import Haste.JSON
 import Haste.Prim (JSString, toJSStr, fromJSStr)
 
 class Serialize a where
-  toJSON   :: a -> JSON
+  toJSON :: a -> JSON
+
+  listToJSON :: [a] -> JSON
+  listToJSON = Arr . map toJSON
+
   fromJSON :: JSON -> Either String a
+
+  listFromJSON :: JSON -> Either String [a]
+  listFromJSON (Arr xs) = mapM fromJSON xs
+  listFromJSON _        = Left "Tried to deserialie a non-array to a list!"
 
 instance Serialize Float where
   toJSON = Num . float2Double
@@ -73,9 +81,16 @@ instance Serialize () where
   toJSON _ = Dict []
   fromJSON _ = Right ()
 
-instance Serialize String where
-  toJSON = toJSON . toJSStr
-  fromJSON s = fmap fromJSStr (fromJSON s)
+instance Serialize Char where
+  toJSON c = Str $ toJSStr [c]
+  fromJSON (Str s) =
+    case fromJSStr s of
+      [c] -> return c
+      _   -> fail "Tried to deserialize long string to a Char"
+  fromJSON _ =
+    fail "Tried to deserialize a non-string to a Char"
+  listToJSON = toJSON . toJSStr
+  listFromJSON s = fmap fromJSStr (fromJSON s)
 
 instance Serialize JSString where
   toJSON = Str
@@ -100,3 +115,6 @@ instance Serialize a => Serialize (Maybe a) where
       False -> return Nothing
       _     -> Just `fmap` ((d ~> "value") >>= fromJSON)
 
+instance Serialize a => Serialize [a] where
+  toJSON = listToJSON
+  fromJSON = listFromJSON
