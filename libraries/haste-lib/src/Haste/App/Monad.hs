@@ -72,6 +72,8 @@ instance Applicative App where
 --   used server-side.
 liftServerIO :: IO a -> App (Useless a)
 #ifdef __HASTE__
+{-# RULES "throw away liftServerIO"
+          forall x. liftServerIO x = liftServerIO undefined #-}
 liftServerIO _ = return Useless
 #else
 liftServerIO m = App $ \cfg cid exports -> do
@@ -96,8 +98,14 @@ instance (Serialize a, Exportable b) => Exportable (a -> b) where
 
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> App (Export a)
+#ifdef __HASTE__
+{-# RULES "throw away exports" forall f. export f = export undefined  #-}
+export _ = App $ \_ cid _ ->
+    return (Export cid [], cid+1, undefined)
+#else
 export s = App $ \_ cid exports ->
     return (Export cid [], cid+1, M.insert cid (serializify s) exports)
+#endif
 
 -- | Returns the application configuration.
 getAppConfig :: App AppCfg
@@ -108,7 +116,7 @@ getAppConfig = App $ \cfg cid exports -> return (cfg, cid, exports)
 runApp :: AppCfg -> App Done -> IO ()
 runApp cfg (App s) = do
 #ifdef __HASTE__
-    (Done client, _, _) <- s cfg 0 M.empty
+    (Done client, _, _) <- s cfg 0 undefined
     client
 #else
     (_, _, exports) <- s cfg 0 M.empty
