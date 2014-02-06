@@ -163,12 +163,12 @@ serverEventLoop cfg sessions exports = do
   where
     encode = BS.pack . fromJSStr . encodeJSON . toJSON
     
-    exHandler :: SessionID -> IORef Sessions -> SomeException -> IO ()
-    exHandler deadsession sessionsref _ = do
+    cleanup :: SessionID -> IORef Sessions -> IO ()
+    cleanup deadsession sessionsref = do
       atomicModifyIORef sessionsref $ \cs -> (S.delete deadsession cs, ())
 
     clientLoop :: SessionID -> IORef Sessions -> Connection -> IO ()
-    clientLoop sid sref c = catch go (exHandler sid sref)
+    clientLoop sid sref c = finally go (cleanup sid sref)
       where
         go = do
           msg <- receiveData c
