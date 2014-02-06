@@ -83,22 +83,22 @@ evtName evt =
     OnBlur      -> "blur"
 
 -- | Friendlier name for @setCallback@.
-onEvent :: MonadIO m => Elem -> Event m a -> a -> m Bool
+onEvent :: MonadIO m => Elem -> Event IO a -> a -> m Bool
 onEvent = setCallback
 
 -- | Friendlier name for @setCallback'@.
-onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event m a -> Async a -> m Bool
+onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event CIO a -> Async a -> m Bool
 onEvent' = setCallback'
 
 -- | Set a callback for the given event.
-setCallback :: MonadIO m => Elem -> Event m a -> a -> m Bool
+setCallback :: MonadIO m => Elem -> Event IO a -> a -> m Bool
 setCallback e evt f =
   liftIO $ jsSetCB e (evtName evt) (mkCallback $! f)
 
 -- | Like @setCallback@, but takes a callback in the CIO monad instead of IO.
 setCallback' :: (ToConcurrent a, MonadIO m)
              => Elem
-             -> Event m a
+             -> Event CIO a
              -> Async a
              -> m Bool
 setCallback' e evt f =
