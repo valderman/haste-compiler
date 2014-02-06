@@ -15,15 +15,15 @@ import Data.IORef
 
 data ClientState = ClientState {
     csWebSocket  :: WebSocket,
-    csNonce      :: Int,
+    csNonce      :: IORef Int,
     csResultVars :: IORef [(Int, MVar JSON)]
   }
 
-initialState :: IORef [(Int, MVar JSON)] -> WebSocket -> ClientState
-initialState mv ws =
+initialState :: IORef Int -> IORef [(Int,MVar JSON)] -> WebSocket -> ClientState
+initialState n mv ws =
   ClientState {
     csWebSocket  = ws,
-    csNonce      = 0,
+    csNonce      = n,
     csResultVars = mv
   }
 
@@ -62,17 +62,18 @@ get f = Client $ \cs -> return (cs, f cs)
 newResult :: Client (Int, MVar JSON)
 newResult = Client $ \cs -> do
   mv <- newEmptyMVar
-  let nonce = csNonce cs
+  nonce <- liftIO $ atomicModifyIORef (csNonce cs) $ \n -> (n+1, n)
   liftIO $ atomicModifyIORef (csResultVars cs) $ \vs -> ((nonce, mv):vs, ())
-  return (cs {csNonce = nonce + 1}, (nonce, mv))
+  return (cs, (nonce, mv))
 
 -- | Run a Client computation in the web browser. The URL argument specifies
 --   the WebSockets URL the client should use to find the server.
 runClient_ :: URL -> Client () -> IO ()
 runClient_ url (Client m) = concurrent $ do
     mv <- liftIO $ newIORef []
+    n <- liftIO $ newIORef 0
     let errorhandler = error "WebSockets connection died for some reason!"
-        computation ws = snd `fmap` m (initialState mv ws)
+        computation ws = snd `fmap` m (initialState n mv ws)
     withWebSocket url (handler mv) errorhandler computation
   where
     -- When a message comes in, attempt to extract from it two members "nonce"
