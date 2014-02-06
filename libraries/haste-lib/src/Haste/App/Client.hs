@@ -125,4 +125,4 @@ __call cid args = do
   res <- liftCIO (takeMVar mv)
   case fromJSON res of
     Right x -> return x
-    Left e  -> fail $ "Unable to decode JSON: " ++ e ++ " data: " ++ show res
+    Left e  -> fail $ "Unable to decode JSON: " ++ e

@@ -38,7 +38,7 @@ type SessionID = Int64
 type Sessions = S.Set SessionID
 type Method = [JSON] -> SessionID -> IO JSON
 type Exports = M.Map CallID Method
-data Useless a = Useful (IO a) | Useless
+data Useless a = Useful a | Useless
 newtype Done = Done (IO ())
 
 data Export a = Export CallID [JSON]
@@ -51,13 +51,14 @@ data Export a = Export CallID [JSON]
 -- | Application monad; allows for exporting functions, limited liftIO and
 --   launching the client.
 newtype App a = App {
-    unA :: AppCfg -> CallID -> Exports -> (a, CallID, Exports)
+    unA :: AppCfg -> CallID -> Exports -> IO (a, CallID, Exports)
   }
 
 instance Monad App where
-  return x = App $ \_ cid exports -> (x, cid, exports)
-  (App m) >>= f = App $ \cfg cid exports ->
-    case m cfg cid exports of
+  return x = App $ \_ cid exports -> return (x, cid, exports)
+  (App m) >>= f = App $ \cfg cid exports -> do
+    res <- m cfg cid exports
+    case res of
       (x, cid', exports') -> unA (f x) cfg cid' exports'
 
 instance Functor App where
@@ -73,7 +74,9 @@ liftServerIO :: IO a -> App (Useless a)
 #ifdef __HASTE__
 liftServerIO _ = return Useless
 #else
-liftServerIO = return . Useful
+liftServerIO m = App $ \cfg cid exports -> do
+  x <- m
+  return (Useful x, cid, exports)
 #endif
 
 -- | An exportable function is of the type
@@ -94,23 +97,23 @@ instance (Serialize a, Exportable b) => Exportable (a -> b) where
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> App (Export a)
 export s = App $ \_ cid exports ->
-    (Export cid [], cid+1, M.insert cid (serializify s) exports)
+    return (Export cid [], cid+1, M.insert cid (serializify s) exports)
 
 -- | Returns the application configuration.
 getAppConfig :: App AppCfg
-getAppConfig = App $ \cfg cid exports -> (cfg, cid, exports)
+getAppConfig = App $ \cfg cid exports -> return (cfg, cid, exports)
 
 -- | Run a Haste application. runApp never returns before the program
 --   terminates.
 runApp :: AppCfg -> App Done -> IO ()
 runApp cfg (App s) = do
 #ifdef __HASTE__
+    (Done client, _, _) <- s cfg 0 M.empty
     client
 #else
+    (_, _, exports) <- s cfg 0 M.empty
     serverEventLoop cfg exports
 #endif
-  where
-    (Done client, _, exports) = s cfg 0 M.empty
 
 #ifndef __HASTE__
 -- | Server's communication event loop. Handles dispatching API calls.
@@ -178,7 +181,7 @@ instance MonadIO Server where
 -- | Make a Useless value useful by extracting it. Only possible server-side,
 --   in the IO monad.
 mkUseful :: Useless a -> Server a
-mkUseful (Useful m) = liftIO m
+mkUseful (Useful x) = return x
 mkUseful _          = error "Useless values are only useful server-side!"
 
 -- | Returns the ID of the current session.
