@@ -123,8 +123,6 @@ instance (Serialize a, Exportable b) => Exportable (a -> b) where
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> App (Export a)
 #ifdef __HASTE__
-{-# RULES "throw away exports"
-          forall f. export f = export undefined #-}
 export _ = App $ \_ _ cid _ ->
     return (Export cid [], cid+1, undefined)
 #else
