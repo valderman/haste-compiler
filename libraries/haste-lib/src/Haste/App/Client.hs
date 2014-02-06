@@ -9,16 +9,17 @@ import Haste.JSON
 import Haste.App.Monad
 import Haste.App.Protocol
 import Control.Applicative
-import Control.Monad (ap)
+import Control.Monad (ap, join)
 import Control.Monad.IO.Class
+import Data.IORef
 
 data ClientState = ClientState {
     csWebSocket  :: WebSocket,
     csNonce      :: Int,
-    csResultVars :: MVar [(Int, MVar JSON)]
+    csResultVars :: IORef [(Int, MVar JSON)]
   }
 
-initialState :: MVar [(Int, MVar JSON)] -> WebSocket -> ClientState
+initialState :: IORef [(Int, MVar JSON)] -> WebSocket -> ClientState
 initialState mv ws =
   ClientState {
     csWebSocket  = ws,
@@ -62,16 +63,14 @@ newResult :: Client (Int, MVar JSON)
 newResult = Client $ \cs -> do
   mv <- newEmptyMVar
   let nonce = csNonce cs
-      varsvar = csResultVars cs
-  vars <- takeMVar varsvar
-  putMVar varsvar $ (nonce, mv) : vars
+  liftIO $ atomicModifyIORef (csResultVars cs) $ \vs -> ((nonce, mv):vs, ())
   return (cs {csNonce = nonce + 1}, (nonce, mv))
 
 -- | Run a Client computation in the web browser. The URL argument specifies
 --   the WebSockets URL the client should use to find the server.
 runClient_ :: URL -> Client () -> IO ()
 runClient_ url (Client m) = concurrent $ do
-    mv <- newMVar []
+    mv <- liftIO $ newIORef []
     let errorhandler = error "WebSockets connection died for some reason!"
         computation ws = snd `fmap` m (initialState mv ws)
     withWebSocket url (handler mv) errorhandler computation
@@ -79,20 +78,20 @@ runClient_ url (Client m) = concurrent $ do
     -- When a message comes in, attempt to extract from it two members "nonce"
     -- and "result". Find the result MVar corresponding to the nonce and write
     -- the result to it, then discard the MVar.
+    -- TODO: if the nonce is not found, the result vars list if left as it was.
+    --       Maybe we should crash here instead, since this is clearly an
+    --       unrecoverable error?
     handler rvars _ msg = do
-      vs <- takeMVar rvars
-      let res = do
-            ServerReply nonce result <- liftMaybe (decodeJSON msg) >>= fromJSON
-            (var, vs') <- case span (\(n, _) -> n /= nonce) vs of
-                            (xs, ((_, y):ys)) -> Right (y, xs ++ ys)
-                            _                 -> Left "Wrong nonce"
-            return (var, result, vs')
-      case res of
-        Right (resvar, result, vs') -> do
-          putMVar resvar result
-          putMVar rvars vs'
-        _ -> do
-          putMVar rvars vs
+      join . liftIO $ atomicModifyIORef rvars $ \vs ->
+        let res = do
+              ServerReply nonce result <- liftMaybe (decodeJSON msg) >>= fromJSON
+              (var, vs') <- case span (\(n, _) -> n /= nonce) vs of
+                              (xs, ((_, y):ys)) -> Right (y, xs ++ ys)
+                              _                 -> Left "Bad nonce!"
+              return (var, result, vs')
+        in case res of
+             Right (resvar, result, vs') -> (vs', putMVar resvar result)
+             _                           -> (vs, return ())
 
 -- | Launch a client from a Server computation. runClient never returns before
 --   the program terminates.
