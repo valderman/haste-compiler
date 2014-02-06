@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Haste.App.Client (
-    Client, runClient, onServer, liftCIO
+    Client, runClient, onServer, liftCIO, get
   ) where
 import Haste
 import Haste.Serialize
@@ -29,34 +29,34 @@ initialState n mv ws =
 
 -- | A client-side computation. See it as XHaste's version of the IO monad.
 newtype Client a = Client {
-    unC :: ClientState -> CIO (ClientState, a)
+    unC :: ClientState -> CIO a
   }
 
 instance Monad Client where
   (Client m) >>= f = Client $ \cs -> do
-    (cs', x) <- m cs
-    unC (f x) cs'
-  return x = Client $ \cs -> return (cs, x)
+    x <- m cs
+    unC (f x) cs
+  return x = Client $ \_ -> return x
 
 instance Functor Client where
-  fmap f (Client m) = Client $ \cs -> fmap (fmap f) (m cs)
+  fmap f (Client m) = Client $ \cs -> fmap f (m cs)
 
 instance Applicative Client where
   (<*>) = ap
   pure  = return
 
 instance MonadIO Client where
-  liftIO m = Client $ \cs -> do
+  liftIO m = Client $ \_ -> do
     x <- liftIO m
-    return (cs, x)
+    return x
 
 -- | Lift a CIO action into the Client monad.
 liftCIO :: CIO a -> Client a
-liftCIO m = Client $ \cs -> m >>= \x -> return (cs, x)
+liftCIO m = Client $ \_ -> m >>= \x -> return x
 
 -- | Get part of the client state.
 get :: (ClientState -> a) -> Client a
-get f = Client $ \cs -> return (cs, f cs)
+get f = Client $ \cs -> return (f cs)
 
 -- | Create a new nonce with associated result var.
 newResult :: Client (Int, MVar JSON)
@@ -64,7 +64,7 @@ newResult = Client $ \cs -> do
   mv <- newEmptyMVar
   nonce <- liftIO $ atomicModifyIORef (csNonce cs) $ \n -> (n+1, n)
   liftIO $ atomicModifyIORef (csResultVars cs) $ \vs -> ((nonce, mv):vs, ())
-  return (cs, (nonce, mv))
+  return (nonce, mv)
 
 -- | Run a Client computation in the web browser. The URL argument specifies
 --   the WebSockets URL the client should use to find the server.
@@ -73,7 +73,7 @@ runClient_ url (Client m) = concurrent $ do
     mv <- liftIO $ newIORef []
     n <- liftIO $ newIORef 0
     let errorhandler = error "WebSockets connection died for some reason!"
-        computation ws = snd `fmap` m (initialState n mv ws)
+        computation ws = m (initialState n mv ws)
     withWebSocket url (handler mv) errorhandler computation
   where
     -- When a message comes in, attempt to extract from it two members "nonce"
