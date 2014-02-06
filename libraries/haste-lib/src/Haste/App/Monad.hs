@@ -4,7 +4,8 @@ module Haste.App.Monad (
     Exportable,
     App, Server, Useless (..), Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
-    liftServerIO, export, mkUseful, runApp, getAppConfig, (<.>), getSessionID
+    liftServerIO, forkServerIO, export, getAppConfig,
+    mkUseful, runApp, (<.>), getSessionID
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -15,6 +16,7 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Haste.App.Protocol
 import Data.Int
+import Control.Concurrent (ThreadId)
 #ifndef __HASTE__
 import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)
@@ -48,8 +50,8 @@ data Export a = Export CallID [JSON]
 (<.>) :: Serialize a => Export (a -> b) -> a -> Export b
 (Export cid args) <.> arg = Export cid (toJSON arg:args)
 
--- | Application monad; allows for exporting functions, limited liftIO and
---   launching the client.
+-- | Application monad; allows for exporting functions, limited liftIO,
+--   forkIO and launching the client.
 newtype App a = App {
     unA :: AppCfg -> CallID -> Exports -> IO (a, CallID, Exports)
   }
@@ -73,12 +75,25 @@ instance Applicative App where
 liftServerIO :: IO a -> App (Useless a)
 #ifdef __HASTE__
 {-# RULES "throw away liftServerIO"
-          forall x. liftServerIO x = liftServerIO undefined #-}
+          forall x. liftServerIO x = return Useless #-}
 liftServerIO _ = return Useless
 #else
 liftServerIO m = App $ \cfg cid exports -> do
   x <- m
   return (Useful x, cid, exports)
+#endif
+
+-- | Fork off an IO computation on the server. This may be useful for any tasks
+--   that will keep running for as long as the server is running.
+forkServerIO :: IO () -> App (Useless ThreadId)
+#ifdef __HASTE__
+{-# RULES "throw away forkServerIO"
+          forall x. forkServerIO x = return Useless #-}
+forkServerIO _ = return Useless
+#else
+forkServerIO m = App $ \_ cid exports -> do
+  tid <- forkIO m
+  return (Useful tid, cid, exports)
 #endif
 
 -- | An exportable function is of the type
@@ -99,7 +114,8 @@ instance (Serialize a, Exportable b) => Exportable (a -> b) where
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> App (Export a)
 #ifdef __HASTE__
-{-# RULES "throw away exports" forall f. export f = export undefined  #-}
+{-# RULES "throw away exports"
+          forall f. export f = export undefined #-}
 export _ = App $ \_ cid _ ->
     return (Export cid [], cid+1, undefined)
 #else
