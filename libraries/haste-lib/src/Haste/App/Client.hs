@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Haste.App.Client (
-    Client, runClient, onServer, liftCIO, get, runClientCIO
+    Client, ClientState,
+    runClient, onServer, liftCIO, get, runClientCIO
   ) where
 import Haste
 import Haste.Serialize
@@ -102,8 +103,8 @@ runClient m = do
   return . Done $ runClient_ url m
 
 -- | Run a client computation from the CIO monad, using a pre-specified state.
-runClientCIO :: Client a -> ClientState -> CIO a
-runClientCIO (Client m) = m
+runClientCIO :: ClientState -> Client a -> CIO a
+runClientCIO cs (Client m) = m cs
 
 -- | Perform a server-side computation, blocking the client thread until said
 --   computation returns. All free variables in the server-side computation

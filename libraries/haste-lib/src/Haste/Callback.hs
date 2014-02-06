@@ -2,7 +2,8 @@
              FlexibleInstances, OverloadedStrings, CPP #-}
 module Haste.Callback (
     setCallback, setCallback', JSFun (..), mkCallback, Event (..),
-    setTimeout, setTimeout', Callback (..), onEvent, onEvent'
+    setTimeout, setTimeout', Callback (..), onEvent, onEvent',
+    jsSetCB, jsSetTimeout, evtName
   ) where
 import Haste.Prim
 import Haste.DOM

@@ -4,7 +4,7 @@ module Haste (JSString, JSAny, URL,
               module Haste.JSType, module Haste.DOM,
               module Haste.Callback, module Haste.Random) where
 import Haste.Prim
-import Haste.Callback
+import Haste.Callback hiding (jsSetCB, jsSetTimeout)
 import Haste.Random
 import Haste.JSType
 import Haste.DOM
