@@ -232,8 +232,5 @@ Known issues
 ------------
 
 * Not all GHC primops are implemented; if you encounter an unimplemented
-  primop, I'd be happy if you'd report it together with a small test case that
-  demonstrates the problem.
-
-* A program that throws unhandled exceptions may not always give a nice error
-  message.
+  primop, please report it together with a small test case that demonstrates
+  the problem.
