@@ -7,7 +7,9 @@ import Haste.Callback
 import Haste.Prim
 import Unsafe.Coerce
 
-instance Marshal (JSString -> JSString -> IO ()) where
+newtype HashCallback = HashCallback (JSString -> JSString -> IO ())
+
+instance Marshal HashCallback where
   pack = unsafeCoerce
   unpack = unsafeCoerce
 
@@ -18,9 +20,9 @@ onHashChange :: (MonadIO m, GenericCallback (m ()) m, CB (m ()) ~ IO ())
               -> m ()
 onHashChange f = do
     f' <- toCallback $ \old new -> f (fromJSStr old) (fromJSStr new)
-    liftIO $ go f'
+    liftIO $ go (HashCallback f')
   where
-    go :: (JSString -> JSString -> IO ()) -> IO ()
+    go :: HashCallback -> IO ()
     go = ffi "(function(cb,_) {\
              \  window.onhashchange = function(e){\
              \      A(cb, [[0,e.oldURL.split('#')[1] || ''],\
