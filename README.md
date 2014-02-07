@@ -199,7 +199,9 @@ Libraries
 Haste is able to use standard Haskell libraries. However, some primitive
 operations are still not implemented which means that any code making use 
 of them will give you a compiler warning, then die at runtime with an angry
-error. This is currently being worked on.
+error. Some libraries also depend on external C code - if you wish to use such
+a library, you will need to port the C bits to Javascript yourself (perhaps
+using Escripten) and link them into your program using `--with-js`.
 
 
 Why yet another Haskell to Javascript compiler?
