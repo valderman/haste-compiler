@@ -70,15 +70,37 @@ data Event m a where
   OnChange    :: Event m (m ())
   OnFocus     :: Event m (m ())
   OnBlur      :: Event m (m ())
+  -- | The callback for @OnMouseMove@ receives the mouse coordinates relative
+  --   to the top left corner of the hovered element as its argument.
   OnMouseMove :: Event m ((Int, Int) -> m ())
+  -- | The callback for @OnMouseOver@ receives the mouse coordinates relative
+  --   to the top left corner of the hovered element as its argument.
   OnMouseOver :: Event m ((Int, Int) -> m ())
   OnMouseOut  :: Event m (m ())
+  -- | The callback for @OnClick@ receives the number of the clicked mouse
+  --   button and the mouse coordinates at the time of the click, relative to
+  --   the top left corner of the clicked element.
   OnClick     :: Event m (Int -> (Int, Int) -> m ())
+  -- | The callback for @OnDblClick@ receives the number of the clicked mouse
+  --   button and the mouse coordinates at the time of the click, relative to
+  --   the top left corner of the clicked element.
   OnDblClick  :: Event m (Int -> (Int, Int) -> m ())
+  -- | The callback for @OnMouseDown@ receives the number of the clicked mouse
+  --   button and the mouse coordinates at the time of the click, relative to
+  --   the top left corner of the clicked element.
   OnMouseDown :: Event m (Int -> (Int, Int) -> m ())
+  -- | The callback for @OnMouseUp@ receives the number of the clicked mouse
+  --   button and the mouse coordinates at the time of the click, relative to
+  --   the top left corner of the clicked element.
   OnMouseUp   :: Event m (Int -> (Int, Int) -> m ())
+  -- | The callback for @OnKeyPress@ receives the character code of the pressed
+  --   key as its argument.
   OnKeyPress  :: Event m (Int -> m ())
+  -- | The callback for @OnKeyUp@ receives the character code of the pressed
+  --   key as its argument.
   OnKeyUp     :: Event m (Int -> m ())
+  -- | The callback for @OnKeyDown@ receives the character code of the pressed
+  --   key as its argument.
   OnKeyDown   :: Event m (Int -> m ())
 
 asEvtTypeOf :: Event m a -> a -> a
