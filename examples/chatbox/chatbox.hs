@@ -63,18 +63,15 @@ clientMain :: API -> Client ()
 clientMain api = withElems ["name","message","chat"] $ \[name, msg, chat] -> do
   -- Tell the server we're here, and fill out our backlog.
   -- The backlog is stored with newest messags first, so we need to reverse it.
-  backlog <- reverse `fmap` onServer (apiHello api)
-  setProp chat "value" . unlines $ map (\(n, m) -> n ++ ": " ++ m) backlog
-  scrollToBottom chat
+  backlog <- map (\(n, m) -> n ++ ": " ++ m) <$> onServer (apiHello api)
 
   -- Ask the server for a new message, block until one arrives, repeat
-  fork $ let awaitLoop = do
-               (from, msg) <- onServer $ apiAwait api
-               prev <- maybe "" id `fmap` getValue chat
-               setProp chat "value" $ prev ++ from ++ ": " ++ msg ++ "\n"
+  fork $ let awaitLoop chatlines = do
+               setProp chat "value" . unlines . reverse $ take 100 chatlines
                scrollToBottom chat
-               awaitLoop
-         in awaitLoop
+               (from, msg) <- onServer $ apiAwait api
+               awaitLoop $ (from ++ ": " ++ msg) : chatlines
+         in awaitLoop backlog
 
   -- Send a message if the user hits return (charcode 13)
   msg `onEvent` OnKeyDown $ \k -> do
