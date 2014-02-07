@@ -137,8 +137,13 @@ export s = App $ \_ _ cid exports ->
 getAppConfig :: App AppCfg
 getAppConfig = App $ \cfg _ cid exports -> return (cfg, cid, exports)
 
--- | Run a Haste application. runApp never returns before the program
+-- | Run a Haste.App application. runApp never returns before the program
 --   terminates.
+--
+--   Note that @runApp@'s arguments *must not* depend on any external IO,
+--   or the client and server computations may diverge.
+--   Ideally, calling runApp should be the first and only thing that happens
+--   in main.
 runApp :: AppCfg -> App Done -> IO ()
 runApp cfg (App s) = do
 #ifdef __HASTE__
