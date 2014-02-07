@@ -153,6 +153,22 @@ name the compiler chooses for the Haste `main`) and then executing our own
 `mymain`.
 
 
+Effortless type-safe client-server communication
+------------------------------------------------
+
+Using the framework from the `Haste.App` module hierarchy, you can easily
+web applications that communicate with a server without having to write a
+single line of AJAX/WebSockets/whatever. Best of all: it's completely type
+safe.
+
+In essence, you write your web application as a single program - no more forced
+separation of your client and server code. You then compile your program once
+using Haste and once using GHC, and the two compilers will magically generate
+client and server code respectively.
+
+An example of Haste.App in action is available in `examples/chatbox`.
+
+
 Base library and documentation
 ------------------------------
 
