@@ -10,17 +10,21 @@ import Haste.Foreign
 import Haste.Concurrent
 import Unsafe.Coerce
 
+newtype WSOnMsg = WSOnMsg (WebSocket -> JSString -> IO ())
+newtype WSComputation = WSComputation (WebSocket -> IO ())
+newtype WSOnError = WSOnError (IO ())
+
 data WebSocket
 instance Marshal WebSocket where
   pack = unsafeCoerce
   unpack = unsafeCoerce
-instance Marshal (WebSocket -> JSString -> IO ()) where
+instance Marshal WSOnMsg where
   pack = unsafeCoerce
   unpack = unsafeCoerce
-instance Marshal (WebSocket -> IO ()) where
+instance Marshal WSComputation where
   pack = unsafeCoerce
   unpack = unsafeCoerce
-instance Marshal (IO ()) where
+instance Marshal WSOnError where
   pack = unsafeCoerce
   unpack = unsafeCoerce
 
@@ -37,16 +41,16 @@ withWebSocket :: URL
               -> CIO a
 withWebSocket url cb err f = do
     result <- newEmptyMVar
-    let f' = \ws -> concurrent $ f ws >>= putMVar result
-    liftIO $ new url cb' f' $ concurrent $ err >>= putMVar result
+    let f' = WSComputation $ \ws -> concurrent $ f ws >>= putMVar result
+    liftIO $ new url cb' f' $ WSOnError $ concurrent $ err >>= putMVar result
     takeMVar result
   where
-    cb' = \ws msg -> concurrent $ cb ws msg
+    cb' = WSOnMsg $ \ws msg -> concurrent $ cb ws msg
 
 new :: URL
-    -> (WebSocket -> JSString -> IO ())
-    -> (WebSocket -> IO ())
-    -> IO ()
+    -> WSOnMsg
+    -> WSComputation
+    -> WSOnError
     -> IO ()
 new = ffi "(function(url, cb, f, err) {\
              \var ws = new WebSocket(url);\
