@@ -1,5 +1,5 @@
 Name:           haste-lib
-Version:        0.2
+Version:        0.3
 License:        BSD3
 License-File:   LICENSE
 Synopsis:       Base libraries for haste-compiler.
@@ -22,13 +22,15 @@ Library
     GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
+        Haste.App
+        Haste.App.Concurrent
         Haste.JSON
         Haste.Ajax
         Haste.Reactive
         Haste.DOM
         Haste.Prim
         Haste.Concurrent
-        Haste.Graphics.Canvas,
+        Haste.Graphics.Canvas
         Haste.Foreign
         Haste.Serialize
         Haste.Parsing
@@ -36,11 +38,16 @@ Library
     Other-Modules:
         Haste.JSType
         Haste.Callback
+        Haste.Hash
         Haste.Random
         Haste.Reactive.DOM
         Haste.Reactive.Ajax
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
+        Haste.App.Client
+        Haste.App.Events
+        Haste.App.Monad
+        Haste.App.Protocol
     Build-Depends:
         integer-gmp,
         transformers,
@@ -56,5 +63,7 @@ Library
         Build-Depends:
             base,
             array,
-            random
+            random,
+            bytestring >= 0.9.2.1,
+            websockets >= 0.8
     Default-Language: Haskell98

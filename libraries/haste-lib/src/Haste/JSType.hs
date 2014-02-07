@@ -5,13 +5,16 @@
 module Haste.JSType (
     JSType (..), JSNum (..), toString, fromString, convert
   ) where
-import GHC.Prim
 import GHC.Int
 import GHC.Word
-import GHC.Float
+import Haste.Prim (JSString, toJSStr, fromJSStr)
+#ifdef __HASTE__
+import GHC.Prim
 import GHC.Integer.GMP.Internals
 import GHC.Types (Int (..))
-import Haste.Prim (JSString, toJSStr, fromJSStr)
+#else
+import GHC.Float
+#endif
 
 class JSType a where
   toJSString   :: a -> JSString

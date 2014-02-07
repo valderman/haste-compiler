@@ -66,23 +66,23 @@ jsUnquote = toJSStr . unq . fromJSStr
 (!) :: JSON -> JSString -> JSON
 dict ! k =
   case dict ~> k of
-    Just x -> x
-    _      -> error $ "Haste.JSON.!: unable to look up key " ++ fromJSStr k
+    Right x -> x
+    _       -> error $ "Haste.JSON.!: unable to look up key " ++ fromJSStr k
 infixl 5 !
 
 class JSONLookup a where
   -- | Look up a key in a JSON dictionary. Return Nothing if the key can't be
   --   found for some reason.
-  (~>) :: a -> JSString -> Maybe JSON  
+  (~>) :: a -> JSString -> Either String JSON  
 infixl 5 ~>
 
 instance JSONLookup JSON where
-  (Dict m) ~> key = lookup key m
-  _        ~> _   = Nothing
+  (Dict m) ~> key = maybe (Left "No such key") return (lookup key m)
+  _        ~> _   = Left "Not a dictionary"
 
-instance JSONLookup (Maybe JSON) where
-  (Just (Dict m)) ~> key = lookup key m
-  _               ~> _   = Nothing
+instance JSONLookup (Either String JSON) where
+  (Right (Dict m)) ~> key = maybe (Left "No such key") return (lookup key m)
+  _                ~> _   = Left "Not a dictionary"
 
 encodeJSON :: JSON -> JSString
 encodeJSON = catJSStr "" . enc []
@@ -114,12 +114,17 @@ encodeJSON = catJSStr "" . enc []
       | otherwise =
         opencu : closecu : acc
 
-decodeJSON :: JSString -> Maybe JSON
+decodeJSON :: JSString -> Either String JSON
 #ifdef __HASTE__
-decodeJSON = fromPtr . jsParseJSON
-#else
-decodeJSON = runParser json . fromJSStr
+decodeJSON = liftMaybe . fromPtr . jsParseJSON
   where
+    liftMaybe (Just x) = Right x
+    liftMaybe _        = Left "Invalid JSON!"
+#else
+decodeJSON = liftMaybe . runParser json . fromJSStr
+  where
+    liftMaybe (Just x) = Right x
+    liftMaybe _        = Left "Invalid JSON!"
     json = oneOf [Num  <$> double,
                   Bool <$> boolean,
                   Str  <$> jsstring,

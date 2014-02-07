@@ -76,7 +76,9 @@ jsonRequest_ m url kv cb = liftIO $ do
   _ <- ajaxReq (toJSString $ show m) url' True "" cb'
   return ()
   where
-    cb' = mkCallback $ \mjson -> cb (mjson >>= decodeJSON)
+    liftEither (Right x) = Just x
+    liftEither _         = Nothing
+    cb' = mkCallback $ \mjson -> cb (mjson >>= liftEither . decodeJSON)
     url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
 
 toQueryString :: [(JSString, JSString)] -> JSString

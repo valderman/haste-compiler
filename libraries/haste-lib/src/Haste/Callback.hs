@@ -1,8 +1,11 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, GADTs,
-             FlexibleInstances, OverloadedStrings, CPP #-}
+             FlexibleInstances, OverloadedStrings, CPP, MultiParamTypeClasses,
+             TypeFamilies, FlexibleContexts #-}
 module Haste.Callback (
+    GenericCallback (..), toCallback,
     setCallback, setCallback', JSFun (..), mkCallback, Event (..),
-    setTimeout, setTimeout', Callback (..), onEvent, onEvent'
+    setTimeout, setTimeout', Callback (..), onEvent, onEvent',
+    jsSetCB, jsSetTimeout, evtName
   ) where
 import Haste.Prim
 import Haste.DOM
@@ -22,6 +25,31 @@ jsSetTimeout :: Int -> JSFun a -> IO ()
 jsSetTimeout = error "Tried to use jsSetTimeout on server side!"
 #endif
 
+-- | Turn a function of type a -> ... -> m () into a function of type
+--   a -> ... -> IO (), for use with generic JS callbacks.
+toCallback :: (Monad m, GenericCallback a m) => a -> m (CB a)
+toCallback f = do
+  iofy <- mkIOfier f
+  return $ mkcb iofy f
+
+class GenericCallback a m where
+  type CB a
+  -- | Build a callback from an IOfier and a function.
+  mkcb :: (m () -> IO ()) -> a -> CB a
+  -- | Never evaluate the first argument to mkIOfier, it's only there to fix
+  --   the types.
+  mkIOfier :: a -> m (m () -> IO ())
+
+instance GenericCallback (IO ()) IO where
+  type CB (IO ()) = IO ()
+  mkcb toIO m = toIO m
+  mkIOfier _ = return id
+
+instance GenericCallback b m => GenericCallback (a -> b) m where
+  type CB (a -> b) = a -> CB b
+  mkcb toIO f = \x -> mkcb toIO (f x)
+  mkIOfier f = mkIOfier (f undefined)
+
 -- | Turn a computation into a callback that can be passed to a JS
 --   function.
 mkCallback :: a -> JSFun a
@@ -36,34 +64,34 @@ instance Callback (IO ()) where
 instance Callback (a -> IO ()) where
   constCallback = const
 
-data Event a where
-  OnLoad      :: Event (IO ())
-  OnUnload    :: Event (IO ())
-  OnChange    :: Event (IO ())
-  OnFocus     :: Event (IO ())
-  OnBlur      :: Event (IO ())
-  OnMouseMove :: Event ((Int, Int) -> IO ())
-  OnMouseOver :: Event ((Int, Int) -> IO ())
-  OnMouseOut  :: Event (IO ())
-  OnClick     :: Event (Int -> (Int, Int) -> IO ())
-  OnDblClick  :: Event (Int -> (Int, Int) -> IO ())
-  OnMouseDown :: Event (Int -> (Int, Int) -> IO ())
-  OnMouseUp   :: Event (Int -> (Int, Int) -> IO ())
-  OnKeyPress  :: Event (Int -> IO ())
-  OnKeyUp     :: Event (Int -> IO ())
-  OnKeyDown   :: Event (Int -> IO ())
+data Event m a where
+  OnLoad      :: Event m (m ())
+  OnUnload    :: Event m (m ())
+  OnChange    :: Event m (m ())
+  OnFocus     :: Event m (m ())
+  OnBlur      :: Event m (m ())
+  OnMouseMove :: Event m ((Int, Int) -> m ())
+  OnMouseOver :: Event m ((Int, Int) -> m ())
+  OnMouseOut  :: Event m (m ())
+  OnClick     :: Event m (Int -> (Int, Int) -> m ())
+  OnDblClick  :: Event m (Int -> (Int, Int) -> m ())
+  OnMouseDown :: Event m (Int -> (Int, Int) -> m ())
+  OnMouseUp   :: Event m (Int -> (Int, Int) -> m ())
+  OnKeyPress  :: Event m (Int -> m ())
+  OnKeyUp     :: Event m (Int -> m ())
+  OnKeyDown   :: Event m (Int -> m ())
 
-asEvtTypeOf :: Event a -> a -> a
+asEvtTypeOf :: Event m a -> a -> a
 asEvtTypeOf _ = id
 
-instance Eq (Event a) where
+instance Eq (Event m a) where
   a == b = evtName a == (evtName b :: String)
 
-instance Ord (Event a) where
+instance Ord (Event m a) where
   compare a b = compare (evtName a) (evtName b :: String)
 
 -- | The name of a given event.
-evtName :: IsString s => Event a -> s
+evtName :: IsString s => Event m a -> s
 evtName evt =
   case evt of
     OnLoad      -> "load"
@@ -83,22 +111,22 @@ evtName evt =
     OnBlur      -> "blur"
 
 -- | Friendlier name for @setCallback@.
-onEvent :: MonadIO m => Elem -> Event a -> a -> m Bool
+onEvent :: MonadIO m => Elem -> Event IO a -> a -> m Bool
 onEvent = setCallback
 
 -- | Friendlier name for @setCallback'@.
-onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event a -> Async a -> m Bool
+onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event CIO a -> Async a -> m Bool
 onEvent' = setCallback'
 
 -- | Set a callback for the given event.
-setCallback :: MonadIO m => Elem -> Event a -> a -> m Bool
+setCallback :: MonadIO m => Elem -> Event IO a -> a -> m Bool
 setCallback e evt f =
   liftIO $ jsSetCB e (evtName evt) (mkCallback $! f)
 
 -- | Like @setCallback@, but takes a callback in the CIO monad instead of IO.
 setCallback' :: (ToConcurrent a, MonadIO m)
              => Elem
-             -> Event a
+             -> Event CIO a
              -> Async a
              -> m Bool
 setCallback' e evt f =

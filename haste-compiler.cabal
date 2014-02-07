@@ -199,3 +199,53 @@ Executable haste-copy-pkg
         executable-path,
         shellmate
     default-language: Haskell98
+
+Library
+    Hs-Source-Dirs: libraries/haste-lib/src, libraries/fursuit/src
+    GHC-Options: -Wall -O2
+    Exposed-Modules:
+        FRP.Fursuit
+        FRP.Fursuit.Async
+        Haste
+        Haste.App
+        Haste.App.Concurrent
+        Haste.JSON
+        Haste.Ajax
+        Haste.Reactive
+        Haste.DOM
+        Haste.Prim
+        Haste.Concurrent
+        Haste.Graphics.Canvas
+        Haste.Foreign
+        Haste.Serialize
+        Haste.Parsing
+        Haste.WebSockets
+    Other-Modules:
+        FRP.Fursuit.Signal
+        FRP.Fursuit.Sink
+        FRP.Fursuit.Pipe
+        FRP.Fursuit.Locking
+        Haste.JSType
+        Haste.Callback
+        Haste.Hash
+        Haste.Random
+        Haste.Reactive.DOM
+        Haste.Reactive.Ajax
+        Haste.Concurrent.Monad
+        Haste.Concurrent.Ajax
+        Haste.App.Client
+        Haste.App.Events
+        Haste.App.Monad
+        Haste.App.Protocol
+    Build-Depends:
+        integer-gmp,
+        transformers,
+        monads-tf,
+        ghc-prim,
+        containers,
+        base < 5,
+        array,
+        random,
+        bytestring >= 0.9.2.1,
+        websockets >= 0.8
+    Default-Language: Haskell98
