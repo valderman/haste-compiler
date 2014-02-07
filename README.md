@@ -156,7 +156,7 @@ name the compiler chooses for the Haste `main`) and then executing our own
 Effortless type-safe client-server communication
 ------------------------------------------------
 
-Using the framework from the `Haste.App` module hierarchy, you can easily
+Using the framework from the `Haste.App` module hierarchy, you can easily write
 web applications that communicate with a server without having to write a
 single line of AJAX/WebSockets/whatever. Best of all: it's completely type
 safe.
