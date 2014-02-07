@@ -227,6 +227,7 @@ Library
         FRP.Fursuit.Locking
         Haste.JSType
         Haste.Callback
+        Haste.Hash
         Haste.Random
         Haste.Reactive.DOM
         Haste.Reactive.Ajax
