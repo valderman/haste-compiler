@@ -1,6 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, GADTs,
-             FlexibleInstances, OverloadedStrings, CPP #-}
+             FlexibleInstances, OverloadedStrings, CPP, MultiParamTypeClasses,
+             TypeFamilies, FlexibleContexts #-}
 module Haste.Callback (
+    GenericCallback (..), toCallback,
     setCallback, setCallback', JSFun (..), mkCallback, Event (..),
     setTimeout, setTimeout', Callback (..), onEvent, onEvent',
     jsSetCB, jsSetTimeout, evtName
@@ -22,6 +24,31 @@ jsSetCB = error "Tried to use jsSetCB on server side!"
 jsSetTimeout :: Int -> JSFun a -> IO ()
 jsSetTimeout = error "Tried to use jsSetTimeout on server side!"
 #endif
+
+-- | Turn a function of type a -> ... -> m () into a function of type
+--   a -> ... -> IO (), for use with generic JS callbacks.
+toCallback :: (Monad m, GenericCallback a m) => a -> m (CB a)
+toCallback f = do
+  iofy <- mkIOfier f
+  return $ mkcb iofy f
+
+class GenericCallback a m where
+  type CB a
+  -- | Build a callback from an IOfier and a function.
+  mkcb :: (m () -> IO ()) -> a -> CB a
+  -- | Never evaluate the first argument to mkIOfier, it's only there to fix
+  --   the types.
+  mkIOfier :: a -> m (m () -> IO ())
+
+instance GenericCallback (IO ()) IO where
+  type CB (IO ()) = IO ()
+  mkcb toIO m = toIO m
+  mkIOfier _ = return id
+
+instance GenericCallback b m => GenericCallback (a -> b) m where
+  type CB (a -> b) = a -> CB b
+  mkcb toIO f = \x -> mkcb toIO (f x)
+  mkIOfier f = mkIOfier (f undefined)
 
 -- | Turn a computation into a callback that can be passed to a JS
 --   function.

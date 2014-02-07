@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies, MultiParamTypeClasses,
+             FlexibleInstances #-}
 module Haste.App.Client (
     Client, ClientState,
     runClient, onServer, liftCIO, get, runClientCIO
@@ -50,6 +51,13 @@ instance MonadIO Client where
   liftIO m = Client $ \_ -> do
     x <- liftIO m
     return x
+
+instance GenericCallback (Client ()) Client where
+  type CB (Client ()) = IO ()
+  mkcb toIO m = toIO m
+  mkIOfier _ = do
+    st <- get id
+    return $ concurrent . runClientCIO st
 
 -- | Lift a CIO action into the Client monad.
 liftCIO :: CIO a -> Client a

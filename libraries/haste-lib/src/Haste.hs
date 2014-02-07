@@ -1,10 +1,11 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, CPP #-}
-module Haste (JSString, JSAny, URL,
+module Haste (JSString, JSAny, URL, CB.GenericCallback,
               alert, prompt, eval, writeLog, catJSStr, fromJSStr,
               module Haste.JSType, module Haste.DOM,
               module Haste.Callback, module Haste.Random) where
 import Haste.Prim
-import Haste.Callback hiding (jsSetCB, jsSetTimeout)
+import Haste.Callback hiding (jsSetCB, jsSetTimeout, GenericCallback)
+import qualified Haste.Callback as CB (GenericCallback)
 import Haste.Random
 import Haste.JSType
 import Haste.DOM
