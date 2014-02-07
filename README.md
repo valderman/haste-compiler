@@ -166,7 +166,13 @@ separation of your client and server code. You then compile your program once
 using Haste and once using GHC, and the two compilers will magically generate
 client and server code respectively.
 
-An example of Haste.App in action is available in `examples/chatbox`.
+You will need to have the same libraries installed with both Haste and vanilla
+GHC (unless you use conditional compilation to get around this).
+`haste-compiler` comes bundled with all of `fursuit` and `haste-lib`, so you
+only need to concern yourself with this if you're using third party libraries.
+
+Examples of Haste.App in action is available in `examples/haste-app` and
+`examples/chatbox`.
 
 
 Base library and documentation
