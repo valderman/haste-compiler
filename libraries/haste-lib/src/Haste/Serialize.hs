@@ -86,9 +86,9 @@ instance Serialize Char where
   fromJSON (Str s) =
     case fromJSStr s of
       [c] -> return c
-      _   -> fail "Tried to deserialize long string to a Char"
+      _   -> Left "Tried to deserialize long string to a Char"
   fromJSON _ =
-    fail "Tried to deserialize a non-string to a Char"
+    Left "Tried to deserialize a non-string to a Char"
   listToJSON = toJSON . toJSStr
   listFromJSON s = fmap fromJSStr (fromJSON s)
 
@@ -104,7 +104,7 @@ instance (Serialize a, Serialize b) => Serialize (a, b) where
     b' <- fromJSON b
     return (a', b')
   fromJSON _ =
-    fail "Tried to deserialize a non-array into a pair!"
+    Left "Tried to deserialize a non-array into a pair!"
 
 instance Serialize a => Serialize (Maybe a) where
   toJSON (Just x)  = Dict [("hasValue", toJSON True), ("value", toJSON x)]
