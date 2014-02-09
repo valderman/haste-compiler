@@ -6,17 +6,20 @@ A compiler to generate Javascript code from Haskell.
 Features
 --------
 
+* Seamless, type-safe single program framework for client-server communication
+* Support for modern web technologies such as WebSockets, WebStorage and Canvas
+* Simple Javascript interoperability
 * Generates small, fast programs
 * Supports all GHC extensions except Template Haskell
 * Uses standard Haskell libraries
 * Cabal integration
+* Simple, one-step build; no need for error prone Rube Goldberg machines of
+  Vagrant, VirtualBox, GHC sources and other black magic
 * Concurrency and MVars with Haste.Concurrent
 * Unboxed arrays, ByteArrays, StableNames and other low level features
 * Low-level DOM base library
 * Easy integration with Google's Closure compiler
 * Works on Windows, GNU/Linux and Mac OS X
-* Simple, one-step build; no need for error prone Rube Goldberg machines of
-  Vagrant, VirtualBox, GHC sources and other black magic
 
 
 Installation
