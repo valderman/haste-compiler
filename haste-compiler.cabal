@@ -220,6 +220,7 @@ Library
         Haste.Serialize
         Haste.Parsing
         Haste.WebSockets
+        Haste.LocalStorage
     Other-Modules:
         FRP.Fursuit.Signal
         FRP.Fursuit.Sink
