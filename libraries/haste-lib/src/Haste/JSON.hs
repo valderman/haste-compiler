@@ -12,6 +12,8 @@ import Data.String as S
 #ifndef __HASTE__
 import Haste.Parsing
 import Control.Applicative
+import Data.Char (ord)
+import Numeric (showHex)
 #endif
 
 -- Remember to update jsParseJSON if this data type changes!
@@ -47,18 +49,24 @@ instance Num JSON where
 
 #ifdef __HASTE__
 foreign import ccall "jsShow" jsShowD :: Double -> JSString
-foreign import ccall "jsUnquote" jsUnquote :: JSString -> JSString
+foreign import ccall "jsStringify" jsStringify :: JSString -> JSString
 foreign import ccall "jsParseJSON" jsParseJSON :: JSString -> Ptr (Maybe JSON)
 #else
 jsShowD :: Double -> JSString
 jsShowD = toJSStr . show
 
-jsUnquote :: JSString -> JSString
-jsUnquote = toJSStr . unq . fromJSStr
+jsStringify :: JSString -> JSString
+jsStringify = toJSStr . ('"' :) . unq . fromJSStr
   where
     unq ('"' : cs) = "\\\"" ++ unq cs
-    unq (c : cs)   = c : unq cs
-    unq _          = []
+    unq (c : cs)
+      | c < ' ' || c > '~' = unicodeChar c (unq cs)
+      | otherwise          = c : unq cs
+    unq _          = ['"']
+
+    unicodeChar c str =
+      case showHex (ord c) "" of
+        s -> "\\u" ++ replicate (4-length s) '0' ++ s ++ str
 #endif
 
 -- | Look up a JSON object from a JSON dictionary. Panics if the dictionary
@@ -96,7 +104,7 @@ encodeJSON = catJSStr "" . enc []
     quote   = "\""
     true    = "true"
     false   = "false"
-    enc acc (Str s)      = quote : jsUnquote s : quote : acc
+    enc acc (Str s)      = jsStringify s : acc
     enc acc (Num d)      = jsShowD d : acc
     enc acc (Bool True)  = true : acc
     enc acc (Bool False) = false : acc
@@ -108,7 +116,7 @@ encodeJSON = catJSStr "" . enc []
     enc acc (Dict elems)
       | ((key,val):xs) <- elems =
         let encElem (k, v) a = comma : quote : k : quote : colon : enc a v
-            encAll = opencu : quote : jsUnquote key : quote : colon : encRest
+            encAll = opencu : jsStringify key : colon : encRest
             encRest  = enc (foldr encElem (closecu:acc) xs) val
         in encAll
       | otherwise =
