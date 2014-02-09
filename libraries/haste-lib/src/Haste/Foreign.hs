@@ -72,9 +72,20 @@ instance Marshal Bool where
   unpack False = jsFalse
   pack x = if pack x > (0 :: Double) then True else False
 
-jsTrue, jsFalse :: Unpacked
+-- | Maybe is simply a nullable type. Nothing is equivalent to null, and any
+--   non-null value is equivalent to x in Just x.
+instance Marshal a => Marshal (Maybe a) where
+  unpack Nothing  = jsNull
+  unpack (Just x) = unpack x
+  pack x = if isNull x then Nothing else Just (pack x)
+
+jsNull, jsTrue, jsFalse :: Unpacked
 jsTrue = unsafePerformIO $ ffi "true"
 jsFalse = unsafePerformIO $ ffi "false"
+jsNull = unsafePerformIO $ ffi "null"
+
+isNull :: Unpacked -> Bool
+isNull = unsafePerformIO . ffi "(function(x) {return x === null;})"
 
 class FFI a where
   type T a
