@@ -23,7 +23,7 @@ onHashChange f = do
     liftIO $ go (HashCallback f')
   where
     go :: HashCallback -> IO ()
-    go = ffi "(function(cb,_) {\
+    go = ffi "(function(cb) {\
              \  window.onhashchange = function(e){\
              \      A(cb, [[0,e.oldURL.split('#')[1] || ''],\
              \             [0,e.newURL.split('#')[1] || ''],0]);\
@@ -32,8 +32,8 @@ onHashChange f = do
 
 -- | Set the hash part of the current URL.
 setHash :: MonadIO m => String -> m ()
-setHash = liftIO . ffi "(function(h,_) {location.hash = '#'+h;})"
+setHash = liftIO . ffi "(function(h) {location.hash = '#'+h;})"
 
 -- | Read the hash part of the currunt URL.
 getHash :: MonadIO m => m String
-getHash = liftIO $ ffi "(function(_) {return location.hash.substring(1);})"
+getHash = liftIO $ ffi "(function() {return location.hash.substring(1);})"

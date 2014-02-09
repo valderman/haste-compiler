@@ -65,4 +65,4 @@ wsSend :: WebSocket -> JSString -> CIO ()
 wsSend ws str = liftIO $ send ws str
 
 send :: WebSocket -> JSString -> IO ()
-send = ffi "(function(s, msg) {s.send(msg); return 0;})"
+send = ffi "(function(s, msg) {s.send(msg);})"
