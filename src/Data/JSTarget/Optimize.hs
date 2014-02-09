@@ -33,6 +33,7 @@ topLevelInline (AST ast js) =
     >>= optimizeArrays
     >>= optimizeThunks
     >>= optimizeArrays
+    >>= zapJSStringConversions
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -157,8 +158,12 @@ zapJSStringConversions :: JSTrav ast => ast -> TravM ast
 zapJSStringConversions ast =
     mapJS (const True) opt return ast
   where
-    opt (Call _ _ (Var (Foreign "toJSStr"))
-       [Call _ _ (Var (Foreign "unCStr")) [x]]) =
+    opt (Call _ _ (Var (Foreign "toJSStr")) [
+           Call _ _ (Var (Foreign "unCStr")) [x]]) =
+      return x
+    opt (Call _ _ (Var (Foreign "toJSStr")) [
+           Call _ _ (Var (Foreign "E")) [
+             Call _ _ (Var (Foreign "unCStr")) [x]]]) =
       return x
     opt (Call _ _ (Var (Foreign "new T"))
          [Fun _ [] (Return x@(Call _ _ (Var (Foreign "unCStr")) [Lit _]))]) =
@@ -186,7 +191,6 @@ optimizeThunks ast =
     optEx ex =
       return ex
 
-
 -- | Unpack the given expression if it's a thunk.
 fromThunk :: Exp -> Maybe Stm
 fromThunk (Call _ Fast (Var (Foreign "new T")) [body]) =
@@ -202,7 +206,6 @@ fromThunkEx ex =
   case fromThunk ex of
     Just (Return ex') -> Just ex'
     _                 -> Nothing
-
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
 --   exactly once.
