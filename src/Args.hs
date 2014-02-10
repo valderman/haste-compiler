@@ -43,11 +43,22 @@ printHelp = unlines . map helpString
 
 helpString :: ArgSpec a -> String
 helpString spec =
-  "--" ++ hdr ++ "\n  "
-       ++ info spec
-       ++ "\n"
+  "--" ++ hdr ++ "\n"
+       ++ formatHelpMessage (info spec)
   where
     hdr =
       case last $ optName spec of
         '=' -> optName spec ++ "<arg>"
         _   -> optName spec
+
+-- | Break lines at 80 chars, add two spaces before each.
+formatHelpMessage :: String -> String
+formatHelpMessage s =
+    unlines $ map ("  " ++) $ breakLines 0 [] ws
+  where
+    ws = words s
+    breakLines len ln (w:ws)
+      | len+length w >= 78 = unwords (reverse ln) : breakLines 0 [] (w:ws)
+      | otherwise          = breakLines (len+1+length w) (w:ln) ws
+    breakLines _ ln _ =
+      [unwords $ reverse ln]

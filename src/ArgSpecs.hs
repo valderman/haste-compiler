@@ -24,7 +24,7 @@ argSpecs = [
               updateCfg = \cfg _ -> cfg {targetLibPath = jsmodDir,
                                          performLink   = False},
               info = "Install all compiled modules into the user's jsmod "
-                     ++ "library\nrather than linking them together into a JS"
+                     ++ "library rather than linking them together into a JS"
                      ++ "blob."},
     ArgSpec { optName = "opt-all",
               updateCfg = optAllSafe,
@@ -32,7 +32,7 @@ argSpecs = [
                      ++ "Equivalent to -O2 --opt-google-closure --opt-whole-program."},
     ArgSpec { optName = "opt-all-unsafe",
               updateCfg = optAllUnsafe,
-              info = "Enable all safe and unsafe optimizations.\n"
+              info = "Enable all safe and unsafe optimizations. "
                      ++ "Equivalent to --opt-all --opt-unsafe-ints."},
     ArgSpec { optName = "opt-google-closure",
               updateCfg = updateClosureCfg,
@@ -42,7 +42,7 @@ argSpecs = [
     ArgSpec { optName = "opt-sloppy-tce",
               updateCfg = useSloppyTCE,
               info = "Allow the possibility that some tail recursion may not "
-                     ++ "be optimized, to get\nslightly smaller code."},
+                     ++ "be optimized, to get slightly smaller code."},
     ArgSpec { optName = "opt-unsafe-ints",
               updateCfg = unsafeMath,
               info = "Enable all unsafe Int math optimizations. Equivalent to "
@@ -65,7 +65,7 @@ argSpecs = [
     ArgSpec { optName = "opt-whole-program",
               updateCfg = enableWholeProgramOpts,
               info = "Perform optimizations over the whole program at link "
-                     ++ "time.\nMay significantly increase compilation time."},
+                     ++ "time. May significantly increase compilation time."},
     ArgSpec { optName = "out=",
               updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
               info = "Write the JS blob to <arg>."},
@@ -79,8 +79,8 @@ argSpecs = [
                      ++ "either asap, onload or a custom string "
                      ++ "containing the character sequence '%%', which will "
                      ++ "be replaced with the program's entry point function. "
-                     ++ "The default is onload.\n"
-                     ++ "  Note that '%%' will be replaced by the main function"
+                     ++ "The default is onload."
+                     ++ " Note that '%%' will be replaced by the main function"
                      ++ " itself, not a call to it. Thus, in order to actually"
                      ++ " call the function, one would use '%%()'."},
     ArgSpec { optName = "trace-primops",
