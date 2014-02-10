@@ -5,7 +5,7 @@ module Haste.App.Monad (
     App, Server, Sessions, SessionID, Useless (..), Export (..), Done (..),
     AppCfg, defaultConfig, cfgURL, cfgPort,
     liftServerIO, forkServerIO, export, getAppConfig,
-    mkUseful, runApp, (<.>), getSessionID, getActiveSessions
+    mkUseful, runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -25,16 +25,22 @@ import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as BS
 import Control.Exception
 import System.Random
+import Data.List (foldl')
 #endif
 
 data AppCfg = AppCfg {
-    cfgURL  :: String,
-    cfgPort :: Int
+    cfgURL                :: String,
+    cfgPort               :: Int,
+    cfgSessionEndHandlers :: [SessionID -> Server ()]
   }
 
 -- | Create a default configuration from an URL and a port number.
 defaultConfig :: String -> Int -> AppCfg
-defaultConfig = AppCfg
+defaultConfig url port = AppCfg {
+    cfgURL = url,
+    cfgPort = port,
+    cfgSessionEndHandlers = []
+  }
 
 type SessionID = Word64
 type Sessions = S.Set SessionID
@@ -57,15 +63,15 @@ newtype App a = App {
         -> IORef Sessions
         -> CallID
         -> Exports
-        -> IO (a, CallID, Exports)
+        -> IO (a, CallID, Exports, AppCfg)
   }
 
 instance Monad App where
-  return x = App $ \_ _ cid exports -> return (x, cid, exports)
+  return x = App $ \c _ cid exports -> return (x, cid, exports, c)
   (App m) >>= f = App $ \cfg sessions cid exports -> do
     res <- m cfg sessions cid exports
     case res of
-      (x, cid', exports') -> unA (f x) cfg sessions cid' exports'
+      (x, cid', exports', cfg') -> unA (f x) cfg' sessions cid' exports'
 
 instance Functor App where
   fmap f m = m >>= return . f
@@ -82,9 +88,9 @@ liftServerIO :: IO a -> App (Useless a)
           forall x. liftServerIO x = return Useless #-}
 liftServerIO _ = return Useless
 #else
-liftServerIO m = App $ \_ _ cid exports -> do
+liftServerIO m = App $ \cfg _ cid exports -> do
   x <- m
-  return (Useful x, cid, exports)
+  return (Useful x, cid, exports, cfg)
 #endif
 
 -- | Fork off a Server computation not bound an API call.
@@ -100,9 +106,9 @@ forkServerIO :: Server () -> App (Useless ThreadId)
           forall x. forkServerIO x = return Useless #-}
 forkServerIO _ = return Useless
 #else
-forkServerIO (Server m) = App $ \_ sessions cid exports -> do
+forkServerIO (Server m) = App $ \cfg sessions cid exports -> do
   tid <- forkIO $ m 0 sessions
-  return (Useful tid, cid, exports)
+  return (Useful tid, cid, exports, cfg)
 #endif
 
 -- | An exportable function is of the type
@@ -125,17 +131,30 @@ export :: Exportable a => a -> App (Export a)
 #ifdef __HASTE__
 {-# RULES "throw away export's argument"
           forall x. export x =
-            App $ \_ _ cid _ -> return (Export cid [], cid+1, undefined) #-}
-export _ = App $ \_ _ cid _ ->
-    return (Export cid [], cid+1, undefined)
+            App $ \c _ cid _ -> return (Export cid [], cid+1, undefined, c) #-}
+export _ = App $ \c _ cid _ ->
+    return (Export cid [], cid+1, undefined, c)
 #else
-export s = App $ \_ _ cid exports ->
-    return (Export cid [], cid+1, M.insert cid (serializify s) exports)
+export s = App $ \c _ cid exports ->
+    return (Export cid [], cid+1, M.insert cid (serializify s) exports, c)
+#endif
+
+-- | Register a handler to be run whenever a session terminates.
+--   Several handlers can be registered at the same time; they will be run in
+--   the order they were registered.
+onSessionEnd :: (SessionID -> Server ()) -> App ()
+#ifdef __HASTE__
+{-# RULES "throw away onSessionEnd argument"
+          forall x. onSessionEnd x = return () #-}
+onSessionEnd _ = return ()
+#else
+onSessionEnd s = App $ \cfg _ cid exports -> return $
+  ((), cid, exports, cfg {cfgSessionEndHandlers = s:cfgSessionEndHandlers cfg})
 #endif
 
 -- | Returns the application configuration.
 getAppConfig :: App AppCfg
-getAppConfig = App $ \cfg _ cid exports -> return (cfg, cid, exports)
+getAppConfig = App $ \cfg _ cid exports -> return (cfg, cid, exports, cfg)
 
 -- | Run a Haste.App application. runApp never returns before the program
 --   terminates.
@@ -147,12 +166,12 @@ getAppConfig = App $ \cfg _ cid exports -> return (cfg, cid, exports)
 runApp :: AppCfg -> App Done -> IO ()
 runApp cfg (App s) = do
 #ifdef __HASTE__
-    (Done client, _, _) <- s cfg undefined 0 undefined
+    (Done client, _, _, _) <- s cfg undefined 0 undefined
     client
 #else
     sessions <- newIORef S.empty
-    (_, _, exports) <- s cfg sessions 0 M.empty
-    serverEventLoop cfg sessions exports
+    (_, _, exports, cfg') <- s cfg sessions 0 M.empty
+    serverEventLoop cfg' sessions exports
 #endif
 
 #ifndef __HASTE__
@@ -170,8 +189,10 @@ serverEventLoop cfg sessions exports = do
     encode = BS.pack . fromJSStr . encodeJSON . toJSON
     
     cleanup :: SessionID -> IORef Sessions -> IO ()
-    cleanup deadsession sessionsref = do
-      atomicModifyIORef sessionsref $ \cs -> (S.delete deadsession cs, ())
+    cleanup deadsession sref = do
+      let f next m = unS (m deadsession) deadsession sref >> next
+      foldl' f (return ()) (cfgSessionEndHandlers cfg)
+      atomicModifyIORef sref $ \cs -> (S.delete deadsession cs, ())
 
     clientLoop :: SessionID -> IORef Sessions -> Connection -> IO ()
     clientLoop sid sref c = finally go (cleanup sid sref)

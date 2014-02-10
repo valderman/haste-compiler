@@ -6,7 +6,7 @@ module Haste.App (
     MonadIO, Serialize, Exportable, App, Server, Useless, Export, Done,
     Sessions, SessionID,
     liftServerIO, forkServerIO, export, runApp,
-    (<.>), mkUseful, getSessionID, getActiveSessions,
+    (<.>), mkUseful, getSessionID, getActiveSessions, onSessionEnd,
     AppCfg, cfgURL, cfgPort, defaultConfig,
     Client,
     runClient, onServer, liftIO,
