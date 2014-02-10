@@ -79,7 +79,10 @@ argSpecs = [
                      ++ "either asap, onload or a custom string "
                      ++ "containing the character sequence '%%', which will "
                      ++ "be replaced with the program's entry point function. "
-                     ++ "The default is onload."},
+                     ++ "The default is onload.\n"
+                     ++ "  Note that '%%' will be replaced by the main function"
+                     ++ " itself, not a call to it. Thus, in order to actually"
+                     ++ " call the function, one would use '%%()'."},
     ArgSpec { optName = "trace-primops",
               updateCfg = \cfg _ -> cfg {tracePrimops = True,
                                          rtsLibs = debugLib : rtsLibs cfg},
