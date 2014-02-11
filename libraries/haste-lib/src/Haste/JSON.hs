@@ -74,23 +74,23 @@ jsStringify = toJSStr . ('"' :) . unq . fromJSStr
 (!) :: JSON -> JSString -> JSON
 dict ! k =
   case dict ~> k of
-    Right x -> x
-    _       -> error $ "Haste.JSON.!: unable to look up key " ++ fromJSStr k
+    Just x -> x
+    _      -> error $ "Haste.JSON.!: unable to look up key " ++ fromJSStr k
 infixl 5 !
 
 class JSONLookup a where
   -- | Look up a key in a JSON dictionary. Return Nothing if the key can't be
   --   found for some reason.
-  (~>) :: a -> JSString -> Either String JSON  
+  (~>) :: a -> JSString -> Maybe JSON  
 infixl 5 ~>
 
 instance JSONLookup JSON where
-  (Dict m) ~> key = maybe (Left "No such key") return (lookup key m)
-  _        ~> _   = Left "Not a dictionary"
+  (Dict m) ~> key = lookup key m
+  _        ~> _   = Nothing
 
-instance JSONLookup (Either String JSON) where
-  (Right (Dict m)) ~> key = maybe (Left "No such key") return (lookup key m)
-  _                ~> _   = Left "Not a dictionary"
+instance JSONLookup (Maybe JSON) where
+  (Just (Dict m)) ~> key = lookup key m
+  _               ~> _   = Nothing
 
 encodeJSON :: JSON -> JSString
 encodeJSON = catJSStr "" . enc []

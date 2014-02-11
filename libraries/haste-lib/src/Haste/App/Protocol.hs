@@ -21,12 +21,10 @@ instance Serialize ServerCall where
       ("method", toJSON method),
       ("args", Arr args)
     ]
-  fromJSON d = do
-    ServerCall <$> ((d ~> "nonce") >>= fromJSON)
-               <*> ((d ~> "method") >>= fromJSON)
-               <*> case d ~> "args" of
-                     Right (Arr args') -> pure args'
-                     _                 -> fail "Args not an array!"
+  parseJSON d = do
+    ServerCall <$> (d .: "nonce")
+               <*> (d .: "method")
+               <*> (d .: "args")
 
 -- | A reply to a ServerCall.
 data ServerReply = ServerReply {
@@ -39,6 +37,6 @@ instance Serialize ServerReply where
       ("nonce", toJSON nonce),
       ("result", result)
     ]
-  fromJSON d = do
-    ServerReply <$> ((d ~> "nonce") >>= fromJSON)
-                <*> (d ~> "result")
+  parseJSON d = do
+    ServerReply <$> (d .: "nonce")
+                <*> (d .: "result")
