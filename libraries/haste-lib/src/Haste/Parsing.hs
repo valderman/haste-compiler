@@ -3,7 +3,7 @@
 module Haste.Parsing (
     Parse, runParser, char, charP, string, oneOf, possibly, atLeast,
     whitespace, word, Haste.Parsing.words, int, double, positiveDouble,
-    suchThat, quotedString
+    suchThat, quotedString, skip, rest, lookahead
   ) where
 import Control.Applicative
 import Control.Monad
@@ -119,3 +119,18 @@ suchThat p f = do {x <- p ; if f x then return x else mzero}
 -- | A string quoted with the given quotation mark.
 quotedString :: Char -> Parse String
 quotedString q = char q *> atLeast 0 (charP (/= q)) <* char q
+
+-- | Read the rest of the input.
+rest :: Parse String
+rest = Parse $ \s -> Just ("", s)
+
+-- | Run a parser with the current parsing state, but don't consume any input.
+lookahead :: Parse a -> Parse a
+lookahead p = do
+  s' <- Parse $ \s -> Just (s, s)
+  x <- p
+  Parse $ \_ -> Just (s', x)
+
+-- | Skip n characters from the input.
+skip :: Int -> Parse ()
+skip n = Parse $ \s -> Just (drop n s, ())
