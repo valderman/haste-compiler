@@ -3,7 +3,7 @@
 module Haste.Parsing (
     Parse, runParser, char, charP, string, oneOf, possibly, atLeast,
     whitespace, word, Haste.Parsing.words, int, double, positiveDouble,
-    suchThat, quotedString, skip, rest, lookahead
+    suchThat, quotedString, skip, rest, lookahead, anyChar
   ) where
 import Control.Applicative
 import Control.Monad
@@ -36,6 +36,13 @@ instance Functor Parse where
 instance Applicative Parse where
   pure  = return
   (<*>) = ap
+
+-- | Read one character. Fails if end of stream.
+anyChar :: Parse Char
+anyChar = Parse $ \s ->
+  case s of
+    (c:cs) -> Just (cs, c)
+    _      -> Nothing
 
 -- | Require a specific character.
 char :: Char -> Parse Char
@@ -116,9 +123,23 @@ positiveDouble = do
 suchThat :: Parse a -> (a -> Bool) -> Parse a
 suchThat p f = do {x <- p ; if f x then return x else mzero}
 
--- | A string quoted with the given quotation mark.
+-- | A string quoted with the given quotation mark. Strings can contain escaped
+--   quotation marks; escape characters are stripped from the returned string.
 quotedString :: Char -> Parse String
-quotedString q = char q *> atLeast 0 (charP (/= q)) <* char q
+quotedString q = char q *> strContents q <* char q
+
+strContents :: Char -> Parse String
+strContents c = do
+  s <- atLeast 0 $ charP (\x -> x /= c && x /= '\\')
+  c' <- lookahead anyChar
+  if c == c'
+    then do
+      return s
+    else do
+      skip 1
+      c'' <- anyChar
+      s' <- strContents c
+      return $ s ++ [c''] ++ s'
 
 -- | Read the rest of the input.
 rest :: Parse String
