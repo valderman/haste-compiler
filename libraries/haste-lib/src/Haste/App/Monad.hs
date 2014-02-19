@@ -3,7 +3,7 @@
 module Haste.App.Monad (
     Exportable,
     App, Server, Sessions, SessionID, Useless (..), Export (..), Done (..),
-    AppCfg, defaultConfig, cfgURL, cfgPort,
+    AppCfg, def, defaultConfig, cfgURL, cfgPort,
     liftServerIO, forkServerIO, export, getAppConfig,
     mkUseful, runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
@@ -18,6 +18,7 @@ import Haste.App.Protocol
 import Data.Word
 import Control.Concurrent (ThreadId)
 import Data.IORef
+import Data.Default
 #ifndef __HASTE__
 import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)
@@ -33,6 +34,9 @@ data AppCfg = AppCfg {
     cfgPort               :: Int,
     cfgSessionEndHandlers :: [SessionID -> Server ()]
   }
+
+instance Default AppCfg where
+  def = defaultConfig "ws://localhost:24601" 24601
 
 -- | Create a default configuration from an URL and a port number.
 defaultConfig :: String -> Int -> AppCfg
