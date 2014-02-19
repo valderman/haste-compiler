@@ -24,6 +24,7 @@ Library
         Haste
         Haste.App
         Haste.App.Concurrent
+        Haste.Compiler
         Haste.JSON
         Haste.Ajax
         Haste.Reactive
@@ -45,6 +46,7 @@ Library
         Haste.Reactive.Ajax
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
+        Haste.Compiler.Flags
         Haste.App.Client
         Haste.App.Events
         Haste.App.Monad
@@ -55,7 +57,8 @@ Library
         monads-tf,
         ghc-prim,
         fursuit,
-        containers
+        containers,
+        data-default
     if flag(haste-inst)
         Build-Depends:
             base == 4.6.0.1,
