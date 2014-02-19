@@ -24,6 +24,7 @@ import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.UTF8 as BU
 import Control.Exception
 import System.Random
 import Data.List (foldl')
@@ -190,7 +191,7 @@ serverEventLoop cfg sessions exports = do
       atomicModifyIORef sessions $ \s -> (S.insert sid s, ())
       clientLoop sid sessions conn
   where
-    encode = BS.pack . fromJSStr . encodeJSON . toJSON
+    encode = BU.fromString . fromJSStr . encodeJSON . toJSON
     
     cleanup :: SessionID -> IORef Sessions -> IO ()
     cleanup deadsession sref = do
@@ -205,7 +206,7 @@ serverEventLoop cfg sessions exports = do
           msg <- receiveData c
           forkIO $ do
             -- Parse JSON
-            case decodeJSON . toJSStr $ BS.unpack msg of
+            case decodeJSON . toJSStr $ BU.toString msg of
               Right json -> do
                 -- Attempt to parse ServerCall from JSON and look up method
                 case fromJSON json of
