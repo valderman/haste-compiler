@@ -61,6 +61,7 @@ jsStringify = toJSStr . ('"' :) . unq . fromJSStr
     unq ('"' : cs) = "\\\"" ++ unq cs
     unq (c : cs)
       | c < ' ' || c > '~' = unicodeChar c (unq cs)
+      | c == '\\'          = "\\\\" ++ unq cs
       | otherwise          = c : unq cs
     unq _          = ['"']
 
