@@ -127,6 +127,15 @@ instance Serialize a => Serialize [a] where
   toJSON = listToJSON
   parseJSON = parseJSONList
 
+instance (Serialize a, Serialize b) => Serialize (Either a b) where
+  toJSON (Right x) = Dict [("success", toJSON True), ("value", toJSON x)]
+  toJSON (Left e)  = Dict [("success", toJSON False), ("error", toJSON e)]
+  parseJSON d = do
+    success <- d .: "success"
+    case success of
+      False -> Left `fmap` (d .: "error")
+      _     -> Right `fmap` (d .: "value")
+
 fromJSON :: Serialize a => JSON -> Either String a
 fromJSON = runParser parseJSON
 
