@@ -1,3 +1,4 @@
+{-# LANGUAGE EmptyDataDecls #-}
 -- | Wraps Haste.Concurrent to work with Haste.App.
 --   Task switching happens whenever a thread is blocked in an MVar, so things
 --   like polling an IORef in a loop will starve all other threads.
@@ -5,12 +6,14 @@
 --   This will likely be the state of Haste concurrency until Javascript gains
 --   decent native concurrency support.
 module Haste.App.Concurrent (
-    C.MVar,
+    C.MVar, MBox, Send, Recv,
     fork, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, peekMVar,
-    server
+    spawn, receive, statefully, (!), (<!),
+    forever
   ) where
 import qualified Haste.Concurrent.Monad as C
 import Haste.App.Client
+import Control.Monad
 
 -- | Spawn off a concurrent computation.
 fork :: Client () -> Client ()
@@ -45,22 +48,49 @@ putMVar v x = liftCIO $ C.putMVar v x
 peekMVar :: C.MVar a -> Client (Maybe a)
 peekMVar = liftCIO . C.peekMVar
 
--- | Creates a generic server thread. A server is a function taking a state
---   and an event argument, returning an updated state or Nothing.
---   @server@ creates an MVar that is used to pass events to the server.
---   Whenever a value is written to this MVar, that value is passed to the
---   server function togeter with its current state.
---   If the server function returns Nothing, the server thread terminates.
---   If it returns a new state, the server again blocks on the event MVar,
+-- | An MBox is a read/write-only MVar, depending on its first type parameter.
+--   Used to communicate with server processes.
+newtype MBox t a = MBox (C.MVar a)
+
+data Recv
+data Send
+
+-- | Block until a message arrives in a mailbox, then return it.
+receive :: MBox Recv a -> Client a
+receive (MBox mv) = takeMVar mv
+
+-- | Creates a generic process and returns a MBox which may be used to pass
+--   messages to it.
+spawn :: (MBox Recv a -> Client ()) -> Client (MBox Send a)
+spawn f = do
+  p <- newEmptyMVar
+  fork $ f (MBox p)
+  return (MBox p)
+
+-- | Creates a generic stateful process. This process is a function taking a
+--   state and an event argument, returning an updated state or Nothing.
+--   @statefully@ creates a @MBox@ that is used to pass events to the process.
+--   Whenever a value is written to this MBox, that value is passed to the
+--   process function together with the function's current state.
+--   If the process function returns Nothing, the process terminates.
+--   If it returns a new state, the process again blocks on the event MBox,
 --   and will use the new state to any future calls to the server function.
-server :: state -> (state -> evt -> Client (Maybe state)) -> Client (C.MVar evt)
-server initialState handler = do
-    evtvar <- newEmptyMVar
-    fork $ loop evtvar initialState
-    return evtvar
+statefully :: st -> (st -> evt -> Client (Maybe st)) -> Client (MBox Send evt)
+statefully initialState handler = do
+    spawn $ loop initialState
   where
-    loop m st = do
-      mresult <- takeMVar m >>= handler st
+    loop st p = do
+      mresult <- receive p >>= handler st
       case mresult of
-        Just st' -> loop m st'
+        Just st' -> loop st' p
         _        -> return ()
+
+-- | Write a value to a MBox. Named after the Erlang message sending operator,
+--   as both are intended for passing messages to processes.
+(!) :: MBox Send a -> a -> Client ()
+MBox m ! x = putMVar m x
+
+-- | Perform a Client computation, then write its return value to the given
+--   pipe. Mnemonic: the operator is a combination of <- and !.
+(<!) :: MBox Send a -> Client a -> Client ()
+p <! m = do x <- m ; p ! x
