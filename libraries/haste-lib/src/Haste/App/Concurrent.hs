@@ -6,7 +6,7 @@
 --   This will likely be the state of Haste concurrency until Javascript gains
 --   decent native concurrency support.
 module Haste.App.Concurrent (
-    C.MVar, MBox, Send, Recv,
+    C.MVar, MBox, Send, Recv, Inbox, Outbox,
     fork, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, peekMVar,
     spawn, receive, statefully, (!), (<!),
     forever
@@ -55,13 +55,18 @@ newtype MBox t a = MBox (C.MVar a)
 data Recv
 data Send
 
+type Inbox = MBox Recv
+type Outbox = MBox Send
+
 -- | Block until a message arrives in a mailbox, then return it.
-receive :: MBox Recv a -> Client a
+receive :: Inbox a -> Client a
 receive (MBox mv) = takeMVar mv
 
 -- | Creates a generic process and returns a MBox which may be used to pass
 --   messages to it.
-spawn :: (MBox Recv a -> Client ()) -> Client (MBox Send a)
+--   While it is possible for a process created using spawn to transmit its
+--   inbox to someone else, this is a very bad idea; don't do it.
+spawn :: (Inbox a -> Client ()) -> Client (Outbox a)
 spawn f = do
   p <- newEmptyMVar
   fork $ f (MBox p)
@@ -75,7 +80,7 @@ spawn f = do
 --   If the process function returns Nothing, the process terminates.
 --   If it returns a new state, the process again blocks on the event MBox,
 --   and will use the new state to any future calls to the server function.
-statefully :: st -> (st -> evt -> Client (Maybe st)) -> Client (MBox Send evt)
+statefully :: st -> (st -> evt -> Client (Maybe st)) -> Client (Outbox evt)
 statefully initialState handler = do
     spawn $ loop initialState
   where
@@ -87,10 +92,10 @@ statefully initialState handler = do
 
 -- | Write a value to a MBox. Named after the Erlang message sending operator,
 --   as both are intended for passing messages to processes.
-(!) :: MBox Send a -> a -> Client ()
+(!) :: Inbox a -> a -> Client ()
 MBox m ! x = putMVar m x
 
 -- | Perform a Client computation, then write its return value to the given
 --   pipe. Mnemonic: the operator is a combination of <- and !.
-(<!) :: MBox Send a -> Client a -> Client ()
+(<!) :: Inbox a -> Client a -> Client ()
 p <! m = do x <- m ; p ! x
