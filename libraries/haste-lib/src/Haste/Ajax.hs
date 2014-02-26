@@ -1,4 +1,6 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, CPP #-}
+{-# LANGUAGE CPP                      #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE OverloadedStrings        #-}
 -- | Low level XMLHttpRequest support. IE6 and older are not supported.
 module Haste.Ajax (Method (..), URL, Key, Val, textRequest, textRequest_,
                    jsonRequest, jsonRequest_) where
@@ -67,20 +69,26 @@ jsonRequest m url kv cb = liftIO $ do
 
 -- | Does the same thing as 'jsonRequest' but uses 'JSString's instead of
 --   Strings.
-jsonRequest_ :: MonadIO m 
+jsonRequest_ :: MonadIO m
              => Method
              -> JSString
              -> [(JSString, JSString)]
              -> (Maybe JSON -> IO ())
              -> m ()
 jsonRequest_ m url kv cb = liftIO $ do
-  _ <- ajaxReq (toJSStr $ show m) url' True "" cb'
-  return ()
+    _ <- ajaxReq (toJSStr $ show m) url' True pd cb'
+    return ()
   where
     liftEither (Right x) = Just x
     liftEither _         = Nothing
     cb' = mkCallback $ \mjson -> cb (mjson >>= liftEither . decodeJSON)
-    url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
+    url' = case m of
+             GET -> if null kv then url else catJSStr "?" [url, toQueryString kv]
+             POST -> url
+    pd = case m of
+           GET -> ""
+           POST -> if null kv then "" else toQueryString kv
+
 
 toQueryString :: [(JSString, JSString)] -> JSString
 toQueryString = catJSStr "&" . map (\(k,v) -> catJSStr "=" [k,v])
