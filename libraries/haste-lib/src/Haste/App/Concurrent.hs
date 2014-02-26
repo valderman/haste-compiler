@@ -92,10 +92,13 @@ statefully initialState handler = do
 
 -- | Write a value to a MBox. Named after the Erlang message sending operator,
 --   as both are intended for passing messages to processes.
+--   This operation does not block until the message is delivered, but returns
+--   immediately.
 (!) :: Outbox a -> a -> Client ()
-MBox m ! x = putMVar m x
+MBox m ! x = fork $ putMVar m x
 
 -- | Perform a Client computation, then write its return value to the given
 --   pipe. Mnemonic: the operator is a combination of <- and !.
+--   Just like @(!)@, this operation is non-blocking.
 (<!) :: Outbox a -> Client a -> Client ()
 p <! m = do x <- m ; p ! x
