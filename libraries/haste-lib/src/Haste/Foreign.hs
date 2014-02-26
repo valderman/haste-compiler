@@ -2,7 +2,9 @@
              FlexibleInstances, TypeFamilies, CPP #-}
 -- | Create functions on the fly from JS strings.
 --   Slower but more flexible alternative to the standard FFI.
-module Haste.Foreign (FFI, Marshal (..), Unpacked, ffi, export) where
+module Haste.Foreign (
+    FFI, Marshal (..), Unpacked, Opaque, ffi, export, toOpaque, fromOpaque
+  ) where
 import Haste.Prim
 import Haste.JSType
 import Data.Word
@@ -24,6 +26,19 @@ jsString = error "Tried to use jsString on server side!"
 --   no meaning, but are only there to make sure GHC doesn't optimize the low
 --   level hackery in this module into oblivion.
 data Unpacked = A | B
+
+-- | The Opaque type is inhabited by values that can be passed to Javascript
+--   using their raw Haskell representation. Opaque values are completely
+--   useless to Javascript code, and should not be inspected. This is useful
+--   for, for instance, storing data in some Javascript-native data structure
+--   for later retrieval.
+newtype Opaque a = Opaque Unpacked
+
+toOpaque :: a -> Opaque a
+toOpaque = unsafeCoerce
+
+fromOpaque :: Opaque a -> a
+fromOpaque = unsafeCoerce
 
 data Dummy = Dummy Unpacked
 
@@ -67,6 +82,9 @@ instance Marshal String where
 instance Marshal Unpacked where
   pack = id
   unpack = id
+instance Marshal (Opaque a) where
+  pack = Opaque
+  unpack (Opaque x) = x
 instance Marshal Bool where
   unpack True  = jsTrue
   unpack False = jsFalse
