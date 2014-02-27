@@ -192,15 +192,17 @@ serverEventLoop cfg sessions exports = do
       clientLoop sid sessions conn
   where
     encode = BU.fromString . fromJSStr . encodeJSON . toJSON
+    encodeEx = BU.fromString . fromJSStr . encodeJSON . toJSON
     
-    cleanup :: SessionID -> IORef Sessions -> IO ()
-    cleanup deadsession sref = do
+    cleanup :: Connection -> SessionID -> IORef Sessions -> IO ()
+    cleanup conn deadsession sref = do
       let f next m = unS (m deadsession) deadsession sref >> next
       foldl' f (return ()) (cfgSessionEndHandlers cfg)
       atomicModifyIORef sref $ \cs -> (S.delete deadsession cs, ())
+      sendTextData conn . encodeEx $ ServerException "Session ended"
 
     clientLoop :: SessionID -> IORef Sessions -> Connection -> IO ()
-    clientLoop sid sref c = finally go (cleanup sid sref)
+    clientLoop sid sref c = finally go (cleanup c sid sref)
       where
         go = do
           msg <- receiveData c

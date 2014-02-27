@@ -1,7 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
 -- | Haste.App client-server protocol.
 module Haste.App.Protocol where
 import Control.Applicative
+import Control.Exception
+import Data.Typeable
 import Haste.Serialize
 import Haste.JSON
 
@@ -40,3 +42,19 @@ instance Serialize ServerReply where
   parseJSON d = do
     ServerReply <$> (d .: "nonce")
                 <*> (d .: "result")
+
+-- | Throw a server exception to the client.
+data ServerException = ServerException String deriving (Typeable, Show)
+instance Exception ServerException
+
+instance Serialize ServerException where
+  toJSON (ServerException s) = Dict [
+      ("exception", toJSON True),
+      ("message", toJSON s)
+    ]
+
+  parseJSON d = do
+    mex <- d .:? "exception"
+    case mex of
+      Just True -> ServerException <$> (d .: "message")
+      _         -> fail "Not a ServerException"

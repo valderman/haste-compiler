@@ -13,6 +13,7 @@ import Haste.App.Protocol
 import Control.Applicative
 import Control.Monad (ap, join)
 import Control.Monad.IO.Class
+import Control.Exception (throw)
 import Data.IORef
 
 data ClientState = ClientState {
@@ -95,6 +96,9 @@ runClient_ url (Client m) = concurrent $ do
       join . liftIO $ atomicModifyIORef rvars $ \vs ->
         let res = do
               json <- decodeJSON msg
+              case fromJSON json of
+                Right e@(ServerException _) -> throw e
+                _                           -> return ()
               ServerReply nonce result <- fromJSON json
               (var, vs') <- case span (\(n, _) -> n /= nonce) vs of
                               (xs, ((_, y):ys)) -> Right (y, xs ++ ys)
