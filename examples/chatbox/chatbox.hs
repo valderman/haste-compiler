@@ -90,7 +90,7 @@ main :: IO ()
 main = do
   -- Run the Haste.App application. Please note that a computation in the App
   -- monad should never contain any free variables.
-  runApp (defaultConfig "ws://localhost:24601" 24601) $ do
+  runApp (mkConfig "ws://localhost:24601" 24601) $ do
     -- Create our state-holding elements
     state <- liftServerIO $ do
       clients <- newIORef []

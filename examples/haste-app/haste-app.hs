@@ -11,7 +11,7 @@ import qualified Control.Concurrent as C
 
 main :: IO ()
 main = do
-  runApp (defaultConfig "ws://localhost:24601" 24601) $ do
+  runApp (mkConfig "ws://localhost:24601" 24601) $ do
     message <- liftServerIO $ C.newMVar "This is not a message."
 
     trade <- export $ \newmsg -> do

@@ -3,7 +3,7 @@
 module Haste.App.Monad (
     Exportable,
     App, Server, Sessions, SessionID, Useless (..), Export (..), Done (..),
-    AppCfg, def, defaultConfig, cfgURL, cfgPort,
+    AppCfg, def, mkConfig, cfgURL, cfgPort,
     liftServerIO, forkServerIO, export, getAppConfig,
     mkUseful, runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
@@ -37,11 +37,11 @@ data AppCfg = AppCfg {
   }
 
 instance Default AppCfg where
-  def = defaultConfig "ws://localhost:24601" 24601
+  def = mkConfig "ws://localhost:24601" 24601
 
 -- | Create a default configuration from an URL and a port number.
-defaultConfig :: String -> Int -> AppCfg
-defaultConfig url port = AppCfg {
+mkConfig :: String -> Int -> AppCfg
+mkConfig url port = AppCfg {
     cfgURL = url,
     cfgPort = port,
     cfgSessionEndHandlers = []
