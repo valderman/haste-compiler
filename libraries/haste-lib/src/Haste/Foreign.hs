@@ -95,6 +95,9 @@ instance Marshal a => Marshal [a] where
   unpack = lst2arr . toOpaque . map unpack
   pack arr = map pack . fromOpaque $ arr2lst arr 0
 
+{-# RULES "unpack array/Unpacked" forall x. unpack x = lst2arr (toOpaque x) #-}
+{-# RULES "pack array/Unpacked" forall x. pack x = fromOpaque (arr2lst x 0) #-}
+
 lst2arr :: Opaque [Unpacked] -> Unpacked
 lst2arr = unsafePerformIO . ffi "lst2arr"
 
