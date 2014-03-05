@@ -12,6 +12,7 @@ import Control.Monad (ap)
 import Control.Monad.IO.Class
 import Haste.Serialize
 import Haste.JSON
+import Haste.Binary
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Haste.App.Protocol
@@ -20,10 +21,12 @@ import Control.Concurrent (ThreadId)
 import Data.IORef
 import Data.Default
 #ifndef __HASTE__
+import Haste.Binary.Types
 import Control.Concurrent (forkIO)
 import Haste.Prim (toJSStr, fromJSStr)
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.UTF8 as BU
 import Control.Exception
 import System.Random
@@ -245,6 +248,15 @@ instance Monad Server where
 
 instance MonadIO Server where
   liftIO m = Server $ \_ _ -> m
+
+instance MonadBlob Server where
+#ifndef __HASTE__
+  getBlobData (Blob bd) = return $ BlobData bd
+  getBlobText (Blob bd) = return $ BU.toString $ BS.concat $ BSL.toChunks bd
+#else
+  getBlobData _ = return undefined
+  getBlobText _ = return undefined
+#endif
 
 -- | Make a Useless value useful by extracting it. Only possible server-side,
 --   in the IO monad.

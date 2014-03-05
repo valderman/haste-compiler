@@ -8,6 +8,7 @@ import Haste
 import Haste.Serialize
 import Haste.WebSockets
 import Haste.JSON
+import Haste.Binary hiding (get)
 import Haste.App.Monad
 import Haste.App.Protocol
 import Control.Applicative
@@ -59,6 +60,11 @@ instance GenericCallback (Client ()) Client where
   mkIOfier _ = do
     st <- get id
     return $ concurrent . runClientCIO st
+
+instance MonadBlob Client where
+  getBlobData = liftCIO . getBlobData
+  getBlobText = liftCIO . getBlobText
+
 
 -- | Lift a CIO action into the Client monad.
 liftCIO :: CIO a -> Client a
