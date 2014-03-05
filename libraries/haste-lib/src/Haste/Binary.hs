@@ -97,9 +97,11 @@ instance Binary a => Binary [a] where
     flip mapM [1..len] $ \_ -> get
 
 instance Binary Blob where
+  {-# NOINLINE put #-}
   put b = do
     put (blobSize b)
     putBlob b
+  {-# NOINLINE get #-}
   get = do
     sz <- get
     bd <- getBytes sz
