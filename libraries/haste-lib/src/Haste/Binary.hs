@@ -96,6 +96,15 @@ instance Binary a => Binary [a] where
     len <- get :: Get Int
     flip mapM [1..len] $ \_ -> get
 
+instance Binary Blob where
+  put b = do
+    put (blobSize b)
+    putBlob b
+  get = do
+    sz <- get
+    bd <- getBytes sz
+    return $ toBlob bd
+
 encode :: Binary a => a -> Blob
 encode x = runPut (put x)
 

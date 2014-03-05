@@ -4,6 +4,7 @@ module Haste.Binary.Get (
     getWord8, getWord16le, getWord32le,
     getInt8, getInt16le, getInt32le,
     getFloat32le, getFloat64le,
+    getBytes,
     runGet
   ) where
 import Data.Int
