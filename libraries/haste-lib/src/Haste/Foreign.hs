@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeSynonymInstances,
-             FlexibleInstances, TypeFamilies, CPP #-}
+             FlexibleInstances, TypeFamilies, OverlappingInstances, CPP #-}
 -- | Create functions on the fly from JS strings.
 --   Slower but more flexible alternative to the standard FFI.
 module Haste.Foreign (
@@ -89,6 +89,17 @@ instance Marshal Bool where
   unpack True  = jsTrue
   unpack False = jsFalse
   pack x = if pack x > (0 :: Double) then True else False
+
+-- | Lists are marshalled into arrays.
+instance Marshal a => Marshal [a] where
+  unpack = lst2arr . toOpaque . map unpack
+  pack arr = map pack . fromOpaque $ arr2lst arr 0
+
+lst2arr :: Opaque [Unpacked] -> Unpacked
+lst2arr = unsafePerformIO . ffi "lst2arr"
+
+arr2lst :: Unpacked -> Int -> Opaque [Unpacked]
+arr2lst arr ix = unsafePerformIO $ ffi "lst2arr" arr ix
 
 -- | Maybe is simply a nullable type. Nothing is equivalent to null, and any
 --   non-null value is equivalent to x in Just x.
