@@ -6,7 +6,7 @@
 --   This will likely be the state of Haste concurrency until Javascript gains
 --   decent native concurrency support.
 module Haste.App.Concurrent (
-    C.MVar, MBox, Send, Recv, Inbox, Outbox,
+    C.MVar, MBox, Send, Recv, Inbox, Outbox, C.MonadConc (..),
     fork, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, peekMVar,
     spawn, receive, statefully, (!), (<!),
     forever
@@ -14,6 +14,9 @@ module Haste.App.Concurrent (
 import qualified Haste.Concurrent.Monad as C
 import Haste.App.Client
 import Control.Monad
+
+instance C.MonadConc Client where
+  liftConc = liftCIO
 
 -- | Spawn off a concurrent computation.
 fork :: Client () -> Client ()

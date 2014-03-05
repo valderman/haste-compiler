@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs, TypeFamilies, FlexibleInstances, FlexibleContexts #-}
 -- | Implements concurrency for Haste based on "A Poor Man's Concurrency Monad".
 module Haste.Concurrent.Monad (
-    MVar, CIO, ToConcurrent (..),
+    MVar, CIO, ToConcurrent (..), MonadConc (..),
     forkIO, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, withMVarIO,
     peekMVar, modifyMVarIO, concurrent, liftIO
   ) where
@@ -10,6 +10,13 @@ import Control.Monad.Cont.Class
 import Control.Monad
 import Control.Applicative
 import Data.IORef
+
+-- | Any monad which supports concurrency.
+class MonadConc m where
+  liftConc :: CIO a -> m a
+
+instance MonadConc CIO where
+  liftConc = id
 
 -- | Embed concurrent computations into non-concurrent ones.
 class ToConcurrent a where
