@@ -1,5 +1,5 @@
 {-# LANGUAGE MagicHash, CPP, MultiParamTypeClasses, OverloadedStrings,
-             TypeSynonymInstances , FlexibleInstances,
+             TypeSynonymInstances , FlexibleInstances, OverlappingInstances,
              GeneralizedNewtypeDeriving #-}
 -- | Handling of Javascript-native binary blobs.
 module Haste.Binary (
@@ -7,10 +7,12 @@ module Haste.Binary (
     module Haste.Binary.Get,
     MonadBlob (..), Binary (..),
     Blob, BlobData,
-    blobSize, blobDataSize, toByteString, toBlob, encode, decode
+    blobSize, blobDataSize, toByteString, toBlob, strToBlob,
+    encode, decode
   )where
 import Data.Int
 import Data.Word
+import Data.Char
 import Haste
 import Haste.Concurrent hiding (encode, decode)
 import Haste.Foreign
@@ -106,6 +108,10 @@ instance Binary Blob where
     sz <- get
     bd <- getBytes sz
     return $ toBlob bd
+
+instance Binary Char where
+  put = put . ord
+  get = chr <$> get
 
 encode :: Binary a => a -> Blob
 encode x = runPut (put x)

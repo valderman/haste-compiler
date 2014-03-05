@@ -1,11 +1,15 @@
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
 module Haste.Binary.Types (
     Blob (..), BlobData (..),
-    blobSize, blobDataSize, toByteString, toBlob
+    blobSize, blobDataSize, toByteString, toBlob, strToBlob
   ) where
+import Haste
 import Haste.Foreign
 import System.IO.Unsafe
 import qualified Data.ByteString.Lazy as BS
+#ifndef __HASTE__
+import qualified Data.ByteString.UTF8 as BU
+#endif
 
 #ifdef __HASTE__
 data BlobData = BlobData Int Int Unpacked
@@ -27,18 +31,22 @@ toByteString =
 -- | Convert a piece of BlobData back into a Blob.
 toBlob :: BlobData -> Blob
 toBlob (BlobData 0 len buf) =
-  case catBlobs [buf] of
+  case newBlob buf of
     b | blobSize b > len -> sliceBlob b 0 len
       | otherwise        -> b
 toBlob (BlobData off len buf) =
-  sliceBlob (catBlobs [buf]) off (off+len)
+  sliceBlob (newBlob buf) off (off+len)
+
+-- | Create a Blob from a JSString.
+strToBlob :: JSString -> Blob
+strToBlob = newBlob . unpack
 
 sliceBlob :: Blob -> Int -> Int -> Blob
 sliceBlob b off len = unsafePerformIO $ do
   ffi "(function(b,off,len){return b.slice(off,len);})" b off len
 
-catBlobs :: [Unpacked] -> Blob
-catBlobs = unsafePerformIO . ffi "(function(bs){return new Blob(bs);})"
+newBlob :: Unpacked -> Blob
+newBlob = unsafePerformIO . ffi "(function(b){return new Blob([b]);})"
 #else
 
 newtype BlobData = BlobData BS.ByteString
@@ -63,5 +71,9 @@ toByteString (BlobData bd) = bd
 -- | Convert a piece of BlobData back into a Blob.
 toBlob :: BlobData -> Blob
 toBlob (BlobData bs) = Blob bs
+
+-- | Create a Blob from a JSString.
+strToBlob :: JSString -> Blob
+strToBlob s = Blob $ BS.fromChunks [BU.fromString $ fromJSStr s]
 
 #endif
