@@ -24,6 +24,7 @@ Library
         Haste
         Haste.App
         Haste.App.Concurrent
+        Haste.Binary
         Haste.Compiler
         Haste.JSON
         Haste.Ajax
@@ -51,6 +52,9 @@ Library
         Haste.App.Events
         Haste.App.Monad
         Haste.App.Protocol
+        Haste.Binary.Get
+        Haste.Binary.Put
+        Haste.Binary.Types
     Build-Depends:
         integer-gmp,
         transformers,
@@ -58,7 +62,8 @@ Library
         ghc-prim,
         fursuit,
         containers,
-        data-default
+        data-default,
+        bytestring >= 0.9.2.1
     if flag(haste-inst)
         Build-Depends:
             base == 4.6.0.1,
@@ -68,6 +73,5 @@ Library
             base,
             array,
             random,
-            bytestring >= 0.9.2.1,
             websockets >= 0.8
     Default-Language: Haskell98
