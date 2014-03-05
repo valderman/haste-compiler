@@ -7,12 +7,12 @@ module Haste.Binary (
     module Haste.Binary.Get,
     MonadBlob (..), Binary (..),
     Blob, BlobData,
-    blobSize, blobDataSize, toByteString, toBlob
+    blobSize, blobDataSize, toByteString, toBlob, encode, decode
   )where
 import Data.Int
 import Data.Word
 import Haste
-import Haste.Concurrent
+import Haste.Concurrent hiding (encode, decode)
 import Haste.Foreign
 import Haste.Binary.Types
 import Haste.Binary.Put
@@ -95,3 +95,9 @@ instance Binary a => Binary [a] where
   get = do
     len <- get :: Get Int
     flip mapM [1..len] $ \_ -> get
+
+encode :: Binary a => a -> Blob
+encode x = runPut (put x)
+
+decode :: Binary a => BlobData -> Either String a
+decode = runGet get
