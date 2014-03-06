@@ -4,8 +4,7 @@ module Haste.App.Protocol where
 import Control.Applicative
 import Control.Exception
 import Data.Typeable
-import Haste.Serialize
-import Haste.JSON
+import Haste.Binary
 
 type Nonce = Int
 type CallID = Int
@@ -14,47 +13,42 @@ type CallID = Int
 data ServerCall = ServerCall {
     scNonce  :: Nonce,
     scMethod :: CallID,
-    scArgs   :: [JSON]
+    scArgs   :: [Blob]
   }
 
-instance Serialize ServerCall where
-  toJSON (ServerCall nonce method args) = Dict [
-      ("nonce", toJSON nonce),
-      ("method", toJSON method),
-      ("args", Arr args)
-    ]
-  parseJSON d = do
-    ServerCall <$> (d .: "nonce")
-               <*> (d .: "method")
-               <*> (d .: "args")
+instance Binary ServerCall where
+  {-# NOINLINE get #-}
+  get = do
+    n <- getWord8
+    if n == 0
+      then ServerCall <$> get <*> get <*> get
+      else fail "Wrong magic byte for ServerCall"
+  put (ServerCall n c as) = putWord8 0 >> put n >> put c >> put as
 
 -- | A reply to a ServerCall.
 data ServerReply = ServerReply {
     srNonce  :: Nonce,
-    srResult :: JSON
+    srResult :: Blob
   }
 
-instance Serialize ServerReply where
-  toJSON (ServerReply nonce result) = Dict [
-      ("nonce", toJSON nonce),
-      ("result", result)
-    ]
-  parseJSON d = do
-    ServerReply <$> (d .: "nonce")
-                <*> (d .: "result")
+instance Binary ServerReply where
+  {-# NOINLINE get #-}
+  get = do
+    n <- getWord8
+    if n == 1
+      then ServerReply <$> get <*> get
+      else fail "Wrong magic byte for ServerReply"
+  put (ServerReply n r) = putWord8 1 >> put n >> put r
 
 -- | Throw a server exception to the client.
 data ServerException = ServerException String deriving (Typeable, Show)
 instance Exception ServerException
 
-instance Serialize ServerException where
-  toJSON (ServerException s) = Dict [
-      ("exception", toJSON True),
-      ("message", toJSON s)
-    ]
-
-  parseJSON d = do
-    mex <- d .:? "exception"
-    case mex of
-      Just True -> ServerException <$> (d .: "message")
-      _         -> fail "Not a ServerException"
+instance Binary ServerException where
+  {-# NOINLINE get #-}
+  get = do
+    n <- getWord8
+    if n == 2
+      then ServerException <$> get
+      else fail "Wrong magic byte for ServerException"
+  put (ServerException e) = putWord8 2 >> put e

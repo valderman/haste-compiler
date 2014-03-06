@@ -10,9 +10,8 @@ module Haste.App.Monad (
 import Control.Applicative
 import Control.Monad (ap)
 import Control.Monad.IO.Class
-import Haste.Serialize
-import Haste.JSON
 import Haste.Binary
+import Haste.Binary.Types
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Haste.App.Protocol
@@ -52,17 +51,17 @@ mkConfig url port = AppCfg {
 
 type SessionID = Word64
 type Sessions = S.Set SessionID
-type Method = [JSON] -> SessionID -> IORef Sessions -> IO JSON
+type Method = [Blob] -> SessionID -> IORef Sessions -> IO Blob
 type Exports = M.Map CallID Method
 data Useless a = Useful a | Useless
 newtype Done = Done (IO ())
 
-data Export a = Export CallID [JSON]
+data Export a = Export CallID [Blob]
 
 -- | Apply an exported function to an argument.
 --   TODO: look into making this Applicative.
-(<.>) :: Serialize a => Export (a -> b) -> a -> Export b
-(Export cid args) <.> arg = Export cid (toJSON arg:args)
+(<.>) :: Binary a => Export (a -> b) -> a -> Export b
+(Export cid args) <.> arg = Export cid (encode arg:args)
 
 -- | Application monad; allows for exporting functions, limited liftIO,
 --   forkIO and launching the client.
@@ -122,17 +121,26 @@ forkServerIO (Server m) = App $ \cfg sessions cid exports -> do
 -- | An exportable function is of the type
 --   (Serialize a, ..., Serialize result) => a -> ... -> IO result
 class Exportable a where
-  serializify :: a -> [JSON] -> (SessionID -> IORef Sessions -> IO JSON)
+  serializify :: a -> [Blob] -> (SessionID -> IORef Sessions -> IO Blob)
 
-instance Serialize a => Exportable (Server a) where
-  serializify (Server m) _ = \sid ss -> fmap toJSON (m sid ss)
+instance Binary a => Exportable (Server a) where
+#ifdef __HASTE__
+  serializify _ _ = undefined
+#else
+  serializify (Server m) _ = \sid ss -> fmap encode (m sid ss)
+#endif
 
-instance (Serialize a, Exportable b) => Exportable (a -> b) where
-  serializify f (x:xs) = serializify (f $! fromEither $ fromJSON x) xs
+instance (Binary a, Exportable b) => Exportable (a -> b) where
+#ifdef __HASTE__
+  serializify _ _ = undefined
+#else
+  serializify f (x:xs) = serializify (f $! fromEither $ decode (toBD x)) xs
     where
+      toBD (Blob x) = BlobData x
       fromEither (Right val) = val
       fromEither (Left e)    = error $ "Unable to deserialize data: " ++ e
   serializify _ _      = error "The impossible happened in serializify!"
+#endif
 
 -- | Make a function available to the client as an API call.
 export :: Exportable a => a -> App (Export a)
@@ -194,15 +202,13 @@ serverEventLoop cfg sessions exports = do
       atomicModifyIORef sessions $ \s -> (S.insert sid s, ())
       clientLoop sid sessions conn
   where
-    encode = BU.fromString . fromJSStr . encodeJSON . toJSON
-    encodeEx = BU.fromString . fromJSStr . encodeJSON . toJSON
-    
     cleanup :: Connection -> SessionID -> IORef Sessions -> IO ()
     cleanup conn deadsession sref = do
       let f next m = unS (m deadsession) deadsession sref >> next
       foldl' f (return ()) (cfgSessionEndHandlers cfg)
       atomicModifyIORef sref $ \cs -> (S.delete deadsession cs, ())
-      sendTextData conn . encodeEx $ ServerException "Session ended"
+      let Blob bs = encode $ ServerException "Session ended"
+      sendTextData conn bs
 
     clientLoop :: SessionID -> IORef Sessions -> Connection -> IO ()
     clientLoop sid sref c = finally go (cleanup c sid sref)
@@ -210,22 +216,17 @@ serverEventLoop cfg sessions exports = do
         go = do
           msg <- receiveData c
           forkIO $ do
-            -- Parse JSON
-            case decodeJSON . toJSStr $ BU.toString msg of
-              Right json -> do
-                -- Attempt to parse ServerCall from JSON and look up method
-                case fromJSON json of
-                  Right (ServerCall nonce method args)
-                    | Just m <- M.lookup method exports -> do
-                      result <- m args sid sref
-                      sendTextData c . encode $ ServerReply {
-                          srNonce = nonce,
-                          srResult = result
-                        }
-                  _ -> do
-                    error $ "Got bad method call: " ++ show json
-              _ -> do
-                error $ "Got bad JSON: " ++ BS.unpack msg
+            case decode (BlobData msg) of
+              Right (ServerCall nonce method args)
+                | Just m <- M.lookup method exports -> do
+                  result <- m args sid sref
+                  let Blob bs = encode $ ServerReply {
+                      srNonce = nonce,
+                      srResult = result
+                    }
+                  sendBinaryData c bs
+              Left e -> do
+                error $ "Got bad method call: " ++ show msg
           go
 #endif
 

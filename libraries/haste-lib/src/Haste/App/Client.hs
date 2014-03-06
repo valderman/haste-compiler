@@ -5,9 +5,7 @@ module Haste.App.Client (
     runClient, onServer, liftCIO, get, runClientCIO
   ) where
 import Haste
-import Haste.Serialize
 import Haste.WebSockets
-import Haste.JSON
 import Haste.Binary hiding (get)
 import Haste.App.Monad
 import Haste.App.Protocol
@@ -20,10 +18,10 @@ import Data.IORef
 data ClientState = ClientState {
     csWebSocket  :: WebSocket,
     csNonce      :: IORef Int,
-    csResultVars :: IORef [(Int, MVar JSON)]
+    csResultVars :: IORef [(Int, MVar Blob)]
   }
 
-initialState :: IORef Int -> IORef [(Int,MVar JSON)] -> WebSocket -> ClientState
+initialState :: IORef Int -> IORef [(Int,MVar Blob)] -> WebSocket -> ClientState
 initialState n mv ws =
   ClientState {
     csWebSocket  = ws,
@@ -75,7 +73,7 @@ get :: (ClientState -> a) -> Client a
 get f = Client $ \cs -> return (f cs)
 
 -- | Create a new nonce with associated result var.
-newResult :: Client (Int, MVar JSON)
+newResult :: Client (Int, MVar Blob)
 newResult = Client $ \cs -> do
   mv <- newEmptyMVar
   nonce <- liftIO $ atomicModifyIORef (csNonce cs) $ \n -> (n+1, n)
@@ -90,7 +88,7 @@ runClient_ url (Client m) = concurrent $ do
     n <- liftIO $ newIORef 0
     let errorhandler = error "WebSockets connection died for some reason!"
         computation ws = m (initialState n mv ws)
-    withWebSocket url (handler mv) errorhandler computation
+    withBinaryWebSocket url (handler mv) errorhandler computation
   where
     -- When a message comes in, attempt to extract from it two members "nonce"
     -- and "result". Find the result MVar corresponding to the nonce and write
@@ -99,13 +97,13 @@ runClient_ url (Client m) = concurrent $ do
     --       Maybe we should crash here instead, since this is clearly an
     --       unrecoverable error?
     handler rvars _ msg = do
+      msg' <- getBlobData msg
       join . liftIO $ atomicModifyIORef rvars $ \vs ->
         let res = do
-              json <- decodeJSON msg
-              case fromJSON json of
-                Right e@(ServerException _) -> throw e
-                _                           -> return ()
-              ServerReply nonce result <- fromJSON json
+              case decode msg' :: Either String ServerException of
+                Right e -> throw e
+                _       -> return ()
+              ServerReply nonce result <- decode msg'
               (var, vs') <- case span (\(n, _) -> n /= nonce) vs of
                               (xs, ((_, y):ys)) -> Right (y, xs ++ ys)
                               _                 -> Left "Bad nonce!"
@@ -128,20 +126,21 @@ runClientCIO cs (Client m) = m cs
 -- | Perform a server-side computation, blocking the client thread until said
 --   computation returns. All free variables in the server-side computation
 --   which originate in the Client monad must be serializable.
-onServer :: Serialize a => Export (Server a) -> Client a
+onServer :: Binary a => Export (Server a) -> Client a
 onServer (Export cid args) = __call cid (reverse args)
 
 -- | Make a server-side call.
-__call :: Serialize a => CallID -> [JSON] -> Client a
+__call :: Binary a => CallID -> [Blob] -> Client a
 __call cid args = do
   ws <- get csWebSocket
   (nonce, mv) <- newResult
-  liftCIO . wsSend ws . encodeJSON . toJSON $ ServerCall {
+  liftCIO . wsSendBlob ws . encode $ ServerCall {
       scNonce = nonce,
       scMethod = cid,
       scArgs = args
     }
-  res <- liftCIO (takeMVar mv)
-  case fromJSON res of
+  resblob <- liftCIO $ takeMVar mv
+  res <- getBlobData resblob
+  case decode res of
     Right x -> return x
-    Left e  -> fail $ "Unable to decode JSON: " ++ e
+    Left _  -> fail $ "Unable to decode return value!"

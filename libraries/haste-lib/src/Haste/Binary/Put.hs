@@ -116,10 +116,10 @@ putInt8 :: Int8 -> Put
 putInt8 = PutM . B.put
 
 putInt16le :: Int16 -> Put
-putInt16le = PutM . B.put
+putInt16le = putWord16le . fromIntegral
 
 putInt32le :: Int32 -> Put
-putInt32le = PutM . B.put
+putInt32le = putWord32le . fromIntegral
 
 putFloat32le :: Float -> Put
 putFloat32le = PutM . BI.putFloat32le

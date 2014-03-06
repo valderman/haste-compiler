@@ -34,7 +34,8 @@ instance MonadBlob CIO where
       takeMVar res
     where
 #ifdef __HASTE__
-      mkBlobData res len = concurrent . putMVar res . BlobData 0 len
+      mkBlobData res len x = concurrent $ do
+        putMVar res (BlobData 0 len x)
 #else
       mkBlobData = undefined
 #endif
@@ -93,9 +94,11 @@ instance Binary Double where
   get = getFloat64le
 
 instance Binary a => Binary [a] where
-  put xs = put (length xs) >> mapM_ put xs
+  put xs = do
+    putWord32le (fromIntegral $ length xs)
+    mapM_ put xs
   get = do
-    len <- get :: Get Int
+    len <- getWord32le
     flip mapM [1..len] $ \_ -> get
 
 instance Binary Blob where

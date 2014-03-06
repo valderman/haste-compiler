@@ -115,10 +115,10 @@ getInt8 :: Get Int8
 getInt8 = Get B.get
 
 getInt16le :: Get Int16
-getInt16le = Get B.get
+getInt16le = fromIntegral <$> getWord16le
 
 getInt32le :: Get Int32
-getInt32le = Get B.get
+getInt32le = fromIntegral <$> getWord32le
 
 getFloat32le :: Get Float
 getFloat32le = Get BI.getFloat32le
