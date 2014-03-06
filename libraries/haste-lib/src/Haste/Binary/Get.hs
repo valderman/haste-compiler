@@ -4,7 +4,7 @@ module Haste.Binary.Get (
     getWord8, getWord16le, getWord32le,
     getInt8, getInt16le, getInt32le,
     getFloat32le, getFloat64le,
-    getBytes,
+    getBytes, skip,
     runGet
   ) where
 import Data.Int
@@ -83,6 +83,10 @@ getFloat64le = Get $ \buf next -> Right (next+8, getF buf next)
 getBytes :: Int -> Get BlobData
 getBytes len = Get $ \buf next -> Right (next+len, BlobData next len buf)
 
+-- | Skip n bytes of input.
+skip :: Int -> Get ()
+skip len = Get $ \buf next -> Right (next+len, ())
+
 -- | Run a Get computation.
 runGet :: Get a -> BlobData -> Either String a
 runGet (Get p) (BlobData off len bd) = do
@@ -130,5 +134,9 @@ getBytes :: Int -> Get BlobData
 getBytes len = Get $ do
   bs <- BG.getLazyByteString (fromIntegral len)
   return (BlobData bs)
+
+-- | Skip n bytes of input.
+skip :: Int -> Get ()
+skip = Get . BG.skip
 
 #endif
