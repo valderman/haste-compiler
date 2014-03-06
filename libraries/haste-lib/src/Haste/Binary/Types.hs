@@ -3,7 +3,7 @@ module Haste.Binary.Types (
     Blob (..), BlobData (..),
     blobSize, blobDataSize, toByteString, toBlob, strToBlob
   ) where
-import Haste
+import Haste.Prim
 import Haste.Foreign
 import System.IO.Unsafe
 import qualified Data.ByteString.Lazy as BS

@@ -9,7 +9,7 @@ module Haste.Binary.Get (
   ) where
 import Data.Int
 import Data.Word
-import Haste
+import Haste.Prim
 import Haste.Foreign
 import Haste.Binary.Types
 import Control.Applicative

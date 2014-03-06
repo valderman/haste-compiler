@@ -13,7 +13,7 @@ module Haste.Binary (
 import Data.Int
 import Data.Word
 import Data.Char
-import Haste
+import Haste.Prim
 import Haste.Concurrent hiding (encode, decode)
 import Haste.Foreign
 import Haste.Binary.Types

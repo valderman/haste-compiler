@@ -6,7 +6,6 @@
 --   browser that supports JSON.parse; IE does this from version 8 and up, and
 --   everyone else has done it since just about forever.
 module Haste.JSON (JSON (..), encodeJSON, decodeJSON, (!), (~>)) where
-import Haste
 import Haste.Prim
 import Data.String as S
 #ifndef __HASTE__

@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
     TypeSynonymInstances, FlexibleInstances, OverlappingInstances, CPP #-}
-module Haste.Prim (JSString, toJSStr, fromJSStr, JSAny,
+module Haste.Prim (JSString, URL, toJSStr, fromJSStr, catJSStr, JSAny,
                    Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
 import Data.String
@@ -9,10 +9,22 @@ import Unsafe.Coerce
 import GHC.CString
 import GHC.Prim
 import qualified GHC.HastePrim as HP
+#else
+import Data.List (intercalate)
 #endif
 
+type URL = String
 type JSAny = Ptr Haste.Prim.Any
 data Any
+
+-- | Concatenate a series of JSStrings using the specified separator.
+catJSStr :: JSString -> [JSString] -> JSString
+#ifdef __HASTE__
+foreign import ccall jsCat    :: Ptr [JSString] -> JSString -> JSString
+catJSStr sep strs = jsCat (toPtr strs) sep
+#else
+catJSStr sep strs = toJSStr $ intercalate (fromJSStr sep) (map fromJSStr strs)
+#endif
 
 #ifdef __HASTE__
 foreign import ccall strEq :: JSString -> JSString -> Bool

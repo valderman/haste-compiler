@@ -6,14 +6,19 @@ module Haste.DOM (
     getProp', getValue, withElem , withElems, addChild,
     addChildBefore, removeChild, clearChildren , getChildBefore,
     getLastChild, getChildren, setChildren , getStyle, setStyle,
-    getStyle', setStyle'
+    getStyle', setStyle',
+    getFileData, getFileName
   ) where
 import Haste.Prim
 import Haste.JSType
 import Data.Maybe (isNothing, fromJust)
 import Control.Monad.IO.Class
+import Haste.Foreign
+import Haste.Binary.Types
 
 newtype Elem = Elem JSAny
+instance Marshal Elem
+
 type PropID = String
 type ElemID = String
 
@@ -170,3 +175,28 @@ clearChildren = liftIO . jsClearChildren
 -- | Remove the first element from the second's children.
 removeChild :: MonadIO m => Elem -> Elem -> m ()
 removeChild child parent = liftIO $ jsKillChild child parent
+
+-- | Get a file from a file input element.
+getFileData :: MonadIO m => Elem -> Int -> m (Maybe Blob)
+getFileData e ix = liftIO $ do
+    num <- getFiles e
+    if ix < num
+      then Just `fmap` getFile e ix
+      else return Nothing
+  where
+    getFiles :: Elem -> IO Int
+    getFiles = ffi "(function(e){return e.files.length;})"
+    getFile :: Elem -> Int -> IO Blob
+    getFile = ffi "(function(e,ix){return e.files[ix];})"
+
+-- | Get the name of the currently selected file from a file input element.
+--   Any directory information is stripped, and only the actual file name is
+--   returned, as the directory information is useless (and faked) anyway.
+getFileName :: MonadIO m => Elem -> m String
+getFileName e = liftIO $ do
+    fn <- getProp e "value"
+    return $ reverse $ takeWhile (not . separator) $ reverse fn
+  where
+    separator '/'  = True
+    separator '\\' = True
+    separator _    = False
