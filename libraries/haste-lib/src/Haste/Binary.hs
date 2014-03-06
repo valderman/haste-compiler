@@ -93,6 +93,37 @@ instance Binary Double where
   put = putFloat64le
   get = getFloat64le
 
+instance (Binary a, Binary b) => Binary (a, b) where
+  put (a, b) = put a >> put b
+  get = do
+    a <- get
+    b <- get
+    return (a, b)
+
+instance Binary a => Binary (Maybe a) where
+  put (Just x) = putWord8 1 >> put x
+  put _        = putWord8 0
+  get = do
+    tag <- getWord8
+    case tag of
+      0 -> return Nothing
+      1 -> Just <$> get
+      _ -> fail "Wrong constructor tag when reading Maybe value!"
+
+instance (Binary a, Binary b) => Binary (Either a b) where
+  put (Left x)  = putWord8 0 >> put x
+  put (Right x) = putWord8 1 >> put x
+  get = do
+    tag <- getWord8
+    case tag of
+      0 -> Left <$> get
+      1 -> Right <$> get
+      _ -> fail "Wrong constructor tag when reading Either value!"
+
+instance Binary () where
+  put _ = return ()
+  get = return ()
+
 instance Binary a => Binary [a] where
   put xs = do
     putWord32le (fromIntegral $ length xs)
