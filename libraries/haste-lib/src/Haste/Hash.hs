@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, FlexibleContexts, GADTs #-}
+{-# LANGUAGE FlexibleInstances, FlexibleContexts, GADTs, OverloadedStrings #-}
 -- | Hash manipulation and callbacks.
 module Haste.Hash (onHashChange, setHash, getHash) where
 import Haste.Foreign

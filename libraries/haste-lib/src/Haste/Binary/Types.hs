@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE CPP, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Haste.Binary.Types (
     Blob (..), BlobData (..),
     blobSize, blobDataSize, toByteString, toBlob, strToBlob

@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances, EmptyDataDecls, OverloadedStrings #-}
 -- | WebSockets API for Haste.
 module Haste.WebSockets (
     module Haste.Concurrent,

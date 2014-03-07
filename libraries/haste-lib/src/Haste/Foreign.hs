@@ -1,5 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeSynonymInstances,
-             FlexibleInstances, TypeFamilies, OverlappingInstances, CPP #-}
+             FlexibleInstances, TypeFamilies, OverlappingInstances, CPP,
+             OverloadedStrings #-}
 -- | Create functions on the fly from JS strings.
 --   Slower but more flexible alternative to the standard FFI.
 module Haste.Foreign (
@@ -149,7 +150,7 @@ instance (Marshal a, FFI b) => FFI (a -> b) where
 --
 --   ALWAYS use type signatures for functions defined using this function, as
 --   the argument marshalling is decided by the type signature.
-ffi :: FFI a => String -> a
+ffi :: FFI a => JSString -> a
 ffi = unpackify . unsafeEval
 
 -- | Export a symbol. That symbol may then be accessed from Javascript through
@@ -158,9 +159,9 @@ ffi = unpackify . unsafeEval
 --   --opt-google-closure or any option that implies it, you will instead need
 --   to access your exports through Haste[\'name\'](), or Closure will mangle
 --   your function names.
-export :: FFI a => String -> a -> IO ()
+export :: FFI a => JSString -> a -> IO ()
 export name f =
-    ffi ("(function(s, f) {" ++
+    ffi (toJSStr $ "(function(s, f) {" ++
          "  Haste[s] = function() {" ++
          "      var args = Array.prototype.slice.call(arguments,0);" ++
          "      args.push(0);" ++
@@ -180,7 +181,7 @@ unsafeUnpack x =
 unsafePack :: Unpacked -> a
 unsafePack = unsafeCoerce . Dummy
 
-unsafeEval :: String -> a
+unsafeEval :: JSString -> a
 unsafeEval s = unsafePerformIO $ do
-  x <- eval (toJSStr s)
+  x <- eval s
   return $ fromPtr x

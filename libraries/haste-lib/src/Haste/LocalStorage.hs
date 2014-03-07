@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | Basic bindings to HTML5 WebStorage.
 module Haste.LocalStorage (setItem, getItem, removeItem) where
 import Haste
