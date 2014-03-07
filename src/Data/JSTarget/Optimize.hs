@@ -23,6 +23,7 @@ optimizeFun f (AST ast js) =
     >>= zapJSStringConversions
     >>= optimizeThunks
     >>= optimizeArrays
+    >>= optUnsafeEval
     >>= tailLoopify f
     >>= ifReturnToTernary
 
@@ -236,10 +237,25 @@ computingEx ex =
   case ex of
     Var _                     -> False
     Lit _                     -> False
+    Verbatim _                -> False
     Fun _ _ _                 -> False
     Arr arr                   -> any computingEx arr
     e | Just t <- fromThunk e -> False
       | otherwise             -> True
+
+-- | When possible, optimize ffi "x" into x.
+optUnsafeEval :: JSTrav ast => ast -> TravM ast
+optUnsafeEval = mapJS (const True) opt return
+  where
+    opt ex =
+      case ex of
+        (Call ar c (Var (Internal
+          (Name "unsafeEval" (Just (pkg, "Haste.Foreign"))) _))
+          [Arr [Lit (LNum 0), Lit (LStr s)]]) | take 9 pkg == "haste-lib" -> do
+            return $ Verbatim s
+        _ -> do
+          return ex
+
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
 --   exactly once.

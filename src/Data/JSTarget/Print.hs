@@ -70,6 +70,8 @@ instance Pretty Exp where
     pp v
   pp (Lit l) =
     pp l
+  pp (Verbatim s) =
+    put s
   pp (Not ex) =
     case neg ex of
       Just ex' -> pp ex'

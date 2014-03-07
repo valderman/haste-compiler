@@ -77,6 +77,8 @@ data Lit where
 data Exp where
   Var       :: Var -> Exp
   Lit       :: Lit -> Exp
+  -- A verbatim JS expression. Must always be non-computing!
+  Verbatim  :: String -> Exp
   Not       :: Exp -> Exp
   BinOp     :: BinOp -> Exp -> Exp -> Exp
   Fun       :: Maybe Name -> [Var] -> Stm -> Exp
