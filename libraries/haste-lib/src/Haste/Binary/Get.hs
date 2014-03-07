@@ -40,45 +40,69 @@ instance Monad Get where
       Left e           -> Left e
   fail s = Get $ \_ _ -> Left s
 
+{-# NOINLINE getW8 #-}
+getW8 :: Unpacked -> Int -> IO Word8
+getW8 = ffi "(function(b,i){return b.getUint8(i);})"
+
 getWord8 :: Get Word8
-getWord8 = Get $ \buf next -> Right (next+1, getB buf next)
-  where
-    getB b n = unsafePerformIO $ ffi "(function(b,i){return b.getUint8(i,true);})" b n
+getWord8 =
+  Get $ \buf next -> Right (next+1, unsafePerformIO $ getW8 buf next)
+
+{-# NOINLINE getW16le #-}
+getW16le :: Unpacked -> Int -> IO Word16
+getW16le = ffi "(function(b,i){return b.getUint16(i,true);})"
 
 getWord16le :: Get Word16
-getWord16le = Get $ \buf next -> Right (next+2, getW buf next)
-  where
-    getW b n = unsafePerformIO $ ffi "(function(b,i){return b.getUint16(i,true);})" b n
+getWord16le =
+  Get $ \buf next -> Right (next+2, unsafePerformIO $ getW16le buf next)
+
+{-# NOINLINE getW32le #-}
+getW32le :: Unpacked -> Int -> IO Word32
+getW32le = ffi "(function(b,i){return b.getUint32(i,true);})"
 
 getWord32le :: Get Word32
-getWord32le = Get $ \buf next -> Right (next+4, getW buf next)
-  where
-    getW b n = unsafePerformIO $ ffi "(function(b,i){return b.getUint32(i,true);})" b n
+getWord32le =
+  Get $ \buf next -> Right (next+4, unsafePerformIO $ getW32le buf next)
+
+{-# NOINLINE getI8 #-}
+getI8 :: Unpacked -> Int -> IO Int8
+getI8 = ffi "(function(b,i){return b.getInt8(i);})"
 
 getInt8 :: Get Int8
-getInt8 = Get $ \buf next -> Right (next+1, getB buf next)
-  where
-    getB b n = unsafePerformIO $ ffi "(function(b,i){return b.getInt8(i,true);})" b n
+getInt8 =
+  Get $ \buf next -> Right (next+1, unsafePerformIO $ getI8 buf next)
+
+{-# NOINLINE getI16le #-}
+getI16le :: Unpacked -> Int -> IO Int16
+getI16le = ffi "(function(b,i){return b.getInt16(i,true);})"
 
 getInt16le :: Get Int16
-getInt16le = Get $ \buf next -> Right (next+2, getW buf next)
-  where
-    getW b n = unsafePerformIO $ ffi "(function(b,i){return b.getInt16(i,true);})" b n
+getInt16le =
+  Get $ \buf next -> Right (next+2, unsafePerformIO $ getI16le buf next)
+
+{-# NOINLINE getI32le #-}
+getI32le :: Unpacked -> Int -> IO Int32
+getI32le = ffi "(function(b,i){return b.getInt32(i,true);})"
 
 getInt32le :: Get Int32
-getInt32le = Get $ \buf next -> Right (next+4, getW buf next)
-  where
-    getW b n = unsafePerformIO $ ffi "(function(b,i){return b.getInt32(i,true);})" b n
+getInt32le =
+  Get $ \buf next -> Right (next+4, unsafePerformIO $ getI32le buf next)
+
+{-# NOINLINE getF32le #-}
+getF32le :: Unpacked -> Int -> IO Float
+getF32le = ffi "(function(b,i){return b.getFloat32(i,true);})"
 
 getFloat32le :: Get Float
-getFloat32le = Get $ \buf next -> Right (next+4, getF buf next)
-  where
-    getF b n = unsafePerformIO $ ffi "(function(b,i){return b.getFloat32(i,true);})" b n
+getFloat32le =
+  Get $ \buf next -> Right (next+4, unsafePerformIO $ getF32le buf next)
+
+{-# NOINLINE getF64le #-}
+getF64le :: Unpacked -> Int -> IO Double
+getF64le = ffi "(function(b,i){return b.getFloat64(i,true);})"
 
 getFloat64le :: Get Double
-getFloat64le = Get $ \buf next -> Right (next+8, getF buf next)
-  where
-    getF b n = unsafePerformIO $ ffi "(function(b,i){return b.getFloat64(i,true);})" b n
+getFloat64le =
+  Get $ \buf next -> Right (next+8, unsafePerformIO $ getF64le buf next)
 
 getBytes :: Int -> Get BlobData
 getBytes len = Get $ \buf next -> Right (next+len, BlobData next len buf)
