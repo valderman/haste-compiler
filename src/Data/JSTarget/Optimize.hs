@@ -97,7 +97,8 @@ replaceEx trav old new =
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
 --
---   TODO: don't inline thunks into functions!
+--   Note: a thunk may ONLY be inlined into a lambda if it performs no useful
+--         work, to avoid computing expensive thunks more than once.
 inlineAssigns :: JSTrav ast => ast -> TravM ast
 inlineAssigns ast = do
     inlinable <- gatherInlinable ast
@@ -187,6 +188,8 @@ zapJSStringConversions ast =
 --     => x
 --   E(\x ... -> ...)
 --     => \x ... -> ...
+--   thunk(x) where x is non-computing
+--     => x
 optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
@@ -196,6 +199,8 @@ optimizeThunks ast =
       | Fun _ _ _ <- x           = return x
     optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
       return $ Call arity calltype f' args
+    optEx ex | Just ex' <- fromThunkEx ex, not (computingEx ex') =
+      return ex'
     optEx ex =
       return ex
 
