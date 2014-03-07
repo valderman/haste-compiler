@@ -115,7 +115,15 @@ inlineAssigns ast = do
               case occ of
                 -- Inline of any non-lambda value
                 Once | mayReorder -> do
-                  replaceEx (not <$> isShared) (Var lhs) ex next
+                  if computingThunk ex
+                    then do
+                      let notSharedOrLambda = (not <$> (isShared .|. isLambda))
+                      occs <- occurrences notSharedOrLambda (varOccurs lhs) next
+                      if occs == Once
+                        then replaceEx notSharedOrLambda (Var lhs) ex next
+                        else return keep
+                    else do
+                      replaceEx (not <$> isShared) (Var lhs) ex next
                 -- Don't inline lambdas, but use less verbose syntax.
                 _    | Fun Nothing vs body <- ex,
                        Internal lhsname _ <- lhs -> do
@@ -206,6 +214,27 @@ fromThunkEx ex =
   case fromThunk ex of
     Just (Return ex') -> Just ex'
     _                 -> Nothing
+
+-- | Is the given expression a thunk which when evaluated performs some kind of
+--   computation?
+computingThunk :: Exp -> Bool
+computingThunk e =
+  case fromThunkEx e of
+    Just e' -> computingEx e'
+    _       -> False
+
+-- | Does the given expression compute something? An expression is
+--   non-computing if it is a variable, a literal, a lambda abstraction,
+--   a thunk or an array which only has non-computing elements.
+computingEx :: Exp -> Bool
+computingEx ex =
+  case ex of
+    Var _                     -> False
+    Lit _                     -> False
+    Fun _ _ _                 -> False
+    Arr arr                   -> any computingEx arr
+    e | Just t <- fromThunk e -> False
+      | otherwise             -> True
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
 --   exactly once.
