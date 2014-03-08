@@ -1,18 +1,18 @@
-{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, CPP #-}
+{-# LANGUAGE CPP #-}
 module Haste (
     JSString, JSAny, URL, CB.GenericCallback,
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
-    module Haste.JSType, module Haste.DOM, module Haste.Callback,
-    module Haste.Random, module Haste.Hash
+    module M
   ) where
 import Haste.Prim
-import Haste.Callback hiding (jsSetCB, jsSetTimeout, GenericCallback)
+import Haste.Callback as M hiding (jsSetCB, jsSetTimeout, GenericCallback)
 import qualified Haste.Callback as CB (GenericCallback)
-import Haste.Random
-import Haste.JSType
-import Haste.DOM
-import Haste.Hash
+import Haste.Random as M
+import Haste.JSType as M
+import Haste.DOM as M
+import Haste.Hash as M
 import Control.Monad.IO.Class
+import Control.Monad (liftM)
 
 #ifdef __HASTE__
 foreign import ccall jsAlert  :: JSString -> IO ()
@@ -42,7 +42,7 @@ prompt q = liftIO $ do
 
 -- | Javascript eval() function.
 eval :: MonadIO m => String -> m String
-eval js = liftIO $ jsEval (toJSStr js) >>= return . fromJSStr
+eval js = liftIO $ liftM fromJSStr (jsEval (toJSStr js))
 
 -- | Use console.log to write a message.
 writeLog :: MonadIO m => String -> m ()
