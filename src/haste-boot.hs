@@ -88,12 +88,12 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
 -- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> Shell ()
 fetchLibs tmpdir = do
-    echo "Downloading base libs from ekblad.cc"
+    echo "Downloading base libs from GitHub"
     file <- downloadFile $ mkUrl hasteVersion
     liftIO . unpack tmpdir . read . decompress $ file
   where
     mkUrl v =
-      "http://ekblad.cc/haste-libs/haste-libs-" ++ showVersion v ++ ".tar.bz2"
+      "http://valderman.github.io/haste-libs/haste-libs-" ++ showVersion v ++ ".tar.bz2"
 
 -- | Fetch and install the Closure compiler.
 installClosure :: Shell ()
