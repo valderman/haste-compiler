@@ -35,6 +35,7 @@ topLevelInline (AST ast js) =
     >>= optimizeThunks
     >>= optimizeArrays
     >>= zapJSStringConversions
+    >>= optUnsafeEval
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -137,7 +138,6 @@ inlineAssigns ast = do
         else do
           return keep
     inl _ stm = return stm
-
 
 -- | Turn if(foo) {return bar;} else {return baz;} into return foo ? bar : baz.
 ifReturnToTernary :: JSTrav ast => ast -> TravM ast
@@ -251,8 +251,11 @@ optUnsafeEval = mapJS (const True) opt return
       case ex of
         (Call ar c (Var (Internal
           (Name "unsafeEval" (Just (pkg, "Haste.Foreign"))) _))
-          [Arr [Lit (LNum 0), Lit (LStr s)]]) | take 9 pkg == "haste-lib" -> do
-            return $ Verbatim s
+          (Arr [Lit (LNum 0), Lit (LStr s)] : args))
+          | take 9 pkg == "haste-lib" -> do
+            case args of
+              [] -> return $ Verbatim s
+              _  -> return $ Call (ar-1) c (Verbatim s) args
         _ -> do
           return ex
 
@@ -423,5 +426,6 @@ tailLoopify f fun@(Fun mname args body) = do
     contains (Arr xs) var         = any (`contains` var) xs
     contains (AssignEx l r) var   = l `contains` var || r `contains` var
     contains (IfEx c t e) var     = any (`contains` var) [c,t,e]
+    contains (Verbatim _) _       = False
 tailLoopify _ fun = do
   return fun
