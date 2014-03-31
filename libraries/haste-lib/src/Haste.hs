@@ -41,8 +41,8 @@ prompt q = liftIO $ do
   return (fromJSStr a)
 
 -- | Javascript eval() function.
-eval :: MonadIO m => String -> m String
-eval js = liftIO $ jsEval (toJSStr js) >>= return . fromJSStr
+eval :: MonadIO m => JSString -> m JSString
+eval = liftIO . jsEval
 
 -- | Use console.log to write a message.
 writeLog :: MonadIO m => String -> m ()
