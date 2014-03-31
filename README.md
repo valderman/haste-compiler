@@ -3,6 +3,9 @@ Haste
 
 A compiler to generate Javascript code from Haskell.
 
+It even has a [website](http://haste-lang.org) and a
+[mailing list](https://groups.google.com/d/forum/haste-compiler).
+
 Features
 --------
 
@@ -101,7 +104,7 @@ Finally, you can interact with Javascript code using the FFI. See
 `doc/js-externals.txt` for more information about that.
 
 For more information on how Haste works, see
-[the Haste Report](http://ekblad.cc/hastereport.pdf "Haste Report"),
+[the Haste Report](http://haste-lang.org/hastereport.pdf "Haste Report"),
 though beware that parts of Haste may have changed quite a bit.
 
 You should also have a look at the documentation and/or source code for
@@ -177,15 +180,18 @@ only need to concern yourself with this if you're using third party libraries.
 Examples of Haste.App in action is available in `examples/haste-app` and
 `examples/chatbox`.
 
+For more information about how exactly this works, see this
+[draft paper](http://haste-lang.org/icfp14.pdf).
+
 
 Base library and documentation
 ------------------------------
 
 You can build your own set of docs for haste-lib and fursuit by running
-`cabal haddock` in their respective directories as with any other package.
+`cabal haddock` in the Haste base directory as with any other package.
 
-Or you could just look at [the online docs](http://ekblad.cc/haste-doc).
-It may or may not be up to date with the current Haste version.
+Or you could just look at
+[the online docs](http://hackage.haskell.org/package/haste-compiler).
 
 
 Reactive web EDSL
