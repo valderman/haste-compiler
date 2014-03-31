@@ -61,7 +61,7 @@ instance GenericCallback (Client ()) Client where
 
 instance MonadBlob Client where
   getBlobData = liftCIO . getBlobData
-  getBlobText = liftCIO . getBlobText
+  getBlobText' = liftCIO . getBlobText'
 
 
 -- | Lift a CIO action into the Client monad.

@@ -5,7 +5,7 @@
 module Haste.Binary (
     module Haste.Binary.Put,
     module Haste.Binary.Get,
-    MonadBlob (..), Binary (..),
+    MonadBlob (..), Binary (..), getBlobText,
     Blob, BlobData,
     blobSize, blobDataSize, toByteString, toBlob, strToBlob,
     encode, decode
@@ -24,8 +24,12 @@ import Control.Applicative
 class Monad m => MonadBlob m where
   -- | Retrieve the raw data from a blob.
   getBlobData :: Blob -> m BlobData
-  -- | Interpret a blob as UTF-8 text.
-  getBlobText :: Blob -> m String
+  -- | Interpret a blob as UTF-8 text, as a JSString.
+  getBlobText' :: Blob -> m JSString
+
+-- | Interpret a blob as UTF-8 text.
+getBlobText :: MonadBlob m => Blob -> m String
+getBlobText b = getBlobText' b >>= return . fromJSStr
 
 instance MonadBlob CIO where
   getBlobData b = do
@@ -44,10 +48,10 @@ instance MonadBlob CIO where
       convertBlob = ffi
         "(function(b,cb){var r=new FileReader();r.onload=function(){A(cb,[new DataView(r.result),0]);};r.readAsArrayBuffer(b);})"
 
-  getBlobText b = do
+  getBlobText' b = do
       res <- newEmptyMVar
       liftIO $ convertBlob b (toOpaque $ concurrent . putMVar res)
-      fromJSStr <$> takeMVar res
+      takeMVar res
     where
       convertBlob :: Blob -> Opaque (JSString -> IO ()) -> IO ()
       convertBlob = ffi

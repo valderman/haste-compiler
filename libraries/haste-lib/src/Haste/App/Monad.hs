@@ -30,6 +30,7 @@ import qualified Data.ByteString.UTF8 as BU
 import Control.Exception
 import System.Random
 import Data.List (foldl')
+import Data.String
 #endif
 
 data AppCfg = AppCfg {
@@ -253,10 +254,10 @@ instance MonadIO Server where
 instance MonadBlob Server where
 #ifndef __HASTE__
   getBlobData (Blob bd) = return $ BlobData bd
-  getBlobText (Blob bd) = return $ BU.toString $ BS.concat $ BSL.toChunks bd
+  getBlobText' (Blob bd) = return $ fromString $ BU.toString $ BS.concat $ BSL.toChunks bd
 #else
   getBlobData _ = return undefined
-  getBlobText _ = return undefined
+  getBlobText' _ = return undefined
 #endif
 
 -- | Make a Useless value useful by extracting it. Only possible server-side,
