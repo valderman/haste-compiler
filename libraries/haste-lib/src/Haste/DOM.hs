@@ -7,7 +7,8 @@ module Haste.DOM (
     addChildBefore, removeChild, clearChildren , getChildBefore,
     getLastChild, getChildren, setChildren , getStyle, setStyle,
     getStyle', setStyle',
-    getFileData, getFileName
+    getFileData, getFileName,
+    setClass, toggleClass, hasClass
   ) where
 import Haste.Prim
 import Haste.JSType
@@ -184,8 +185,10 @@ getFileData e ix = liftIO $ do
       then Just `fmap` getFile e ix
       else return Nothing
   where
+    {-# NOINLINE getFiles #-}
     getFiles :: Elem -> IO Int
     getFiles = ffi "(function(e){return e.files.length;})"
+    {-# NOINLINE getFile #-}
     getFile :: Elem -> Int -> IO Blob
     getFile = ffi "(function(e,ix){return e.files[ix];})"
 
@@ -200,3 +203,27 @@ getFileName e = liftIO $ do
     separator '/'  = True
     separator '\\' = True
     separator _    = False
+
+-- | Add or remove a class from an element's class list.
+setClass :: MonadIO m => Elem -> String -> Bool -> m ()
+setClass e c x = liftIO $ setc e c x
+  where
+    {-# NOINLINE setc #-}
+    setc :: Elem -> String -> Bool -> IO ()
+    setc = ffi "(function(e,c,x){x?e.classList.add(c):e.classList.remove(c);})"
+
+-- | Toggle the existence of a class within an elements class list.
+toggleClass :: MonadIO m => Elem -> String -> m ()
+toggleClass e c = liftIO $ toggc e c
+  where
+    {-# NOINLINE toggc #-}
+    toggc :: Elem -> String -> IO ()
+    toggc = ffi "(function(e,c) {e.classList.toggle(c);})"
+
+-- | Does the given element have a particular class?
+hasClass :: MonadIO m => Elem -> String -> m Bool
+hasClass e c = liftIO $ getc e c
+  where
+    {-# NOINLINE getc #-}
+    getc :: Elem -> String -> IO Bool
+    getc = ffi "(function(e,c) {return e.classList.contains(c);})"
