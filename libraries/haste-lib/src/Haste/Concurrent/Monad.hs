@@ -12,11 +12,13 @@ import Control.Applicative
 import Data.IORef
 
 -- | Any monad which supports concurrency.
-class MonadConc m where
+class Monad m => MonadConc m where
   liftConc :: CIO a -> m a
+  fork     :: m () -> m ()
 
 instance MonadConc CIO where
   liftConc = id
+  fork = forkIO
 
 -- | Embed concurrent computations into non-concurrent ones.
 class ToConcurrent a where
