@@ -91,6 +91,68 @@ instance Marshal Bool where
   unpack False = jsFalse
   pack x = if pack x > (0 :: Double) then True else False
 
+instance (Marshal a, Marshal b) => Marshal (a, b) where
+  unpack (a, b) = unpack [unpack a, unpack b]
+  pack x = case pack x of [a, b] -> (pack a, pack b)
+
+instance (Marshal a, Marshal b, Marshal c) => Marshal (a, b, c) where
+  unpack (a, b, c) = unpack [unpack a, unpack b, unpack c]
+  pack x = case pack x of [a, b, c] -> (pack a, pack b, pack c)
+
+instance (Marshal a, Marshal b, Marshal c, Marshal d) =>
+         Marshal (a, b, c, d) where
+  unpack (a, b, c, d) = unpack [unpack a, unpack b, unpack c, unpack d]
+  pack x = case pack x of [a, b, c, d] -> (pack a, pack b, pack c, pack d)
+
+instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e) =>
+         Marshal (a, b, c, d, e) where
+  unpack (a, b, c, d, e) = unpack [unpack a,unpack b,unpack c,unpack d,unpack e]
+  pack x = case pack x of [a,b,c,d,e] -> (pack a, pack b, pack c, pack d, pack e)
+
+instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
+          Marshal f) => Marshal (a, b, c, d, e, f) where
+  unpack (a, b, c, d, e, f) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e, unpack f]
+  pack x = case pack x of
+    [a, b, c, d, e, f] -> (pack a, pack b, pack c, pack d, pack e, pack f)
+
+instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
+          Marshal f, Marshal g) => Marshal (a, b, c, d, e, f, g) where
+  unpack (a, b, c, d, e, f, g) =
+    unpack [unpack a,unpack b,unpack c,unpack d,unpack e,unpack f,unpack g]
+  pack x = case pack x of
+    [a, b, c, d, e, f, g] -> (pack a,pack b,pack c,pack d,pack e,pack f,pack g)
+
+instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
+          Marshal f, Marshal g, Marshal h) =>
+         Marshal (a, b, c, d, e, f, g, h) where
+  unpack (a, b, c, d, e, f, g, h) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
+            unpack f, unpack g, unpack h]
+  pack x = case pack x of
+    [a, b, c, d, e, f, g, h] -> (pack a, pack b, pack c, pack d, pack e,
+                                 pack f, pack g, pack h)
+
+instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
+          Marshal f, Marshal g, Marshal h, Marshal i) =>
+         Marshal (a, b, c, d, e, f, g, h, i) where
+  unpack (a, b, c, d, e, f, g, h, i) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
+            unpack f, unpack g, unpack h, unpack i]
+  pack x = case pack x of
+    [a, b, c, d, e, f, g, h, i] -> (pack a, pack b, pack c, pack d, pack e,
+                                    pack f, pack g, pack h, pack i)
+
+instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
+          Marshal f, Marshal g, Marshal h, Marshal i, Marshal j) =>
+         Marshal (a, b, c, d, e, f, g, h, i) where
+  unpack (a, b, c, d, e, f, g, h, i) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
+            unpack f, unpack g, unpack h, unpack i, unpack j]
+  pack x = case pack x of
+    [a, b, c, d, e, f, g, h, i, j] -> (pack a, pack b, pack c, pack d, pack e,
+                                       pack f, pack g, pack h, pack i, pack j)
+
 -- | Lists are marshalled into arrays.
 instance Marshal a => Marshal [a] where
   unpack = lst2arr . toOpaque . map unpack
