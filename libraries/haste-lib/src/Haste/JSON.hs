@@ -15,11 +15,16 @@ import Data.Char (ord)
 import Numeric (showHex)
 #endif
 
-foreign import ccall jsJSONParse :: JSString -> JSAny
-
--- | Create a Javascript object from a JSON object.
+-- | Create a Javascript object from a JSON object. Only makes sense in a
+--   browser context, obviously.
 toObject :: JSON -> JSAny
+#ifdef __HASTE__
 toObject = jsJSONParse . encodeJSON
+foreign import ccall jsJSONParse :: JSString -> JSAny
+#else
+toObject j = error $ "Call to toObject in non-browser: " ++ show j
+#endif
+
 
 -- Remember to update jsParseJSON if this data type changes!
 data JSON
