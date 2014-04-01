@@ -103,7 +103,7 @@ lst2arr :: Opaque [Unpacked] -> Unpacked
 lst2arr = unsafePerformIO . ffi "lst2arr"
 
 arr2lst :: Unpacked -> Int -> Opaque [Unpacked]
-arr2lst arr ix = unsafePerformIO $ ffi "lst2arr" arr ix
+arr2lst arr ix = unsafePerformIO $ ffi "arr2lst" arr ix
 
 -- | Maybe is simply a nullable type. Nothing is equivalent to null, and any
 --   non-null value is equivalent to x in Just x.
