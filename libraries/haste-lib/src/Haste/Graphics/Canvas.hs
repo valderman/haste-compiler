@@ -12,7 +12,7 @@ module Haste.Graphics.Canvas (
   -- Working with bitmaps
   bitmapElem,
   -- Rendering pictures, extracting data from a canvas
-  render, buffer, toDataURL,
+  render, renderOnTop, buffer, toDataURL,
   -- Working with colors and opacity
   setStrokeColor, setFillColor, color, opacity,
   -- Matrix operations
@@ -210,6 +210,12 @@ render :: MonadIO m => Canvas -> Picture a -> m a
 render (Canvas ctx el) (Picture p) = liftIO $ do
   jsResetCanvas el
   p ctx
+
+-- | Draw a picture onto a canvas without first clearing it.
+{-# SPECIALISE renderOnTop :: Canvas -> Picture a -> IO a #-}
+{-# SPECIALISE renderOnTop :: Canvas -> Picture a -> CIO a #-}
+renderOnTop :: MonadIO m => Canvas -> Picture a -> m a
+renderOnTop (Canvas ctx el) (Picture p) = liftIO $ p ctx
 
 -- | Generate a data URL from the contents of a canvas.
 toDataURL :: MonadIO m => Canvas -> m URL
