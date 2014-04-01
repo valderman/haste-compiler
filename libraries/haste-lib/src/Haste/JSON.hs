@@ -5,7 +5,7 @@
 --   the parser is implemented entirely in Javascript, and works with any
 --   browser that supports JSON.parse; IE does this from version 8 and up, and
 --   everyone else has done it since just about forever.
-module Haste.JSON (JSON (..), encodeJSON, decodeJSON, (!), (~>)) where
+module Haste.JSON (JSON (..), encodeJSON, decodeJSON, toObject, (!), (~>)) where
 import Haste.Prim
 import Data.String as S
 #ifndef __HASTE__
@@ -14,6 +14,12 @@ import Control.Applicative
 import Data.Char (ord)
 import Numeric (showHex)
 #endif
+
+foreign import ccall jsJSONParse :: JSString -> JSAny
+
+-- | Create a Javascript object from a JSON object.
+toObject :: JSON -> JSAny
+toObject = jsJSONParse . encodeJSON
 
 -- Remember to update jsParseJSON if this data type changes!
 data JSON

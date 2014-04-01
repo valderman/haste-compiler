@@ -91,6 +91,7 @@ instance Marshal Bool where
   unpack False = jsFalse
   pack x = if pack x > (0 :: Double) then True else False
 
+-- | Tuples are marshalled into arrays.
 instance (Marshal a, Marshal b) => Marshal (a, b) where
   unpack (a, b) = unpack [unpack a, unpack b]
   pack x = case pack x of [a, b] -> (pack a, pack b)
@@ -145,8 +146,8 @@ instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
 
 instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
           Marshal f, Marshal g, Marshal h, Marshal i, Marshal j) =>
-         Marshal (a, b, c, d, e, f, g, h, i) where
-  unpack (a, b, c, d, e, f, g, h, i) =
+         Marshal (a, b, c, d, e, f, g, h, i, j) where
+  unpack (a, b, c, d, e, f, g, h, i, j) =
     unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
             unpack f, unpack g, unpack h, unpack i, unpack j]
   pack x = case pack x of
