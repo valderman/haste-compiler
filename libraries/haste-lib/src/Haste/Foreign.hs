@@ -56,6 +56,7 @@ class Marshal a where
 
 instance Marshal Float
 instance Marshal Double
+instance Marshal JSAny
 instance Marshal JSString where
   pack = jsString . unsafePack
 instance Marshal Int where
