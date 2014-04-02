@@ -46,7 +46,11 @@ sliceBlob b off len = unsafePerformIO $ do
   ffi "(function(b,off,len){return b.slice(off,len);})" b off len
 
 newBlob :: Unpacked -> Blob
-newBlob = unsafePerformIO . ffi "(function(b){return new Blob([b]);})"
+newBlob = unsafePerformIO . jsNewBlob
+
+jsNewBlob :: Unpacked -> IO Blob
+jsNewBlob =
+  ffi "(function(b){try {return new Blob([b]);} catch (e) {return new Blob([b.buffer]);}})"
 #else
 
 newtype BlobData = BlobData BS.ByteString
