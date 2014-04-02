@@ -21,24 +21,29 @@ onHashChange :: (MonadIO m, GenericCallback (m ()) m, CB (m ()) ~ IO ())
               => (String -> String -> m ())
               -> m ()
 onHashChange f = do
+    firsthash <- getHash'
     f' <- toCallback $ \old new -> f (fromJSStr old) (fromJSStr new)
-    liftIO $ jsOnHashChange (HashCallback f')
+    liftIO $ jsOnHashChange firsthash (HashCallback f')
 
 -- | JSString version of @onHashChange@.
 onHashChange' :: (MonadIO m, GenericCallback (m ()) m, CB (m ()) ~ IO ())
               => (JSString -> JSString -> m ())
               -> m ()
 onHashChange' f = do
+    firsthash <- getHash'
     f' <- toCallback f
-    liftIO $ jsOnHashChange (HashCallback f')
+    liftIO $ jsOnHashChange firsthash (HashCallback f')
 
 {-# NOINLINE jsOnHashChange #-}
-jsOnHashChange :: HashCallback -> IO ()
+jsOnHashChange :: JSString -> HashCallback -> IO ()
 jsOnHashChange =
-  ffi "(function(cb) {\
+  ffi "(function(firsthash,cb){\
+          \window.__old_hash = firsthash;\
           \window.onhashchange = function(e){\
-            \A(cb, [[0,e.oldURL.split('#')[1] || ''],\
-            \[0,e.newURL.split('#')[1] || ''],0]);\
+            \var oldhash = window.__old_hash;\
+            \var newhash = window.location.hash.split('#')[1] || '';\
+            \window.__old_hash = newhash;\
+            \A(cb, [[0,oldhash],[0,newhash],0]);\
           \};\
        \})"
 
