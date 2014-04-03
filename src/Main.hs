@@ -119,12 +119,12 @@ compiler cmdargs = do
   case argRes of
     -- We got --help as an argument - display help and exit.
     Left help -> putStrLn help
-    
+
     -- We got a config and a set of arguments for GHC; let's compile!
     Right (cfg, ghcargs) -> do
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
-      
+
       runGhc (Just libdir) $ handleSourceError (const $ liftIO exitFailure) $ do
         -- Handle dynamic GHC flags. Make sure __HASTE__ is #defined.
         let args = "-D__HASTE__" : map unLoc ghcargs'
@@ -142,7 +142,7 @@ compiler cmdargs = do
           _ <- load LoadAllTargets
           depanal [] False
         mapM_ (compile cfg dynflags') deps
-        
+
         -- Link everything together into a .js file.
         when (performLink cfg) $ liftIO $ do
           flip mapM_ files' $ \file -> do
@@ -153,7 +153,7 @@ compiler cmdargs = do
             let pkgid = showPpr $ thisPackage dynflags'
 #endif
             link cfg pkgid file
-            case useGoogleClosure cfg of 
+            case useGoogleClosure cfg of
               Just clopath -> closurize clopath $ outFile cfg file
               _            -> return ()
 
@@ -162,13 +162,20 @@ prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName
 prepare dynflags theMod = do
   env <- getSession
   let name = moduleName $ ms_mod theMod
+#if __GLASGOW_HASKELL__ >= 707
+      mod  = ms_mod theMod
+#endif
   pgm <- parseModule theMod
     >>= typecheckModule
     >>= desugarModule
     >>= liftIO . hscSimplify env . coreModule
     >>= liftIO . tidyProgram env
     >>= prepPgm env . fst
+#if __GLASGOW_HASKELL__ >= 707
+    >>= liftIO . coreToStg dynflags mod
+#else
     >>= liftIO . coreToStg dynflags
+#endif
   return (pgm, name)
   where
     prepPgm env tidy = liftIO $ do

@@ -9,6 +9,9 @@ import Data.Word
 import Data.Char
 import Data.List (partition, foldl')
 import Data.Maybe (isJust)
+#if __GLASGOW_HASKELL__ >= 707
+import qualified Data.ByteString.Char8 as B
+#endif
 import qualified Data.Set as S
 import qualified Data.Map as M
 -- STG/GHC stuff
@@ -56,7 +59,7 @@ generate cfg fp pkgid modname binds =
     }
   where
     theMod = genAST cfg modname binds
-    
+
     insFun m (_, AST (Assign (NewVar _ (Internal v _)) body _) jumps) =
       M.insert v (AST body jumps) m
     insFun m _ =
@@ -194,7 +197,7 @@ genBindRec b =
 --   a recursive binding; this is because it's quite a lot easier to keep track
 --   of which functions depend on each other if every genBind call results in a
 --   single function being generated.
---   Use `genBindRec` to generate code for local potentially recursive bindings 
+--   Use `genBindRec` to generate code for local potentially recursive bindings
 --   as their dependencies get merged into their parent's anyway.
 genBind :: Bool -> Maybe Int -> StgBinding -> JSGen Config ()
 genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
@@ -245,7 +248,7 @@ unRec b           = [(Nothing, b)]
 genArgVarsPair :: [(Var.Var, a)] -> JSGen Config ([J.Var], [a])
 genArgVarsPair vps = do
     vs' <- mapM genVar vs
-    return (vs', xs) 
+    return (vs', xs)
   where
     (vs, xs) = unzip $ filter (hasRepresentation . fst) vps
 
@@ -300,7 +303,7 @@ splitAlts :: [StgAlt] -> (StgAlt, [StgAlt])
 splitAlts alts =
     case partition isDefault alts of
       ([defAlt], otherAlts) -> (defAlt, otherAlts)
-      ([], otherAlts)       -> (last otherAlts, init otherAlts) 
+      ([], otherAlts)       -> (last otherAlts, init otherAlts)
       _                     -> error "More than one default alt in case!"
   where
     isDefault (DEFAULT, _, _, _) = True
@@ -456,7 +459,11 @@ dataConNameModule d =
 genLit :: L.Literal -> JSGen Config (AST Exp)
 genLit l = do
   case l of
+#if __GLASGOW_HASKELL__ >= 707
+    MachStr s           -> return . lit $ B.unpack s
+#else
     MachStr s           -> return . lit $ unpackFS s
+#endif
     MachInt n
       | n > 2147483647 ||
         n < -2147483648 -> do warn Verbose (constFail "Int" n)
@@ -501,7 +508,7 @@ genApp f xs = do
 
 -- | Does this data constructor create an enumeration type?
 isEnumerationDataCon :: DataCon -> Bool
-isEnumerationDataCon = isEnumerationTyCon . dataConTyCon    
+isEnumerationDataCon = isEnumerationTyCon . dataConTyCon
 
 -- | Returns True if the given Var is an unboxed tuple with a single element
 --   after any represenationless elements are discarded.
