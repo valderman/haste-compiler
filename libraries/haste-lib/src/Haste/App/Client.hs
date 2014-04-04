@@ -16,20 +16,23 @@ import Control.Exception (throw)
 import Data.IORef
 
 data ClientState = ClientState {
-    csWebSocket  :: WebSocket,
+    csSendBlob   :: MVar (Blob -> Client ()),
     csNonce      :: IORef Int,
     csResultVars :: IORef [(Int, MVar Blob)]
   }
 
-initialState :: IORef Int -> IORef [(Int,MVar Blob)] -> WebSocket -> ClientState
+initialState :: IORef Int
+             -> IORef [(Int,MVar Blob)]
+             -> MVar (Blob -> Client ())
+             -> ClientState
 initialState n mv ws =
   ClientState {
-    csWebSocket  = ws,
+    csSendBlob  = ws,
     csNonce      = n,
     csResultVars = mv
   }
 
--- | A client-side computation. See it as XHaste's version of the IO monad.
+-- | A client-side computation. See it as Haste.App's version of the IO monad.
 newtype Client a = Client {
     unC :: ClientState -> CIO a
   }
@@ -86,9 +89,16 @@ runClient_ :: URL -> Client () -> IO ()
 runClient_ url (Client m) = concurrent $ do
     mv <- liftIO $ newIORef []
     n <- liftIO $ newIORef 0
-    let errorhandler = error "WebSockets connection died for some reason!"
-        computation ws = m (initialState n mv ws)
-    withBinaryWebSocket url (handler mv) errorhandler computation
+    let errhandler = error "WebSockets connection died for some reason!"
+        openWS blob = do
+          wsvar <- get csSendBlob
+          liftCIO $ do
+            _ <- takeMVar wsvar
+            w <- withBinaryWebSocket url (handler mv) errhandler return
+            putMVar wsvar (liftCIO . wsSendBlob w)
+            wsSendBlob w blob
+    ws <- newMVar openWS
+    m (initialState n mv ws)
   where
     -- When a message comes in, attempt to extract from it two members "nonce"
     -- and "result". Find the result MVar corresponding to the nonce and write
@@ -132,9 +142,9 @@ onServer (Export cid args) = __call cid (reverse args)
 -- | Make a server-side call.
 __call :: Binary a => CallID -> [Blob] -> Client a
 __call cid args = do
-  ws <- get csWebSocket
+  send <- get csSendBlob >>= liftCIO . readMVar
   (nonce, mv) <- newResult
-  liftCIO . wsSendBlob ws . encode $ ServerCall {
+  send . encode $ ServerCall {
       scNonce = nonce,
       scMethod = cid,
       scArgs = args
