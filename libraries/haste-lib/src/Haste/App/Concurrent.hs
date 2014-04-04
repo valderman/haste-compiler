@@ -7,7 +7,7 @@
 --   decent native concurrency support.
 module Haste.App.Concurrent (
     C.MVar, CC.MBox, CC.Send, CC.Recv, CC.Inbox, CC.Outbox, C.MonadConc (..),
-    forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, peekMVar,
+    forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, peekMVar, readMVar,
     CC.spawn, CC.receive, CC.statefully, (CC.!), (CC.<!),
     forever
   ) where
@@ -48,3 +48,9 @@ putMVar v x = liftCIO $ C.putMVar v x
 --   If the MVar is empty, @peekMVar@ immediately returns @Nothing@.
 peekMVar :: C.MVar a -> Client (Maybe a)
 peekMVar = liftCIO . C.peekMVar
+
+-- | Read an MVar then put it back. As Javascript is single threaded, this
+--   function is atomic. If this ever changes, this function will only be
+--   atomic as long as no other thread attempts to write to the MVar.
+readMVar :: C.MVar a -> Client a
+readMVar = liftCIO . C.readMVar

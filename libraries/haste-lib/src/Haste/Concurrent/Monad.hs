@@ -3,7 +3,7 @@
 module Haste.Concurrent.Monad (
     MVar, CIO, ToConcurrent (..), MonadConc (..),
     forkIO, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, withMVarIO,
-    peekMVar, modifyMVarIO, concurrent, liftIO
+    peekMVar, modifyMVarIO, readMVar, concurrent, liftIO
   ) where
 import Control.Monad.IO.Class
 import Control.Monad.Cont.Class
@@ -110,6 +110,15 @@ peekMVar (MVar ref) = liftIO $ do
   case v of
     Full x _ -> return (Just x)
     _        -> return Nothing
+
+-- | Read an MVar then put it back. As Javascript is single threaded, this
+--   function is atomic. If this ever changes, this function will only be
+--   atomic as long as no other thread attempts to write to the MVar.
+readMVar :: MVar a -> CIO a
+readMVar m = do
+  x <- takeMVar m
+  putMVar m x
+  return x
 
 -- | Write an MVar. Blocks if the MVar is already full.
 --   Only the first reader in the read queue, if any, is woken.
