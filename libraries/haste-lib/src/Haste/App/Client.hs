@@ -100,12 +100,8 @@ runClient_ url (Client m) = concurrent $ do
     ws <- newMVar openWS
     m (initialState n mv ws)
   where
-    -- When a message comes in, attempt to extract from it two members "nonce"
-    -- and "result". Find the result MVar corresponding to the nonce and write
-    -- the result to it, then discard the MVar.
-    -- TODO: if the nonce is not found, the result vars list if left as it was.
-    --       Maybe we should crash here instead, since this is clearly an
-    --       unrecoverable error?
+    -- Find the result MVar corresponding to the nonce and write the result to
+    -- it, then discard the MVar.
     handler rvars _ msg = do
       msg' <- getBlobData msg
       join . liftIO $ atomicModifyIORef rvars $ \vs ->
@@ -134,8 +130,7 @@ runClientCIO :: ClientState -> Client a -> CIO a
 runClientCIO cs (Client m) = m cs
 
 -- | Perform a server-side computation, blocking the client thread until said
---   computation returns. All free variables in the server-side computation
---   which originate in the Client monad must be serializable.
+--   computation returns.
 onServer :: Binary a => Export (Server a) -> Client a
 onServer (Export cid args) = __call cid (reverse args)
 
