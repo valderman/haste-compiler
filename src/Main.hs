@@ -154,7 +154,9 @@ compiler cmdargs = do
 #endif
             link cfg pkgid file
             case useGoogleClosure cfg of
-              Just clopath -> closurize clopath $ outFile cfg file
+              Just clopath -> closurize clopath
+                                        (outFile cfg file)
+                                        (useGoogleClosureFlags cfg)
               _            -> return ()
 
 -- | Do everything required to get a list of STG bindings out of a module.
@@ -188,14 +190,16 @@ prepare dynflags theMod = do
 
 
 -- | Run Google Closure on a file.
-closurize :: FilePath -> FilePath -> IO ()
-closurize cloPath file = do
+closurize :: FilePath -> FilePath -> [String] -> IO ()
+closurize cloPath file arguments = do
   logStr $ "Running the Google Closure compiler on " ++ file ++ "..."
   let cloFile = file `addExtension` ".clo"
   cloOut <- openFile cloFile WriteMode
   build <- runProcess "java"
-             ["-jar", cloPath, "--compilation_level", "ADVANCED_OPTIMIZATIONS",
+             (["-jar", cloPath,
+              "--compilation_level", "ADVANCED_OPTIMIZATIONS",
               "--jscomp_off", "globalThis", file]
+              ++ arguments)
              Nothing
              Nothing
              Nothing

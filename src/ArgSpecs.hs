@@ -39,6 +39,11 @@ argSpecs = [
               info = "Run the Google Closure compiler on the output. "
                    ++ "Use --opt-google-closure=foo.jar to hint that foo.jar "
                    ++ "is the Closure compiler."},
+    ArgSpec { optName = "opt-google-closure-flag=",
+              updateCfg = updateClosureFlags,
+              info = "Add an extra flag for the Google Closure compiler to take. "
+                   ++ "Use --opt-google-closure-flag='--language_in=ECMASCRIPT5_STRICT', "
+                   ++ "to optimize programs to strict mode"},
     ArgSpec { optName = "opt-sloppy-tce",
               updateCfg = useSloppyTCE,
               info = "Allow the possibility that some tail recursion may not "
@@ -130,6 +135,11 @@ updateClosureCfg cfg ['=':arg] =
   cfg {useGoogleClosure = Just arg}
 updateClosureCfg cfg _ =
   cfg {useGoogleClosure = Just closureCompiler}
+
+-- | Add flags for Google Closure to use
+updateClosureFlags :: Config -> [String] -> Config
+updateClosureFlags cfg args = cfg {
+  useGoogleClosureFlags = useGoogleClosureFlags cfg ++ args}
 
 -- | Enable optimizations over the entire program.
 enableWholeProgramOpts :: Config -> [String] -> Config

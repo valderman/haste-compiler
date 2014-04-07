@@ -93,6 +93,8 @@ data Config = Config {
     tracePrimops :: Bool,
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
+    -- | Extra flags for Google Closure to take?
+    useGoogleClosureFlags :: [String],
     -- | Any external Javascript to link into the JS bundle.
     jsExternals :: [FilePath]
   }
@@ -115,5 +117,6 @@ defConfig = Config {
     sloppyTCE        = False,
     tracePrimops     = False,
     useGoogleClosure = Nothing,
+    useGoogleClosureFlags = [],
     jsExternals      = []
   }
