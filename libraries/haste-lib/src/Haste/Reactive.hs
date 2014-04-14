@@ -1,4 +1,8 @@
-module Haste.Reactive (module Fursuit, module DOM, module Ajax) where
-import FRP.Fursuit as Fursuit
-import Haste.Reactive.DOM as DOM
-import Haste.Reactive.Ajax as Ajax
+module Haste.Reactive
+  ( module FRP.Fursuit,
+    module Haste.Reactive.DOM, module Haste.Reactive.Ajax
+  ) where
+
+import FRP.Fursuit
+import Haste.Reactive.DOM
+import Haste.Reactive.Ajax
