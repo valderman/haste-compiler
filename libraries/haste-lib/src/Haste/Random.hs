@@ -50,14 +50,16 @@ class Random a where
   randomRs bounds seed = unfoldr (Just . randomR bounds) seed
 
 instance Random Int where
-  randomR (low, high) s@(Seed n) =
-    (n' `mod` (high-low) + low, next s)
-    where
-      -- Use the LCG from MSVC here; less apparent relationship between seed
-      -- and output.
-      a  = 214013
-      c  = 2531011
-      n' = a*n+c
+  randomR (low, high) s@(Seed n)
+    | low <= high =
+      let -- Use the LCG from MSVC here; less apparent relationship between seed
+          -- and output.
+          a  = 214013
+          c  = 2531011
+          n' = a*n+c
+      in  (n' `mod` (high-low+1) + low, next s)
+    | otherwise =
+      randomR (high, low) s
 
 instance Random Int32 where
   randomR (l,h) seed =
