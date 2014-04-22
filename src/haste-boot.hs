@@ -97,6 +97,7 @@ main = do
 
 bootHaste :: Cfg -> FilePath -> Shell ()
 bootHaste cfg tmpdir = inDirectory tmpdir $ do
+  rm bootFile
   when (getLibs cfg) $ do
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
