@@ -76,7 +76,7 @@ data Config = Config {
     ppOpts :: PPOpts,
     -- | A function that takes the name of the a target as its input and
     --   outputs the name of the file its JS blob should be written to.
-    outFile :: String -> String,
+    outFile :: Config -> String -> String,
     -- | Link the program?
     performLink :: Bool,
     -- | A function to call on each Int arithmetic primop.
@@ -98,6 +98,9 @@ data Config = Config {
     useGoogleClosureFlags :: [String],
     -- | Any external Javascript to link into the JS bundle.
     jsExternals :: [FilePath],
+    -- | Produce a skeleton HTML file containing the program rather than a
+    --   JS file.
+    outputHTML :: Bool,
     -- | GHC DynFlags used for STG generation.
     --   Currently only used for printing StgSyn values.
     showOutputable :: forall a. Outputable a => a -> String
@@ -112,7 +115,10 @@ defConfig = Config {
     appStart         = startOnLoadComplete,
     wrapProg         = False,
     ppOpts           = def,
-    outFile          = flip replaceExtension "js",
+    outFile          = \cfg f -> let ext = if outputHTML cfg
+                                             then "html"
+                                             else "js"
+                                 in replaceExtension f ext,
     performLink      = True,
     wrapIntMath      = strictly32Bits,
     multiplyIntOp    = safeMultiply,
@@ -123,5 +129,6 @@ defConfig = Config {
     useGoogleClosure = Nothing,
     useGoogleClosureFlags = [],
     jsExternals      = [],
+    outputHTML       = False,
     showOutputable   = const "No showOutputable defined in config!"
   }

@@ -72,8 +72,11 @@ argSpecs = [
               info = "Perform optimizations over the whole program at link "
                      ++ "time. May significantly increase compilation time."},
     ArgSpec { optName = "out=",
-              updateCfg = \cfg outfile -> cfg {outFile = const $ head outfile},
-              info = "Write the JS blob to <arg>."},
+              updateCfg = \cfg outfile -> cfg {outFile = \_ _ -> head outfile},
+              info = "Write compiler output to <arg>."},
+    ArgSpec { optName = "output-html",
+              updateCfg = \cfg _ -> cfg {outputHTML = True},
+              info = "Produce a skeleton HTML file containing the program."},
     ArgSpec { optName = "separate-namespace",
               updateCfg = \cfg _ -> cfg {wrapProg = True},
               info = "Wrap the program in its own namespace? "

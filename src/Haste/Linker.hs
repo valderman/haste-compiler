@@ -29,7 +29,7 @@ link cfg pkgid target = do
   
   rtslibs <- mapM readFile $ rtsLibs cfg
   extlibs <- mapM readFile $ jsExternals cfg
-  B.writeFile (outFile cfg target)
+  B.writeFile (outFile cfg cfg target)
     $ toLazyByteString
     $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp
   where

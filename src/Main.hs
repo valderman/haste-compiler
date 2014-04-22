@@ -29,6 +29,7 @@ import Data.Version
 import Data.List
 import Data.String
 import qualified Data.ByteString.Char8 as B
+import qualified Control.Shell as Sh
 
 logStr :: String -> IO ()
 logStr = hPutStrLn stderr
@@ -145,7 +146,8 @@ compiler cmdargs = do
         -- Link everything together into a .js file.
         when (performLink cfg) $ liftIO $ do
           flip mapM_ files' $ \file -> do
-            logStr $ "Linking " ++ outFile cfg file
+            let outfile = outFile cfg cfg file
+            logStr $ "Linking " ++ outfile
 #if __GLASGOW_HASKELL__ >= 706
             let pkgid = showPpr dynflags $ thisPackage dynflags'
 #else
@@ -154,9 +156,28 @@ compiler cmdargs = do
             link cfg pkgid file
             case useGoogleClosure cfg of
               Just clopath -> closurize clopath
-                                        (outFile cfg file)
+                                        outfile
                                         (useGoogleClosureFlags cfg)
               _            -> return ()
+            when (outputHTML cfg) $ do
+              res <- Sh.shell $ Sh.withCustomTempFile "." $ \tmp h -> do
+                prog <- Sh.file outfile
+                Sh.hPutStrLn h (htmlSkeleton outfile prog)
+                Sh.liftIO $ hClose h
+                Sh.mv tmp outfile
+              case res of
+                Right () -> return ()
+                Left err -> error $ "Couldn't output HTML file: " ++ err
+
+-- | Produce an HTML skeleton with an embedded JS program.
+htmlSkeleton :: FilePath -> String -> String
+htmlSkeleton filename prog = concat [
+  "<!DOCTYPE HTML>",
+  "<html><head>",
+  "<title>", filename , "</title>",
+  "<meta charset=\"UTF-8\">",
+  "<script type=\"text/javascript\">", prog, "</script>",
+  "</head><body></body></html>"]
 
 -- | Do everything required to get a list of STG bindings out of a module.
 prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName)

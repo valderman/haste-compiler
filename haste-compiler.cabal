@@ -105,7 +105,8 @@ Executable hastec
         process,
         random,
         system-fileio,
-        executable-path
+        executable-path,
+        shellmate
     Main-Is:
         Main.hs
     Other-Modules:
