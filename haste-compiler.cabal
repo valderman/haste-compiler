@@ -112,7 +112,6 @@ Executable hastec
         Args
         ArgSpecs
         Haste
-        Haste.Util
         Haste.Version
         Haste.Environment
         Haste.Config

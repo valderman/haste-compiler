@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, Rank2Types #-}
 module Haste.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, debugLib) where
@@ -8,6 +8,7 @@ import Blaze.ByteString.Builder
 import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
 import Haste.Environment
+import Outputable (Outputable)
 
 type AppStart = Builder -> Builder
 
@@ -96,7 +97,10 @@ data Config = Config {
     -- | Extra flags for Google Closure to take?
     useGoogleClosureFlags :: [String],
     -- | Any external Javascript to link into the JS bundle.
-    jsExternals :: [FilePath]
+    jsExternals :: [FilePath],
+    -- | GHC DynFlags used for STG generation.
+    --   Currently only used for printing StgSyn values.
+    showOutputable :: forall a. Outputable a => a -> String
   }
 
 -- | Default compiler configuration.
@@ -118,5 +122,6 @@ defConfig = Config {
     tracePrimops     = False,
     useGoogleClosure = Nothing,
     useGoogleClosureFlags = [],
-    jsExternals      = []
+    jsExternals      = [],
+    showOutputable   = const "No showOutputable defined in config!"
   }

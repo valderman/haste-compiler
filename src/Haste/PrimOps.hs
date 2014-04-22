@@ -4,7 +4,6 @@ import Prelude hiding (LT, GT)
 import PrimOp
 import Data.JSTarget
 import Haste.Config
-import Haste.Util
 
 -- | Dummy State# RealWorld value for where one is needed.
 defState :: AST Exp
@@ -315,7 +314,7 @@ genOp cfg op xs =
     -- noDuplicate is only relevant in a threaded environment.
     NoDuplicateOp  -> Right $ defState
     CatchOp        -> callF "jsCatch"
-    x              -> Left $ "Unsupported PrimOp: " ++ showOutputable x
+    x              -> Left $ "Unsupported PrimOp: " ++ showOutputable cfg x
   where
     (arr:ix:_) = xs
     

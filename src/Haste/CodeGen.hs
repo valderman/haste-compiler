@@ -41,7 +41,6 @@ import Haste.Monad
 import Haste.Errors
 import Haste.PrimOps
 import Haste.Builtins
-import Haste.Util (showOutputable)
 
 generate :: Config
          -> Fingerprint
@@ -142,7 +141,7 @@ genEx (StgOpApp op args _) = do
   cfg <- getCfg
   let theOp = case op of
         StgPrimOp op' ->
-          maybeTrace cfg (showOutputable op') args' <$> genOp cfg op' args'
+          maybeTrace cfg (showOutputable cfg op') args' <$> genOp cfg op' args'
         StgPrimCallOp (PrimCall f _) ->
           Right $ maybeTrace cfg fs args' $ callForeign fs args'
           where fs = unpackFS f
@@ -329,7 +328,9 @@ genAlt scrut res (con, args, used, body) = do
 
 -- | Generate a result variable for the given scrutinee variable.
 genResultVar :: Var.Var -> JSGen Config J.Var
-genResultVar v = (\mn -> toJSVar mn v (Just "#result")) <$> getModName
+genResultVar v = do
+  cfg <- getCfg
+  (\mn -> toJSVar cfg mn v (Just "#result")) <$> getModName
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
@@ -339,7 +340,8 @@ genVar v | hasRepresentation v = do
     Just v' -> return v'
     _       -> do
       mymod <- getModName
-      v' <- return $ toJSVar mymod v Nothing
+      cfg <- getCfg
+      v' <- return $ toJSVar cfg mymod v Nothing
       dependOn v'
       return v'
 genVar _ = do
@@ -357,8 +359,8 @@ foreignName (CCall (CCallSpec (StaticTarget str _) _ _)) =
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 
-toJSVar :: String -> Var.Var -> Maybe String -> J.Var
-toJSVar thisMod v msuffix =
+toJSVar :: Config -> String -> Var.Var -> Maybe String -> J.Var
+toJSVar c thisMod v msuffix =
   case idDetails v of
     FCallId fc -> foreignVar (foreignName fc)
     _
@@ -380,7 +382,7 @@ toJSVar thisMod v msuffix =
     myMod =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe vname)
     myPkg =
-      maybe "main" (showOutputable . modulePackageId) (nameModule_maybe vname)
+      maybe "main" (showOutputable c . modulePackageId) (nameModule_maybe vname)
     extern = occNameString $ nameOccName vname
     unique = show $ nameUnique vname
 

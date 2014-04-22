@@ -15,7 +15,6 @@ import GhcMonad
 import System.Environment (getArgs)
 import Control.Monad (when)
 import Haste
-import Haste.Util (showOutputable)
 import Haste.Environment
 import Haste.Version
 import Args
@@ -239,7 +238,8 @@ compile cfg dynflags modSummary = do
 #else
           let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
 #endif
-              theCode = generate cfg fp pkgid name pgm
+              cfg' = cfg {showOutputable = showPpr dynflags}
+              theCode = generate cfg' fp pkgid name pgm
           liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
           liftIO $ writeModule targetpath theCode
   where
