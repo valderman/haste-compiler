@@ -152,7 +152,7 @@ buildLibs cfg = do
     inDirectory "libraries" $ do
       -- Install ghc-prim
       inDirectory "ghc-prim" $ do
-        hasteInst ["configure"]
+        hasteInst ["configure", "--solver", "topdown"]
         hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
         run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
         run_ hastePkgBinary ["update", "packageconfig"] ""
@@ -160,7 +160,7 @@ buildLibs cfg = do
       -- Install integer-gmp; double install shouldn't be needed anymore.
       run_ hasteCopyPkgBinary ["Cabal"] ""
       inDirectory "integer-gmp" $ do
-        hasteInst ("install" : ghcOpts)
+        hasteInst ("install" : "--solver" : "topdown" : ghcOpts)
       
       -- Install base
       inDirectory "base" $ do
@@ -170,7 +170,7 @@ buildLibs cfg = do
           . filter (not . null)
           . filter (and . zipWith (==) "version")
           . lines
-        hasteInst ["configure"]
+        hasteInst ["configure", "--solver", "topdown"]
         hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
         let base = "base-" ++ basever
             pkgdb = "--package-db=dist" </> "package.conf.inplace"
