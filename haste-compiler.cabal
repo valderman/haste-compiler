@@ -106,7 +106,7 @@ Executable hastec
         random,
         system-fileio,
         executable-path,
-        shellmate
+        shellmate >= 0.1.4
     Main-Is:
         Main.hs
     Other-Modules:
@@ -197,7 +197,7 @@ Executable haste-copy-pkg
         time,
         transformers,
         executable-path,
-        shellmate
+        shellmate >= 0.1.4
     default-language: Haskell98
 
 Library
