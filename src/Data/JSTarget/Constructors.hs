@@ -95,12 +95,7 @@ newVars prefix n =
 
 -- | Create a thunk.
 thunk :: AST Stm -> AST Exp
-thunk stm@(AST s js) =
-  case s of
-    (Return ex) | not $ evaluates ex ->
-      AST ex js
-    _ ->
-      callForeign "new T" [Fun Nothing [] <$> stm]
+thunk stm = callForeign "new T" [Fun Nothing [] <$> stm]
 
 -- | Unpack the given expression if it's a thunk without internal bindings.
 fromThunk :: AST Exp -> Maybe (AST Exp)

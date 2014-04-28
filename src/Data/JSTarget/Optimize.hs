@@ -181,7 +181,6 @@ zapJSStringConversions ast =
     opt x =
       return x
 
-
 -- | Optimize thunks in the following ways:
 --   A(thunk(return f), xs)
 --     => A(f, xs)
@@ -189,8 +188,11 @@ zapJSStringConversions ast =
 --     => x
 --   E(\x ... -> ...)
 --     => \x ... -> ...
---   thunk(x) where x is non-computing
+--   thunk(x) where x is non-computing and non-recursive
 --     => x
+--
+--   TODO: figure out efficient way to only perform the 4th optimization when x
+--         is not recursive.
 optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
@@ -200,8 +202,8 @@ optimizeThunks ast =
       | Fun _ _ _ <- x           = return x
     optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
       return $ Call arity calltype f' args
-    optEx ex | Just ex' <- fromThunkEx ex, not (computingEx ex') =
-      return ex'
+--    optEx ex | Just ex' <- fromThunkEx ex, not (computingEx ex') =
+--      return ex'
     optEx ex =
       return ex
 
