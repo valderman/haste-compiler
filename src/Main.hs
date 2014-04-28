@@ -256,10 +256,11 @@ compile cfg dynflags modSummary = do
           (pgm, name) <- prepare dynflags modSummary
 #if __GLASGOW_HASKELL__ >= 706
           let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
+              cfg' = cfg {showOutputable = showPpr dynflags}
 #else
           let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
+              cfg' = cfg {showOutputable = showPpr}
 #endif
-              cfg' = cfg {showOutputable = showPpr dynflags}
               theCode = generate cfg' fp pkgid name pgm
           liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
           liftIO $ writeModule targetpath theCode
