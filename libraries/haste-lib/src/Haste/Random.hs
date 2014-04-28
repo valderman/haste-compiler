@@ -1,46 +1,63 @@
-{-# LANGUAGE ForeignFunctionInterface, CPP #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, CPP, OverloadedStrings #-}
 module Haste.Random (Random (..), Seed, next, mkSeed, newSeed) where
 import Haste.JSType
 import Data.Int
 import Data.Word
 import Data.List (unfoldr)
 import Control.Monad.IO.Class
-#ifndef __HASTE__
-import System.Random (randomIO)
+import System.IO.Unsafe
+#ifdef __HASTE__
+import Haste.Foreign
+#else
+import qualified System.Random as SR
 #endif
 
 #ifdef __HASTE__
-foreign import ccall jsRand :: IO Double
-#else
-jsRand :: IO Double
-jsRand = randomIO
-#endif
 
-newtype Seed = Seed Int
+newtype Seed = Seed Unpacked deriving Marshal
+
+{-# NOINLINE nxt #-}
+nxt :: Seed -> IO Seed
+nxt = ffi "(function(s){return md51(s.join(','));})"
+
+{-# NOINLINE getN #-}
+getN :: Seed -> IO Int
+getN = ffi "(function(s){return s[0];})"
+
+{-# NOINLINE toSeed #-}
+toSeed :: Int -> IO Seed
+toSeed = ffi "(function(n){return md51(n.toString());})"
+
+{-# NOINLINE createSeed #-}
+createSeed :: IO Seed
+createSeed = ffi "(function(){return md51(jsRand().toString());})"
+#else
+newtype Seed = Seed (Int, SR.StdGen)
+
+nxt :: Seed -> IO Seed
+nxt (Seed (_, g)) = return . Seed $ SR.next g
+
+getN :: Seed -> IO Int
+getN (Seed (n, _)) = return n
+
+toSeed :: Int -> IO Seed
+toSeed = return . Seed . SR.next . SR.mkStdGen
+
+createSeed :: IO Seed
+createSeed = SR.newStdGen >>= return . Seed . SR.next
+#endif
 
 -- | Create a new seed from an integer.
 mkSeed :: Int -> Seed
-mkSeed = Seed . convert
+mkSeed = unsafePerformIO . toSeed
 
 -- | Generate a new seed using Javascript's PRNG.
 newSeed :: MonadIO m => m Seed
-newSeed = liftIO $ do
-  x <- jsRand
-  s <- jsRand
-  let sign = if s > 0.5 then 1 else -1
-  return . mkSeed . round $ x*sign*2147483647
+newSeed = liftIO createSeed
 
 -- | Generate the next seed in the sequence.
 next :: Seed -> Seed
-next (Seed s) =
-  Seed s'
-  where
-    -- This is the same LCG that's used in older glibc versions.
-    -- It was chosen because the untruncated product will never be larger than
-    -- 2^53 and thus not cause precision problems with JS.
-    a  = 69069
-    c  = 1
-    s' = a*s+c
+next = unsafePerformIO . nxt
 
 class Random a where
   -- | Generate a pseudo random number between a lower (inclusive) and higher
@@ -50,14 +67,10 @@ class Random a where
   randomRs bounds seed = unfoldr (Just . randomR bounds) seed
 
 instance Random Int where
-  randomR (low, high) s@(Seed n)
+  randomR (low, high) s
     | low <= high =
-      let -- Use the LCG from MSVC here; less apparent relationship between seed
-          -- and output.
-          a  = 214013
-          c  = 2531011
-          n' = a*n+c
-      in  (n' `mod` (high-low+1) + low, next s)
+      let n = unsafePerformIO $ getN s
+      in  (n `mod` (high-low+1) + low, next s)
     | otherwise =
       randomR (high, low) s
 
