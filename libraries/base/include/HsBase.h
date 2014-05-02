@@ -65,9 +65,6 @@
 #if HAVE_UTIME_H
 #include <utime.h>
 #endif
-#if HAVE_SYS_UTSNAME_H
-#include <sys/utsname.h>
-#endif
 #if HAVE_GETTIMEOFDAY
 #  if HAVE_SYS_TIME_H
 #   include <sys/time.h>
@@ -124,9 +121,6 @@
 #endif
 
 /* For System */
-#if HAVE_SYS_WAIT_H
-#include <sys/wait.h>
-#endif
 #if HAVE_VFORK_H
 #include <vfork.h>
 #endif
@@ -143,10 +137,6 @@ extern HsWord64 getMonotonicUSec(void);
 #include <fcntl.h>
 #include <shlobj.h>
 #include <share.h>
-#endif
-
-#if HAVE_SYS_SELECT_H
-#include <sys/select.h>
 #endif
 
 #if HAVE_SYS_EVENT_H

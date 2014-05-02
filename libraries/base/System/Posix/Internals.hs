@@ -138,7 +138,9 @@ fdGetMode _ = error "fdGetMode is not implemented"
 
 #ifdef mingw32_HOST_OS
 withFilePath :: FilePath -> (CWString -> IO a) -> IO a
+withFilePath _ _ = error "withFilePath not implemented"
 peekFilePath :: CWString -> IO FilePath
+peekFilePath _ = error "peekFilePath not implemented"
 #else
 
 withFilePath :: FilePath -> (CString -> IO a) -> IO a
