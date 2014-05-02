@@ -78,7 +78,7 @@ Executable haste-boot
         network,
         HTTP,
         executable-path,
-        shellmate >= 0.1.4
+        shellmate >= 0.1.5
     Default-Language: Haskell98
 
 Executable hastec
@@ -106,7 +106,7 @@ Executable hastec
         random,
         system-fileio,
         executable-path,
-        shellmate >= 0.1.4
+        shellmate >= 0.1.5
     Main-Is:
         Main.hs
     Other-Modules:
@@ -197,7 +197,7 @@ Executable haste-copy-pkg
         time,
         transformers,
         executable-path,
-        shellmate >= 0.1.4
+        shellmate >= 0.1.5
     default-language: Haskell98
 
 Library
@@ -261,7 +261,7 @@ Library
         websockets >= 0.8,
         utf8-string,
         -- For Haste.Compiler
-        shellmate >= 0.1.3,
+        shellmate >= 0.1.5,
         data-default,
         directory,
         executable-path,
