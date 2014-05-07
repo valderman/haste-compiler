@@ -131,8 +131,8 @@ runClientCIO cs (Client m) = m cs
 
 -- | Perform a server-side computation, blocking the client thread until said
 --   computation returns.
-onServer :: Binary a => Export (Server a) -> Client a
-onServer (Export cid args) = __call cid (reverse args)
+onServer :: Binary a => Remote (Server a) -> Client a
+onServer (Remote cid args) = __call cid (reverse args)
 
 -- | Make a server-side call.
 __call :: Binary a => CallID -> [Blob] -> Client a

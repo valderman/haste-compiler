@@ -1,11 +1,11 @@
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
 -- | Haste.App startup monad and configuration.
 module Haste.App.Monad (
-    Exportable,
-    App, Server, Sessions, SessionID, Useless (..), Export (..), Done (..),
+    Remotable,
+    App, Server, Sessions, SessionID, Remote (..), RemoteValue (..), Done (..),
     AppCfg, def, mkConfig, cfgURL, cfgPort,
     liftServerIO, forkServerIO, export, getAppConfig,
-    mkUseful, runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
+    use, runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -57,20 +57,20 @@ type Exports = M.Map CallID Method
 newtype Done = Done (IO ())
 
 #ifdef __HASTE__
-data Useless a = Useless
-data Export a = Export CallID [Blob]
+data RemoteValue a = There
+data Remote a = Remote CallID [Blob]
 #else
-data Useless a = Useful a
-data Export a = Export
+data RemoteValue a = Here a
+data Remote a = Remote
 #endif
 
 -- | Apply an exported function to an argument.
 --   TODO: look into making this Applicative.
-(<.>) :: Binary a => Export (a -> b) -> a -> Export b
+(<.>) :: Binary a => Remote (a -> b) -> a -> Remote b
 #ifdef __HASTE__
-(Export cid args) <.> arg = Export cid (encode arg:args)
+(Remote cid args) <.> arg = Remote cid (encode arg:args)
 #else
-_ <.> _ = Export
+_ <.> _ = Remote
 #endif
 
 -- | Application monad; allows for exporting functions, limited liftIO,
@@ -99,15 +99,15 @@ instance Applicative App where
 
 -- | Lift an IO action into the Server monad, the result of which can only be
 --   used server-side.
-liftServerIO :: IO a -> App (Useless a)
+liftServerIO :: IO a -> App (RemoteValue a)
 #ifdef __HASTE__
 {-# RULES "throw away liftServerIO"
-          forall x. liftServerIO x = return Useless #-}
-liftServerIO _ = return Useless
+          forall x. liftServerIO x = return There #-}
+liftServerIO _ = return There
 #else
 liftServerIO m = App $ \cfg _ cid exports -> do
   x <- m
-  return (Useful x, cid, exports, cfg)
+  return (Here x, cid, exports, cfg)
 #endif
 
 -- | Fork off a Server computation not bound an API call.
@@ -117,30 +117,30 @@ liftServerIO m = App $ \cfg _ cid exports -> do
 --   Calling @getSessionID@ inside this computation will return 0, which will
 --   never be generated for an actual session. @getActiveSessions@ works as
 --   expected.
-forkServerIO :: Server () -> App (Useless ThreadId)
+forkServerIO :: Server () -> App (RemoteValue ThreadId)
 #ifdef __HASTE__
 {-# RULES "throw away forkServerIO"
-          forall x. forkServerIO x = return Useless #-}
-forkServerIO _ = return Useless
+          forall x. forkServerIO x = return There #-}
+forkServerIO _ = return There
 #else
 forkServerIO (Server m) = App $ \cfg sessions cid exports -> do
   tid <- forkIO $ m 0 sessions
-  return (Useful tid, cid, exports, cfg)
+  return (Here tid, cid, exports, cfg)
 #endif
 
 -- | An exportable function is of the type
 --   (Serialize a, ..., Serialize result) => a -> ... -> IO result
-class Exportable a where
+class Remotable a where
   serializify :: a -> [Blob] -> (SessionID -> IORef Sessions -> IO Blob)
 
-instance Binary a => Exportable (Server a) where
+instance Binary a => Remotable (Server a) where
 #ifdef __HASTE__
   serializify _ _ = undefined
 #else
   serializify (Server m) _ = \sid ss -> fmap encode (m sid ss)
 #endif
 
-instance (Binary a, Exportable b) => Exportable (a -> b) where
+instance (Binary a, Remotable b) => Remotable (a -> b) where
 #ifdef __HASTE__
   serializify _ _ = undefined
 #else
@@ -153,16 +153,16 @@ instance (Binary a, Exportable b) => Exportable (a -> b) where
 #endif
 
 -- | Make a function available to the client as an API call.
-export :: Exportable a => a -> App (Export a)
+export :: Remotable a => a -> App (Remote a)
 #ifdef __HASTE__
 {-# RULES "throw away export's argument"
           forall x. export x =
-            App $ \c _ cid _ -> return (Export cid [], cid+1, undefined, c) #-}
+            App $ \c _ cid _ -> return (Remote cid [], cid+1, undefined, c) #-}
 export _ = App $ \c _ cid _ ->
-    return (Export cid [], cid+1, undefined, c)
+    return (Remote cid [], cid+1, undefined, c)
 #else
 export s = App $ \c _ cid exports ->
-    return (Export cid [], cid+1, M.insert cid (serializify s) exports, c)
+    return (Remote, cid+1, M.insert cid (serializify s) exports, c)
 #endif
 
 -- | Register a handler to be run whenever a session terminates.
@@ -240,7 +240,7 @@ serverEventLoop cfg sessions exports = do
           go
 #endif
 
--- | Server monad for Haste.App. Allows redeeming Useless values, lifting IO
+-- | Server monad for Haste.App. Allows redeeming RemoteValues, lifting IO
 --   actions, and not much more.
 newtype Server a = Server {unS :: SessionID -> IORef Sessions -> IO a}
 
@@ -269,13 +269,12 @@ instance MonadBlob Server where
   getBlobText' _ = return undefined
 #endif
 
--- | Make a Useless value useful by extracting it. Only possible server-side,
---   in the IO monad.
-mkUseful :: Useless a -> Server a
+-- | Make a RemoteValue useful by extracting it. Only possible server-side.
+use :: RemoteValue a -> Server a
 #ifndef __HASTE__
-mkUseful (Useful x) = return x
+use (Here x) = return x
 #else
-mkUseful _          = error "Impossibru!"
+use _          = error "Impossibru!"
 #endif
 
 -- | Returns the ID of the current session.
