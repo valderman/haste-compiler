@@ -54,15 +54,24 @@ type SessionID = Word64
 type Sessions = S.Set SessionID
 type Method = [Blob] -> SessionID -> IORef Sessions -> IO Blob
 type Exports = M.Map CallID Method
-data Useless a = Useful a | Useless
 newtype Done = Done (IO ())
 
+#ifdef __HASTE__
+data Useless a = Useless
 data Export a = Export CallID [Blob]
+#else
+data Useless a = Useful a
+data Export a = Export
+#endif
 
 -- | Apply an exported function to an argument.
 --   TODO: look into making this Applicative.
 (<.>) :: Binary a => Export (a -> b) -> a -> Export b
+#ifdef __HASTE__
 (Export cid args) <.> arg = Export cid (encode arg:args)
+#else
+_ <.> _ = Export
+#endif
 
 -- | Application monad; allows for exporting functions, limited liftIO,
 --   forkIO and launching the client.
@@ -263,8 +272,11 @@ instance MonadBlob Server where
 -- | Make a Useless value useful by extracting it. Only possible server-side,
 --   in the IO monad.
 mkUseful :: Useless a -> Server a
+#ifndef __HASTE__
 mkUseful (Useful x) = return x
-mkUseful _          = error "Useless values are only useful server-side!"
+#else
+mkUseful _          = error "Impossibru!"
+#endif
 
 -- | Returns the ID of the current session.
 getSessionID :: Server SessionID
