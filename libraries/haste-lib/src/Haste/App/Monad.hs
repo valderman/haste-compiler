@@ -4,7 +4,7 @@ module Haste.App.Monad (
     Remotable,
     App, Server, Sessions, SessionID, Remote (..), RemoteValue (..), Done (..),
     AppCfg, def, mkConfig, cfgURL, cfgPort,
-    liftServerIO, forkServerIO, export, getAppConfig,
+    remoteIO, forkServerIO, remote, getAppConfig,
     use, runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
 import Control.Applicative
@@ -99,13 +99,13 @@ instance Applicative App where
 
 -- | Lift an IO action into the Server monad, the result of which can only be
 --   used server-side.
-liftServerIO :: IO a -> App (RemoteValue a)
+remoteIO :: IO a -> App (RemoteValue a)
 #ifdef __HASTE__
-{-# RULES "throw away liftServerIO"
-          forall x. liftServerIO x = return There #-}
-liftServerIO _ = return There
+{-# RULES "throw away remoteIO"
+          forall x. remoteIO x = return There #-}
+remoteIO _ = return There
 #else
-liftServerIO m = App $ \cfg _ cid exports -> do
+remoteIO m = App $ \cfg _ cid exports -> do
   x <- m
   return (Here x, cid, exports, cfg)
 #endif
@@ -153,15 +153,15 @@ instance (Binary a, Remotable b) => Remotable (a -> b) where
 #endif
 
 -- | Make a function available to the client as an API call.
-export :: Remotable a => a -> App (Remote a)
+remote :: Remotable a => a -> App (Remote a)
 #ifdef __HASTE__
-{-# RULES "throw away export's argument"
-          forall x. export x =
+{-# RULES "throw away remote's argument"
+          forall x. remote x =
             App $ \c _ cid _ -> return (Remote cid [], cid+1, undefined, c) #-}
-export _ = App $ \c _ cid _ ->
+remote _ = App $ \c _ cid _ ->
     return (Remote cid [], cid+1, undefined, c)
 #else
-export s = App $ \c _ cid exports ->
+remote s = App $ \c _ cid exports ->
     return (Remote, cid+1, M.insert cid (serializify s) exports, c)
 #endif
 

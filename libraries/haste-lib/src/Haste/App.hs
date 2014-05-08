@@ -5,7 +5,7 @@
 module Haste.App (
     MonadIO, Remotable, App, Server, RemoteValue, Remote, Done,
     Sessions, SessionID,
-    liftServerIO, forkServerIO, export, runApp,
+    remoteIO, forkServerIO, remote, runApp,
     (<.>), use, getSessionID, getActiveSessions, onSessionEnd,
     AppCfg, cfgURL, cfgPort, mkConfig,
     Client,
