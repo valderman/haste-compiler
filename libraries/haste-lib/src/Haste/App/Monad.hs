@@ -2,10 +2,10 @@
 -- | Haste.App startup monad and configuration.
 module Haste.App.Monad (
     Remotable,
-    App, Server, Sessions, SessionID, Remote (..), RemoteValue (..), Done (..),
+    App, Server, Sessions, SessionID, Remote (..), Done (..),
     AppCfg, def, mkConfig, cfgURL, cfgPort,
-    remoteIO, forkServerIO, remote, getAppConfig,
-    use, runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
+    liftServerIO, forkServerIO, remote, getAppConfig,
+    runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
 import Control.Applicative
 import Control.Monad (ap)
@@ -57,10 +57,8 @@ type Exports = M.Map CallID Method
 newtype Done = Done (IO ())
 
 #ifdef __HASTE__
-data RemoteValue a = There
 data Remote a = Remote CallID [Blob]
 #else
-data RemoteValue a = Here a
 data Remote a = Remote
 #endif
 
@@ -99,15 +97,15 @@ instance Applicative App where
 
 -- | Lift an IO action into the Server monad, the result of which can only be
 --   used server-side.
-remoteIO :: IO a -> App (RemoteValue a)
+liftServerIO :: IO a -> App (Server a)
 #ifdef __HASTE__
-{-# RULES "throw away remoteIO"
-          forall x. remoteIO x = return There #-}
-remoteIO _ = return There
+{-# RULES "throw away liftServerIO"
+          forall x. liftServerIO x = return (return undefined) #-}
+liftServerIO _ = return (return undefined)
 #else
-remoteIO m = App $ \cfg _ cid exports -> do
+liftServerIO m = App $ \cfg _ cid exports -> do
   x <- m
-  return (Here x, cid, exports, cfg)
+  return (return x, cid, exports, cfg)
 #endif
 
 -- | Fork off a Server computation not bound an API call.
@@ -117,15 +115,15 @@ remoteIO m = App $ \cfg _ cid exports -> do
 --   Calling @getSessionID@ inside this computation will return 0, which will
 --   never be generated for an actual session. @getActiveSessions@ works as
 --   expected.
-forkServerIO :: Server () -> App (RemoteValue ThreadId)
+forkServerIO :: Server () -> App (Server ThreadId)
 #ifdef __HASTE__
 {-# RULES "throw away forkServerIO"
-          forall x. forkServerIO x = return There #-}
-forkServerIO _ = return There
+          forall x. forkServerIO x = return (return undefined) #-}
+forkServerIO _ = return (return undefined)
 #else
 forkServerIO (Server m) = App $ \cfg sessions cid exports -> do
   tid <- forkIO $ m 0 sessions
-  return (Here tid, cid, exports, cfg)
+  return (return tid, cid, exports, cfg)
 #endif
 
 -- | An exportable function is of the type
@@ -240,7 +238,7 @@ serverEventLoop cfg sessions exports = do
           go
 #endif
 
--- | Server monad for Haste.App. Allows redeeming RemoteValues, lifting IO
+-- | Server monad for Haste.App. Allows redeeming remote values, lifting IO
 --   actions, and not much more.
 newtype Server a = Server {unS :: SessionID -> IORef Sessions -> IO a}
 
@@ -267,14 +265,6 @@ instance MonadBlob Server where
 #else
   getBlobData _ = return undefined
   getBlobText' _ = return undefined
-#endif
-
--- | Make a RemoteValue useful by extracting it. Only possible server-side.
-use :: RemoteValue a -> Server a
-#ifndef __HASTE__
-use (Here x) = return x
-#else
-use _          = error "Impossibru!"
 #endif
 
 -- | Returns the ID of the current session.

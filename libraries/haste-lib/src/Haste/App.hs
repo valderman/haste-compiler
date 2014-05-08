@@ -3,10 +3,10 @@
 --   functions are exported by both Haste and Haste.App with different
 --   definitions. For simplicity, import one or the other, not both.
 module Haste.App (
-    MonadIO, Remotable, App, Server, RemoteValue, Remote, Done,
+    MonadIO, Remotable, App, Server, Remote, Done,
     Sessions, SessionID,
-    remoteIO, forkServerIO, remote, runApp,
-    (<.>), use, getSessionID, getActiveSessions, onSessionEnd,
+    liftServerIO, forkServerIO, remote, runApp,
+    (<.>), getSessionID, getActiveSessions, onSessionEnd,
     AppCfg, cfgURL, cfgPort, mkConfig,
     Client,
     runClient, onServer, liftIO,

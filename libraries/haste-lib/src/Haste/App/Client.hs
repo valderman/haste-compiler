@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, MultiParamTypeClasses,
-             FlexibleInstances #-}
+             FlexibleInstances, CPP #-}
 module Haste.App.Client (
     Client, ClientState,
     runClient, onServer, liftCIO, get, runClientCIO
@@ -132,7 +132,11 @@ runClientCIO cs (Client m) = m cs
 -- | Perform a server-side computation, blocking the client thread until said
 --   computation returns.
 onServer :: Binary a => Remote (Server a) -> Client a
+#ifdef __HASTE__
 onServer (Remote cid args) = __call cid (reverse args)
+#else
+onServer _ = undefined
+#endif
 
 -- | Make a server-side call.
 __call :: Binary a => CallID -> [Blob] -> Client a
