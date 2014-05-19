@@ -176,6 +176,7 @@ buildLibs cfg = do
             pkgdb = "--package-db=dist" </> "package.conf.inplace"
         run_ hasteInstHisBinary [base, "dist" </> "build"] ""
         run_ hasteCopyPkgBinary [base, pkgdb] ""
+        cpDir "include" hasteDir
       
       -- Install array, fursuit and haste-lib
       forM_ ["array", "fursuit", "haste-lib"] $ \pkg -> do
