@@ -12,10 +12,10 @@ import qualified Control.Concurrent as C
 main :: IO ()
 main = do
   runApp (mkConfig "ws://localhost:24601" 24601) $ do
-    message <- liftServerIO $ C.newMVar "This is not a message."
+    remoteMsg <- liftServerIO $ C.newMVar "This is not a message."
 
-    trade <- export $ \newmsg -> do
-      message <- mkUseful message
+    trade <- remote $ \newmsg -> do
+      message <- remoteMsg
       liftIO $ do oldmsg <- C.takeMVar message
                   C.putMVar message newmsg
                   return oldmsg

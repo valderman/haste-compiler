@@ -20,17 +20,17 @@ type State = (IORef [(SessionID, C.MVar Message)], IORef [Message])
 
 -- | Data type to hold all our API calls
 data API = API {
-    apiHello :: Export (Server [Message]),
-    apiSend :: Export (String -> String -> Server ()),
-    apiAwait :: Export (Server Message)
+    apiHello :: Remote (Server [Message]),
+    apiSend  :: Remote (String -> String -> Server ()),
+    apiAwait :: Remote (Server Message)
   }
 
 -- | Tell the server we're here and remove any stale sessions.
-hello :: Useless State -> Server [Message]
+hello :: Server State -> Server [Message]
 hello state = do
   sid <- getSessionID
   active <- getActiveSessions
-  (clients, messages) <- mkUseful state
+  (clients, messages) <- state
   liftIO $ do
     v <- C.newEmptyMVar
     atomicModifyIORef clients $ \cs ->
@@ -38,9 +38,9 @@ hello state = do
     readIORef messages
 
 -- | Send a message; keep a backlog of 100 messages.
-send :: Useless State -> String -> String -> Server ()
+send :: Server State -> String -> String -> Server ()
 send state sender msg = do
-  (clients, messages) <- mkUseful state
+  (clients, messages) <- state
   liftIO $ do
     cs <- readIORef clients
     atomicModifyIORef messages $ \msgs -> ((sender, msg):take 99 msgs, ())
@@ -48,10 +48,10 @@ send state sender msg = do
     forM_ cs $ \(_, v) -> C.forkIO $ C.putMVar v (sender, msg)
 
 -- | Block until a new message arrives, then return it.
-await :: Useless State -> Server Message
+await :: Server State -> Server Message
 await state = do
   sid <- getSessionID
-  (clients, _) <- mkUseful state
+  (clients, _) <- state
   liftIO $ readIORef clients >>= maybe (return ("","")) C.takeMVar . lookup sid
 
 -- | Scroll to the bottom of a textarea.
@@ -98,9 +98,9 @@ main = do
       return (clients, messages)
 
     -- Create an API object holding all available functions
-    api <- API <$> export (hello state)
-               <*> export (send state)
-               <*> export (await state)
+    api <- API <$> remote (hello state)
+               <*> remote (send state)
+               <*> remote (await state)
 
     -- Launch the client
     runClient $ clientMain api

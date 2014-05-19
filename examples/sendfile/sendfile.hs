@@ -6,7 +6,7 @@ import Haste.Binary
 import qualified Data.ByteString.Lazy as BS
 
 main = runApp def $ do
-  upload <- export $ \name file -> do
+  upload <- remote $ \name file -> do
     filedata <- getBlobData file
     liftIO $ BS.writeFile name (toByteString filedata)
 
