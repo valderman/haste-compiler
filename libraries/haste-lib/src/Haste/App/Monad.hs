@@ -100,8 +100,8 @@ instance Applicative App where
 liftServerIO :: IO a -> App (Server a)
 #ifdef __HASTE__
 {-# RULES "throw away liftServerIO"
-          forall x. liftServerIO x = return (return undefined) #-}
-liftServerIO _ = return (return undefined)
+          forall x. liftServerIO x = return Server #-}
+liftServerIO _ = return Server
 #else
 liftServerIO m = App $ \cfg _ cid exports -> do
   x <- m
@@ -118,8 +118,8 @@ liftServerIO m = App $ \cfg _ cid exports -> do
 forkServerIO :: Server () -> App (Server ThreadId)
 #ifdef __HASTE__
 {-# RULES "throw away forkServerIO"
-          forall x. forkServerIO x = return (return undefined) #-}
-forkServerIO _ = return (return undefined)
+          forall x. forkServerIO x = return Server #-}
+forkServerIO _ = return Server
 #else
 forkServerIO (Server m) = App $ \cfg sessions cid exports -> do
   tid <- forkIO $ m 0 sessions
@@ -240,37 +240,62 @@ serverEventLoop cfg sessions exports = do
 
 -- | Server monad for Haste.App. Allows redeeming remote values, lifting IO
 --   actions, and not much more.
+#ifdef __HASTE__
+data Server a = Server
+#else
 newtype Server a = Server {unS :: SessionID -> IORef Sessions -> IO a}
+#endif
 
 instance Functor Server where
+#ifdef __HASTE__
+  fmap _ _ = Server
+#else
   fmap f (Server m) = Server $ \sid ss -> f <$> m sid ss
+#endif
 
 instance Applicative Server where
   (<*>) = ap
   pure  = return
 
 instance Monad Server where
+#ifdef __HASTE__
+  return _ = Server
+  _ >>= _  = Server
+#else
   return x = Server $ \_ _ -> return x
   (Server m) >>= f = Server $ \sid ss -> do
     Server m' <- f <$> m sid ss
     m' sid ss
+#endif
 
 instance MonadIO Server where
+#ifdef __HASTE__
+  liftIO _ = Server
+#else
   liftIO m = Server $ \_ _ -> m
+#endif
 
 instance MonadBlob Server where
 #ifndef __HASTE__
   getBlobData (Blob bd) = return $ BlobData bd
   getBlobText' (Blob bd) = return $ fromString $ BU.toString $ BS.concat $ BSL.toChunks bd
 #else
-  getBlobData _ = return undefined
-  getBlobText' _ = return undefined
+  getBlobData _ = Server
+  getBlobText' _ = Server
 #endif
 
 -- | Returns the ID of the current session.
 getSessionID :: Server SessionID
+#ifdef __HASTE__
+getSessionID = Server
+#else
 getSessionID = Server $ \sid _ -> return sid
+#endif
 
 -- | Return all currently active sessions.
 getActiveSessions :: Server Sessions
+#ifdef __HASTE__
+getActiveSessions = Server
+#else
 getActiveSessions = Server $ \_ ss -> readIORef ss
+#endif
