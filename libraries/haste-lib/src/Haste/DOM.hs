@@ -18,7 +18,8 @@ import Haste.Foreign
 import Haste.Binary.Types
 
 newtype Elem = Elem JSAny
-instance Marshal Elem
+instance Pack Elem
+instance Unpack Elem
 
 type PropID = String
 type ElemID = String

@@ -1,10 +1,12 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, TypeSynonymInstances,
              FlexibleInstances, TypeFamilies, OverlappingInstances, CPP,
-             OverloadedStrings #-}
+             OverloadedStrings, UndecidableInstances #-}
 -- | Create functions on the fly from JS strings.
 --   Slower but more flexible alternative to the standard FFI.
 module Haste.Foreign (
-    FFI, Marshal (..), Unpacked, Opaque, ffi, export, toOpaque, fromOpaque
+    FFI, Pack (..), Unpack (..), Marshal,
+    Unpacked, Opaque,
+    ffi, export, toOpaque, fromOpaque
   ) where
 import Haste.Prim
 import Haste.JSType
@@ -43,122 +45,187 @@ fromOpaque = unsafeCoerce
 
 data Dummy = Dummy Unpacked
 
+class Pack a where
+  pack :: Unpacked -> a
+  pack = unsafePack
+
+class Unpack a where
+  unpack :: a -> Unpacked
+  unpack = unsafeUnpack
+
 -- | Class for marshallable types. Pack takes an opaque JS value and turns it
 --   into the type's proper Haste representation, and unpack is its inverse.
 --   The default instances make an effort to prevent wrongly typed values
 --   through, but you could probably break them with enough creativity.
-class Marshal a where
-  pack :: Unpacked -> a
-  pack = unsafePack
+class (Pack a, Unpack a) => Marshal a
+instance (Pack a, Unpack a) => Marshal a
 
-  unpack :: a -> Unpacked
-  unpack = unsafeUnpack
-
-instance Marshal Float
-instance Marshal Double
-instance Marshal JSAny
-instance Marshal JSString where
+instance Pack Float
+instance Pack Double
+instance Pack JSAny
+instance Pack JSString where
   pack = jsString . unsafePack
-instance Marshal Int where
+instance Pack Int where
   pack x = convert (unsafePack x :: Double)
-instance Marshal Int8 where
+instance Pack Int8 where
   pack x = convert (unsafePack x :: Double)
-instance Marshal Int16 where
+instance Pack Int16 where
   pack x = convert (unsafePack x :: Double)
-instance Marshal Int32 where
+instance Pack Int32 where
   pack x = convert (unsafePack x :: Double)
-instance Marshal Word where
+instance Pack Word where
   pack x = convert (unsafePack x :: Double)
-instance Marshal Word8 where
+instance Pack Word8 where
   pack x = convert (unsafePack x :: Double)
-instance Marshal Word16 where
+instance Pack Word16 where
   pack x = convert (unsafePack x :: Double)
-instance Marshal Word32 where
+instance Pack Word32 where
   pack x = convert (unsafePack x :: Double)
-instance Marshal () where
+instance Pack () where
   pack _   = ()
-  unpack _ = unpack (0 :: Double)
-instance Marshal String where
+instance Pack String where
   pack = fromJSStr . pack
-  unpack = unpack . toJSStr
-instance Marshal Unpacked where
+instance Pack Unpacked where
   pack = id
-  unpack = id
-instance Marshal (Opaque a) where
+instance Pack (Opaque a) where
   pack = Opaque
-  unpack (Opaque x) = x
-instance Marshal Bool where
-  unpack True  = jsTrue
-  unpack False = jsFalse
+instance Pack Bool where
   pack x = if pack x > (0 :: Double) then True else False
 
+-- | Lists are marshalled into arrays.
+instance Pack a => Pack [a] where
+  pack arr = map pack . fromOpaque $ arr2lst arr 0
+
+-- | Maybe is simply a nullable type. Nothing is equivalent to null, and any
+--   non-null value is equivalent to x in Just x.
+instance Pack a => Pack (Maybe a) where
+  pack x = if isNull x then Nothing else Just (pack x)
+
 -- | Tuples are marshalled into arrays.
-instance (Marshal a, Marshal b) => Marshal (a, b) where
-  unpack (a, b) = unpack [unpack a, unpack b]
+instance (Pack a, Pack b) => Pack (a, b) where
   pack x = case pack x of [a, b] -> (pack a, pack b)
 
-instance (Marshal a, Marshal b, Marshal c) => Marshal (a, b, c) where
-  unpack (a, b, c) = unpack [unpack a, unpack b, unpack c]
+instance (Pack a, Pack b, Pack c) => Pack (a, b, c) where
   pack x = case pack x of [a, b, c] -> (pack a, pack b, pack c)
 
-instance (Marshal a, Marshal b, Marshal c, Marshal d) =>
-         Marshal (a, b, c, d) where
-  unpack (a, b, c, d) = unpack [unpack a, unpack b, unpack c, unpack d]
+instance (Pack a, Pack b, Pack c, Pack d) =>
+         Pack (a, b, c, d) where
   pack x = case pack x of [a, b, c, d] -> (pack a, pack b, pack c, pack d)
 
-instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e) =>
-         Marshal (a, b, c, d, e) where
-  unpack (a, b, c, d, e) = unpack [unpack a,unpack b,unpack c,unpack d,unpack e]
+instance (Pack a, Pack b, Pack c, Pack d, Pack e) =>
+         Pack (a, b, c, d, e) where
   pack x = case pack x of [a,b,c,d,e] -> (pack a, pack b, pack c, pack d, pack e)
 
-instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
-          Marshal f) => Marshal (a, b, c, d, e, f) where
-  unpack (a, b, c, d, e, f) =
-    unpack [unpack a, unpack b, unpack c, unpack d, unpack e, unpack f]
+instance (Pack a, Pack b, Pack c, Pack d, Pack e,
+          Pack f) => Pack (a, b, c, d, e, f) where
   pack x = case pack x of
     [a, b, c, d, e, f] -> (pack a, pack b, pack c, pack d, pack e, pack f)
 
-instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
-          Marshal f, Marshal g) => Marshal (a, b, c, d, e, f, g) where
-  unpack (a, b, c, d, e, f, g) =
-    unpack [unpack a,unpack b,unpack c,unpack d,unpack e,unpack f,unpack g]
+instance (Pack a, Pack b, Pack c, Pack d, Pack e,
+          Pack f, Pack g) => Pack (a, b, c, d, e, f, g) where
   pack x = case pack x of
     [a, b, c, d, e, f, g] -> (pack a,pack b,pack c,pack d,pack e,pack f,pack g)
 
-instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
-          Marshal f, Marshal g, Marshal h) =>
-         Marshal (a, b, c, d, e, f, g, h) where
-  unpack (a, b, c, d, e, f, g, h) =
-    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
-            unpack f, unpack g, unpack h]
+instance (Pack a, Pack b, Pack c, Pack d, Pack e,
+          Pack f, Pack g, Pack h) =>
+         Pack (a, b, c, d, e, f, g, h) where
   pack x = case pack x of
     [a, b, c, d, e, f, g, h] -> (pack a, pack b, pack c, pack d, pack e,
                                  pack f, pack g, pack h)
 
-instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
-          Marshal f, Marshal g, Marshal h, Marshal i) =>
-         Marshal (a, b, c, d, e, f, g, h, i) where
-  unpack (a, b, c, d, e, f, g, h, i) =
-    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
-            unpack f, unpack g, unpack h, unpack i]
+instance (Pack a, Pack b, Pack c, Pack d, Pack e,
+          Pack f, Pack g, Pack h, Pack i) =>
+         Pack (a, b, c, d, e, f, g, h, i) where
   pack x = case pack x of
     [a, b, c, d, e, f, g, h, i] -> (pack a, pack b, pack c, pack d, pack e,
                                     pack f, pack g, pack h, pack i)
 
-instance (Marshal a, Marshal b, Marshal c, Marshal d, Marshal e,
-          Marshal f, Marshal g, Marshal h, Marshal i, Marshal j) =>
-         Marshal (a, b, c, d, e, f, g, h, i, j) where
-  unpack (a, b, c, d, e, f, g, h, i, j) =
-    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
-            unpack f, unpack g, unpack h, unpack i, unpack j]
+instance (Pack a, Pack b, Pack c, Pack d, Pack e,
+          Pack f, Pack g, Pack h, Pack i, Pack j) =>
+         Pack (a, b, c, d, e, f, g, h, i, j) where
   pack x = case pack x of
     [a, b, c, d, e, f, g, h, i, j] -> (pack a, pack b, pack c, pack d, pack e,
                                        pack f, pack g, pack h, pack i, pack j)
 
+instance Unpack Float
+instance Unpack Double
+instance Unpack JSAny
+instance Unpack JSString
+instance Unpack Int
+instance Unpack Int8
+instance Unpack Int16
+instance Unpack Int32
+instance Unpack Word
+instance Unpack Word8
+instance Unpack Word16
+instance Unpack Word32
+instance Unpack () where
+  unpack _ = unpack (0 :: Double)
+instance Unpack String where
+  unpack = unpack . toJSStr
+instance Unpack Unpacked where
+  unpack = id
+instance Unpack (Opaque a) where
+  unpack (Opaque x) = x
+instance Unpack Bool where
+  unpack True  = jsTrue
+  unpack False = jsFalse
+
 -- | Lists are marshalled into arrays.
-instance Marshal a => Marshal [a] where
+instance Unpack a => Unpack [a] where
   unpack = lst2arr . toOpaque . map unpack
-  pack arr = map pack . fromOpaque $ arr2lst arr 0
+
+-- | Maybe is simply a nullable type. Nothing is equivalent to null, and any
+--   non-null value is equivalent to x in Just x.
+instance Unpack a => Unpack (Maybe a) where
+  unpack Nothing  = jsNull
+  unpack (Just x) = unpack x
+
+-- | Tuples are marshalled into arrays.
+instance (Unpack a, Unpack b) => Unpack (a, b) where
+  unpack (a, b) = unpack [unpack a, unpack b]
+
+instance (Unpack a, Unpack b, Unpack c) => Unpack (a, b, c) where
+  unpack (a, b, c) = unpack [unpack a, unpack b, unpack c]
+
+instance (Unpack a, Unpack b, Unpack c, Unpack d) =>
+         Unpack (a, b, c, d) where
+  unpack (a, b, c, d) = unpack [unpack a, unpack b, unpack c, unpack d]
+
+instance (Unpack a, Unpack b, Unpack c, Unpack d, Unpack e) =>
+         Unpack (a, b, c, d, e) where
+  unpack (a, b, c, d, e) = unpack [unpack a,unpack b,unpack c,unpack d,unpack e]
+
+instance (Unpack a, Unpack b, Unpack c, Unpack d, Unpack e,
+          Unpack f) => Unpack (a, b, c, d, e, f) where
+  unpack (a, b, c, d, e, f) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e, unpack f]
+
+instance (Unpack a, Unpack b, Unpack c, Unpack d, Unpack e,
+          Unpack f, Unpack g) => Unpack (a, b, c, d, e, f, g) where
+  unpack (a, b, c, d, e, f, g) =
+    unpack [unpack a,unpack b,unpack c,unpack d,unpack e,unpack f,unpack g]
+
+instance (Unpack a, Unpack b, Unpack c, Unpack d, Unpack e,
+          Unpack f, Unpack g, Unpack h) =>
+         Unpack (a, b, c, d, e, f, g, h) where
+  unpack (a, b, c, d, e, f, g, h) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
+            unpack f, unpack g, unpack h]
+
+instance (Unpack a, Unpack b, Unpack c, Unpack d, Unpack e,
+          Unpack f, Unpack g, Unpack h, Unpack i) =>
+         Unpack (a, b, c, d, e, f, g, h, i) where
+  unpack (a, b, c, d, e, f, g, h, i) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
+            unpack f, unpack g, unpack h, unpack i]
+
+instance (Unpack a, Unpack b, Unpack c, Unpack d, Unpack e,
+          Unpack f, Unpack g, Unpack h, Unpack i, Unpack j) =>
+         Unpack (a, b, c, d, e, f, g, h, i, j) where
+  unpack (a, b, c, d, e, f, g, h, i, j) =
+    unpack [unpack a, unpack b, unpack c, unpack d, unpack e,
+            unpack f, unpack g, unpack h, unpack i, unpack j]
 
 {-# RULES "unpack array/Unpacked" forall x. unpack x = lst2arr (toOpaque x) #-}
 {-# RULES "pack array/Unpacked" forall x. pack x = fromOpaque (arr2lst x 0) #-}
@@ -168,13 +235,6 @@ lst2arr = unsafePerformIO . ffi "lst2arr"
 
 arr2lst :: Unpacked -> Int -> Opaque [Unpacked]
 arr2lst arr ix = unsafePerformIO $ ffi "arr2lst" arr ix
-
--- | Maybe is simply a nullable type. Nothing is equivalent to null, and any
---   non-null value is equivalent to x in Just x.
-instance Marshal a => Marshal (Maybe a) where
-  unpack Nothing  = jsNull
-  unpack (Just x) = unpack x
-  pack x = if isNull x then Nothing else Just (pack x)
 
 jsNull, jsTrue, jsFalse :: Unpacked
 jsTrue = unsafePerformIO $ ffi "true"

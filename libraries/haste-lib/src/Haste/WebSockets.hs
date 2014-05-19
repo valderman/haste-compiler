@@ -15,22 +15,28 @@ newtype WSOnMsg = WSOnMsg (WebSocket -> JSString -> IO ())
 newtype WSOnBinMsg = WSOnBinMsg (WebSocket -> Blob -> IO ())
 newtype WSComputation = WSComputation (WebSocket -> IO ())
 newtype WSOnError = WSOnError (IO ())
-
 data WebSocket
-instance Marshal WebSocket where
+
+instance Pack WebSocket where
   pack = unsafeCoerce
+instance Pack WSOnMsg where
+  pack = unsafeCoerce
+instance Pack WSOnBinMsg where
+  pack = unsafeCoerce
+instance Pack WSComputation where
+  pack = unsafeCoerce
+instance Pack WSOnError where
+  pack = unsafeCoerce
+
+instance Unpack WebSocket where
   unpack = unsafeCoerce
-instance Marshal WSOnMsg where
-  pack = unsafeCoerce
+instance Unpack WSOnMsg where
   unpack = unsafeCoerce
-instance Marshal WSOnBinMsg where
-  pack = unsafeCoerce
+instance Unpack WSOnBinMsg where
   unpack = unsafeCoerce
-instance Marshal WSComputation where
-  pack = unsafeCoerce
+instance Unpack WSComputation where
   unpack = unsafeCoerce
-instance Marshal WSOnError where
-  pack = unsafeCoerce
+instance Unpack WSOnError where
   unpack = unsafeCoerce
 
 -- | Run a computation with a web socket. The computation will not be executed

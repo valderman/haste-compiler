@@ -13,7 +13,7 @@ import qualified Data.ByteString.UTF8 as BU
 
 #ifdef __HASTE__
 data BlobData = BlobData Int Int Unpacked
-newtype Blob = Blob Unpacked deriving Marshal
+newtype Blob = Blob Unpacked deriving (Pack, Unpack)
 
 -- | The size, in bytes, of the contents of the given blob.
 blobSize :: Blob -> Int
