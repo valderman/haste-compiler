@@ -57,8 +57,10 @@ newtype BlobData = BlobData BS.ByteString
 newtype Blob = Blob BS.ByteString
 
 -- Never used except for type checking
-instance Marshal BlobData
-instance Marshal Blob
+instance Pack BlobData
+instance Unpack BlobData
+instance Pack Blob
+instance Unpack Blob
 
 -- | The size, in bytes, of the contents of the given blob.
 blobSize :: Blob -> Int
