@@ -201,11 +201,9 @@ Executable haste-copy-pkg
     default-language: Haskell98
 
 Library
-    Hs-Source-Dirs: libraries/haste-lib/src, libraries/fursuit/src, src
+    Hs-Source-Dirs: libraries/haste-lib/src, src
     GHC-Options: -Wall -O2
     Exposed-Modules:
-        FRP.Fursuit
-        FRP.Fursuit.Async
         Haste
         Haste.App
         Haste.App.Concurrent
@@ -213,7 +211,6 @@ Library
         Haste.Compiler
         Haste.JSON
         Haste.Ajax
-        Haste.Reactive
         Haste.DOM
         Haste.Prim
         Haste.Concurrent
@@ -224,10 +221,6 @@ Library
         Haste.WebSockets
         Haste.LocalStorage
     Other-Modules:
-        FRP.Fursuit.Signal
-        FRP.Fursuit.Sink
-        FRP.Fursuit.Pipe
-        FRP.Fursuit.Locking
         Haste.JSType
         Haste.Callback
         Haste.Compiler.Flags
@@ -235,8 +228,6 @@ Library
         Paths_haste_compiler
         Haste.Hash
         Haste.Random
-        Haste.Reactive.DOM
-        Haste.Reactive.Ajax
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
         Haste.App.Client

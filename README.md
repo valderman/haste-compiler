@@ -174,7 +174,7 @@ client and server code respectively.
 
 You will need to have the same libraries installed with both Haste and vanilla
 GHC (unless you use conditional compilation to get around this).
-`haste-compiler` comes bundled with all of `fursuit` and `haste-lib`, so you
+`haste-compiler` comes bundled with all of `haste-lib`, so you
 only need to concern yourself with this if you're using third party libraries.
 
 Examples of Haste.App in action is available in `examples/haste-app` and
@@ -187,7 +187,7 @@ For more information about how exactly this works, see this
 Base library and documentation
 ------------------------------
 
-You can build your own set of docs for haste-lib and fursuit by running
+You can build your own set of docs for haste-lib by running
 `cabal haddock` in the Haste base directory as with any other package.
 
 Or you could just look at
@@ -197,12 +197,10 @@ Or you could just look at
 Reactive web EDSL
 -----------------
 
-Haste comes with a basic, environment for writing client side web applications
-in a reactive fashion. See Fursuit for more information.
-
-As the reactive library relies heavily on Applicative, you may find the idiom
-brackets of the Strathclyde Haskell Enhancement
-(https://personal.cis.strath.ac.uk/~conor/pub/she/) quite useful.
+Fursuit, the reactive EDSL previously shipped together with Haste, had several
+serious problems and has now been deprecated. Other, much better, solutions
+which work with Haste include [Yampa](http://hackage.haskell.org/package/Yampa),
+[elerea](http://hackage.haskell.org/package/elerea) and others.
 
 
 A note about security
@@ -217,7 +215,7 @@ to obtain a trusted Haste installation:
   as usual.
 * Install `deepseq`, `containers`, `monads-tf` and `transformers` from a source
   you trust, in that order, forcing reinstalls as necessary.
-* Manually reinstall `fursuit` and `haste-lib` from the same source tree you
+* Manually reinstall `haste-lib` from the same source tree you
   installed Haste from, in that order.
 
 That said, if you're comfortable trusting random Internet people

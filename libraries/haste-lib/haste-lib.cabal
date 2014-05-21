@@ -28,7 +28,6 @@ Library
         Haste.Compiler
         Haste.JSON
         Haste.Ajax
-        Haste.Reactive
         Haste.DOM
         Haste.Prim
         Haste.Concurrent
@@ -43,8 +42,6 @@ Library
         Haste.Callback
         Haste.Hash
         Haste.Random
-        Haste.Reactive.DOM
-        Haste.Reactive.Ajax
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
         Haste.Compiler.Flags
@@ -60,7 +57,6 @@ Library
         transformers,
         monads-tf,
         ghc-prim,
-        fursuit,
         containers,
         data-default,
         bytestring >= 0.9.2.1

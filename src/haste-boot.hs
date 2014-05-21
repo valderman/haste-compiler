@@ -178,8 +178,8 @@ buildLibs cfg = do
         run_ hasteCopyPkgBinary [base, pkgdb] ""
         cpDir "include" hasteDir
       
-      -- Install array, fursuit and haste-lib
-      forM_ ["array", "fursuit", "haste-lib"] $ \pkg -> do
+      -- Install array and haste-lib
+      forM_ ["array", "haste-lib"] $ \pkg -> do
         inDirectory pkg $ hasteInst ("install" : ghcOpts)
   where
     ghcOpts = concat [
