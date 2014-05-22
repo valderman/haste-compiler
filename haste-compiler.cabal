@@ -72,7 +72,6 @@ Executable haste-boot
         transformers,
         network,
         HTTP,
-        executable-path,
         shellmate >= 0.1.5
     Default-Language: Haskell98
 
@@ -97,7 +96,6 @@ Executable hastec
         ghc-paths,
         random,
         system-fileio,
-        executable-path,
         shellmate >= 0.1.5
     Main-Is:
         Main.hs
@@ -135,7 +133,6 @@ Executable haste-inst
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        executable-path,
         shellmate
     default-language: Haskell98
 
@@ -148,7 +145,6 @@ Executable haste-pkg
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        executable-path,
         shellmate
     default-language: Haskell98
 
@@ -161,7 +157,6 @@ Executable haste-install-his
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        executable-path,
         shellmate
     default-language: Haskell98
 
@@ -176,7 +171,6 @@ Executable haste-copy-pkg
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        executable-path,
         shellmate >= 0.1.5
     default-language: Haskell98
 
@@ -232,7 +226,6 @@ Library
         shellmate >= 0.1.5,
         data-default,
         directory,
-        executable-path,
         filepath,
         process
     Default-Language: Haskell98
