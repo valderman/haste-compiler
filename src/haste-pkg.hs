@@ -2,17 +2,17 @@
 -- | haste-pkg; wrapper for ghc-pkg.
 module Main where
 import Control.Monad
-import System.Environment
-import System.Directory
+import System.Environment (getArgs)
 import Haste.Environment
+import Control.Shell
 
-main = do
-  args <- getArgs
-  pkgDirExists <- doesDirectoryExist pkgDir
+main = shell $ do
+  args <- liftIO getArgs
+  pkgDirExists <- isDirectory pkgDir
   when (not pkgDirExists) $ do
-    createDirectoryIfMissing True pkgLibDir
-    runAndWait "ghc-pkg" ["init", pkgDir] Nothing
-  runAndWait "ghc-pkg" (packages ++ map userToGlobal args) Nothing
+    mkdir True pkgLibDir
+    runInteractive "ghc-pkg" ["init", pkgDir]
+  runInteractive "ghc-pkg" (packages ++ map userToGlobal args)
   where
 #if __GLASGOW_HASKELL__ >= 706
     packages = ["--no-user-package-db",

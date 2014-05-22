@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP #-}
 import Prelude hiding (read)
-import System.Directory
 import Network.HTTP
 import Network.Browser hiding (err)
 import Network.URI

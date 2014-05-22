@@ -1,17 +1,15 @@
 {-# LANGUAGE CPP #-}
 -- | Paths, host bitness and other environmental information about Haste.
 module Haste.Environment (hasteDir, jsmodDir, hasteInstDir, pkgDir, pkgLibDir,
-                          jsDir, hostWordSize, runAndWait, hasteBinary,
+                          jsDir, hostWordSize, hasteBinary,
                           hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
                           hasteCopyPkgBinary, closureCompiler) where
-import System.Process
 import System.IO.Unsafe
-import System.FilePath
 import Data.Bits (bitSize)
 import Foreign.C.Types (CIntPtr)
 import System.Environment.Executable
-import System.Directory
 import System.Exit
+import Control.Shell
 import Paths_haste_compiler
 
 -- | The directory where the currently residing binary lives.
@@ -37,7 +35,7 @@ hasteDir :: FilePath
 hasteDir = hasteBinDir
 #else
 hasteDir :: FilePath
-hasteDir = unsafePerformIO $ getAppUserDataDirectory "haste"
+Right hasteDir = unsafePerformIO . shell $ withAppDirectory "haste" return
 #endif
 
 jsmodDir :: FilePath
@@ -58,36 +56,6 @@ hostWordSize = bitSize (undefined :: CIntPtr)
 -- | Directory containing library information. 
 pkgLibDir :: FilePath
 pkgLibDir = hasteInstDir </> "lib"
-
--- | Run a process and wait for its completion. Terminate with an error code
---   if the process did not exit cleanly.
-runAndWait :: FilePath -> [String] -> Maybe FilePath -> IO ()
-runAndWait file args workDir = do
-  h <- runProcess file args workDir Nothing Nothing Nothing Nothing
-  ec <- waitForProcess h
-  case ec of
-    ExitFailure _ -> exitFailure
-    _             -> return ()
-
-{-
--- | Find an executable.
-locateBinary :: String -> [FilePath] -> IO (Either String FilePath)
-locateBinary progname (c:cs) = do
-  mexe <- findExecutable c
-  case mexe of
-    Nothing  -> locateBinary progname cs
-    Just exe -> return (Right exe)
-locateBinary progname _ = do
-  return $ Left $ "No " ++ progname ++ " executable found; aborting!"
-
--- | Find a binary.
-binaryPath :: FilePath -> FilePath
-binaryPath exe = unsafePerformIO $ do
-  b <- locateBinary exe [exe, currentBinDir </> exe, cabalBinDir </> exe]
-  case b of
-    Left err   -> error err
-    Right path -> return path
--}
 
 -- | The main Haste compiler binary.
 hasteBinary :: FilePath

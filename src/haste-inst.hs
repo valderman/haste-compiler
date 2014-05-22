@@ -1,15 +1,16 @@
 -- | haste-inst - Haste wrapper for cabal.
 module Main where
-import System.FilePath
 import System.Environment
 import Haste.Environment
+import Control.Shell
 import Data.List
 
 type Match = (String -> Bool, [String] -> [String])
 
 cabal :: [String] -> IO ()
 cabal args = do
-  runAndWait "cabal" (hasteargs ++ args) Nothing
+  _ <- shell $ run_ "cabal" (hasteargs ++ args) ""
+  return ()
   where
     hasteargs 
       | "build" `elem` args =

@@ -65,15 +65,10 @@ Executable haste-boot
     Build-Depends:
         ghc,
         base < 5,
-        directory,
-        process,
         bytestring,
         tar,
         bzlib,
         zip-archive,
-        filepath,
-        temporary,
-        time,
         transformers,
         network,
         HTTP,
@@ -98,11 +93,8 @@ Executable hastec
         data-default,
         bytestring >= 0.9.2.1,
         blaze-builder,
-        filepath,
-        directory,
         array,
         ghc-paths,
-        process,
         random,
         system-fileio,
         executable-path,
@@ -143,10 +135,8 @@ Executable haste-inst
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        filepath,
-        process,
-        directory,
-        executable-path
+        executable-path,
+        shellmate
     default-language: Haskell98
 
 Executable haste-pkg
@@ -158,10 +148,8 @@ Executable haste-pkg
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        process,
-        filepath,
-        directory,
-        executable-path
+        executable-path,
+        shellmate
     default-language: Haskell98
 
 Executable haste-install-his
@@ -173,10 +161,8 @@ Executable haste-install-his
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        filepath,
-        directory,
-        process,
-        executable-path
+        executable-path,
+        shellmate
     default-language: Haskell98
 
 Executable haste-copy-pkg
@@ -190,12 +176,6 @@ Executable haste-copy-pkg
         CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        filepath,
-        directory,
-        process,
-        temporary,
-        time,
-        transformers,
         executable-path,
         shellmate >= 0.1.5
     default-language: Haskell98
@@ -238,13 +218,10 @@ Library
         Haste.Binary.Put
         Haste.Binary.Types
     Build-Depends:
-        integer-gmp,
         transformers,
         monads-tf,
-        ghc-prim,
         containers,
         base < 5,
-        array,
         random,
         binary,
         data-binary-ieee754,

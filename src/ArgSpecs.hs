@@ -5,7 +5,7 @@ import Haste.Config
 import Haste.Environment
 import Data.JSTarget.PP (debugPPOpts)
 import Data.List (isSuffixOf)
-import System.FilePath ((</>))
+import Control.Shell ((</>))
 
 argSpecs :: [ArgSpec Config]
 argSpecs = [

@@ -2,43 +2,43 @@
 -- | haste-install-his; install all .hi files in a directory.
 module Main where
 import Haste.Environment
-import System.FilePath
-import System.Directory
 import System.Environment
 import Control.Applicative
 import Control.Monad
 import Data.List
 import Data.Char
+import Control.Shell
 
 main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [package, dir] -> installFromDir (pkgLibDir </> package) dir
-    _              -> putStrLn "Usage: haste-install-his pkgname dir"
+    [package, dir] -> shell $ installFromDir (pkgLibDir </> package) dir
+    _              -> shell $ echo "Usage: haste-install-his pkgname dir"
+  return ()
 
-getHiFiles :: FilePath -> IO [FilePath]
+getHiFiles :: FilePath -> Shell [FilePath]
 getHiFiles dir =
-  filter (".hi" `isSuffixOf`) <$> getDirectoryContents dir
+  filter (".hi" `isSuffixOf`) <$> ls dir
 
-getSubdirs :: FilePath -> IO [FilePath]
+getSubdirs :: FilePath -> Shell [FilePath]
 getSubdirs dir = do
-  contents <- getDirectoryContents dir
-  someDirs <- mapM (\d -> (d,) <$> doesDirectoryExist (dir </> d)) contents
+  contents <- ls dir
+  someDirs <- mapM (\d -> (d,) <$> isDirectory (dir </> d)) contents
   return [path | (path, isDir) <- someDirs
                , isDir
                , head path /= '.'
                , isUpper (head path)]
 
-installFromDir :: FilePath -> FilePath -> IO ()
+installFromDir :: FilePath -> FilePath -> Shell ()
 installFromDir base path = do
   hiFiles <- getHiFiles path
   when (not $ null hiFiles) $ do
-    createDirectoryIfMissing True (pkgLibDir </> base)
+    mkdir True (pkgLibDir </> base)
   mapM_ (installHiFile base path) hiFiles
   getSubdirs path >>= mapM_ (\d -> installFromDir (base </> d) (path </> d))
 
-installHiFile :: FilePath -> FilePath -> FilePath -> IO ()
+installHiFile :: FilePath -> FilePath -> FilePath -> Shell ()
 installHiFile to from file = do
-  putStrLn $ "Installing " ++ from </> file ++ "..."
-  copyFile (from </> file) (to </> file)
+  echo $ "Installing " ++ from </> file ++ "..."
+  cp (from </> file) (to </> file)

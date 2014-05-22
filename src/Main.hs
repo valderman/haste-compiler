@@ -19,11 +19,8 @@ import Haste.Environment
 import Haste.Version
 import Args
 import ArgSpecs
-import System.FilePath (addExtension)
 import System.IO
-import System.Process (runProcess, waitForProcess, rawSystem)
 import System.Exit (ExitCode (..), exitFailure)
-import System.Directory (renameFile)
 import Filesystem (getModified, isFile)
 import Data.Version
 import Data.List
@@ -81,7 +78,7 @@ main = do
 -- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
-  _ <- rawSystem "ghc" (filter noHasteArgs args)
+  _ <- Sh.shell $ Sh.run_ "ghc" (filter noHasteArgs args) ""
   return ()
   where
     noHasteArgs x =
@@ -211,27 +208,20 @@ prepare dynflags theMod = do
 
 -- | Run Google Closure on a file.
 closurize :: FilePath -> FilePath -> [String] -> IO ()
-closurize cloPath file arguments = do
-  logStr $ "Running the Google Closure compiler on " ++ file ++ "..."
-  let cloFile = file `addExtension` ".clo"
-  cloOut <- openFile cloFile WriteMode
-  build <- runProcess "java"
-             (["-jar", cloPath,
-              "--compilation_level", "ADVANCED_OPTIMIZATIONS",
-              "--jscomp_off", "globalThis", file]
-              ++ arguments)
-             Nothing
-             Nothing
-             Nothing
-             (Just cloOut)
-             Nothing
-  res <- waitForProcess build
-  hClose cloOut
+closurize cloPath f arguments = do
+  logStr $ "Running the Google Closure compiler on " ++ f ++ "..."
+  let cloFile = f `Sh.addExtension` ".clo"
+  res <- Sh.shell $ do
+    str <- Sh.run "java"
+      (["-jar", cloPath,
+        "--compilation_level", "ADVANCED_OPTIMIZATIONS",
+        "--jscomp_off", "globalThis", f]
+       ++ arguments) ""
+    Sh.file cloFile str :: Sh.Shell ()
+    Sh.mv cloFile f
   case res of
-    ExitFailure n ->
-      fail $ "Couldn't execute Google Closure compiler: " ++ show n
-    ExitSuccess ->
-      renameFile cloFile file
+    Left e  -> fail $ "Couldn't execute Google Closure compiler: " ++ e
+    Right _ -> return ()
 
 -- | Generate a unique fingerprint for the compiler, command line arguments,
 --   etc.

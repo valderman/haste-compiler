@@ -2,8 +2,7 @@
 module Haste.Version (hasteVersion, ghcVersion, bootVersion, needsReboot,
                       BootVer (..), bootFile) where
 import System.IO.Unsafe
-import System.Directory
-import System.FilePath ((</>))
+import Control.Shell ((</>), shell, isFile)
 import System.IO
 import Data.Version
 import Config (cProjectVersion)
@@ -27,9 +26,9 @@ data BootVer = BootVer Version String deriving (Read, Show)
 --   format triggers a full reboot.
 needsReboot :: Bool
 needsReboot = unsafePerformIO $ do
-  exists <- doesFileExist bootFile
-  if exists
-    then do
+  exists <- shell $ isFile bootFile
+  case exists of
+    Right True -> do
       fh <- openFile bootFile ReadMode
       bootedVerString <- hGetLine fh
       hClose fh
@@ -38,5 +37,5 @@ needsReboot = unsafePerformIO $ do
           return $ hasteVer /= hasteVersion || ghcVer /= ghcVersion
         _ ->
           return True
-    else
+    _ -> do
       return True

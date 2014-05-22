@@ -3,7 +3,7 @@ module Haste.Config (
   Config (..), AppStart, defConfig, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, debugLib) where
 import Data.JSTarget
-import System.FilePath (replaceExtension, (</>))
+import Control.Shell (replaceExtension, (</>))
 import Blaze.ByteString.Builder
 import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
