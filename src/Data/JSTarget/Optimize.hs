@@ -23,7 +23,6 @@ optimizeFun f (AST ast js) =
     >>= zapJSStringConversions
     >>= optimizeThunks
     >>= optimizeArrays
-    >>= optUnsafeEval
     >>= tailLoopify f
     >>= ifReturnToTernary
 
@@ -35,7 +34,6 @@ topLevelInline (AST ast js) =
     >>= optimizeThunks
     >>= optimizeArrays
     >>= zapJSStringConversions
-    >>= optUnsafeEval
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -239,27 +237,10 @@ computingEx ex =
   case ex of
     Var _                     -> False
     Lit _                     -> False
-    Verbatim _                -> False
     Fun _ _ _                 -> False
     Arr arr                   -> any computingEx arr
     e | Just t <- fromThunk e -> False
       | otherwise             -> True
-
--- | When possible, optimize ffi "x" into x.
-optUnsafeEval :: JSTrav ast => ast -> TravM ast
-optUnsafeEval = mapJS (const True) opt return
-  where
-    opt ex =
-      case ex of
-        (Call ar c (Var (Internal
-          (Name "unsafeEval" (Just (pkg, "Haste.Foreign"))) _))
-          (Arr [Lit (LNum 0), Lit (LStr s)] : args))
-          | take 9 pkg == "haste-lib" -> do
-            case args of
-              [] -> return $ Verbatim s
-              _  -> return $ Call (ar-1) c (Verbatim s) args
-        _ -> do
-          return ex
 
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
@@ -428,6 +409,5 @@ tailLoopify f fun@(Fun mname args body) = do
     contains (Arr xs) var         = any (`contains` var) xs
     contains (AssignEx l r) var   = l `contains` var || r `contains` var
     contains (IfEx c t e) var     = any (`contains` var) [c,t,e]
-    contains (Verbatim _) _       = False
 tailLoopify _ fun = do
   return fun

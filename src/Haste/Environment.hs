@@ -7,14 +7,8 @@ module Haste.Environment (hasteDir, jsmodDir, hasteInstDir, pkgDir, pkgLibDir,
 import System.IO.Unsafe
 import Data.Bits (bitSize)
 import Foreign.C.Types (CIntPtr)
-import System.Environment.Executable
-import System.Exit
 import Control.Shell
 import Paths_haste_compiler
-
--- | The directory where the currently residing binary lives.
-currentBinDir :: FilePath
-currentBinDir = dropFileName . unsafePerformIO $ getExecutablePath
 
 #if defined(PORTABLE) || defined(PORTABLE_COMPILER)
 hasteBinDir :: FilePath

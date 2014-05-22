@@ -37,8 +37,13 @@ type NameSupply = (FinalName, M.Map Name FinalName)
 emptyNS :: NameSupply
 emptyNS = (FinalName 0, M.empty)
 
+intDec :: Int -> Builder
 intDec = B.fromString . show
+
+doubleDec :: Double -> Builder
 doubleDec = B.fromString . show
+
+integerDec :: Integer -> Builder
 integerDec = B.fromString . show
 
 newtype PP a = PP {unPP :: PPOpts

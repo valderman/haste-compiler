@@ -54,9 +54,8 @@ helpString spec =
 -- | Break lines at 80 chars, add two spaces before each.
 formatHelpMessage :: String -> String
 formatHelpMessage s =
-    unlines $ map ("  " ++) $ breakLines 0 [] ws
+    unlines $ map ("  " ++) $ breakLines 0 [] (words s)
   where
-    ws = words s
     breakLines len ln (w:ws)
       | len+length w >= 78 = unwords (reverse ln) : breakLines 0 [] (w:ws)
       | otherwise          = breakLines (len+1+length w) (w:ln) ws

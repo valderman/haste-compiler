@@ -10,7 +10,6 @@ import CorePrep
 import CoreToStg
 import StgSyn (StgBinding)
 import HscTypes
-import Module (moduleNameSlashes)
 import GhcMonad
 import System.Environment (getArgs)
 import Control.Monad (when)
@@ -20,12 +19,9 @@ import Haste.Version
 import Args
 import ArgSpecs
 import System.IO
-import System.Exit (ExitCode (..), exitFailure)
-import Filesystem (getModified, isFile)
+import System.Exit (exitFailure)
 import Data.Version
 import Data.List
-import Data.String
-import qualified Data.ByteString.Char8 as B
 import qualified Control.Shell as Sh
 
 logStr :: String -> IO ()
