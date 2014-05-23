@@ -5,8 +5,8 @@ module Haste.DOM (
     elemById, setProp, getProp, setAttr, getAttr, setProp',
     getProp', getValue, withElem , withElems, addChild,
     addChildBefore, removeChild, clearChildren , getChildBefore,
-    getLastChild, getChildren, setChildren , getStyle, setStyle,
-    getStyle', setStyle',
+    getFirstChild, getLastChild, getChildren, setChildren,
+    getStyle, setStyle, getStyle', setStyle',
     getFileData, getFileName,
     setClass, toggleClass, hasClass
   ) where
@@ -35,6 +35,7 @@ foreign import ccall jsFind :: JSString -> IO (Ptr (Maybe Elem))
 foreign import ccall jsCreateElem :: JSString -> IO Elem
 foreign import ccall jsCreateTextNode :: JSString -> IO Elem
 foreign import ccall jsAppendChild :: Elem -> Elem -> IO ()
+foreign import ccall jsGetFirstChild :: Elem -> IO (Ptr (Maybe Elem))
 foreign import ccall jsGetLastChild :: Elem -> IO (Ptr (Maybe Elem))
 foreign import ccall jsGetChildren :: Elem -> IO (Ptr [Elem])
 foreign import ccall jsSetChildren :: Elem -> Ptr [Elem] -> IO ()
@@ -53,6 +54,7 @@ jsFind = error "Tried to use jsFind on server side!"
 jsCreateElem = error "Tried to use jsCreateElem on server side!"
 jsCreateTextNode = error "Tried to use jsCreateTextNode on server side!"
 jsAppendChild = error "Tried to use jsAppendChild on server side!"
+jsGetFirstChild = error "Tried to use jsGetFirstChild on server side!"
 jsGetLastChild = error "Tried to use jsGetLastChild on server side!"
 jsGetChildren = error "Tried to use jsGetChildren on server side!"
 jsSetChildren = error "Tried to use jsSetChildren on server side!"
@@ -78,6 +80,10 @@ addChildBefore child parent oldChild =
 -- | Get the sibling before the given one, if any.
 getChildBefore :: MonadIO m => Elem -> m (Maybe Elem)
 getChildBefore e = liftIO $ fromPtr `fmap` jsGetChildBefore e
+
+-- | Get the first of an element's children.
+getFirstChild :: MonadIO m => Elem -> m (Maybe Elem)
+getFirstChild e = liftIO $ fromPtr `fmap` jsGetFirstChild e
 
 -- | Get the last of an element's children.
 getLastChild :: MonadIO m => Elem -> m (Maybe Elem)
