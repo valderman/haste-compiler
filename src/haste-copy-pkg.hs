@@ -39,6 +39,7 @@ fixPaths pkgname pkgtext =
              . map fixPath
              . filter (not . ("haddock" `isPrefixOf`))
              . filter (not . ("hs-libraries:" `isPrefixOf`))
+             . takeWhile (not . isPrefixOf "---")
              $ lines pkgtext
     
     fixPath str
