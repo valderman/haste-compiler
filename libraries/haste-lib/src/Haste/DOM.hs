@@ -8,7 +8,8 @@ module Haste.DOM (
     getFirstChild, getLastChild, getChildren, setChildren,
     getStyle, setStyle, getStyle', setStyle',
     getFileData, getFileName,
-    setClass, toggleClass, hasClass
+    setClass, toggleClass, hasClass,
+    click, focus, blur
   ) where
 import Haste.Prim
 import Haste.JSType
@@ -234,3 +235,27 @@ hasClass e c = liftIO $ getc e c
     {-# NOINLINE getc #-}
     getc :: Elem -> String -> IO Bool
     getc = ffi "(function(e,c) {return e.classList.contains(c);})"
+
+-- | Generate a click event on an element.
+click :: MonadIO m => Elem -> m ()
+click = liftIO . click'
+  where
+    {-# NOINLINE click' #-}
+    click' :: Elem -> IO ()
+    click' = ffi "(function(e) {e.click();})"
+
+-- | Generate a focus event on an element.
+focus :: MonadIO m => Elem -> m ()
+focus = liftIO . focus'
+  where
+    {-# NOINLINE focus' #-}
+    focus' :: Elem -> IO ()
+    focus' = ffi "(function(e) {e.focus();})"
+
+-- | Generate a blur event on an element.
+blur :: MonadIO m => Elem -> m ()
+blur = liftIO . blur'
+  where
+    {-# NOINLINE blur' #-}
+    blur' :: Elem -> IO ()
+    blur' = ffi "(function(e) {e.blur();})"
