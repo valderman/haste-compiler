@@ -9,7 +9,8 @@ module Haste.DOM (
     getStyle, setStyle, getStyle', setStyle',
     getFileData, getFileName,
     setClass, toggleClass, hasClass,
-    click, focus, blur
+    click, focus, blur,
+    documentBody
   ) where
 import Haste.Prim
 import Haste.JSType
@@ -17,6 +18,7 @@ import Data.Maybe (isNothing, fromJust)
 import Control.Monad.IO.Class
 import Haste.Foreign
 import Haste.Binary.Types
+import System.IO.Unsafe (unsafePerformIO)
 
 newtype Elem = Elem JSAny
 instance Pack Elem
@@ -259,3 +261,11 @@ blur = liftIO . blur'
     {-# NOINLINE blur' #-}
     blur' :: Elem -> IO ()
     blur' = ffi "(function(e) {e.blur();})"
+
+-- | The DOM node corresponding to document.body.
+documentBody :: Elem
+documentBody = unsafePerformIO getBody
+  where
+    {-# NOINLINE getBody #-}
+    getBody :: IO Elem
+    getBody = ffi "document.body"
