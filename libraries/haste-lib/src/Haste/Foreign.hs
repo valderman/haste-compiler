@@ -247,20 +247,43 @@ isNull = unsafePerformIO . ffi "(function(x) {return x === null;})"
 class FFI a where
   type T a
   unpackify :: T a -> a
-  -- | TODO: although the @export@ function, which is the only user-visible
-  --         interface to @packify@, is type safe, the function itself is not.
-  --         This should be fixed ASAP!
-  packify :: a -> a
 
-instance Marshal a => FFI (IO a) where
+instance Pack a => FFI (IO a) where
   type T (IO a) = IO Unpacked
   unpackify = fmap pack
-  packify m = fmap (unsafeCoerce . unpack) m
 
-instance (Marshal a, FFI b) => FFI (a -> b) where
+instance (Unpack a, FFI b) => FFI (a -> b) where
   type T (a -> b) = Unpacked -> T b
   unpackify f x = unpackify (f $! unpack x)
-  packify f x = packify (f $! pack (unsafeCoerce x))
+
+class IOFun a where
+  type X a
+  packify :: a -> X a
+
+instance Unpack a => IOFun (IO a) where
+  type X (IO a) = Unpacked
+  packify = unsafePerformIO . unpack' . toOpaque . fmap unpack
+    where
+      {-# NOINLINE unpack' #-}
+      unpack' :: Opaque (IO a) -> IO Unpacked
+      unpack' =
+        ffi (toJSStr $ "(function(f) {" ++
+             "  return (function() {" ++
+             "      var args=Array.prototype.slice.call(arguments,0);"++
+             "      args.push(0);" ++
+             "      return E(A(f, args));" ++
+             "    });" ++
+             "})")
+
+instance (Pack a, IOFun b) => IOFun (a -> b) where
+  type X (a -> b) = Unpacked -> X b
+  packify f = \x -> packify (f $! pack x)
+
+instance Unpack a => Unpack (IO a) where
+  unpack = packify
+
+instance (IOFun (a -> b)) => Unpack (a -> b) where
+  unpack = unsafeCoerce . packify
 
 -- | Creates a function based on the given string of Javascript code. If this
 --   code is not well typed or is otherwise incorrect, your program may crash
@@ -283,19 +306,9 @@ ffi = unpackify . unsafeEval
 --   --opt-google-closure or any option that implies it, you will instead need
 --   to access your exports through Haste[\'name\'](), or Closure will mangle
 --   your function names.
-export :: FFI a => JSString -> a -> IO ()
-export name f =
-    ffi (toJSStr $ "(function(s, f) {" ++
-         "  Haste[s] = function() {" ++
-         "      var args = Array.prototype.slice.call(arguments,0);" ++
-         "      args.push(0);" ++
-         "      return E(A(f, args));" ++
-         "    };" ++
-         "  return 0;" ++
-         "})") name f'
-  where
-    f' :: Unpacked
-    f' = unsafeCoerce $! packify f
+{-# NOINLINE export #-}
+export :: Unpack a => JSString -> a -> IO ()
+export = ffi "(function(s,f){Haste[s] = f;})"
 
 unsafeUnpack :: a -> Unpacked
 unsafeUnpack x =
