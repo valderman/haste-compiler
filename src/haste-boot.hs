@@ -180,6 +180,9 @@ buildLibs cfg = do
       -- Install array and haste-lib
       forM_ ["array", "haste-lib"] $ \pkg -> do
         inDirectory pkg $ hasteInst ("install" : ghcOpts)
+
+      -- Export monads-tf; it seems to be hidden by default
+      run_ hastePkgBinary ["expose", "monads-tf"] ""
   where
     ghcOpts = concat [
         if tracePrimops cfg then ["--ghc-option=-debug"] else [],
