@@ -16,7 +16,7 @@ import Data.Monoid
 --   This will need to change when we start supporting building "binaries"
 --   using cabal, since we'll have all sorts of funny package names then.
 mainSym :: Name
-mainSym = name "main" (Just ("main", "Main"))
+mainSym = name "main" (Just ("main", ":Main"))
 
 -- | Link a program using the given config and input file name.
 link :: Config -> String -> FilePath -> IO ()
@@ -87,6 +87,7 @@ getModuleOf libpath v =
   case moduleOf v of
     Just "GHC.Prim" -> return foreignModule
     Just ""         -> return foreignModule
+    Just (':':m)    -> getModule libpath (maybe "main" id $ pkgOf v) m
     Just m          -> getModule libpath (maybe "main" id $ pkgOf v) m
     _               -> return foreignModule
 

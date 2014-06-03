@@ -59,19 +59,10 @@ import GHC.ConsoleHandler
 -- | 'runMainIO' is wrapped around 'Main.main' (or whatever main is
 -- called in the program).  It catches otherwise uncaught exceptions,
 -- and also flushes stdout\/stderr before exiting.
+--
+-- For Haste, this is not really necessary.
 runMainIO :: IO a -> IO a
-runMainIO main = 
-    do 
-      main_thread_id <- myThreadId
-      weak_tid <- mkWeakThreadId main_thread_id
-      install_interrupt_handler $ do
-           m <- deRefWeak weak_tid 
-           case m of
-               Nothing  -> return ()
-               Just tid -> throwTo tid (toException UserInterrupt)
-      main -- hs_exit() will flush
-    `catch`
-      topHandler
+runMainIO main = main
 
 install_interrupt_handler :: IO () -> IO ()
 #ifdef mingw32_HOST_OS
