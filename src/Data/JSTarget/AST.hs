@@ -102,15 +102,10 @@ data Stm where
 -- | Case alternatives - an expression to match and a branch.
 type Alt = (Exp, Stm)
 
--- | Module fingerprint, containing a hash of compiler options and other things
---   that may be used to determine whether the module needs recompiling or not.
-type Fingerprint = String
-
--- | Represents a module. A module has a name, a fingerprint, an owning
+-- | Represents a module. A module has a name, an owning
 --   package, a dependency map of all its definitions, and a bunch of
 --   definitions.
 data Module = Module {
-    modFingerprint :: !Fingerprint,
     modPackageId   :: !String,
     modName        :: !String,
     modDeps        :: !(M.Map Name (S.Set Name)),
@@ -120,7 +115,6 @@ data Module = Module {
 -- | Imaginary module for foreign code that may need one.
 foreignModule :: Module
 foreignModule = Module {
-    modFingerprint = "",
     modPackageId   = "",
     modName        = "",
     modDeps        = M.empty,

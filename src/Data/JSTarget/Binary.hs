@@ -13,9 +13,9 @@ instance Binary a => Binary (AST a) where
   get = AST <$> get <*> get
 
 instance Binary Module where
-  put (Module fp pkgid name deps defs) =
-    put fp >> put pkgid >> put name >> put deps >> put defs
-  get = Module <$> get <*> get <*> get <*> get <*> get
+  put (Module pkgid name deps defs) =
+    put pkgid >> put name >> put deps >> put defs
+  get = Module <$> get <*> get <*> get <*> get
 
 instance Binary Var where
   put (Foreign str)           = putWord8 0 >> put str

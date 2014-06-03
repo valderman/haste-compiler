@@ -43,14 +43,12 @@ import Haste.PrimOps
 import Haste.Builtins
 
 generate :: Config
-         -> Fingerprint
          -> String
          -> ModuleName
          -> [StgBinding]
          -> J.Module
-generate cfg fp pkgid modname binds =
+generate cfg pkgid modname binds =
   Module {
-      modFingerprint = fp,
       modPackageId   = pkgid,
       modName        = moduleNameString modname,
       modDeps        = foldl' insDep M.empty theMod,

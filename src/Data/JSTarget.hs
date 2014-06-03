@@ -1,7 +1,7 @@
 -- | Javascript subset as a target language for compilers.
 module Data.JSTarget (
     module Constr, module Op, module Optimize, module Trav,
-    Fingerprint, PPOpts (..), pretty, runPP, prettyProg, def,
+    PPOpts (..), pretty, runPP, prettyProg, def,
     Arity, Comment, Shared, Name (..), Var (..), LHS, Call,
     Lit, Exp, Stm, Alt, AST (..), Module (..),
     foreignModule, moduleOf, pkgOf, blackHole, blackHoleVar

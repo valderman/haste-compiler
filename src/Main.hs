@@ -118,49 +118,51 @@ compiler cmdargs = do
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
 
-      runGhc (Just libdir) $ handleSourceError (const $ liftIO exitFailure) $ do
+      runGhc (Just libdir) $ do
         -- Handle dynamic GHC flags. Make sure __HASTE__ is #defined.
         let args = "-D__HASTE__" : map unLoc ghcargs'
+            justDie = const $ liftIO exitFailure
         dynflags <- getSessionDynFlags
-        (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)
-        _ <- setSessionDynFlags dynflags' {ghcLink = NoLink,
-                                           ghcMode = usedGhcMode}
+        defaultCleanupHandler dynflags $ handleSourceError justDie $ do
+          (dynflags', files, _) <- parseDynamicFlags dynflags (map noLoc args)
+          _ <- setSessionDynFlags dynflags' {ghcLink = NoLink,
+                                             ghcMode = usedGhcMode}
 
-        -- Prepare and compile all needed targets.
-        let files' = map unLoc files
-            printErrorAndDie e = printException e >> liftIO exitFailure
-        deps <- handleSourceError printErrorAndDie $ do
-          ts <- mapM (flip guessTarget Nothing) files'
-          setTargets ts
-          _ <- load LoadAllTargets
-          depanal [] False
-        mapM_ (compile cfg dynflags') deps
+          -- Prepare and compile all needed targets.
+          let files' = map unLoc files
+              printErrorAndDie e = printException e >> liftIO exitFailure
+          deps <- handleSourceError printErrorAndDie $ do
+            ts <- mapM (flip guessTarget Nothing) files'
+            setTargets ts
+            _ <- load LoadAllTargets
+            depanal [] False
+          mapM_ (compile cfg dynflags') deps
 
-        -- Link everything together into a .js file.
-        when (performLink cfg) $ liftIO $ do
-          flip mapM_ files' $ \file -> do
-            let outfile = outFile cfg cfg file
-            logStr $ "Linking " ++ outfile
+          -- Link everything together into a .js file.
+          when (performLink cfg) $ liftIO $ do
+            flip mapM_ files' $ \file -> do
+              let outfile = outFile cfg cfg file
+              logStr $ "Linking " ++ outfile
 #if __GLASGOW_HASKELL__ >= 706
-            let pkgid = showPpr dynflags $ thisPackage dynflags'
+              let pkgid = showPpr dynflags $ thisPackage dynflags'
 #else
-            let pkgid = showPpr $ thisPackage dynflags'
+              let pkgid = showPpr $ thisPackage dynflags'
 #endif
-            link cfg pkgid file
-            case useGoogleClosure cfg of
-              Just clopath -> closurize clopath
-                                        outfile
-                                        (useGoogleClosureFlags cfg)
-              _            -> return ()
-            when (outputHTML cfg) $ do
-              res <- Sh.shell $ Sh.withCustomTempFile "." $ \tmp h -> do
-                prog <- Sh.file outfile
-                Sh.hPutStrLn h (htmlSkeleton outfile prog)
-                Sh.liftIO $ hClose h
-                Sh.mv tmp outfile
-              case res of
-                Right () -> return ()
-                Left err -> error $ "Couldn't output HTML file: " ++ err
+              link cfg pkgid file
+              case useGoogleClosure cfg of
+                Just clopath -> closurize clopath
+                                          outfile
+                                          (useGoogleClosureFlags cfg)
+                _            -> return ()
+              when (outputHTML cfg) $ do
+                res <- Sh.shell $ Sh.withCustomTempFile "." $ \tmp h -> do
+                  prog <- Sh.file outfile
+                  Sh.hPutStrLn h (htmlSkeleton outfile prog)
+                  Sh.liftIO $ hClose h
+                  Sh.mv tmp outfile
+                case res of
+                  Right () -> return ()
+                  Left err -> error $ "Couldn't output HTML file: " ++ err
 
 -- | Produce an HTML skeleton with an embedded JS program.
 htmlSkeleton :: FilePath -> String -> String
@@ -201,7 +203,6 @@ prepare dynflags theMod = do
 #endif
       return prepd
 
-
 -- | Run Google Closure on a file.
 closurize :: FilePath -> FilePath -> [String] -> IO ()
 closurize cloPath f arguments = do
@@ -219,57 +220,23 @@ closurize cloPath f arguments = do
     Left e  -> fail $ "Couldn't execute Google Closure compiler: " ++ e
     Right _ -> return ()
 
--- | Generate a unique fingerprint for the compiler, command line arguments,
---   etc.
-genFingerprint :: String -> FilePath -> [String] -> Fingerprint
-genFingerprint modname targetpath args =
-  {- md5sum $ B.pack $ -} show [
-      modname,
-      targetpath,
-      show bootVersion,
-      show args
-    ]
-
 -- | Compile a module into a .jsmod intermediate file.
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
-    fp <- liftIO $ fmap (genFingerprint myName targetpath) getArgs
-    should_recompile <- liftIO $ shouldRecompile fp modSummary targetpath
-    when should_recompile $ do
-      case ms_hsc_src modSummary of
-        HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
-        _          -> do
-          (pgm, name) <- prepare dynflags modSummary
+    case ms_hsc_src modSummary of
+      HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
+      _          -> do
+        (pgm, name) <- prepare dynflags modSummary
 #if __GLASGOW_HASKELL__ >= 706
-          let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
-              cfg' = cfg {showOutputable = showPpr dynflags}
+        let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
+            cfg' = cfg {showOutputable = showPpr dynflags}
 #else
-          let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
-              cfg' = cfg {showOutputable = showPpr}
+        let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
+            cfg' = cfg {showOutputable = showPpr}
 #endif
-              theCode = generate cfg' fp pkgid name pgm
-          liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
-          liftIO $ writeModule targetpath theCode
+            theCode = generate cfg' pkgid name pgm
+        liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
+        liftIO $ writeModule targetpath theCode
   where
     myName = moduleNameString $ moduleName $ ms_mod modSummary
     targetpath = targetLibPath cfg
-
-shouldRecompile :: Fingerprint -> ModSummary -> FilePath -> IO Bool
-shouldRecompile _ _ _ = return True
-{-
-shouldRecompile fp ms path = do
-    exists <- isFile fpPath
-    if exists
-      then do
-        fp' <- readModuleFingerprint path pkgid modname
-        jsmtime <- getModified fpPath
-        return $ ms_hs_date ms > jsmtime || fp /= fp'
-      else do
-        return True
-  where
-    modname = moduleNameString $ ms_mod_name ms
-    file    = moduleNameSlashes (ms_mod_name ms) ++ ".jsmod"
-    path'   = path ++ "/" ++ pkgid ++ "/" ++ file
-    pkgid   = showOutputable $ modulePackageId $ ms_mod ms
-    fpPath  = fromString path'
--}

@@ -1,5 +1,5 @@
 -- | Read and write JSMods.
-module Haste.Module (writeModule, readModule, readModuleFingerprint) where
+module Haste.Module (writeModule, readModule) where
 import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import Control.Shell
@@ -17,25 +17,13 @@ moduleFilePath basepath pkgid modname =
   flip addExtension jsmodExt $
     basepath </> pkgid </> (moduleNameSlashes $ mkModuleName modname)
 
-readModuleFingerprint :: FilePath -> String -> String -> IO Fingerprint
-readModuleFingerprint basepath pkgid modname =
-  fromRight "readModuleFingerprint" . shell $ do
-    x <- isFile path
-    let path' = if x then path else syspath 
-    liftIO $ withFile path' ReadMode $ \h -> do
-      fp <- decode <$> B.hGetContents h
-      return $! fp
-  where
-    path = moduleFilePath "" "" modname
-    syspath = moduleFilePath basepath pkgid modname
-
 -- | Write a module to file, with the extension specified in `fileExt`.
 --   Assuming that fileExt = "jsmod", a module Foo.Bar is written to
 --   basepath/Foo/Bar.jsmod
 --   If any directory in the path where the module is to be written doesn't
 --   exist, it gets created.
 writeModule :: FilePath -> Module -> IO ()
-writeModule basepath m@(Module _ pkgid modname _ _) =
+writeModule basepath m@(Module pkgid modname _ _) =
   fromRight "writeModule" . shell $ do
     mkdir True (takeDirectory path)
     liftIO $ B.writeFile path (encode m)
