@@ -11,6 +11,7 @@ import CoreToStg
 import StgSyn (StgBinding)
 import HscTypes
 import GhcMonad
+import Module (packageIdString)
 import System.Environment (getArgs)
 import Control.Monad (when)
 import Haste
@@ -114,7 +115,7 @@ compiler cmdargs = do
     Left help -> putStrLn help
 
     -- We got a config and a set of arguments for GHC; let's compile!
-    Right (cfg, ghcargs) -> do
+    Right (config, ghcargs) -> do
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
 
@@ -136,6 +137,7 @@ compiler cmdargs = do
             setTargets ts
             _ <- load LoadAllTargets
             depanal [] False
+          let cfg = fillLinkerConfig dynflags' config
           mapM_ (compile cfg dynflags') deps
 
           -- Link everything together into a .js file.
@@ -240,3 +242,16 @@ compile cfg dynflags modSummary = do
   where
     myName = moduleNameString $ moduleName $ ms_mod modSummary
     targetpath = targetLibPath cfg
+
+-- | Fill in linkage info, such as whether to link at all and what the program
+--   entry point is.
+fillLinkerConfig :: DynFlags -> Config -> Config
+fillLinkerConfig df cfg =
+    cfg {
+        mainMod = mainmod,
+        performLink = maybe False (const $ performLink cfg) mainmod
+      }
+  where
+    mainmod =
+      Just (packageIdString $ modulePackageId (mainModIs df),
+            moduleNameString $ moduleName (mainModIs df))

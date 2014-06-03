@@ -3,7 +3,6 @@ module Haste.Module (writeModule, readModule) where
 import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import Control.Shell
-import System.IO
 import Control.Applicative
 import Data.JSTarget
 import Data.Binary
@@ -33,13 +32,14 @@ writeModule basepath m@(Module pkgid modname _ _) =
 -- | Read a module from file. If the module is not found at the specified path,
 --   libpath/path is tried instead. Panics if the module is found on neither
 --   path.
-readModule :: FilePath -> String -> String -> IO Module
+readModule :: FilePath -> String -> String -> IO (Maybe Module)
 readModule basepath pkgid modname = fromRight "readModule" . shell $ do
     x <- isFile path
     let path' = if x then path else syspath
-    guard ("JSMod for module " ++ pkgid ++ ":" ++ modname ++ " not found") $ do
-      isFile path'
-    decode <$> liftIO (B.readFile path')
+    isF <- isFile path'
+    if isF
+       then Just . decode <$> liftIO (B.readFile path')
+       else return Nothing
   where
     path = moduleFilePath "." pkgid modname
     syspath = moduleFilePath basepath pkgid modname

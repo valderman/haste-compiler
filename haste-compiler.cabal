@@ -96,7 +96,8 @@ Executable hastec
         ghc-paths,
         random,
         system-fileio,
-        shellmate >= 0.1.5
+        shellmate >= 0.1.5,
+        either
     Main-Is:
         Main.hs
     Other-Modules:

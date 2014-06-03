@@ -103,7 +103,10 @@ data Config = Config {
     outputHTML :: Bool,
     -- | GHC DynFlags used for STG generation.
     --   Currently only used for printing StgSyn values.
-    showOutputable :: forall a. Outputable a => a -> String
+    showOutputable :: forall a. Outputable a => a -> String,
+    -- | Which module contains the program's main function?
+    --   Defaults to Just ("main", "Main")
+    mainMod :: Maybe (String, String)
   }
 
 -- | Default compiler configuration.
@@ -130,5 +133,6 @@ defConfig = Config {
     useGoogleClosureFlags = [],
     jsExternals      = [],
     outputHTML       = False,
-    showOutputable   = const "No showOutputable defined in config!"
+    showOutputable   = const "No showOutputable defined in config!",
+    mainMod          = Just ("main", "Main")
   }
