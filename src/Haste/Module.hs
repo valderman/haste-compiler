@@ -18,7 +18,8 @@ moduleFilePath basepath pkgid modname =
     basepath </> pkgid </> (moduleNameSlashes $ mkModuleName modname)
 
 readModuleFingerprint :: FilePath -> String -> String -> IO Fingerprint
-readModuleFingerprint basepath pkgid modname = fromRight . shell $ do
+readModuleFingerprint basepath pkgid modname =
+  fromRight "readModuleFingerprint" . shell $ do
     x <- isFile path
     let path' = if x then path else syspath 
     liftIO $ withFile path' ReadMode $ \h -> do
@@ -34,7 +35,8 @@ readModuleFingerprint basepath pkgid modname = fromRight . shell $ do
 --   If any directory in the path where the module is to be written doesn't
 --   exist, it gets created.
 writeModule :: FilePath -> Module -> IO ()
-writeModule basepath m@(Module _ pkgid modname _ _) = fromRight . shell $ do
+writeModule basepath m@(Module _ pkgid modname _ _) =
+  fromRight "writeModule" . shell $ do
     mkdir True (takeDirectory path)
     liftIO $ B.writeFile path (encode m)
   where
@@ -44,13 +46,19 @@ writeModule basepath m@(Module _ pkgid modname _ _) = fromRight . shell $ do
 --   libpath/path is tried instead. Panics if the module is found on neither
 --   path.
 readModule :: FilePath -> String -> String -> IO Module
-readModule basepath pkgid modname = fromRight . shell $ do
+readModule basepath pkgid modname = fromRight "readModule" . shell $ do
     x <- isFile path
-    let path' = if x then path else syspath 
+    let path' = if x then path else syspath
+    guard ("JSMod for module " ++ pkgid ++ ":" ++ modname ++ " not found") $ do
+      isFile path'
     decode <$> liftIO (B.readFile path')
   where
     path = moduleFilePath "." pkgid modname
     syspath = moduleFilePath basepath pkgid modname
 
-fromRight :: IO (Either a b) -> IO b
-fromRight m = do Right x <- m ; return x
+fromRight :: String -> IO (Either String b) -> IO b
+fromRight from m = do
+  ex <- m
+  case ex of
+    Right x -> return x
+    Left e  -> fail $ "shell expression failed in " ++ from ++ ": " ++ e
