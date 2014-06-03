@@ -47,6 +47,8 @@ fixPaths pkgname pkgtext =
         "library-dirs: " ++ importDir </> pkgname
       | isKey "import-dirs:" str =
         "import-dirs: " ++ importDir </> pkgname
+      | isKey "include-dirs:" str =
+        "include-dirs: " ++ includeDir
       | isKey "pkgroot:" str =
         "pkgroot: \"" ++ pkgRoot ++ "\""
       | "-inplace" `isSuffixOf` str =
@@ -59,5 +61,6 @@ fixPaths pkgname pkgtext =
     isKey key str =
       and $ zipWith (==) key str
     
-    importDir = pkgLibDir
-    pkgRoot   = hasteInstDir
+    importDir  = pkgLibDir
+    includeDir = hasteDir </> "include"
+    pkgRoot    = hasteInstDir
