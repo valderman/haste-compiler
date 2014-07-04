@@ -68,7 +68,6 @@ Executable haste-boot
         bytestring,
         tar,
         bzlib,
-        zip-archive == 0.2,
         transformers,
         network,
         HTTP,

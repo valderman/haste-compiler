@@ -11,7 +11,6 @@ import Codec.Archive.Tar
 import System.Environment (getArgs)
 import System.Exit
 import Control.Monad
-import qualified Codec.Archive.Zip as Zip
 import Haste.Environment
 import Haste.Version
 import Control.Shell
@@ -126,19 +125,13 @@ fetchLibs tmpdir = do
 installClosure :: Shell ()
 installClosure = do
     echo "Downloading Google Closure compiler..."
-    downloadAndUnpackClosure `orElse` do
+    downloadClosure `orElse` do
       echo "Couldn't install Closure compiler; continuing without."
   where
-    downloadAndUnpackClosure = do
-      file <- downloadFile closureURI
-      let cloArch = Zip.toArchive file
-      case Zip.findEntryByPath "compiler.jar" cloArch of
-        Just compiler ->
-          liftIO $ BS.writeFile closureCompiler (Zip.fromEntry compiler)
-        _ ->
-          fail "Unable to unpack Closure compiler"
+    downloadClosure = do
+      downloadFile closureURI >>= (liftIO . BS.writeFile closureCompiler)
     closureURI =
-      "http://dl.google.com/closure-compiler/compiler-latest.zip"
+      "http://valderman.github.io/haste-libs/compiler.jar"
 
 -- | Build haste's base libs.
 buildLibs :: Cfg -> Shell ()
