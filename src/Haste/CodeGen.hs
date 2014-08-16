@@ -257,9 +257,11 @@ genCase t ex scrut alts = do
   -- sole alternative.
   case (isUnaryUnboxedTuple scrut, alts) of
     (True, [(_, as, _, expr)]) | [arg] <- filter hasRepresentation as -> do
+      scrut' <- genVar scrut
       arg' <- genVar arg
-      addLocal [arg']
-      continue (newVar (reorderableType scrut) arg' ex')
+      addLocal [scrut', arg']
+      continue (newVar (reorderableType scrut) scrut' ex')
+      continue (newVar (reorderableType scrut) arg' (varExp scrut'))
       genEx expr
     (True, _) -> do
         error "Case on unary unboxed tuple with more than one alt! WTF?!"
