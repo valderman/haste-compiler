@@ -302,7 +302,7 @@ genOp cfg op xs =
     PopCnt16Op     -> Right $ callForeign "popCnt" [head xs]
     PopCnt32Op     -> Right $ callForeign "popCnt" [head xs]
     DelayOp        -> Right $ defState
-    SeqOp          -> Right $ callForeign "E" [head xs]
+    SeqOp          -> Right $ eval $ head xs
     AtomicallyOp   -> Right $ callSaturated (xs !! 0) []
     -- Get the data constructor tag from a value.
     DataToTagOp    -> callF "dataToTag"

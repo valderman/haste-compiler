@@ -102,6 +102,10 @@ instance Pretty Exp where
     pp l .+. sp .+. "=" .+. sp .+. pp r
   pp (IfEx c th el) = do
     pp c .+. sp .+. "?" .+. sp .+. pp th .+. sp .+. ":" .+. sp .+. pp el
+  pp (Eval x) = do
+    "E(" .+. pp x .+. ")"
+  pp (Thunk x) = do
+    "new T(function(){" .+. newl .+. indent (pp x) .+. "})"
 
 instance Pretty (Var, Exp) where
   pp (v, ex) = pp v .+. sp .+. "=" .+. sp .+. pp ex

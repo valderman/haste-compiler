@@ -95,16 +95,12 @@ newVars prefix n =
 
 -- | Create a thunk.
 thunk :: AST Stm -> AST Exp
-thunk stm = callForeign "new T" [Fun Nothing [] <$> stm]
+thunk = fmap Thunk
 
 -- | Unpack the given expression if it's a thunk without internal bindings.
 fromThunk :: AST Exp -> Maybe (AST Exp)
-fromThunk (AST (Call 0 Fast (Var (Foreign "new T")) [body]) js) =
-  case body of
-    Fun Nothing [] (Return ex) -> Just (AST ex js)
-    _                          -> Nothing
-fromThunk _ =
-  Nothing
+fromThunk (AST (Thunk (Return ex)) js) = Just (AST ex js)
+fromThunk _                            = Nothing
 
 -- | Returns True if the given expression causes evaluation by appearing
 --   outside a closure, otherwise False.
@@ -119,10 +115,12 @@ evaluates (Index a b)    = evaluates a || evaluates b
 evaluates (Arr xs)       = any evaluates xs
 evaluates (AssignEx a b) = evaluates a || evaluates b
 evaluates (IfEx c a b)   = evaluates c || evaluates a || evaluates b
+evaluates (Thunk _)      = False
+evaluates (Eval x)       = True
 
 -- | Evaluate an expression that may or may not be a thunk.
 eval :: AST Exp -> AST Exp
-eval = callForeign "E" . (:[])
+eval = fmap Eval
 
 -- | A binary operator.
 binOp :: BinOp -> AST Exp -> AST Exp -> AST Exp

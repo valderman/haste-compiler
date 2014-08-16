@@ -60,21 +60,25 @@ instance Binary Exp where
   put (Arr exs)         = putWord8 7 >> put exs
   put (AssignEx l r)    = putWord8 8 >> put l >> put r
   put (IfEx c th el)    = putWord8 9 >> put c >> put th >> put el
+  put (Eval x)          = putWord8 10 >> put x
+  put (Thunk x)         = putWord8 11 >> put x
   
   get = do
     tag <- getWord8
     case tag of
-      0 -> Var <$> get
-      1 -> Lit <$> get
-      2 -> Not <$> get
-      3 -> BinOp <$> get <*> get <*> get
-      4 -> Fun <$> get <*> get <*> get
-      5 -> Call <$> get <*> get <*> get <*> get
-      6 -> Index <$> get <*> get
-      7 -> Arr <$> get
-      8 -> AssignEx <$> get <*> get
-      9 -> IfEx <$> get <*> get <*> get
-      n -> error $ "Bad tag in get :: Get Exp: " ++ show n
+      0  -> Var <$> get
+      1  -> Lit <$> get
+      2  -> Not <$> get
+      3  -> BinOp <$> get <*> get <*> get
+      4  -> Fun <$> get <*> get <*> get
+      5  -> Call <$> get <*> get <*> get <*> get
+      6  -> Index <$> get <*> get
+      7  -> Arr <$> get
+      8  -> AssignEx <$> get <*> get
+      9  -> IfEx <$> get <*> get <*> get
+      10 -> Eval <$> get
+      11 -> Thunk <$> get
+      n  -> error $ "Bad tag in get :: Get Exp: " ++ show n
 
 instance Binary Stm where
   put (Case e def alts next) =

@@ -170,11 +170,9 @@ zapJSStringConversions ast =
            Call _ _ (Var (Foreign "unCStr")) [x]]) =
       return x
     opt (Call _ _ (Var (Foreign "toJSStr")) [
-           Call _ _ (Var (Foreign "E")) [
-             Call _ _ (Var (Foreign "unCStr")) [x]]]) =
+           Eval (Call _ _ (Var (Foreign "unCStr")) [x])]) =
       return x
-    opt (Call _ _ (Var (Foreign "new T"))
-         [Fun _ [] (Return x@(Call _ _ (Var (Foreign "unCStr")) [Lit _]))]) =
+    opt (Thunk (Return x@(Call _ _ (Var (Foreign "unCStr")) [Lit _]))) =
       return x
     opt x =
       return x
@@ -195,7 +193,7 @@ optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
   where
-    optEx (Call _ _ (Var (Foreign "E")) [x])
+    optEx (Eval x)
       | Just x' <- fromThunkEx x = return x'
       | Fun _ _ _ <- x           = return x
     optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
@@ -207,12 +205,8 @@ optimizeThunks ast =
 
 -- | Unpack the given expression if it's a thunk.
 fromThunk :: Exp -> Maybe Stm
-fromThunk (Call _ Fast (Var (Foreign "new T")) [body]) =
-  case body of
-    Fun Nothing [] (b) -> Just b
-    _                  -> Nothing
-fromThunk _ =
-  Nothing
+fromThunk (Thunk body) = Just body
+fromThunk _            = Nothing
 
 -- | Unpack the given expression if it's a thunk without internal bindings.
 fromThunkEx :: Exp -> Maybe Exp
@@ -235,12 +229,12 @@ computingThunk e =
 computingEx :: Exp -> Bool
 computingEx ex =
   case ex of
-    Var _                     -> False
-    Lit _                     -> False
-    Fun _ _ _                 -> False
-    Arr arr                   -> any computingEx arr
-    e | Just t <- fromThunk e -> False
-      | otherwise             -> True
+    Var _      -> False
+    Lit _      -> False
+    Fun _ _ _  -> False
+    Thunk _    -> False
+    Arr arr    -> any computingEx arr
+    _          -> True
 
 
 -- | Gather a map of all inlinable symbols; that is, the once that are used
@@ -409,5 +403,7 @@ tailLoopify f fun@(Fun mname args body) = do
     contains (Arr xs) var         = any (`contains` var) xs
     contains (AssignEx l r) var   = l `contains` var || r `contains` var
     contains (IfEx c t e) var     = any (`contains` var) [c,t,e]
+    contains (Eval x) var         = x `contains` var
+    contains (Thunk _) _          = False
 tailLoopify _ fun = do
   return fun

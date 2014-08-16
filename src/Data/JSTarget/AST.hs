@@ -85,6 +85,8 @@ data Exp where
   Arr       :: [Exp] -> Exp
   AssignEx  :: Exp -> Exp -> Exp
   IfEx      :: Exp -> Exp -> Exp -> Exp
+  Eval      :: Exp -> Exp
+  Thunk     :: Stm -> Exp
   deriving (Eq, Show)
 
 -- | Statements. The only mildly interesting thing here are the Case and Jump
