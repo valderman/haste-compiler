@@ -369,6 +369,7 @@ tailLoopify f fun@(Fun mname args body) = do
     -- Only traverse until we find a closure
     createsClosures = foldJS (\acc _ -> not acc) isClosure False
     isClosure _ (Exp (Fun _ _ _)) = pure True
+    isClosure _ (Exp (Thunk _))   = pure True
     isClosure acc _               = pure acc
 
     -- Assign any changed vars, then loop.
