@@ -138,5 +138,5 @@ defConfig = Config {
     outputHTML       = False,
     showOutputable   = const "No showOutputable defined in config!",
     mainMod          = Just ("main", "Main"),
-    optimize         = False
+    optimize         = True
   }
