@@ -106,7 +106,10 @@ data Config = Config {
     showOutputable :: forall a. Outputable a => a -> String,
     -- | Which module contains the program's main function?
     --   Defaults to Just ("main", "Main")
-    mainMod :: Maybe (String, String)
+    mainMod :: Maybe (String, String),
+    -- | Perform optimizations.
+    --   Defaults to True.
+    optimize :: Bool
   }
 
 -- | Default compiler configuration.
@@ -134,5 +137,6 @@ defConfig = Config {
     jsExternals      = [],
     outputHTML       = False,
     showOutputable   = const "No showOutputable defined in config!",
-    mainMod          = Just ("main", "Main")
+    mainMod          = Just ("main", "Main"),
+    optimize         = False
   }

@@ -204,7 +204,8 @@ genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
     addLocal v'
   expr <- genRhs (isJust funsInRecGroup) rhs
   popBind
-  let expr' = optimizeFun v' expr
+  opt <- optimize `fmap` getCfg
+  let expr' = if opt then optimizeFun v' expr else expr
   continue $ newVar True v' expr'
 genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"

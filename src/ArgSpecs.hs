@@ -13,6 +13,10 @@ argSpecs = [
               updateCfg = \cfg _ -> cfg {ppOpts = debugPPOpts},
               info = "Output indented, fairly readable code, with all " ++
                      "external names included in comments."},
+    ArgSpec { optName = "disable-js-optimizations",
+              updateCfg = \cfg _ -> cfg {optimize = False},
+              info = "Don't perform any optimizations on the JS at all. " ++
+                     "Handy for debugging."},
     ArgSpec { optName = "full-unicode",
               updateCfg = \cfg _ -> fullUnicode cfg,
               info = "Enable full Unicode support. Will bloat your output by "
