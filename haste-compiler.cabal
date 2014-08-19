@@ -90,6 +90,7 @@ Executable hastec
         containers,
         data-default,
         bytestring >= 0.9.2.1,
+        utf8-string,
         blaze-builder,
         array,
         ghc-paths,

@@ -10,7 +10,7 @@ import Data.Char
 import Data.List (partition, foldl')
 import Data.Maybe (isJust)
 #if __GLASGOW_HASKELL__ >= 707
-import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.UTF8 as B
 #endif
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -463,7 +463,7 @@ genLit :: L.Literal -> JSGen Config (AST Exp)
 genLit l = do
   case l of
 #if __GLASGOW_HASKELL__ >= 707
-    MachStr s           -> return . lit $ B.unpack s
+    MachStr s           -> return . lit $ B.toString s
 #else
     MachStr s           -> return . lit $ unpackFS s
 #endif
