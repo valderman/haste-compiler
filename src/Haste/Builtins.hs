@@ -4,6 +4,9 @@ import GhcPlugins as P
 import Data.JSTarget as J
 import Control.Applicative
 
+-- TODO: proxy# (and probably void#, realWorld# and coercionToken# as well)
+--       should really just go away in the final code.
+
 toBuiltin :: P.Var -> Maybe J.Var
 toBuiltin v =
   case (modname, varname) of
@@ -12,6 +15,8 @@ toBuiltin v =
     (Just "GHC.Prim", "realWorld#") ->
       Just $ foreignVar "_"
     (Just "GHC.Prim", "void#") ->
+      Just $ foreignVar "_"
+    (Just "GHC.Prim", "proxy#") ->
       Just $ foreignVar "_"
     (Just "GHC.Err", "error") ->
       Just $ foreignVar "err"
