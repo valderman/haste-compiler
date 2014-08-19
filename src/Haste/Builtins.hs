@@ -11,7 +11,7 @@ toBuiltin :: P.Var -> Maybe J.Var
 toBuiltin v =
   case (modname, varname) of
     (Just "GHC.Prim", "coercionToken#") ->
-      Just $ foreignVar "coercionToken"
+      Just $ foreignVar "_"
     (Just "GHC.Prim", "realWorld#") ->
       Just $ foreignVar "_"
     (Just "GHC.Prim", "void#") ->
