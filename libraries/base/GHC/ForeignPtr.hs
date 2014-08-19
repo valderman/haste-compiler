@@ -255,17 +255,8 @@ addForeignPtrFinalizer :: FinalizerPtr a -> ForeignPtr a -> IO ()
 -- ^This function adds a finalizer to the given foreign object.  The
 -- finalizer will run /before/ all other finalizers for the same
 -- object which have already been registered.
-addForeignPtrFinalizer (FunPtr fp) (ForeignPtr p c) = case c of
-  PlainForeignPtr r -> f r >> return ()
-  MallocPtr     _ r -> f r >> return ()
-  _ -> error "GHC.ForeignPtr: attempt to add a finalizer to a plain pointer"
- where
-    f r =
-      noMixing CFinalizers r $
-        IO $ \s ->
-          case r of { IORef (STRef r#) ->
-          case mkWeakForeignEnv# r# () fp p 0# nullAddr# s of { (# s1, w #) ->
-          (# s1, finalizeForeign w #) }}
+addForeignPtrFinalizer (FunPtr fp) (ForeignPtr p c) =
+  error "Haste doesn't support foreign pointers with finalizers!"
 
 addForeignPtrFinalizerEnv ::
   FinalizerEnvPtr env a -> Ptr env -> ForeignPtr a -> IO ()
@@ -273,17 +264,9 @@ addForeignPtrFinalizerEnv ::
 -- passed an additional environment parameter to be passed to the
 -- finalizer.  The environment passed to the finalizer is fixed by the
 -- second argument to 'addForeignPtrFinalizerEnv'
-addForeignPtrFinalizerEnv (FunPtr fp) (Ptr ep) (ForeignPtr p c) = case c of
-  PlainForeignPtr r -> f r >> return ()
-  MallocPtr     _ r -> f r >> return ()
-  _ -> error "GHC.ForeignPtr: attempt to add a finalizer to a plain pointer"
- where
-    f r =
-      noMixing CFinalizers r $
-        IO $ \s ->
-          case r of { IORef (STRef r#) ->
-          case mkWeakForeignEnv# r# () fp p 1# ep s of { (# s1, w #) ->
-          (# s1, finalizeForeign w #) }}
+addForeignPtrFinalizerEnv (FunPtr fp) (Ptr ep) (ForeignPtr p c) =
+  error "Haste doesn't support foreign pointers with finalizers!"
+
 
 finalizeForeign :: Weak# () -> IO ()
 finalizeForeign w = IO $ \s ->

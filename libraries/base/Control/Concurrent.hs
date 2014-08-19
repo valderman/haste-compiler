@@ -430,7 +430,7 @@ forkOS action0
 isCurrentThreadBound :: IO Bool
 isCurrentThreadBound = IO $ \ s# ->
     case isCurrentThreadBound# s# of
-        (# s2#, flg #) -> (# s2#, not (flg ==# 0#) #)
+        (# s2#, flg #) -> (# s2#, not (isTrue# (flg ==# 0#)) #)
 
 
 {- | 

@@ -18,16 +18,14 @@
 --
 -----------------------------------------------------------------------------
 
--- #hide
 module GHC.Real where
 
-import GHC.HasteWordInt
 import GHC.Base
 import GHC.Num
 import GHC.List
 import GHC.Enum
 import GHC.Show
-import GHC.Err
+import {-# SOURCE #-} GHC.Exception( divZeroException, overflowException, ratioZeroDenomException )
 
 #ifdef OPTIMISE_INTEGER_GCD_LCM
 import GHC.Integer.GMP.Internals
@@ -41,6 +39,29 @@ default ()              -- Double isn't available yet,
                         -- and we shouldn't be using defaults anyway
 \end{code}
 
+
+%*********************************************************
+%*                                                      *
+       Divide by zero and arithmetic overflow
+%*                                                      *
+%*********************************************************
+
+We put them here because they are needed relatively early
+in the libraries before the Exception type has been defined yet.
+
+\begin{code}
+{-# NOINLINE divZeroError #-}
+divZeroError :: a
+divZeroError = raise# divZeroException
+
+{-# NOINLINE ratioZeroDenominatorError #-}
+ratioZeroDenominatorError :: a
+ratioZeroDenominatorError = raise# ratioZeroDenomException
+
+{-# NOINLINE overflowError #-}
+overflowError :: a
+overflowError = raise# overflowException
+\end{code}
 
 %*********************************************************
 %*                                                      *
@@ -170,6 +191,7 @@ class  (Num a) => Fractional a  where
     {-# INLINE (/) #-}
     recip x             =  1 / x
     x / y               = x * recip y
+    {-# MINIMAL fromRational, (recip | (/)) #-}
 
 -- | Extracting components of fractions.
 --
@@ -302,11 +324,6 @@ instance  Integral Int  where
 instance Real Word where
     toRational x = toInteger x % 1
 
-#if __GLASGOW_HASKELL__ < 706
-quotRemWord# :: Word# -> Word# -> (# Word#, Word# #)
-quotRemWord# x y = (# quotWord# x y, remWord# x y #)
-#endif
-
 instance Integral Word where
     quot    (W# x#) y@(W# y#)
         | y /= 0                = W# (x# `quotWord#` y#)
@@ -329,10 +346,10 @@ instance Integral Word where
         | y /= 0                = (W# (x# `quotWord#` y#), W# (x# `remWord#` y#))
         | otherwise             = divZeroError
     toInteger (W# x#)
-        | i# >=# 0#             = smallInteger i#
+        | isTrue# (i# >=# 0#)   = smallInteger i#
         | otherwise             = wordToInteger x#
         where
-        !i# = w2i x#
+        !i# = word2Int# x#
 
 instance Enum Word where
     succ x
@@ -342,11 +359,11 @@ instance Enum Word where
         | x /= minBound = x - 1
         | otherwise     = predError "Word"
     toEnum i@(I# i#)
-        | i >= 0        = W# (i2w i#)
+        | i >= 0        = W# (int2Word# i#)
         | otherwise     = toEnumError "Word" i (minBound::Word, maxBound::Word)
     fromEnum x@(W# x#)
         | x <= fromIntegral (maxBound::Int)
-                        = I# (w2i x#)
+                        = I# (word2Int# x#)
         | otherwise     = fromEnumError "Word" x
     enumFrom            = integralEnumFrom
     enumFromThen        = integralEnumFromThen
@@ -365,30 +382,46 @@ instance Enum Word where
 instance  Real Integer  where
     toRational x        =  x :% 1
 
+-- Note [Integer division constant folding]
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--
+-- Constant folding of quot, rem, div, mod, divMod and quotRem for
+-- Integer arguments depends crucially on inlining. Constant folding
+-- rules defined in compiler/prelude/PrelRules.lhs trigger for
+-- quotInteger, remInteger and so on. So if calls to quot, rem and so on
+-- were not inlined the rules would not fire. The rules would also not
+-- fire if calls to quotInteger and so on were inlined, but this does not
+-- happen because they are all marked with NOINLINE pragma - see documentation
+-- of integer-gmp or integer-simple.
+
 instance  Integral Integer where
     toInteger n      = n
 
+    {-# INLINE quot #-}
     _ `quot` 0 = divZeroError
     n `quot` d = n `quotInteger` d
 
+    {-# INLINE rem #-}
     _ `rem` 0 = divZeroError
-    n `rem`  d = n `remInteger`  d
+    n `rem` d = n `remInteger` d
 
+    {-# INLINE div #-}
     _ `div` 0 = divZeroError
     n `div` d = n `divInteger` d
 
+    {-# INLINE mod #-}
     _ `mod` 0 = divZeroError
-    n `mod`  d = n `modInteger`  d
+    n `mod` d = n `modInteger` d
 
+    {-# INLINE divMod #-}
     _ `divMod` 0 = divZeroError
-    a `divMod` b = case a `divModInteger` b of
-                   (# x, y #) -> (x, y)
+    n `divMod` d = case n `divModInteger` d of
+                     (# x, y #) -> (x, y)
 
+    {-# INLINE quotRem #-}
     _ `quotRem` 0 = divZeroError
-    a `quotRem` b = case a `quotRemInteger` b of
-                    (# q, r #) -> (q, r)
-
-    -- use the defaults for div & mod
+    n `quotRem` d = case n `quotRemInteger` d of
+                      (# q, r #) -> (q, r)
 \end{code}
 
 
@@ -467,6 +500,7 @@ instance  (Integral a)  => Enum (Ratio a)  where
 
 \begin{code}
 -- | general coercion from integral types
+{-# NOINLINE [1] fromIntegral #-}
 fromIntegral :: (Integral a, Num b) => a -> b
 fromIntegral = fromInteger . toInteger
 
@@ -475,13 +509,14 @@ fromIntegral = fromInteger . toInteger
     #-}
 
 {-# RULES
-"fromIntegral/Int->Word"  fromIntegral = \(I# x#) -> W# (i2w x#)
-"fromIntegral/Word->Int"  fromIntegral = \(W# x#) -> I# (w2i x#)
+"fromIntegral/Int->Word"  fromIntegral = \(I# x#) -> W# (int2Word# x#)
+"fromIntegral/Word->Int"  fromIntegral = \(W# x#) -> I# (word2Int# x#)
 "fromIntegral/Word->Word" fromIntegral = id :: Word -> Word
     #-}
 
 -- | general coercion to fractional types
 realToFrac :: (Real a, Fractional b) => a -> b
+{-# NOINLINE [1] realToFrac #-}
 realToFrac = fromRational . toRational
 \end{code}
 
@@ -512,7 +547,7 @@ odd             =  not . even
         Integer -> Integer -> Integer,
         Integer -> Int -> Integer,
         Int -> Int -> Int #-}
-{-# INLINABLE (^) #-}    -- See Note [Inlining (^)]
+{-# INLINABLE [1] (^) #-}    -- See Note [Inlining (^)]
 (^) :: (Num a, Integral b) => a -> b -> a
 x0 ^ y0 | y0 < 0    = error "Negative exponent"
         | y0 == 0   = 1
@@ -528,7 +563,7 @@ x0 ^ y0 | y0 < 0    = error "Negative exponent"
 
 -- | raise a number to an integral power
 (^^)            :: (Fractional a, Integral b) => a -> b -> a
-{-# INLINABLE (^^) #-}         -- See Note [Inlining (^)
+{-# INLINABLE [1] (^^) #-}         -- See Note [Inlining (^)
 x ^^ n          =  if n >= 0 then x^n else recip (x^(negate n))
 
 {- Note [Inlining (^)
@@ -650,6 +685,7 @@ x ^^ n          =  if n >= 0 then x^n else recip (x^(negate n))
 -- the result may be negative if one of the arguments is @'minBound'@ (and
 -- necessarily is if the other is @0@ or @'minBound'@) for such types.
 gcd             :: (Integral a) => a -> a -> a
+{-# NOINLINE [1] gcd #-}
 gcd x y         =  gcd' (abs x) (abs y)
                    where gcd' a 0  =  a
                          gcd' a b  =  gcd' b (a `rem` b)
@@ -657,19 +693,20 @@ gcd x y         =  gcd' (abs x) (abs y)
 -- | @'lcm' x y@ is the smallest positive integer that both @x@ and @y@ divide.
 lcm             :: (Integral a) => a -> a -> a
 {-# SPECIALISE lcm :: Int -> Int -> Int #-}
+{-# NOINLINE [1] lcm #-}
 lcm _ 0         =  0
 lcm 0 _         =  0
 lcm x y         =  abs ((x `quot` (gcd x y)) * y)
 
 #ifdef OPTIMISE_INTEGER_GCD_LCM
 {-# RULES
-"gcd/Int->Int->Int"             gcd = gcdInt
+"gcd/Int->Int->Int"             gcd = gcdInt'
 "gcd/Integer->Integer->Integer" gcd = gcdInteger
 "lcm/Integer->Integer->Integer" lcm = lcmInteger
  #-}
 
-gcdInt :: Int -> Int -> Int
-gcdInt a b = fromIntegral (gcdInteger (fromIntegral a) (fromIntegral b))
+gcdInt' :: Int -> Int -> Int
+gcdInt' (I# x) (I# y) = I# (gcdInt x y)
 #endif
 
 integralEnumFrom :: (Integral a, Bounded a) => a -> [a]

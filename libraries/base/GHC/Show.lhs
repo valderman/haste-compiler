@@ -421,13 +421,13 @@ Code specific for Ints.
 -- lower-case hexadecimal digits.
 intToDigit :: Int -> Char
 intToDigit (I# i)
-    | i >=# 0#  && i <=#  9# =  unsafeChr (ord '0' + I# i)
-    | i >=# 10# && i <=# 15# =  unsafeChr (ord 'a' + I# i - 10)
+    | isTrue# (i >=# 0#) && isTrue# (i <=#  9#) =  unsafeChr (ord '0' + I# i)
+    | isTrue# (i >=# 10#) && isTrue# (i <=# 15#) =  unsafeChr (ord 'a' + I# i - 10)
     | otherwise           =  error ("Char.intToDigit: not a digit " ++ show (I# i))
 
 showSignedInt :: Int -> Int -> ShowS
 showSignedInt (I# p) (I# n) r
-    | n <# 0# && p ># 6# = '(' : itos n (')' : r)
+    | isTrue# (n <# 0#) && isTrue# (p ># 6#) = '(' : itos n (')' : r)
     | otherwise          = itos n r
 
 itos :: Int# -> String -> String

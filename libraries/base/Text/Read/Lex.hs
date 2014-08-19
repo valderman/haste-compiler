@@ -1,5 +1,5 @@
 {-# LANGUAGE Trustworthy #-}
-{-# LANGUAGE CPP, NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -17,42 +17,33 @@
 
 module Text.Read.Lex
   -- lexing types
-  ( Lexeme(..)  -- :: *; Show, Eq
+  ( Lexeme(..), Number
 
-  , numberToInteger, numberToRational, numberToRangedRational
+  , numberToInteger, numberToFixed, numberToRational, numberToRangedRational
 
   -- lexer
-  , lex         -- :: ReadP Lexeme      Skips leading spaces
-  , hsLex       -- :: ReadP String
-  , lexChar     -- :: ReadP Char        Reads just one char, with H98 escapes
+  , lex, expect
+  , hsLex
+  , lexChar
 
-  , readIntP    -- :: Num a => a -> (Char -> Bool) -> (Char -> Int) -> ReadP a
-  , readOctP    -- :: Num a => ReadP a
-  , readDecP    -- :: Num a => ReadP a
-  , readHexP    -- :: Num a => ReadP a
+  , readIntP
+  , readOctP
+  , readDecP
+  , readHexP
   )
  where
 
 import Text.ParserCombinators.ReadP
 
-#ifdef __GLASGOW_HASKELL__
 import GHC.Base
 import GHC.Char
 import GHC.Num( Num(..), Integer )
 import GHC.Show( Show(..) )
 import {-# SOURCE #-} GHC.Unicode ( isSpace, isAlpha, isAlphaNum )
-import GHC.Real( Integral, Rational, (%), fromIntegral,
+import GHC.Real( Rational, (%), fromIntegral,
                  toInteger, (^) )
 import GHC.List
 import GHC.Enum( minBound, maxBound )
-#else
-import Prelude hiding ( lex )
-import Data.Char( chr, ord, isSpace, isAlpha, isAlphaNum )
-import Data.Ratio( Ratio, (%) )
-#endif
-#ifdef __HUGS__
-import Hugs.Prelude( Ratio(..) )
-#endif
 import Data.Maybe
 import Control.Monad
 
@@ -66,10 +57,11 @@ data Lexeme
   | Punc   String       -- ^ Punctuation or reserved symbol, e.g. @(@, @::@
   | Ident  String       -- ^ Haskell identifier, e.g. @foo@, @Baz@
   | Symbol String       -- ^ Haskell symbol, e.g. @>>@, @:%@
-  | Number Number
+  | Number Number       -- ^ /Since: 4.6.0.0/
   | EOF
  deriving (Eq, Show)
 
+-- | /Since: 4.7.0.0/
 data Number = MkNumber Int              -- Base
                        Digits           -- Integral part
             | MkDecimal Digits          -- Integral part
@@ -77,10 +69,28 @@ data Number = MkNumber Int              -- Base
                         (Maybe Integer) -- Exponent
  deriving (Eq, Show)
 
+-- | /Since: 4.5.1.0/
 numberToInteger :: Number -> Maybe Integer
 numberToInteger (MkNumber base iPart) = Just (val (fromIntegral base) 0 iPart)
 numberToInteger (MkDecimal iPart Nothing Nothing) = Just (val 10 0 iPart)
 numberToInteger _ = Nothing
+
+-- | /Since: 4.7.0.0/
+numberToFixed :: Integer -> Number -> Maybe (Integer, Integer)
+numberToFixed _ (MkNumber base iPart) = Just (val (fromIntegral base) 0 iPart, 0)
+numberToFixed _ (MkDecimal iPart Nothing Nothing) = Just (val 10 0 iPart, 0)
+numberToFixed p (MkDecimal iPart (Just fPart) Nothing)
+    = let i = val 10 0 iPart
+          f = val 10 0 (integerTake p (fPart ++ repeat 0))
+          -- Sigh, we really want genericTake, but that's above us in
+          -- the hierarchy, so we define our own version here (actually
+          -- specialised to Integer)
+          integerTake             :: Integer -> [a] -> [a]
+          integerTake n _ | n <= 0 = []
+          integerTake _ []        =  []
+          integerTake n (x:xs)    =  x : integerTake (n-1) xs
+      in Just (i, f)
+numberToFixed _ _ = Nothing
 
 -- This takes a floatRange, and if the Rational would be outside of
 -- the floatRange then it may return Nothing. Not that it will not
@@ -93,6 +103,7 @@ numberToInteger _ = Nothing
 -- * We only worry about numbers that have an exponent. If they don't
 --   have an exponent then the Rational won't be much larger than the
 --   Number, so there is no problem
+-- | /Since: 4.5.1.0/
 numberToRangedRational :: (Int, Int) -> Number
                        -> Maybe Rational -- Nothing = Inf
 numberToRangedRational (neg, pos) n@(MkDecimal iPart mFPart (Just exp))
@@ -122,6 +133,7 @@ numberToRangedRational (neg, pos) n@(MkDecimal iPart mFPart (Just exp))
                 else Just (numberToRational n)
 numberToRangedRational _ n = Just (numberToRational n)
 
+-- | /Since: 4.6.0.0/
 numberToRational :: Number -> Rational
 numberToRational (MkNumber base iPart) = val (fromIntegral base) 0 iPart % 1
 numberToRational (MkDecimal iPart mFPart mExp)
@@ -143,6 +155,12 @@ numberToRational (MkDecimal iPart mFPart mExp)
 
 lex :: ReadP Lexeme
 lex = skipSpaces >> lexToken
+
+-- | /Since: 4.7.0.0/
+expect :: Lexeme -> ReadP ()
+expect lexeme = do { skipSpaces 
+                   ; thing <- lexToken
+                   ; if thing == lexeme then return () else pfail }
 
 hsLex :: ReadP String
 -- ^ Haskell lexer: returns the lexed string, rather than the lexeme

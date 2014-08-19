@@ -283,7 +283,7 @@ instance Bits Int where
     complement (I# x#)     = I# (w2i (i2w x# `xor#` i2w (-1#)))
 
     (I# x#) `shift` (I# i#)
-        | i# >=# 0#        = I# (x# `iShiftL#` i#)
+        | isTrue# (i# >=# 0#)        = I# (x# `iShiftL#` i#)
         | otherwise        = I# (x# `iShiftRA#` negateInt# i#)
     (I# x#) `shiftL` (I# i#) = I# (x# `iShiftL#` i#)
     (I# x#) `unsafeShiftL` (I# i#) = I# (x# `uncheckedIShiftL#` i#)
@@ -360,14 +360,14 @@ instance Bits Word where
     complement (W# x#)       = W# (x# `xor#` mb#)
         where !(W# mb#) = maxBound
     (W# x#) `shift` (I# i#)
-        | i# >=# 0#          = W# (x# `shiftL#` i#)
+        | isTrue# (i# >=# 0#)          = W# (x# `shiftL#` i#)
         | otherwise          = W# (x# `shiftRL#` negateInt# i#)
     (W# x#) `shiftL` (I# i#) = W# (x# `shiftL#` i#)
     (W# x#) `unsafeShiftL` (I# i#) = W# (x# `uncheckedShiftL#` i#)
     (W# x#) `shiftR` (I# i#) = W# (x# `shiftRL#` i#)
     (W# x#) `unsafeShiftR` (I# i#) = W# (x# `uncheckedShiftRL#` i#)
     (W# x#) `rotate` (I# i#)
-        | i'# ==# 0# = W# x#
+        | isTrue# (i'# ==# 0#) = W# x#
         | otherwise  = W# ((x# `uncheckedShiftL#` i'#) `or#` (x# `uncheckedShiftRL#` (wsib -# i'#)))
         where
         !i'# = w2i (i2w i# `and#` i2w (wsib -# 1#))

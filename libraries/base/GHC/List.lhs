@@ -363,7 +363,7 @@ splitAt n xs           =  (take n xs, drop n xs)
 {-# INLINE takeFoldr #-}
 takeFoldr :: Int -> [a] -> [a]
 takeFoldr (I# n#) xs
-  = build (\c nil -> if n# <=# 0# then nil else
+  = build (\c nil -> if isTrue# (n# <=# 0#) then nil else
                      foldr (takeFB c nil) (takeConst nil) xs n#)
 
 {-# NOINLINE [0] takeConst #-}
@@ -374,7 +374,7 @@ takeConst x _ = x
 
 {-# NOINLINE [0] takeFB #-}
 takeFB :: (a -> b -> b) -> b -> a -> (Int# -> b) -> Int# -> b
-takeFB c n x xs m | m <=# 1#  = x `c` n
+takeFB c n x xs m | isTrue# (m <=# 1#)  = x `c` n
                   | otherwise = x `c` xs (m -# 1#)
 
 {-# INLINE [0] take #-}
@@ -386,7 +386,7 @@ take (I# n#) xs = takeUInt n# xs
 
 takeUInt :: Int# -> [b] -> [b]
 takeUInt n xs
-  | n >=# 0#  =  take_unsafe_UInt n xs
+  | isTrue# (n >=# 0#)  =  take_unsafe_UInt n xs
   | otherwise =  []
 
 take_unsafe_UInt :: Int# -> [b] -> [b]
@@ -398,7 +398,7 @@ take_unsafe_UInt m   ls =
 
 takeUInt_append :: Int# -> [b] -> [b] -> [b]
 takeUInt_append n xs rs
-  | n >=# 0#  =  take_unsafe_UInt_append n xs rs
+  | isTrue# (n >=# 0#)  =  take_unsafe_UInt_append n xs rs
   | otherwise =  []
 
 take_unsafe_UInt_append :: Int# -> [b] -> [b] -> [b]
@@ -409,7 +409,7 @@ take_unsafe_UInt_append m  ls rs  =
     (x:xs) -> x : take_unsafe_UInt_append (m -# 1#) xs rs
 
 drop (I# n#) ls
-  | n# <# 0#    = ls
+  | isTrue# (n# <# 0#)    = ls
   | otherwise   = drop# n# ls
     where
         drop# :: Int# -> [a] -> [a]
@@ -418,7 +418,7 @@ drop (I# n#) ls
         drop# m# (_:xs)  = drop# (m# -# 1#) xs
 
 splitAt (I# n#) ls
-  | n# <# 0#    = ([], ls)
+  | isTrue# (n# <# 0#)    = ([], ls)
   | otherwise   = splitAt# n# ls
     where
         splitAt# :: Int# -> [a] -> ([a], [a])
@@ -589,12 +589,12 @@ xs     !! n | n < 0 =  error "Prelude.!!: negative index"
 -- The semantics is not quite the same for error conditions
 -- in the more efficient version.
 --
-xs !! (I# n0) | n0 <# 0#   =  error "Prelude.(!!): negative index\n"
+xs !! (I# n0) | isTrue# (n0 <# 0#) =  error "Prelude.(!!): negative index\n"
                | otherwise =  sub xs n0
                          where
                             sub :: [a] -> Int# -> a
                             sub []     _ = error "Prelude.(!!): index too large\n"
-                            sub (y:ys) n = if n ==# 0#
+                            sub (y:ys) n = if isTrue# (n ==# 0#)
                                            then y
                                            else sub ys (n -# 1#)
 #endif

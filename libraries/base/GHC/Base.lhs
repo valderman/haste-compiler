@@ -1,3 +1,4 @@
+
 \section[GHC.Base]{Module @GHC.Base@}
 
 The overall structure of the GHC Prelude is a bit tricky.
@@ -450,12 +451,12 @@ otherwise               =  True
 type String = [Char]
 
 {-# RULES
-"x# `eqChar#` x#" forall x#. x# `eqChar#` x# = True
-"x# `neChar#` x#" forall x#. x# `neChar#` x# = False
-"x# `gtChar#` x#" forall x#. x# `gtChar#` x# = False
-"x# `geChar#` x#" forall x#. x# `geChar#` x# = True
-"x# `leChar#` x#" forall x#. x# `leChar#` x# = True
-"x# `ltChar#` x#" forall x#. x# `ltChar#` x# = False
+"x# `eqChar#` x#" forall x#. x# `eqChar#` x# = 1#
+"x# `neChar#` x#" forall x#. x# `neChar#` x# = 0#
+"x# `gtChar#` x#" forall x#. x# `gtChar#` x# = 0#
+"x# `geChar#` x#" forall x#. x# `geChar#` x# = 1#
+"x# `leChar#` x#" forall x#. x# `leChar#` x# = 1#
+"x# `ltChar#` x#" forall x#. x# `ltChar#` x# = 0#
   #-}
 
 unsafeChr :: Int -> Char
@@ -685,10 +686,12 @@ divModInt :: Int -> Int -> (Int, Int)
 
 divModInt# :: Int# -> Int# -> (# Int#, Int# #)
 x# `divModInt#` y#
- | (x# ># 0#) && (y# <# 0#) = case (x# -# 1#) `quotRemInt#` y# of
-                              (# q, r #) -> (# q -# 1#, r +# y# +# 1# #)
- | (x# <# 0#) && (y# ># 0#) = case (x# +# 1#) `quotRemInt#` y# of
-                              (# q, r #) -> (# q -# 1#, r +# y# -# 1# #)
+ | isTrue# (x# ># 0#) && isTrue# (y# <# 0#) =
+   case (x# -# 1#) `quotRemInt#` y# of
+     (# q, r #) -> (# q -# 1#, r +# y# +# 1# #)
+ | isTrue# (x# <# 0#) && isTrue# (y# ># 0#) =
+   case (x# +# 1#) `quotRemInt#` y# of
+     (# q, r #) -> (# q -# 1#, r +# y# -# 1# #)
  | otherwise                = x# `quotRemInt#` y#
 
 {-# RULES
@@ -703,12 +706,12 @@ x# `divModInt#` y#
   #-}
 
 {-# RULES
-"x# ># x#"  forall x#. x# >#  x# = False
-"x# >=# x#" forall x#. x# >=# x# = True
-"x# ==# x#" forall x#. x# ==# x# = True
-"x# /=# x#" forall x#. x# /=# x# = False
-"x# <# x#"  forall x#. x# <#  x# = False
-"x# <=# x#" forall x#. x# <=# x# = True
+"x# ># x#"  forall x#. x# >#  x# = 0#
+"x# >=# x#" forall x#. x# >=# x# = 1#
+"x# ==# x#" forall x#. x# ==# x# = 1#
+"x# /=# x#" forall x#. x# /=# x# = 0#
+"x# <# x#"  forall x#. x# <#  x# = 0#
+"x# <=# x#" forall x#. x# <=# x# = 1#
   #-}
 
 {-# RULES
@@ -761,31 +764,32 @@ Similarly for Float (#5178):
 -- | Shift the argument left by the specified number of bits
 -- (which must be non-negative).
 shiftL# :: Word# -> Int# -> Word#
-a `shiftL#` b   | b >=# WORD_SIZE_IN_BITS# = 0##
+a `shiftL#` b   | isTrue# (b >=# WORD_SIZE_IN_BITS#) = 0##
                 | otherwise                = a `uncheckedShiftL#` b
 
 -- | Shift the argument right by the specified number of bits
 -- (which must be non-negative).
 shiftRL# :: Word# -> Int# -> Word#
-a `shiftRL#` b  | b >=# WORD_SIZE_IN_BITS# = 0##
+a `shiftRL#` b  | isTrue# (b >=# WORD_SIZE_IN_BITS#) = 0##
                 | otherwise                = a `uncheckedShiftRL#` b
 
 -- | Shift the argument left by the specified number of bits
 -- (which must be non-negative).
 iShiftL# :: Int# -> Int# -> Int#
-a `iShiftL#` b  | b >=# WORD_SIZE_IN_BITS# = 0#
+a `iShiftL#` b  | isTrue# (b >=# WORD_SIZE_IN_BITS#) = 0#
                 | otherwise                = a `uncheckedIShiftL#` b
 
 -- | Shift the argument right (signed) by the specified number of bits
 -- (which must be non-negative).
 iShiftRA# :: Int# -> Int# -> Int#
-a `iShiftRA#` b | b >=# WORD_SIZE_IN_BITS# = if a <# 0# then (-1#) else 0#
+a `iShiftRA#` b | isTrue# (b >=# WORD_SIZE_IN_BITS#) =
+                  if isTrue# (a <# 0#) then (-1#) else 0#
                 | otherwise                = a `uncheckedIShiftRA#` b
 
 -- | Shift the argument right (unsigned) by the specified number of bits
 -- (which must be non-negative).
 iShiftRL# :: Int# -> Int# -> Int#
-a `iShiftRL#` b | b >=# WORD_SIZE_IN_BITS# = 0#
+a `iShiftRL#` b | isTrue# (b >=# WORD_SIZE_IN_BITS#) = 0#
                 | otherwise                = a `uncheckedIShiftRL#` b
 
 #if WORD_SIZE_IN_BITS == 32

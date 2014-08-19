@@ -458,7 +458,7 @@ runSparks :: IO ()
 runSparks = IO loop
   where loop s = case getSpark# s of
                    (# s', n, p #) ->
-                      if n ==# 0# then (# s', () #)
+                      if isTrue# (n ==# 0#) then (# s', () #)
                                   else p `seq` loop s'
 
 data BlockReason
@@ -514,7 +514,7 @@ threadStatus (ThreadId t) = IO $ \s ->
 threadCapability :: ThreadId -> IO (Int, Bool)
 threadCapability (ThreadId t) = IO $ \s ->
    case threadStatus# t s of
-     (# s', _, cap#, locked# #) -> (# s', (I# cap#, locked# /=# 0#) #)
+     (# s', _, cap#, locked# #) -> (# s', (I# cap#, isTrue# (locked# /=# 0#)) #)
 
 -- | make a weak pointer to a 'ThreadId'.  It can be important to do
 -- this if you want to hold a reference to a 'ThreadId' while still
@@ -702,7 +702,7 @@ data TVar a = TVar (TVar# RealWorld a)
 INSTANCE_TYPEABLE1(TVar,tvarTc,"TVar")
 
 instance Eq (TVar a) where
-        (TVar tvar1#) == (TVar tvar2#) = sameTVar# tvar1# tvar2#
+        (TVar tvar1#) == (TVar tvar2#) = isTrue# (sameTVar# tvar1# tvar2#)
 
 -- |Create a new TVar holding a value supplied
 newTVar :: a -> STM (TVar a)

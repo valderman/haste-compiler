@@ -249,7 +249,7 @@ data IOErrorType
   | Interrupted
 
 instance Eq IOErrorType where
-   x == y = getTag x ==# getTag y
+   x == y = isTrue# (getTag x ==# getTag y)
  
 instance Show IOErrorType where
   showsPrec _ e =
