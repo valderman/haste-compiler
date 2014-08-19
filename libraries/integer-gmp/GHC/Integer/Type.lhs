@@ -254,17 +254,17 @@ lcmInteger a b =      if a `eqInteger` S# 0# then S# 0#
 \begin{code}
 {-# NOINLINE eqInteger #-}
 eqInteger :: Integer -> Integer -> Bool
-eqInteger (S# i)     (S# j) = i ==# j
-eqInteger (S# i)     (J# d) = cmpIntegerInt# d i ==# 0#
-eqInteger (J# d)   (S# i)   = cmpIntegerInt# d i ==# 0#
-eqInteger (J# a) (J# b)     = (cmpInteger# a b) ==# 0#
+eqInteger (S# i)     (S# j) = isTrue# (i ==# j)
+eqInteger (S# i)     (J# d) = isTrue# (cmpIntegerInt# d i ==# 0#)
+eqInteger (J# d)   (S# i)   = isTrue# (cmpIntegerInt# d i ==# 0#)
+eqInteger (J# a) (J# b)     = isTrue# (cmpInteger# a b ==# 0#)
 
 {-# NOINLINE neqInteger #-}
 neqInteger :: Integer -> Integer -> Bool
-neqInteger (S# i)     (S# j) = i /=# j
-neqInteger (S# i)     (J# d) = cmpIntegerInt# d i /=# 0#
-neqInteger (J# d)     (S# i) = cmpIntegerInt# d i /=# 0#
-neqInteger (J# a) (J# b)     = (cmpInteger# a b) /=# 0#
+neqInteger (S# i)     (S# j) = isTrue# (i /=# j)
+neqInteger (S# i)     (J# d) = isTrue# (cmpIntegerInt# d i /=# 0#)
+neqInteger (J# d)     (S# i) = isTrue# (cmpIntegerInt# d i /=# 0#)
+neqInteger (J# a) (J# b)     = isTrue# (cmpInteger# a b /=# 0#)
 
 instance  Eq Integer  where
     (==) = eqInteger
@@ -274,52 +274,52 @@ instance  Eq Integer  where
 
 {-# NOINLINE leInteger #-}
 leInteger :: Integer -> Integer -> Bool
-leInteger (S# i)     (S# j) = i <=# j
-leInteger (J# d)   (S# i)   = cmpIntegerInt# d i <=# 0#
-leInteger (S# i)     (J# d) = cmpIntegerInt# d i >=# 0#
-leInteger (J# a) (J# b)     = (cmpInteger# a b) <=# 0#
+leInteger (S# i)     (S# j) = isTrue# (i <=# j)
+leInteger (J# d)   (S# i)   = isTrue# (cmpIntegerInt# d i <=# 0#)
+leInteger (S# i)     (J# d) = isTrue# (cmpIntegerInt# d i >=# 0#)
+leInteger (J# a) (J# b)     = isTrue# (cmpInteger# a b <=# 0#)
 
 {-# NOINLINE gtInteger #-}
 gtInteger :: Integer -> Integer -> Bool
-gtInteger (S# i)     (S# j) = i ># j
-gtInteger (J# d)   (S# i)   = cmpIntegerInt# d i ># 0#
-gtInteger (S# i)     (J# d) = cmpIntegerInt# d i <# 0#
-gtInteger (J# a) (J# b)     = (cmpInteger# a b) ># 0#
+gtInteger (S# i)     (S# j) = isTrue# (i ># j)
+gtInteger (J# d)   (S# i)   = isTrue# (cmpIntegerInt# d i ># 0#)
+gtInteger (S# i)     (J# d) = isTrue# (cmpIntegerInt# d i <# 0#)
+gtInteger (J# a) (J# b)     = isTrue# (cmpInteger# a b ># 0#)
 
 {-# NOINLINE ltInteger #-}
 ltInteger :: Integer -> Integer -> Bool
-ltInteger (S# i)     (S# j) = i <# j
-ltInteger (J# d)   (S# i)   = cmpIntegerInt# d i <# 0#
-ltInteger (S# i)     (J# d) = cmpIntegerInt# d i ># 0#
-ltInteger (J# a) (J# b)     = (cmpInteger# a b) <# 0#
+ltInteger (S# i)     (S# j) = isTrue# (i <# j)
+ltInteger (J# d)   (S# i)   = isTrue# (cmpIntegerInt# d i <# 0#)
+ltInteger (S# i)     (J# d) = isTrue# (cmpIntegerInt# d i ># 0#)
+ltInteger (J# a) (J# b)     = isTrue# (cmpInteger# a b <# 0#)
 
 {-# NOINLINE geInteger #-}
 geInteger :: Integer -> Integer -> Bool
-geInteger (S# i)     (S# j)     = i >=# j
-geInteger (J# d)   (S# i)   = cmpIntegerInt# d i >=# 0#
-geInteger (S# i)     (J# d) = cmpIntegerInt# d i <=# 0#
-geInteger (J# a) (J# b)     = (cmpInteger# a b) >=# 0#
+geInteger (S# i)     (S# j) = isTrue# (i >=# j)
+geInteger (J# d)   (S# i)   = isTrue# (cmpIntegerInt# d i >=# 0#)
+geInteger (S# i)     (J# d) = isTrue# (cmpIntegerInt# d i <=# 0#)
+geInteger (J# a) (J# b)     = isTrue# (cmpInteger# a b >=# 0#)
 
 {-# NOINLINE compareInteger #-}
 compareInteger :: Integer -> Integer -> Ordering
 compareInteger (S# i)  (S# j)
-   =      if i ==# j then EQ
-     else if i <=# j then LT
+   =      if isTrue# (i ==# j) then EQ
+     else if isTrue# (i <=# j) then LT
      else                 GT
 compareInteger (J# d) (S# i)
    = case cmpIntegerInt# d i of { res# ->
-     if res# <# 0# then LT else
-     if res# ># 0# then GT else EQ
+     if isTrue# (res# <# 0#) then LT else
+     if isTrue# (res# ># 0#) then GT else EQ
      }
 compareInteger (S# i) (J# d)
    = case cmpIntegerInt# d i of { res# ->
-     if res# ># 0# then LT else
-     if res# <# 0# then GT else EQ
+     if isTrue# (res# ># 0#) then LT else
+     if isTrue# (res# <# 0#) then GT else EQ
      }
 compareInteger (J# a) (J# b)
    = case cmpInteger# a b of { res# ->
-     if res# <# 0# then LT else
-     if res# ># 0# then GT else EQ
+     if isTrue# (res# <# 0#) then LT else
+     if isTrue# (res# ># 0#) then GT else EQ
      }
 
 instance Ord Integer where
@@ -341,29 +341,29 @@ instance Ord Integer where
 {-# NOINLINE absInteger #-}
 absInteger :: Integer -> Integer
 absInteger (S# INT_MINBOUND) = NEG_INT_MINBOUND
-absInteger n@(S# i) = if i >=# 0# then n else S# (negateInt# i)
-absInteger n@(J# d) = if cmpIntegerInt# d 0# <# 0#
+absInteger n@(S# i) = if isTrue# (i >=# 0#) then n else S# (negateInt# i)
+absInteger n@(J# d) = if isTrue# (cmpIntegerInt# d 0# <# 0#)
                         then J# (negateInteger# d)
                         else n
 
 {-# NOINLINE signumInteger #-}
 signumInteger :: Integer -> Integer
-signumInteger (S# i) = if i <# 0# then S# -1#
-                       else if i ==# 0# then S# 0#
+signumInteger (S# i) = if isTrue# (i <# 0#) then S# -1#
+                       else if isTrue# (i ==# 0#) then S# 0#
                        else S# 1#
 signumInteger (J# d)
   = let
         !cmp = cmpIntegerInt# d 0#
     in
-    if      cmp >#  0# then S# 1#
-    else if cmp ==# 0# then S# 0#
+    if      isTrue# (cmp >#  0#) then S# 1#
+    else if isTrue# (cmp ==# 0#) then S# 0#
     else                    S# (negateInt# 1#)
 
 {-# NOINLINE plusInteger #-}
 plusInteger :: Integer -> Integer -> Integer
 plusInteger i1@(S# i) i2@(S# j)  = case addIntC# i j of
                                    (# r, c #) ->
-                                       if c ==# 0#
+                                       if isTrue# (c ==# 0#)
                                        then S# r
                                        else plusInteger (toBig i1) (toBig i2)
 plusInteger i1@(J# _) i2@(S# _) = plusInteger i1 (toBig i2)
@@ -374,7 +374,7 @@ plusInteger (J# a) (J# b)       = J# (plusInteger# a b)
 minusInteger :: Integer -> Integer -> Integer
 minusInteger i1@(S# i) i2@(S# j)   = case subIntC# i j of
                                      (# r, c #) ->
-                                         if c ==# 0# then S# r
+                                         if isTrue# (c ==# 0#) then S# r
                                          else minusInteger (toBig i1)
                                                            (toBig i2)
 minusInteger i1@(J# _) i2@(S# _) = minusInteger i1 (toBig i2)
@@ -383,7 +383,7 @@ minusInteger (J# a) (J# b)       = J# (minusInteger# a b)
 
 {-# NOINLINE timesInteger #-}
 timesInteger :: Integer -> Integer -> Integer
-timesInteger i1@(S# i) i2@(S# j)   = if mulIntMayOflo# i j ==# 0#
+timesInteger i1@(S# i) i2@(S# j)   = if isTrue# (mulIntMayOflo# i j ==# 0#)
                                      then S# (i *# j)
                                      else timesInteger (toBig i1) (toBig i2)
 timesInteger i1@(J# _) i2@(S# _) = timesInteger i1 (toBig i2)
@@ -565,7 +565,7 @@ integerLog2IsPowerOf2# (S# i) =
 -- of 2, if so, check whether only zero bits follow.
 integerLog2IsPowerOf2# n@(J# _) =
     case integerLog2# n of
-      l -> (# l, if is2pow l then 0# else 1# #)
+      l -> (# l, if isTrue# (is2pow l) then 0# else 1# #)
   where
     is2pow n =
       case wordLog2# (int2Word# n) of 
@@ -586,9 +586,9 @@ roundingMode# :: Integer -> Int# -> Int#
 roundingMode# (S# i) t =
     case int2Word# i `and#` ((uncheckedShiftL# 2## t) `minusWord#` 1##) of
       k -> case uncheckedShiftL# 1## t of
-            c -> if c `gtWord#` k
+            c -> if isTrue# (c `gtWord#` k)
                     then 0#
-                    else if c `ltWord#` k
+                    else if isTrue# (c `ltWord#` k)
                             then 2#
                             else 1#
 roundingMode# i@(J# _) t =
@@ -604,10 +604,10 @@ roundingMode# i@(J# _) t =
 {-# INLINE wordLog2# #-}
 wordLog2# :: Word# -> Int#
 wordLog2# i =
-    if i `eqWord#` 0## then -1# else l2 1## 0#
+    if isTrue# (i `eqWord#` 0##) then -1# else l2 1## 0#
   where
-    l2 x l | x `ltWord#` i = l2 (x `timesWord#` 2##) (l +# 1#)
-           | x `gtWord#` i = l -# 1#
-           | x `eqWord#` i = l
+    l2 x l | isTrue# (x `ltWord#` i) = l2 (x `timesWord#` 2##) (l +# 1#)
+           | isTrue# (x `gtWord#` i) = l -# 1#
+           | isTrue# (x `eqWord#` i) = l
 
 \end{code}
