@@ -223,7 +223,7 @@ genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
     (retExp, body') <- isolate $ do
       mapM_ addLocal args'
       genEx body
-    return $ if isUpdatable upd && null args
+    return $ if null args
                then thunk' (body' $ ret retExp)
                else fun args' (body' $ ret retExp)
   where
