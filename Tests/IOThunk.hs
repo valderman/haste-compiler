@@ -2,9 +2,6 @@
 module Tests.IOThunk where
 #ifdef __HASTE__
 import Haste
-output = alert
-#else
-output = putStrLn
 #endif
 
 runTest :: IO ()
@@ -14,7 +11,7 @@ runTest = do
 
 {-# NOINLINE x #-}
 x :: IO ()
-x = output "hello!"
+x = putStrLn "hello!"
 
 y :: IO ()
-y = output "hi!"
+y = putStrLn "hi!"

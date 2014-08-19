@@ -18,21 +18,17 @@ runTest() {
     ghc_output=`runghc -DTEST_MODULE=$module TestDriver.hs`
 
     if [[ $quiet == 1 ]] ; then
-        $hastec --start=asap -O0 -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp > /dev/null 2>&1
+        $hastec --start=asap -O0 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     else
-        $hastec -O0 --verbose --debug --start=asap -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp
+        $hastec -O0 --verbose --debug --start=asap -DTEST_MODULE=$module TestDriver.hs
     fi
-    echo "if(typeof print == 'undefined') {print = console.log}" > TestDriver.js
-    cat TestDriver.tmp >> TestDriver.js
     haste_output=`$JS TestDriver.js`
 
     if [[ $quiet == 1 ]] ; then
-        $hastec --opt-whole-program --start=asap -DO2 -DTEST_MODULE=$module TestDriver.hs --out=TestDriver.tmp > /dev/null 2>&1
+        $hastec --opt-whole-program --start=asap -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs > /dev/null 2>&1
     else
-        $hastec --opt-whole-program --verbose --debug --start=asap -DO2 -DTEST_MODULE=$module --out=TestDriver.tmp TestDriver.hs
+        $hastec --opt-whole-program --verbose --debug --start=asap -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs
     fi
-    echo "if(typeof print == 'undefined') {print = console.log}" > TestDriver.O2.js
-    cat TestDriver.tmp >> TestDriver.O2.js
     haste_opt_output=`$JS TestDriver.O2.js`
 
     if [[ "$ghc_output" != "$haste_output" ]] ; then
