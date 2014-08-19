@@ -8,13 +8,7 @@ import Haste.Concurrent
 foreign import ccall "sleep" sleep_ :: Int -> IO ()
 
 output :: String -> CIO ()
-output = liftIO . alert
-
-#else
-import Control.Concurrent
-output = putStrLn
-concurrent = id
-#endif
+output = liftIO . putStrLn
 
 runTest :: IO ()
 runTest = do
@@ -35,3 +29,14 @@ runTest = do
     takeMVar v2 >>= output
     takeMVar v2 >>= output
     takeMVar v2 >>= output
+
+#else
+runTest :: IO ()
+runTest = do
+  putStrLn "got 0"
+  putStrLn "wrote 42"
+  putStrLn "derp"
+  putStrLn "omg concurrency!"
+  putStrLn "still concurrent"
+  putStrLn "bye!"
+#endif
