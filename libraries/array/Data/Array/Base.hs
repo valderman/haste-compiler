@@ -554,8 +554,8 @@ instance IArray UArray Bool where
 #ifdef __GLASGOW_HASKELL__
     {-# INLINE unsafeAt #-}
     unsafeAt (UArray _ _ _ arr#) (I# i#) =
-        (indexWordArray# arr# (bOOL_INDEX i#) `and#` bOOL_BIT i#)
-        `neWord#` int2Word# 0#
+        isTrue# ((indexWordArray# arr# (bOOL_INDEX i#) `and#` bOOL_BIT i#)
+        `neWord#` int2Word# 0#)
 #endif
 #ifdef __HUGS__
     unsafeAt (UArray _ _ _ arr) i =
@@ -1146,7 +1146,7 @@ INSTANCE_TYPEABLE3(STUArray,stUArrayTc,"STUArray")
 #ifdef __GLASGOW_HASKELL__
 instance Eq (STUArray s i e) where
     STUArray _ _ _ arr1# == STUArray _ _ _ arr2# =
-        sameMutableByteArray# arr1# arr2#
+        isTrue# (sameMutableByteArray# arr1# arr2#)
 #endif
 #ifdef __HUGS__
 instance Eq (STUArray s i e) where
@@ -1175,7 +1175,7 @@ instance MArray (STUArray s) Bool (ST s) where
         case safeRangeSize (l,u)            of { n@(I# n#) ->
         case newByteArray# (bOOL_SCALE n#) s1# of { (# s2#, marr# #) ->
         case bOOL_WORD_SCALE n#         of { n'# ->
-        let loop i# s3# | i# ==# n'# = s3#
+        let loop i# s3# | isTrue# (i# ==# n'#) = s3#
                         | otherwise  =
                 case writeWordArray# marr# i# e# s3# of { s4# ->
                 loop (i# +# 1#) s4# } in
@@ -1190,7 +1190,7 @@ instance MArray (STUArray s) Bool (ST s) where
     {-# INLINE unsafeRead #-}
     unsafeRead (STUArray _ _ _ marr#) (I# i#) = ST $ \s1# ->
         case readWordArray# marr# (bOOL_INDEX i#) s1# of { (# s2#, e# #) ->
-        (# s2#, (e# `and#` bOOL_BIT i#) `neWord#` int2Word# 0# #) }
+        (# s2#, isTrue# ((e# `and#` bOOL_BIT i#) `neWord#` int2Word# 0#) #) }
     {-# INLINE unsafeWrite #-}
     unsafeWrite (STUArray _ _ _ marr#) (I# i#) e = ST $ \s1# ->
         case bOOL_INDEX i#              of { j# ->
