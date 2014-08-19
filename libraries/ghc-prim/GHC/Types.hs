@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, NoImplicitPrelude, TypeFamilies #-}
+{-# LANGUAGE CPP, NoImplicitPrelude, TypeFamilies, MagicHash #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  GHC.Types
@@ -18,7 +18,8 @@
 module GHC.Types (
         Bool(..), Char(..), Int(..), Word(..),
         Float(..), Double(..),
-        Ordering(..), IO(..)
+        Ordering(..), IO(..),
+        isTrue#
     ) where
 
 import GHC.Prim
@@ -109,3 +110,11 @@ newtype IO a = IO (State# RealWorld -> (# State# RealWorld, a #))
 -- has kind (? -> ? -> Fact) rather than (* -> * -> *)
 data (~) a b = Eq# ((~#) a b)
 
+{-# INLINE isTrue# #-}
+#if __GLASGOW_HASKELL__ >= 708
+isTrue# :: Int# -> Bool
+isTrue# n = tagToEnum# n
+#else
+isTrue# :: Bool -> Bool
+isTrue# x = x
+#endif

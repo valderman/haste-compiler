@@ -43,7 +43,7 @@ unpackCString# addr
   = unpack 0#
   where
     unpack nh
-      | ch `eqChar#` '\0'# = []
+      | isTrue# (ch `eqChar#` '\0'#) = []
       | True               = C# ch : unpack (nh +# 1#)
       where
         !ch = indexCharOffAddr# addr nh
@@ -55,7 +55,7 @@ unpackAppendCString# addr rest
   = unpack 0#
   where
     unpack nh
-      | ch `eqChar#` '\0'# = rest
+      | isTrue# (ch `eqChar#` '\0'#) = rest
       | True               = C# ch : unpack (nh +# 1#)
       where
         !ch = indexCharOffAddr# addr nh
@@ -80,7 +80,7 @@ unpackFoldrCString# addr f z
   = unpack 0#
   where
     unpack nh
-      | ch `eqChar#` '\0'# = z
+      | isTrue# (ch `eqChar#` '\0'#) = z
       | True               = C# ch `f` unpack (nh +# 1#)
       where
         !ch = indexCharOffAddr# addr nh
@@ -90,13 +90,13 @@ unpackCStringUtf8# addr
   = unpack 0#
   where
     unpack nh
-      | ch `eqChar#` '\0'#   = []
-      | ch `leChar#` '\x7F'# = C# ch : unpack (nh +# 1#)
-      | ch `leChar#` '\xDF'# =
+      | isTrue# (ch `eqChar#` '\0'#)   = []
+      | isTrue# (ch `leChar#` '\x7F'#) = C# ch : unpack (nh +# 1#)
+      | isTrue# (ch `leChar#` '\xDF'#) =
           C# (chr# (((ord# ch                                  -# 0xC0#) `uncheckedIShiftL#`  6#) +#
                      (ord# (indexCharOffAddr# addr (nh +# 1#)) -# 0x80#))) :
           unpack (nh +# 2#)
-      | ch `leChar#` '\xEF'# =
+      | isTrue# (ch `leChar#` '\xEF'#) =
           C# (chr# (((ord# ch                                  -# 0xE0#) `uncheckedIShiftL#` 12#) +#
                     ((ord# (indexCharOffAddr# addr (nh +# 1#)) -# 0x80#) `uncheckedIShiftL#`  6#) +#
                      (ord# (indexCharOffAddr# addr (nh +# 2#)) -# 0x80#))) :
@@ -115,7 +115,7 @@ unpackNBytes# _addr 0#   = []
 unpackNBytes#  addr len# = unpack [] (len# -# 1#)
     where
      unpack acc i#
-      | i# <# 0#  = acc
+      | isTrue# (i# <# 0#) = acc
       | True      =
          case indexCharOffAddr# addr i# of
             ch -> unpack (C# ch : acc) (i# -# 1#)
