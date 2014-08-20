@@ -18,6 +18,12 @@ import Data.Char (isDigit)
 import Control.Monad.IO.Class (liftIO)
 import Args
 
+#if __GLASGOW_HASKELL__ >= 708
+baseDir = "base-ghc-7.8"
+#else
+baseDir = "base-ghc-7.6"
+#endif
+
 downloadFile :: String -> Shell BS.ByteString
 downloadFile f = do
   (_, rsp) <- liftIO $ Network.Browser.browse $ do
@@ -155,7 +161,7 @@ buildLibs cfg = do
         hasteInst ("install" : "--solver" : "topdown" : ghcOpts)
       
       -- Install base
-      inDirectory "base" $ do
+      inDirectory baseDir $ do
         basever <- file "base.cabal" >>= return
           . dropWhile (not . isDigit)
           . head
