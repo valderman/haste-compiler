@@ -977,14 +977,14 @@ foreign import ccall unsafe "isDoubleFinite" isDoubleFinite :: Double -> Int
 -- In Haste, all of these share the same representation, so unless we're
 -- converting a decimal type to an integer type, it's just a type coercion!
 {-# RULES
-"fromIntegral/Int->Float"   fromIntegral = unsafeCoerce#
-"fromIntegral/Int->Double"  fromIntegral = unsafeCoerce#
+"fromIntegral/Int->Float"   fromIntegral = unsafeCoerce# id
+"fromIntegral/Int->Double"  fromIntegral = unsafeCoerce# id
 "realToFrac/Float->Float"   realToFrac   = id :: Float -> Float
-"realToFrac/Float->Double"  realToFrac   = unsafeCoerce#
-"realToFrac/Double->Float"  realToFrac   = unsafeCoerce#
+"realToFrac/Float->Double"  realToFrac   = unsafeCoerce# id
+"realToFrac/Double->Float"  realToFrac   = unsafeCoerce# id
 "realToFrac/Double->Double" realToFrac   = id :: Double -> Double
-"realToFrac/Int->Double"    realToFrac   = unsafeCoerce#	-- See Note [realToFrac int-to-float]
-"realToFrac/Int->Float"     realToFrac   = unsafeCoerce#	-- 	..ditto
+"realToFrac/Int->Double"    realToFrac   = unsafeCoerce# id	-- See Note [realToFrac int-to-float]
+"realToFrac/Int->Float"     realToFrac   = unsafeCoerce# id	-- 	..ditto
     #-}
 \end{code}
 
