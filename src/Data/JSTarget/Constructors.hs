@@ -59,28 +59,29 @@ callMethod :: AST Exp -> String -> [AST Exp] -> AST Exp
 callMethod obj meth args =
   Call 0 (Method meth) <$> obj <*> sequence args
 
--- | Foreign function call. Always saturated.
+-- | Foreign function call. Always saturated, never trampolines.
 callForeign :: String -> [AST Exp] -> AST Exp
-callForeign f = fmap (Call 0 Fast (Var $ foreignVar f)) . sequence
+callForeign f = fmap (Call 0 (Fast False) (Var $ foreignVar f)) . sequence
 
 -- | A normal function call. May be unsaturated. A saturated call is always
 --   turned into a fast call.
 call :: Arity -> AST Exp -> [AST Exp] -> AST Exp
 call arity f xs = do
-  foldApp <$> (Call (arity - length xs) Normal <$> f <*> sequence xs)
+  foldApp <$> (Call (arity - length xs) (Normal True) <$> f <*> sequence xs)
 
 callSaturated :: AST Exp -> [AST Exp] -> AST Exp
-callSaturated f xs = Call 0 Fast <$> f <*> sequence xs
+callSaturated f xs = Call 0 (Fast True) <$> f <*> sequence xs
 
 -- | "Fold" nested function applications into one, turning them into fast calls
 --   if they turn out to be saturated.
 foldApp :: Exp -> Exp
-foldApp (Call arity Normal (Call _ Normal f args) args') =
-  Call arity Normal (foldApp f) (args ++ args')
-foldApp (Call 0 Normal f args) =
-  Call 0 Fast f args
-foldApp (Call arity Normal f args) | arity > 0 =
-    Fun Nothing newargs $ Return $ Call arity Fast f (args ++ map Var newargs)
+foldApp (Call arity (Normal tramp) (Call _ (Normal _) f args) args') =
+  Call arity (Normal tramp) (foldApp f) (args ++ args')
+foldApp (Call 0 (Normal tramp) f args) =
+  Call 0 (Fast tramp) f args
+foldApp (Call arity (Normal tramp) f args) | arity > 0 =
+    Fun Nothing newargs $ Return
+                        $ Call arity (Fast tramp) f (args ++ map Var newargs)
   where
     newargs = newVars "_fa_" arity
 foldApp ex =
@@ -100,6 +101,10 @@ thunk = fmap Thunk
 -- | Evaluate an expression that may or may not be a thunk.
 eval :: AST Exp -> AST Exp
 eval = fmap Eval
+
+-- | Create a tail call.
+tailcall :: AST Exp -> AST Stm
+tailcall call = Tailcall <$> call
 
 -- | A binary operator.
 binOp :: BinOp -> AST Exp -> AST Exp -> AST Exp
@@ -138,9 +143,13 @@ case_ ex def alts cont = do
   alts' <- sequence [(,) <$> x <*> s jmp | (x, s) <- alts]
   pure $ Case ex' def' alts' (Shared shared)
 
--- | Return from a function. Only statement that doesn't take a continuation.
+-- | Return from a function.
 ret :: AST Exp -> AST Stm
 ret = fmap Return
+
+-- | Return from a thunk.
+thunkRet :: AST Exp -> AST Stm
+thunkRet = fmap ThunkRet
 
 -- | Create a new var with a new value.
 newVar :: Reorderable -> Var -> AST Exp -> AST Stm -> AST Stm

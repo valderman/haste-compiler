@@ -31,11 +31,13 @@ instance Binary LHS where
   get = getWord8 >>= ([NewVar <$>get<*>get, LhsExp <$> get] !!) . fromIntegral
 
 instance Binary Call where
-  put Normal     = putWord8 0
-  put Fast       = putWord8 1
-  put (Method m) = putWord8 2 >> put m
+  put (Normal tr) = putWord8 0 >> put tr
+  put (Fast tr)   = putWord8 1 >> put tr
+  put (Method m)  = putWord8 2 >> put m
   
-  get = getWord8 >>= ([pure Normal,pure Fast,Method <$> get] !!) . fromIntegral
+  get = do
+    tag <- fromIntegral <$> getWord8
+    [Normal <$> get, Fast <$> get,Method <$> get] !! tag
 
 instance Binary Lit where
   put (LNum d)  = putWord8 0 >> put d
@@ -95,6 +97,10 @@ instance Binary Stm where
     putWord8 5 >> put j
   put (NullRet) =
     putWord8 6
+  put (Tailcall ex) =
+    putWord8 7 >> put ex
+  put (ThunkRet ex) =
+    putWord8 8 >> put ex
   
   get = do
     tag <- getWord8
@@ -106,6 +112,8 @@ instance Binary Stm where
       4 -> pure Cont
       5 -> Jump <$> get
       6 -> pure NullRet
+      7 -> Tailcall <$> get
+      8 -> ThunkRet <$> get
       n -> error $ "Bad tag in get :: Get Stm: " ++ show n
 
 instance Binary BinOp where

@@ -58,9 +58,13 @@ data LHS where
   deriving (Eq, Show)
 
 -- | Distinguish between normal, optimized and method calls.
+--   Normal and optimized calls take a boolean indicating whether the called
+--   function should trampoline or not. This defaults to True, and should
+--   only be set to False when there is absolutely no possibility whatsoever
+--   that the called function will tailcall.
 data Call where
-  Normal   :: Call
-  Fast     :: Call
+  Normal   :: Bool -> Call
+  Fast     :: Bool -> Call
   Method   :: String -> Call
   deriving (Eq, Show)
 
@@ -92,13 +96,15 @@ data Exp where
 -- | Statements. The only mildly interesting thing here are the Case and Jump
 --   constructors, which allow explicit sharing of continuations.
 data Stm where
-  Case    :: Exp -> Stm -> [Alt] -> Shared Stm -> Stm
-  Forever :: Stm -> Stm
-  Assign  :: LHS -> Exp -> Stm -> Stm
-  Return  :: Exp -> Stm
-  Cont    :: Stm
-  Jump    :: Shared Stm -> Stm
-  NullRet :: Stm
+  Case     :: Exp -> Stm -> [Alt] -> Shared Stm -> Stm
+  Forever  :: Stm -> Stm
+  Assign   :: LHS -> Exp -> Stm -> Stm
+  Return   :: Exp -> Stm
+  Cont     :: Stm
+  Jump     :: Shared Stm -> Stm
+  NullRet  :: Stm
+  Tailcall :: Exp -> Stm
+  ThunkRet :: Exp -> Stm -- Return from a Thunk
   deriving (Eq, Show)
 
 -- | Case alternatives - an expression to match and a branch.

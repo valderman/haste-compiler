@@ -88,10 +88,14 @@ instance Pretty Exp where
       lambdaname = maybe "" (\n -> " " .+. pp n) mname
   pp (Call _ call f args) = do
       case call of
-        Normal   -> "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
-        Fast     -> ppCallFun f .+. "(" .+. ppList sep args .+. ")"
-        Method m -> pp f .+. put ('.':m) .+. "(" .+. ppList sep args .+. ")"
+        Normal True  -> "B(" .+. normalCall .+. ")"
+        Normal False -> normalCall
+        Fast True    -> "B(" .+. fastCall .+. ")"
+        Fast False   -> fastCall
+        Method m  -> pp f .+. put ('.':m) .+. "(" .+. ppList sep args .+. ")"
     where
+      normalCall = "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
+      fastCall = ppCallFun f .+. "(" .+. ppList sep args .+. ")"
       ppCallFun fun@(Fun _ _ _) = "(" .+. pp fun .+. ")"
       ppCallFun fun             = pp fun
   pp (Index arr ix) = do
@@ -155,6 +159,10 @@ instance Pretty Stm where
     return ()
   pp (NullRet) = do
     return ()
+  pp (Tailcall call) = do
+    line $ "return new F(function(){return " .+. pp call .+. ";});"
+  pp (ThunkRet ex) = do
+    line $ "return " .+. pp ex .+. ";"
 
 neg :: Exp -> Maybe Exp
 neg (BinOp Eq a b)  = Just $ BinOp Neq a b

@@ -183,6 +183,10 @@ instance JSTrav Stm where
                            fmap Jump <$> foldMapJS tr fe fs acc stm
                          NullRet -> do
                            return (acc, NullRet)
+                         Tailcall ex -> do
+                           fmap Tailcall <$> foldMapJS tr fe fs acc ex
+                         ThunkRet ex -> do
+                           fmap ThunkRet <$> foldMapJS tr fe fs acc ex
                      else do
                        return (acc, ast)
       fs acc' x
@@ -211,6 +215,10 @@ instance JSTrav Stm where
                     foldJS tr f acc j
                   NullRet -> do
                     return acc
+                  Tailcall ex -> do
+                    foldJS tr f acc ex
+                  ThunkRet ex -> do
+                    foldJS tr f acc ex
               else do
                 return acc
     f acc' stmast

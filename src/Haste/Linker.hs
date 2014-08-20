@@ -28,7 +28,7 @@ link cfg pkgid target = do
   ds <- getAllDefs (libPath cfg) mainmod pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
       (progText, myMain') = prettyProg (ppOpts cfg) mainSym myDefs
-      callMain = fromString "A(" <> myMain' <> fromString ", [0]);"
+      callMain = fromString "B(A(" <> myMain' <> fromString ", [0]));"
       launchApp = appStart cfg (fromString "hasteMain")
   
   rtslibs <- mapM readFile $ rtsLibs cfg

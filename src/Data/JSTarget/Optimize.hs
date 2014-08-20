@@ -24,12 +24,14 @@ optimizeFun f (AST ast js) =
     >>= optimizeThunks
     >>= optimizeArrays
     >>= tailLoopify f
+    >>= trampoline
     >>= ifReturnToTernary
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
   flip runTravM js $ do
-    inlineAssigns ast
+    unTrampoline ast
+    >>= inlineAssigns
     >>= optimizeArrays
     >>= optimizeThunks
     >>= optimizeArrays
@@ -237,7 +239,7 @@ computingEx ex =
     _          -> True
 
 
--- | Gather a map of all inlinable symbols; that is, the once that are used
+-- | Gather a map of all inlinable symbols; that is, the ones that are used
 --   exactly once.
 --   TODO: always inline assigns that are just aliases!
 gatherInlinable :: JSTrav ast => ast -> TravM (M.Map Var Occs)
@@ -255,6 +257,83 @@ gatherInlinable ast = do
       pure (M.alter updVarAss v m)
     countOccs m _ =
       pure m
+
+-- | May the given expression ever tailcall?
+mayTailcall :: JSTrav ast => ast -> TravM Bool
+mayTailcall ast = do
+  foldJS enter countTCs False ast
+  where
+    enter True _              = False
+    enter _ (Exp (Thunk _))   = False
+    enter _ (Exp (Fun _ _ _)) = False
+    enter _ _                 = True
+    countTCs _ (Stm (Tailcall _)) = return True
+    countTCs acc _                = return acc
+
+-- | Gather a map of all symbols which we know will never make tail calls.
+--   All calls to functions in this set can then safely be de-trampolined.
+gatherNonTailcalling :: Stm -> TravM (S.Set Var)
+gatherNonTailcalling stm = do
+    foldJS (\_ _ -> True) countTCs S.empty stm
+  where
+    countTCs s (Exp (Var v@(Foreign _))) = do
+      return $ S.insert v s
+    countTCs s (Stm (Assign (NewVar _ v) (Fun _ _ body) _)) = do
+      tc <- mayTailcall body
+      return $ if not tc then S.insert v s else s      
+    countTCs s (Exp (Fun (Just name) _ body)) = do
+      tc <- mayTailcall body
+      return $ if not tc then S.insert (Internal name "") s else s
+    countTCs s _ = do
+      return s
+
+-- | Remove trampolines wherever possible.
+--   The trampoline machinery has some overhead; two extra activation records
+--   on the stack for a single, non-tailcalling function, to be precise.
+--   We observe that bouncing a function that is guaranteed to never tailcall
+--   is a waste of resources, so we can remove those bounces.
+--   Additionally, tailcalling a function which is guaranteed to not tailcall
+--   in turn is wasteful (see above comment about overhead), so we can
+--   eliminate any such function.
+--   Since the tailcalling machinery grows the stack by a total of three
+--   activation records for an arbitrary string of tailcalling functions,
+--   we can apply this procedure recursively three times and still be
+--   guaranteed to use no more stack frames than we would have without this
+--   optimization.
+unTrampoline :: Stm -> TravM Stm
+unTrampoline s = go s >>= go >>= go
+  where
+    go s = do
+      ntcs <- gatherNonTailcalling s
+      mapJS (const True) (unTr ntcs) (unTC ntcs) s
+
+    unTr ntcs (Call ar (Normal True) f@(Var v) xs)
+      | v `S.member` ntcs =
+        return $ Call ar (Normal False) f xs
+    unTr ntcs (Call ar (Fast True) f@(Var v) xs)
+      | v `S.member` ntcs =
+        return $ Call ar (Fast False) f xs
+    unTr _ c@(Call ar (Normal True) f@(Fun _ _ body) xs) = do
+        tc <- mayTailcall body
+        return $ if tc then c else Call ar (Normal False) f xs
+    unTr _ c@(Call ar (Fast True) f@(Fun _ _ body) xs) = do
+        tc <- mayTailcall body
+        return $ if tc then c else Call ar (Fast False) f xs
+    unTr _ x =
+        return x
+
+    -- If we know for certain that the function we're tailcalling will not
+    -- tailcall in turn we should not tailcall it, since that would mean two
+    -- activation records on the stack - one for the trampoline and one for
+    -- the function itself.
+    unTC ntcs (Tailcall c@(Call _ _ (Var v) _))
+      | v `S.member` ntcs =
+        return $ Return c
+    unTC _ tc@(Tailcall c@(Call _ _ (Fun _ _ body) _)) = do
+        maytc <- mayTailcall body
+        if not maytc then return (Return c) else return tc
+    unTC _ x =
+        return x
 
 -- | Like `inlineAssigns`, but doesn't care what happens beyond a jump.
 inlineAssignsLocal :: JSTrav ast => ast -> TravM ast
@@ -323,6 +402,23 @@ shrinkCase =
       | otherwise        = inlineShared lbl def
     shrink stm           = return stm
 
+-- | Turn any calls in tail position into tailcalls.
+--   Must run after @tailLoopify@ or we won't get loops for simple tail
+--   recursive functions.
+trampoline :: Exp -> TravM Exp
+trampoline = mapJS (pure True) pure bounce
+  where
+    bounce (Return (Call arity call f args)) = do
+      return $ Tailcall $ Call arity call' f args
+      where
+        call' =
+          case call of
+            Normal _ -> Normal False
+            Fast _   -> Fast False
+            c        -> c
+    bounce s = do
+      return s
+
 -- | Turn tail recursion on the given var into a loop, if possible.
 --   Tail recursive functions that create closures turn into:
 --   function f(a', b', c') {
@@ -351,7 +447,8 @@ tailLoopify f fun@(Fun mname args body) = do
                 nv = NewVar False nn
                 body' =
                   Forever $
-                  Assign nv (Call 0 Fast (Fun Nothing args b) (map Var args'))$
+                  Assign nv (Call 0 (Fast False) (Fun Nothing args b)
+                                                 (map Var args')) $
                   Case (Var nn) (Return (Var nn)) [(Lit $ LNull, NullRet)] $
                   (Shared nullRetLbl)
             putRef nullRetLbl NullRet

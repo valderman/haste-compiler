@@ -224,7 +224,7 @@ genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
       mapM_ addLocal args'
       genEx body
     return $ if null args
-               then thunk' (body' $ ret retExp)
+               then thunk' (body' $ thunkRet retExp)
                else fun args' (body' $ ret retExp)
   where
     thunk' (AST (Return l@(Lit _)) js) = AST l js
