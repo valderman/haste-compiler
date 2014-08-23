@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types #-}
 module Haste.Config (
-  Config (..), AppStart, defConfig, stdJSLibs, startCustom, fastMultiply,
+  Config (..), AppStart, def, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, debugLib) where
 import Data.JSTarget
 import Control.Shell (replaceExtension, (</>))
@@ -9,6 +9,8 @@ import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
 import Haste.Environment
 import Outputable (Outputable)
+import Data.Default
+import Data.List (isPrefixOf)
 
 type AppStart = Builder -> Builder
 
@@ -34,13 +36,17 @@ startASAP mainSym =
 startCustom :: String -> AppStart
 startCustom "onload" = startOnLoadComplete
 startCustom "asap"   = startASAP
+startCustom "onexec" = startASAP
 startCustom str      = insertSym str
 
--- | Replace the first occurrence of %% with Haste's entry point symbol.
+-- | Replace the first occurrence of $HASTE_MAIN with Haste's entry point
+--   symbol.
 insertSym :: String -> AppStart
-insertSym ('%':'%':str) sym = sym <> fromString str
-insertSym (c:str) sym       = fromChar c <> insertSym str sym
-insertSym [] _              = fromString ""
+insertSym [] _                     = fromString ""
+insertSym str sym
+  | "$HASTE_MAIN" `isPrefixOf` str = sym <> fromString str
+  | otherwise                      = case span (/= '$') str of
+                                       (l,r) -> fromString l <> insertSym r sym
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart
@@ -140,3 +146,6 @@ defConfig = Config {
     mainMod          = Just ("main", "Main"),
     optimize         = True
   }
+
+instance Default Config where
+  def = defConfig

@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy as B
 import Blaze.ByteString.Builder
 import Blaze.ByteString.Builder.Char.Utf8
 import Data.Monoid
+import System.IO (hPutStrLn, stderr)
 
 -- | The program entry point.
 --   This will need to change when we start supporting building "binaries"
@@ -25,7 +26,7 @@ link cfg pkgid target = do
   let mainmod = case mainMod cfg of
                  Just mm -> mm
                  _       -> error "Haste.Linker.link called without main sym!"
-  ds <- getAllDefs (libPath cfg) mainmod pkgid mainSym
+  ds <- getAllDefs cfg [targetLibPath cfg, libPath cfg] mainmod pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
       (progText, myMain') = prettyProg (ppOpts cfg) mainSym myDefs
       callMain = fromString "B(A(" <> myMain' <> fromString ", [0]));"
@@ -53,33 +54,49 @@ link cfg pkgid target = do
                                                      <> fromString "};"
       <> launchApp
 
+-- | Produce an info message if verbose reporting is enabled.
+info' :: Config -> String -> IO ()
+info' cfg = when (verbose cfg) . hPutStrLn stderr
 
 -- | Generate a sequence of all assignments needed to run Main.main.
-getAllDefs :: FilePath -> (String, String) -> String -> Name -> IO (AST Stm)
-getAllDefs libpath mainmod pkgid mainsym =
-  runDep mainmod $ addDef libpath pkgid mainsym
+getAllDefs :: Config
+           -> [FilePath]
+           -> (String, String)
+           -> String
+           -> Name
+           -> IO (AST Stm)
+getAllDefs cfg libpaths mainmod pkgid mainsym =
+  runDep cfg mainmod $ addDef libpaths pkgid mainsym
 
 data DepState = DepState {
     mainmod     :: !(String, String),
     defs        :: !(AST Stm -> AST Stm),
     alreadySeen :: !(S.Set Name),
-    modules     :: !(M.Map String Module)
+    modules     :: !(M.Map String Module),
+    infoLogger  :: String -> IO ()
   }
 
 type DepM a = EitherT Name (StateT DepState IO) a
 
-initState :: (String, String) -> DepState
-initState m = DepState {
+initState :: Config -> (String, String) -> DepState
+initState cfg m = DepState {
     mainmod     = m,
     defs        = id,
     alreadySeen = S.empty,
-    modules     = M.empty
+    modules     = M.empty,
+    infoLogger  = info' cfg
   }
 
+-- | Log a message to stdout if verbose reporting is on.
+info :: String -> DepM ()
+info s = do
+  st <- get
+  liftIO $ infoLogger st s
+
 -- | Run a dependency resolution computation.
-runDep :: (String, String) -> DepM a -> IO (AST Stm)
-runDep mainmod m = do
-    res <- runStateT (runEitherT m) (initState mainmod)
+runDep :: Config -> (String, String) -> DepM a -> IO (AST Stm)
+runDep cfg mainmod m = do
+    res <- runStateT (runEitherT m) (initState cfg mainmod)
     case res of
       (Right _, st) ->
         return $ defs st nullRet
@@ -97,51 +114,57 @@ runDep mainmod m = do
       "Unable to locate function `" ++ f ++ "' in module `" ++ m ++ "'!"
 
 -- | Return the module the given variable resides in.
-getModuleOf :: FilePath -> Name -> DepM Module
-getModuleOf libpath v@(Name n _) =
+getModuleOf :: [FilePath] -> Name -> DepM Module
+getModuleOf libpaths v@(Name n _) =
   case moduleOf v of
     Just "GHC.Prim" -> return foreignModule
     Just ""         -> return foreignModule
+    Nothing         -> return foreignModule
     Just ":Main"    -> do
       (p, m) <- mainmod `fmap` get
-      getModuleOf libpath (Name n (Just (p, m)))
+      getModuleOf libpaths (Name n (Just (p, m)))
     Just m          -> do
-      mm <- getModule libpath (maybe "main" id $ pkgOf v) m
+      mm <- getModule libpaths (maybe "main" id $ pkgOf v) m
       case mm of
         Just m' -> return m'
         _       -> left v
-    _               -> return foreignModule
 
 -- | Return the module at the given path, loading it into cache if it's not
 --   already there.
-getModule :: FilePath -> String -> String -> DepM (Maybe Module)
-getModule libpath pkgid modname = do
-  st <- get
-  case M.lookup modname (modules st) of
-    Just m ->
-      return (Just m)
-    _      -> do
-      liftIO $ putStrLn $ "Linking " ++ modname
+getModule :: [FilePath] -> String -> String -> DepM (Maybe Module)
+getModule libpaths pkgid modname = do
+    st <- get
+    case M.lookup modname (modules st) of
+      Just m -> do
+        return $ Just m
+      _ -> do
+        info $ "Linking " ++ modname
+        go libpaths
+  where
+    go (libpath:lps) = do
       mm <- liftIO $ readModule libpath pkgid modname
       case mm of
         Just m -> do
+          st <- get
           put st {modules = M.insert modname m (modules st)}
           return (Just m)
         _ -> do
-          return Nothing
+          go lps
+    go [] = do
+      return Nothing
 
 -- | Add a new definition and its dependencies. If the given identifier has
 --   already been added, it's just ignored.
-addDef :: FilePath -> String -> Name -> DepM ()
-addDef libpath pkgid v = do
+addDef :: [FilePath] -> String -> Name -> DepM ()
+addDef libpaths pkgid v = do
   st <- get
   when (not $ v `S.member` alreadySeen st) $ do
-    m <- getModuleOf libpath v
+    m <- getModuleOf libpaths v
     -- getModuleOf may update the state, so we need to refresh it
     st' <- get
     let dependencies = maybe S.empty id (M.lookup v (modDeps m))
     put st' {alreadySeen = S.insert v (alreadySeen st')}
-    S.foldl' (\a x -> a >> addDef libpath pkgid x) (return ()) dependencies
+    S.foldl' (\a x -> a >> addDef libpaths pkgid x) (return ()) dependencies
 
     -- addDef _definitely_ updates the state, so refresh once again
     st'' <- get

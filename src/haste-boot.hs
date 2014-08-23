@@ -16,7 +16,8 @@ import Haste.Version
 import Control.Shell
 import Data.Char (isDigit)
 import Control.Monad.IO.Class (liftIO)
-import Args
+import Haste.Args
+import System.Console.GetOpt
 
 #if __GLASGOW_HASKELL__ >= 708
 baseDir = "base-ghc-7.8"
@@ -55,40 +56,44 @@ defCfg = Cfg {
     forceBoot = False
   }
 
-specs :: [ArgSpec Cfg]
+specs :: [OptDescr (Cfg -> Cfg)]
 specs = [
-    ArgSpec { optName = "force",
-              updateCfg = \cfg _ -> cfg {forceBoot = True},
-              info = "Re-boot Haste even if already properly booted."},
-    ArgSpec { optName = "local",
-              updateCfg = \cfg _ -> cfg {useLocalLibs = True},
-              info = "Use libraries from source repository rather than " ++
-                     "downloading a matching set from the Internet. " ++
-                     "This is nearly always necessary when installing " ++
-                     "Haste from Git rather than from Hackage. " ++
-                     "When using --local, your current working directory " ++
-                     "must be the root of the Haste source tree."},
-    ArgSpec { optName = "no-closure",
-              updateCfg = \cfg _ -> cfg {getClosure = False},
-              info = "Don't download Closure compiler. You won't be able " ++
-                     "to use --opt-google-closure, unless you manually " ++
-                     "give it the path to compiler.jar."},
-    ArgSpec { optName = "no-libs",
-              updateCfg = \cfg _ -> cfg {getLibs = False},
-              info = "Don't install any libraries. This is probably not " ++
-                     "what you want."},
-    ArgSpec { optName = "trace-primops",
-              updateCfg = \cfg _ -> cfg {tracePrimops = True},
-              info = "Build standard libs for tracing of primitive " ++
-                     "operations. Only use if you're debugging the code " ++
-                     "generator."}
+    Option "" ["force"]
+           (NoArg $ \cfg -> cfg {forceBoot = True}) $
+           "Re-boot Haste even if already properly booted.",
+    Option "" ["local"]
+           (NoArg $ \cfg -> cfg {useLocalLibs = True}) $
+           "Use libraries from source repository rather than " ++
+           "downloading a matching set from the Internet. " ++
+           "This is nearly always necessary when installing " ++
+           "Haste from Git rather than from Hackage. " ++
+           "When using --local, your current working directory " ++
+           "must be the root of the Haste source tree.",
+    Option "" ["no-closure"]
+           (NoArg $ \cfg -> cfg {getClosure = False}) $
+           "Don't download Closure compiler. You won't be able " ++
+           "to use --opt-minify, unless you manually " ++
+           "give hastec the path to compiler.jar.",
+    Option "" ["no-libs"]
+           (NoArg $ \cfg -> cfg {getLibs = False}) $
+           "Don't install any libraries. This is probably not " ++
+           "what you want.",
+    Option "" ["trace-primops"]
+           (NoArg $ \cfg -> cfg {tracePrimops = True}) $
+           "Build standard libs for tracing of primitive " ++
+           "operations. Only use if you're debugging the code " ++
+           "generator."
   ]
+
+hdr :: String
+hdr = "Fetch, build and install all libraries necessary to use Haste.\n"
 
 main :: IO ()
 main = do
   args <- getArgs
-  case handleArgs defCfg specs args of
-    Right (cfg, _) -> do
+  case parseArgs specs hdr args of
+    Right (mkConfig, _) -> do
+      let cfg = mkConfig defCfg
       when (needsReboot || forceBoot cfg) $ do
         res <- shell $ if useLocalLibs cfg
                          then bootHaste cfg "."

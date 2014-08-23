@@ -101,9 +101,9 @@ Executable hastec
     Main-Is:
         Main.hs
     Other-Modules:
-        Args
-        ArgSpecs
         Haste
+        Haste.Args
+        Haste.Opts
         Haste.Version
         Haste.Environment
         Haste.Config

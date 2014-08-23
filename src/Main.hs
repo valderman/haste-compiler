@@ -4,7 +4,7 @@ import GHC
 import GHC.Paths (libdir)
 import HscMain
 import Outputable (showPpr)
-import DynFlags hiding (flags)
+import DynFlags
 import TidyPgm
 import CorePrep
 import CoreToStg
@@ -15,18 +15,18 @@ import Module (packageIdString)
 import System.Environment (getArgs)
 import Control.Monad (when)
 import Haste
+import Haste.Args
+import Haste.Opts
 import Haste.Environment
 import Haste.Version
-import Args
-import ArgSpecs
 import System.IO
 import System.Exit (exitFailure)
 import Data.Version
 import Data.List
 import qualified Control.Shell as Sh
 
-logStr :: String -> IO ()
-logStr = hPutStrLn stderr
+logStr :: Config -> String -> IO ()
+logStr cfg = when (verbose cfg) . hPutStrLn stderr
 
 rebootMsg :: String
 rebootMsg = "Haste needs to be rebooted; please run haste-boot"
@@ -46,6 +46,8 @@ preArgs args
     putStrLn ghcVersion >> return False
   | "--info" `elem` args =
     printInfo >> return False
+  | "--print-libdir" `elem` args =
+    putStrLn libdir >> return False
   | "--version" `elem` args =
     putStrLn (showVersion hasteVersion) >> return False
   | "--supported-extensions" `elem` args =
@@ -105,17 +107,17 @@ allSupported args =
 -- | The main compiler driver.
 compiler :: [String] -> IO ()
 compiler cmdargs = do
-  let cmdargs' | "-debug" `elem` cmdargs = "--debug":"--trace-primops":cmdargs
-               | otherwise               = cmdargs
-      argRes = handleArgs defConfig argSpecs cmdargs'
+  let argRes = parseArgs hasteOpts helpHeader cmdargs
       usedGhcMode = if "-c" `elem` cmdargs then OneShot else CompManager
 
   case argRes of
     -- We got --help as an argument - display help and exit.
-    Left help -> putStrLn help
+    Left help -> putStr help
 
     -- We got a config and a set of arguments for GHC; let's compile!
-    Right (config, ghcargs) -> do
+    Right (mkConfig, ghcargs) -> do
+      let config = mkConfig def
+
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
 
@@ -144,7 +146,7 @@ compiler cmdargs = do
           when (performLink cfg) $ liftIO $ do
             flip mapM_ files' $ \file -> do
               let outfile = outFile cfg cfg file
-              logStr $ "Linking " ++ outfile
+              logStr cfg $ "Linking program " ++ outfile
 #if __GLASGOW_HASKELL__ >= 706
               let pkgid = showPpr dynflags $ thisPackage dynflags'
 #else
@@ -152,9 +154,7 @@ compiler cmdargs = do
 #endif
               link cfg pkgid file
               case useGoogleClosure cfg of
-                Just clopath -> closurize clopath
-                                          outfile
-                                          (useGoogleClosureFlags cfg)
+                Just clopath -> closurize cfg clopath outfile
                 _            -> return ()
               when (outputHTML cfg) $ do
                 res <- Sh.shell $ Sh.withCustomTempFile "." $ \tmp h -> do
@@ -181,9 +181,6 @@ prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName
 prepare dynflags theMod = do
   env <- getSession
   let name = moduleName $ ms_mod theMod
-#if __GLASGOW_HASKELL__ >= 707
-      mod  = ms_mod theMod
-#endif
   pgm <- parseModule theMod
     >>= typecheckModule
     >>= desugarModule
@@ -191,7 +188,7 @@ prepare dynflags theMod = do
     >>= liftIO . tidyProgram env
     >>= prepPgm env . fst
 #if __GLASGOW_HASKELL__ >= 707
-    >>= liftIO . coreToStg dynflags mod
+    >>= liftIO . coreToStg dynflags (ms_mod theMod)
 #else
     >>= liftIO . coreToStg dynflags
 #endif
@@ -206,9 +203,10 @@ prepare dynflags theMod = do
       return prepd
 
 -- | Run Google Closure on a file.
-closurize :: FilePath -> FilePath -> [String] -> IO ()
-closurize cloPath f arguments = do
-  logStr $ "Running the Google Closure compiler on " ++ f ++ "..."
+closurize :: Config -> FilePath -> FilePath -> IO ()
+closurize cfg cloPath f = do
+  let arguments = useGoogleClosureFlags cfg
+  logStr cfg $ "Running the Google Closure compiler on " ++ f ++ "..."
   let cloFile = f `Sh.addExtension` ".clo"
   res <- Sh.shell $ do
     str <- Sh.run "java"
@@ -226,7 +224,7 @@ closurize cloPath f arguments = do
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
     case ms_hsc_src modSummary of
-      HsBootFile -> liftIO $ logStr $ "Skipping boot " ++ myName
+      HsBootFile -> liftIO $ logStr cfg $ "Skipping boot " ++ myName
       _          -> do
         (pgm, name) <- prepare dynflags modSummary
 #if __GLASGOW_HASKELL__ >= 706
@@ -237,7 +235,7 @@ compile cfg dynflags modSummary = do
             cfg' = cfg {showOutputable = showPpr}
 #endif
             theCode = generate cfg' pkgid name pgm
-        liftIO $ logStr $ "Compiling " ++ myName ++ " into " ++ targetpath
+        liftIO $ logStr cfg $ "Compiling " ++ myName ++ " into " ++ targetpath
         liftIO $ writeModule targetpath theCode
   where
     myName = moduleNameString $ moduleName $ ms_mod modSummary
