@@ -10,7 +10,7 @@ import Foreign.C.Types (CIntPtr)
 import Control.Shell
 import Paths_haste_compiler
 
-#if defined(PORTABLE) || defined(PORTABLE_COMPILER)
+#if defined(PORTABLE_COMPILER)
 hasteBinDir :: FilePath
 hasteBinDir = currentBinDir
 
@@ -24,13 +24,8 @@ jsDir :: FilePath
 jsDir = unsafePerformIO $ getDataDir
 #endif
 
-#if defined(PORTABLE)
-hasteDir :: FilePath
-hasteDir = hasteBinDir
-#else
 hasteDir :: FilePath
 Right hasteDir = unsafePerformIO . shell $ withAppDirectory "haste" return
-#endif
 
 jsmodDir :: FilePath
 jsmodDir = hasteDir </> "jsmods"

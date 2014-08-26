@@ -36,12 +36,6 @@ Data-Files:
     Canvas.js
     Handle.js
 
-Flag portable
-    Description:
-        Install Haste and its package database into a self-contained directory.
-        Primarily useful for installation onto a USB stick.
-    Default: False
-
 Flag portable-compiler
     Description:
         Install Haste into a self-contained directory. Package databases are
@@ -60,8 +54,6 @@ Executable haste-boot
     Hs-Source-Dirs: src
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
-    if flag(portable)
-        CPP-Options: -DPORTABLE
     Build-Depends:
         ghc,
         base < 5,
@@ -79,8 +71,6 @@ Executable hastec
     GHC-Options: -Wall -O2
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
-    if flag(portable)
-        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         ghc-prim,
@@ -130,8 +120,6 @@ Executable haste-inst
     Hs-Source-Dirs: src
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
-    if flag(portable)
-        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         shellmate
@@ -142,8 +130,6 @@ Executable haste-pkg
     Hs-Source-Dirs: src
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
-    if flag(portable)
-        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         shellmate
@@ -154,8 +140,6 @@ Executable haste-install-his
     Hs-Source-Dirs: src
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
-    if flag(portable)
-        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         shellmate
@@ -168,8 +152,6 @@ Executable haste-copy-pkg
     Hs-Source-Dirs: src
     if flag(portable-compiler)
         CPP-Options: -DPORTABLE_COMPILER
-    if flag(portable)
-        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         shellmate >= 0.1.5
