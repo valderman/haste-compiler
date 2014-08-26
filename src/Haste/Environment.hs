@@ -8,9 +8,14 @@ import System.IO.Unsafe
 import Data.Bits (bitSize)
 import Foreign.C.Types (CIntPtr)
 import Control.Shell
+import System.Environment (getExecutablePath)
 import Paths_haste_compiler
 
 #if defined(PORTABLE_COMPILER)
+-- | The directory where the currently residing binary lives.
+currentBinDir :: FilePath
+currentBinDir = dropFileName . unsafePerformIO $ getExecutablePath
+
 hasteBinDir :: FilePath
 hasteBinDir = currentBinDir
 
