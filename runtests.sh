@@ -13,34 +13,53 @@ fi
 runTest() {
     module=$1
     quiet=$2
+    haste_stderr_file=`mktemp`
+    haste_opt_stderr_file=`mktemp`
+    ghc_stderr_file=`mktemp`
     echo "Running test $module..."
 
-    ghc_output=`runghc -DTEST_MODULE=$module TestDriver.hs`
+    ghc_output=`runghc -w -DTEST_MODULE=$module TestDriver.hs 2> $ghc_stderr_file`
 
     if [[ $quiet == 1 ]] ; then
         $hastec --onexec -O0 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     else
         $hastec -O0 --verbose --debug --onexec -DTEST_MODULE=$module TestDriver.hs
     fi
-    haste_output=`$JS TestDriver.js`
+    haste_output=`$JS TestDriver.js 2> $haste_stderr_file`
 
     if [[ $quiet == 1 ]] ; then
         $hastec --opt-whole-program --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs > /dev/null 2>&1
     else
         $hastec --opt-whole-program --verbose --debug --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs
     fi
-    haste_opt_output=`$JS TestDriver.O2.js`
+    haste_opt_output=`$JS TestDriver.O2.js 2> $haste_opt_stderr_file`
 
-    if [[ "$ghc_output" != "$haste_output" ]] ; then
+    haste_stderr=`cat $haste_stderr_file`
+    haste_opt_stderr=`cat $haste_opt_stderr_file`
+    ghc_stderr=`cat $ghc_stderr_file`
+    rm $haste_stderr_file $haste_opt_stderr_file $ghc_stderr_file
+
+    if [[ "$ghc_output" != "$haste_output" || "$ghc_stderr" != "$haste_stderr" ]] ; then
         thistest="failed"
         echo "  GHC disagrees with hastec output!"
-        echo "  GHC says '$ghc_output', but hastec says '$haste_output'"
+        if [[ "$ghc_output" != "$haste_output" ]] ; then
+            echo "  GHC says '$ghc_output', but hastec says '$haste_output'"
+        else
+            echo "  Mismatch on STDERR."
+            echo "  GHC says '$ghc_stderr', but hastec says '$haste_stderr'"
+        fi
     fi
 
-    if [[ "$ghc_output" != "$haste_opt_output" ]] ; then
+    if [[ "$ghc_output" != "$haste_opt_output" || "$ghc_stderr" != "$haste_opt_stderr" ]] ; then
         thistest="failed"
         echo "  GHC disagrees with hastec -O2 output!"
-        echo "  GHC says '$ghc_output', but hastec says '$haste_opt_output'"
+        if [[ "$ghc_output" != "$haste_opt_output" ]] ; then
+            echo "  GHC says '$ghc_output', but hastec says '$haste_opt_output'"
+            echo "  GHC says '$ghc_output', but hastec says '$haste_opt_output'"
+        else
+            echo "  Mismatch on STDERR."
+            echo "  GHC says '$ghc_stderr', but hastec says '$haste_opt_stderr'"
+        fi
     fi
 }
 
