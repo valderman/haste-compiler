@@ -41,13 +41,6 @@ main = do
     fixAllArg args | "all" `elem` args = "deb" : "tarball" : args
                    | otherwise         = args
 
-buildSourceTarball srcdir ver = do
-    run_ "git" ["clone", srcdir, "haste-compiler-" ++ ver] ""
-    run_ "tar" ["-cjf", srctar, "haste-compiler-" ++ ver] ""
-    return srctar
-  where
-    srctar = "haste-compiler_" ++ ver ++ ".orig.tar.bz2"
-
 buildPortable = do
     -- Build compiler
     run_ "cabal" ["configure", "-f", "portable"] ""
@@ -95,5 +88,4 @@ buildBinaryTarball ver ghcver = do
 -- Debian packaging based on https://wiki.debian.org/IntroDebianPackaging.
 -- Requires build-essential, devscripts and debhelper.
 buildDebianPackage srcdir ver ghcver = do
-    _ <- buildSourceTarball srcdir ver
     run_ "debuild" ["-us", "-uc", "-b"] ""
