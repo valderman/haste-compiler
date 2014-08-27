@@ -47,10 +47,19 @@ buildPortable = do
     run_ "cabal" ["build"] ""
 
     -- Strip symbols
-    run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
-    run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
-    run_ "strip" ["-s", "haste-compiler/bin/haste-inst"] ""
-    run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
+    case os of
+      "linux" -> do
+        run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/haste-inst"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
+      "mingw32" -> do
+        run_ "strip" ["-s", "haste-compiler\\bin\\haste-boot.exe"] ""
+        run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
+        run_ "strip" ["-s", "haste-compiler\\bin\\haste-inst.exe"] ""
+        run_ "strip" ["-s", "haste-compiler\\bin\\hastec.exe"] ""
+      _ -> do
+        return ()
 
     -- Get versions
     getVersions
