@@ -63,6 +63,6 @@ relocate packages pkg = do
       and $ zipWith (==) key str
 
     importDir
-      | os == "windows" = "${pkgroot}" </> "libraries"
+      | os == "mingw32" = "${pkgroot}" </> "libraries"
       | otherwise       = "${pkgroot}" </> "libraries" </> "lib"
     includeDir = "${pkgroot}" </> "include"
