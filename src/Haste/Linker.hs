@@ -26,7 +26,7 @@ link cfg pkgid target = do
   let mainmod = case mainMod cfg of
                  Just mm -> mm
                  _       -> error "Haste.Linker.link called without main sym!"
-  ds <- getAllDefs cfg [targetLibPath cfg, libPath cfg] mainmod pkgid mainSym
+  ds <- getAllDefs cfg (targetLibPath cfg : libPaths cfg) mainmod pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
       (progText, myMain') = prettyProg (ppOpts cfg) mainSym myDefs
       callMain = fromString "B(A(" <> myMain' <> fromString ", [0]));"

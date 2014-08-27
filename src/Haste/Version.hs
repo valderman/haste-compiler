@@ -6,7 +6,7 @@ import Control.Shell ((</>), shell, isFile)
 import System.IO
 import Data.Version
 import Config (cProjectVersion)
-import Haste.Environment (hasteDir)
+import Haste.Environment (hasteSysDir)
 
 hasteVersion :: Version
 hasteVersion = Version [0, 3] []
@@ -18,7 +18,7 @@ bootVersion :: BootVer
 bootVersion = BootVer hasteVersion ghcVersion
 
 bootFile :: FilePath
-bootFile = hasteDir </> "booted"
+bootFile = hasteSysDir </> "booted"
 
 data BootVer = BootVer Version String deriving (Read, Show)
 

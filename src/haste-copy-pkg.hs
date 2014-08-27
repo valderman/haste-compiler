@@ -28,7 +28,8 @@ main = do
 copyFromDB :: [String] -> String -> Shell ()
 copyFromDB pkgdbs package = do
   pkgdesc <- run "ghc-pkg" (["describe", package] ++ pkgdbs) ""
-  run_ hastePkgBinary ["update", "-", "--force"] (fixPaths package pkgdesc)
+  run_ hastePkgBinary ["update", "-", "--force", "--global"]
+                      (fixPaths package pkgdesc)
 
 -- | Hack a config to work with Haste.
 fixPaths :: String -> String -> String
@@ -61,6 +62,6 @@ fixPaths pkgname pkgtext =
     isKey key str =
       and $ zipWith (==) key str
     
-    importDir  = pkgLibDir
-    includeDir = hasteDir </> "include"
-    pkgRoot    = hasteInstDir
+    importDir  = "${pkgroot}" </> "libraries" </> "lib"
+    includeDir = "${pkgroot}" </> "include"
+    pkgRoot    = "${pkgroot}"

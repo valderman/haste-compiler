@@ -1,27 +1,51 @@
 {-# LANGUAGE CPP #-}
 -- | Paths, host bitness and other environmental information about Haste.
-module Haste.Environment (hasteDir, jsmodDir, hasteInstDir, pkgDir, pkgLibDir,
-                          jsDir, hostWordSize, hasteBinary,
-                          hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
-                          hasteCopyPkgBinary, closureCompiler) where
+module Haste.Environment (
+  hasteSysDir, jsmodSysDir, hasteInstSysDir, pkgSysDir, pkgSysLibDir, jsDir,
+  hasteUserDir, jsmodUserDir, hasteInstUserDir, pkgUserDir, pkgUserLibDir,
+  hostWordSize, ghcLibDir,
+  hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
+  hasteCopyPkgBinary, closureCompiler, portableHaste) where
 import System.IO.Unsafe
-import Data.Bits (bitSize)
+import Data.Bits
 import Foreign.C.Types (CIntPtr)
 import Control.Shell
 import System.Environment (getExecutablePath)
 import Paths_haste_compiler
+import GHC.Paths (libdir)
 
-#if defined(PORTABLE_COMPILER)
--- | The directory where the currently residing binary lives.
-currentBinDir :: FilePath
-currentBinDir = dropFileName . unsafePerformIO $ getExecutablePath
+#if defined(PORTABLE)
+portableHaste :: Bool
+portableHaste = True
+
+-- | Haste system directory. Identical to @hasteUserDir@ unless built with
+--   -f portable.
+hasteSysDir :: FilePath
+hasteSysDir =
+  joinPath . init . init . splitPath $ unsafePerformIO getExecutablePath
+
+ghcLibDir :: FilePath
+ghcLibDir = unsafePerformIO $ do
+  Right out <- shell $ run "ghc" ["--print-libdir"] ""
+  return $ init out
 
 hasteBinDir :: FilePath
-hasteBinDir = currentBinDir
+hasteBinDir = hasteSysDir </> "bin"
 
 jsDir :: FilePath
-jsDir = hasteBinDir </> "js"
+jsDir = hasteSysDir </> "js"
 #else
+portableHaste :: Bool
+portableHaste = False
+
+-- | Haste system directory. Identical to @hasteUserDir@ unless built with
+--   -f portable.
+hasteSysDir :: FilePath
+hasteSysDir = hasteUserDir
+
+ghcLibDir :: FilePath
+ghcLibDir = libdir
+
 hasteBinDir :: FilePath
 hasteBinDir = unsafePerformIO $ getBinDir
 
@@ -29,27 +53,49 @@ jsDir :: FilePath
 jsDir = unsafePerformIO $ getDataDir
 #endif
 
-hasteDir :: FilePath
-Right hasteDir = unsafePerformIO . shell $ withAppDirectory "haste" return
+-- | Haste user directory. Usually ~/.haste.
+hasteUserDir :: FilePath
+Right hasteUserDir = unsafePerformIO . shell $ withAppDirectory "haste" return
 
-jsmodDir :: FilePath
-jsmodDir = hasteDir </> "jsmods"
+-- | Directory where user .jsmod files are stored.
+jsmodSysDir :: FilePath
+jsmodSysDir = hasteSysDir </> "jsmods"
 
--- | Base directory for haste-inst.
-hasteInstDir :: FilePath
-hasteInstDir = hasteDir </> "libraries"
+-- | Base directory for haste-inst; system packages.
+hasteInstSysDir :: FilePath
+hasteInstSysDir = hasteSysDir </> "libraries"
+
+-- | Base directory for Haste's system libraries.
+pkgSysLibDir :: FilePath
+pkgSysLibDir = hasteInstSysDir </> "lib"
 
 -- | Directory housing package information.
-pkgDir :: FilePath
-pkgDir = hasteDir </> "packages"
+pkgSysDir :: FilePath
+pkgSysDir = hasteSysDir </> "packages"
+
+-- | Directory where user .jsmod files are stored.
+jsmodUserDir :: FilePath
+jsmodUserDir = hasteUserDir </> "jsmods"
+
+-- | Base directory for haste-inst.
+hasteInstUserDir :: FilePath
+hasteInstUserDir = hasteUserDir </> "libraries"
+
+-- | Directory containing library information.
+pkgUserLibDir :: FilePath
+pkgUserLibDir = hasteInstUserDir </> "lib"
+
+-- | Directory housing package information.
+pkgUserDir :: FilePath
+pkgUserDir = hasteUserDir </> "packages"
 
 -- | Host word size in bits.
 hostWordSize :: Int
+#if __GLASGOW_HASKELL__ >= 708
+hostWordSize = finiteBitSize (undefined :: CIntPtr)
+#else
 hostWordSize = bitSize (undefined :: CIntPtr)
-
--- | Directory containing library information. 
-pkgLibDir :: FilePath
-pkgLibDir = hasteInstDir </> "lib"
+#endif
 
 -- | The main Haste compiler binary.
 hasteBinary :: FilePath
@@ -73,4 +119,4 @@ hasteInstHisBinary = hasteBinDir </> "haste-install-his"
 
 -- | JAR for Closure compiler.
 closureCompiler :: FilePath
-closureCompiler = hasteDir </> "compiler.jar"
+closureCompiler = hasteBinDir </> "compiler.jar"

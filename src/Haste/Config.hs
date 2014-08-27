@@ -10,7 +10,7 @@ import Data.Monoid
 import Haste.Environment
 import Outputable (Outputable)
 import Data.Default
-import Data.List (isPrefixOf)
+import Data.List (isPrefixOf, nub)
 
 type AppStart = Builder -> Builder
 
@@ -70,7 +70,7 @@ data Config = Config {
     -- | Runtime files to dump into the JS blob.
     rtsLibs :: [FilePath],
     -- | Path to directory where system jsmods are located.
-    libPath :: FilePath,
+    libPaths :: [FilePath],
     -- | Write all jsmods to this path.
     targetLibPath :: FilePath,
     -- | A function that takes the main symbol as its input and outputs the
@@ -122,7 +122,7 @@ data Config = Config {
 defConfig :: Config
 defConfig = Config {
     rtsLibs          = stdJSLibs,
-    libPath          = jsmodDir,
+    libPaths         = nub [jsmodUserDir, jsmodSysDir],
     targetLibPath    = ".",
     appStart         = startOnLoadComplete,
     wrapProg         = False,

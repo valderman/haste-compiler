@@ -1,11 +1,12 @@
 {-# LANGUAGE CPP #-}
 import Distribution.Simple
 import Distribution.Simple.Setup
-import Distribution.Simple.LocalBuildInfo
+import Distribution.Simple.LocalBuildInfo hiding (libdir)
 import Distribution.PackageDescription
 import Control.Monad (when, forM_)
 import System.Directory
 import System.FilePath
+import GHC.Paths
 
 main = defaultMainWithHooks $ simpleUserHooks {
     postBuild = \args buildflags pkgdesc buildinfo -> do
@@ -28,23 +29,23 @@ main = defaultMainWithHooks $ simpleUserHooks {
                  ++ "and doesn't seem to be a Haste installation."
          when (dirExists && isHasteDir) $
            removeDirectoryRecursive outdir
-             
+
+         -- Create directory and mark as ours
          createDirectoryIfMissing True (outdir </> "js")
-         
+         createDirectoryIfMissing True (outdir </> "bin")
+         writeFile (outdir </> ".hastedir") ""
+
          -- Copy executables
          forM_ exes $ \exe -> do
            exists <- doesFileExist $ builddir </> exe </> exe
            if exists
-             then copyFile (builddir </> exe </> exe) (outdir </> exe)
+             then copyFile (builddir </> exe </> exe) (outdir </> "bin" </> exe)
              else copyFile (builddir </> exe </> exe <.> "exe")
-                           (outdir </> exe <.> "exe")
+                           (outdir </> "bin" </> exe <.> "exe")
          
          -- Copy libs
          forM_ jsfiles $ \js -> do
            copyFile (datadir </> js) (outdir </> "js" </> js)
-         
-         -- Mark the directory as ours
-         writeFile (outdir </> ".hastedir") ""
   }
 
 has :: LocalBuildInfo -> String -> Bool

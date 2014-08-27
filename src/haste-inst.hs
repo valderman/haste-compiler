@@ -10,11 +10,12 @@ type Match = (String -> Bool, [String] -> [String])
 
 cabal :: [String] -> IO ()
 cabal args = do
-  res <- shell $ run_ "cabal" (hasteargs ++ args) ""
+  res <- shell $ run_ "cabal" (hasteargs ++ args') ""
   case res of
     Left _ -> exitFailure
     _      -> exitSuccess
   where
+    args' = [arg | arg <- args, arg /= "--install-global", arg /= "--global"]
     hasteargs 
       | "build" `elem` args =
         ["--with-ghc=" ++ hasteBinary]
@@ -22,9 +23,14 @@ cabal args = do
         ["--with-compiler=" ++ hasteBinary,
          "--with-hc-pkg=" ++ hastePkgBinary,
          "--with-hsc2hs=hsc2hs",
-         "--prefix=" ++ hasteInstDir,
-         "--package-db=" ++ pkgDir,
-         "-fhaste-inst"]
+         "-fhaste-inst"] ++
+        if "--install-global" `elem` args || "--global" `elem` args
+           then ["--prefix=" ++ hasteInstSysDir,
+                 "--package-db=" ++ pkgSysDir]
+           else ["--prefix=" ++ hasteInstUserDir,
+                 "--package-db=" ++ pkgSysDir,
+                 "--package-db=" ++ pkgUserDir]
+
 
 main :: IO ()
 main = do

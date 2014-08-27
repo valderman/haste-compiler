@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP #-}
 module Main (main) where
 import GHC
-import GHC.Paths (libdir)
 import HscMain
 import Outputable (showPpr)
 import DynFlags
@@ -33,7 +32,7 @@ rebootMsg = "Haste needs to be rebooted; please run haste-boot"
 
 printInfo :: IO ()
 printInfo = do
-  ghc <- runGhc (Just libdir) getSessionDynFlags
+  ghc <- runGhc (Just ghcLibDir) getSessionDynFlags
   putStrLn $ formatInfo $ compilerInfo ghc
   where
     formatInfo = ('[' :) . tail . unlines . (++ ["]"]) . map ((',' :) . show)
@@ -47,7 +46,7 @@ preArgs args
   | "--info" `elem` args =
     printInfo >> return False
   | "--print-libdir" `elem` args =
-    putStrLn libdir >> return False
+    putStrLn ghcLibDir >> return False
   | "--version" `elem` args =
     putStrLn (showVersion hasteVersion) >> return False
   | "--supported-extensions" `elem` args =
@@ -59,6 +58,7 @@ preArgs args
 
 main :: IO ()
 main = do
+    initUserPkgDB
     args <- fmap (++ packageDBArgs) getArgs
     runCompiler <- preArgs args
     when (runCompiler) $ do
@@ -69,10 +69,11 @@ main = do
 #if __GLASGOW_HASKELL__ >= 706
     packageDBArgs = ["-no-global-package-db",
                      "-no-user-package-db",
-                     "-package-db " ++ pkgDir]
+                     "-package-db " ++ pkgSysDir,
+                     "-package-db " ++ pkgUserDir ]
 #else
     packageDBArgs = ["-no-user-package-conf",
-                     "-package-conf " ++ pkgDir]
+                     "-package-conf " ++ pkgSysDir]
 #endif
 -- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
@@ -84,15 +85,24 @@ callVanillaGHC args = do
       x /= "--libinstall" &&
       x /= "--unbooted"
 
+initUserPkgDB :: IO ()
+initUserPkgDB = do
+  _ <- Sh.shell $ do
+    pkgDirExists <- Sh.isDirectory pkgUserDir
+    when (not pkgDirExists) $ do
+      Sh.mkdir True pkgUserLibDir
+      Sh.runInteractive "ghc-pkg" ["init", pkgUserDir]
+  return ()
+
 -- | Run the compiler if everything's satisfactorily booted, otherwise whine
 --   and exit.
 hasteMain :: [String] -> IO ()
 hasteMain args
   | not needsReboot =
-    compiler ("-O2" : args)
+    compiler False ("-O2" : args)
   | otherwise = do
     if "--unbooted" `elem` args
-      then compiler (filter (/= "--unbooted") ("-O2" : args))
+      then compiler True (filter (/= "--unbooted") ("-O2" : args))
       else fail rebootMsg
 
 -- | Determine whether all given args are handled by Haste, or if we need to
@@ -105,9 +115,9 @@ allSupported args =
     someoneElsesProblems = [".c", ".cmm", ".hs-boot", ".lhs-boot"]
 
 -- | The main compiler driver.
-compiler :: [String] -> IO ()
-compiler cmdargs = do
-  let argRes = parseArgs hasteOpts helpHeader cmdargs
+compiler :: Bool -> [String] -> IO ()
+compiler unbooted cmdargs = do
+  let argRes = parseArgs (hasteOpts unbooted) helpHeader cmdargs
       usedGhcMode = if "-c" `elem` cmdargs then OneShot else CompManager
 
   case argRes of
@@ -121,7 +131,7 @@ compiler cmdargs = do
       -- Parse static flags, but ignore profiling.
       (ghcargs', _) <- parseStaticFlags [noLoc a | a <- ghcargs, a /= "-prof"]
 
-      runGhc (Just libdir) $ do
+      runGhc (Just ghcLibDir) $ do
         -- Handle dynamic GHC flags. Make sure __HASTE__ is #defined.
         let args = "-D__HASTE__" : map unLoc ghcargs'
             justDie = const $ liftIO exitFailure

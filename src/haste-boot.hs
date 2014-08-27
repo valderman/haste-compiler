@@ -111,16 +111,26 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
   when (getLibs cfg) $ do
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
-    exists <- isDirectory hasteInstDir
-    when exists $ rmdir hasteInstDir
-    exists <- isDirectory jsmodDir
-    when exists $ rmdir jsmodDir
-    exists <- isDirectory pkgDir
-    when exists $ rmdir pkgDir
+    mapM_ clearDir [hasteInstUserDir, jsmodUserDir, pkgUserDir,
+                    hasteInstSysDir, jsmodSysDir, pkgSysDir]
     buildLibs cfg
+    when (portableHaste) $ do
+      mapM_ relocate ["array", "bytestring", "containers", "data-default",
+                      "data-default-class", "data-default-instances-base",
+                      "data-default-instances-containers",
+                      "data-default-instances-dlist",
+                      "data-default-instances-old-locale",
+                      "deepseq", "dlist", "haste-lib", "integer-gmp",
+                      "monads-tf", "old-locale", "transformers"]
   when (getClosure cfg) $ do
     installClosure
   file bootFile (show bootVersion)
+
+clearDir :: FilePath -> Shell ()
+clearDir dir = do
+  exists <- isDirectory dir
+  when exists $ rmdir dir
+
 
 -- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> Shell ()
@@ -148,9 +158,9 @@ installClosure = do
 buildLibs :: Cfg -> Shell ()
 buildLibs cfg = do
     -- Set up dirs and copy includes
-    mkdir True $ pkgLibDir
-    cpDir "include" hasteDir
-    run_ hastePkgBinary ["update", "libraries" </> "rts.pkg"] ""
+    mkdir True $ pkgSysLibDir
+    cpDir "include" hasteSysDir
+    run_ hastePkgBinary ["update", "--global", "libraries" </> "rts.pkg"] ""
     
     inDirectory "libraries" $ do
       -- Install ghc-prim
@@ -158,7 +168,7 @@ buildLibs cfg = do
         hasteInst ["configure", "--solver", "topdown"]
         hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
         run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
-        run_ hastePkgBinary ["update", "packageconfig"] ""
+        run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
       
       -- Install integer-gmp; double install shouldn't be needed anymore.
       run_ hasteCopyPkgBinary ["Cabal"] ""
@@ -179,7 +189,7 @@ buildLibs cfg = do
             pkgdb = "--package-db=dist" </> "package.conf.inplace"
         run_ hasteInstHisBinary [base, "dist" </> "build"] ""
         run_ hasteCopyPkgBinary [base, pkgdb] ""
-        forEachFile "include" $ \f -> cp f (hasteDir </> "include")
+        forEachFile "include" $ \f -> cp f (hasteSysDir </> "include")
       
       -- Install array and haste-lib
       forM_ ["array", "haste-lib"] $ \pkg -> do
@@ -193,4 +203,7 @@ buildLibs cfg = do
         ["--ghc-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
       ]
     hasteInst args =
-      run_ hasteInstBinary ("--unbooted" : args) ""
+      run_ hasteInstBinary ("--install-global" : "--unbooted" : args) ""
+
+relocate :: String -> Shell ()
+relocate pkg = run_ hastePkgBinary ["relocate", pkg] ""

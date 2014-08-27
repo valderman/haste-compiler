@@ -36,7 +36,7 @@ Data-Files:
     Canvas.js
     Handle.js
 
-Flag portable-compiler
+Flag portable
     Description:
         Install Haste into a self-contained directory. Package databases are
         still local to each user. Primarily useful for global installs.
@@ -52,8 +52,8 @@ Executable haste-boot
         Haste.Version
         Haste.Environment
     Hs-Source-Dirs: src
-    if flag(portable-compiler)
-        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         ghc,
         base < 5,
@@ -63,14 +63,15 @@ Executable haste-boot
         transformers,
         network,
         HTTP,
-        shellmate >= 0.1.5
+        shellmate >= 0.1.5,
+        ghc-paths
     Default-Language: Haskell98
 
 Executable hastec
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
-    if flag(portable-compiler)
-        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
         ghc-prim,
@@ -118,31 +119,35 @@ Executable hastec
 Executable haste-inst
     Main-Is: haste-inst.hs
     Hs-Source-Dirs: src
-    if flag(portable-compiler)
-        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        shellmate
+        shellmate,
+        ghc-paths
     default-language: Haskell98
 
 Executable haste-pkg
     Main-Is: haste-pkg.hs
     Hs-Source-Dirs: src
-    if flag(portable-compiler)
-        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        shellmate
+        shellmate,
+        ghc-paths,
+        process
     default-language: Haskell98
 
 Executable haste-install-his
     Main-Is: haste-install-his.hs
     Hs-Source-Dirs: src
-    if flag(portable-compiler)
-        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        shellmate
+        shellmate,
+        ghc-paths
     default-language: Haskell98
 
 Executable haste-copy-pkg
@@ -150,11 +155,12 @@ Executable haste-copy-pkg
     Other-Modules:
         Haste.Environment
     Hs-Source-Dirs: src
-    if flag(portable-compiler)
-        CPP-Options: -DPORTABLE_COMPILER
+    if flag(portable)
+        CPP-Options: -DPORTABLE
     Build-Depends:
         base < 5,
-        shellmate >= 0.1.5
+        shellmate >= 0.1.5,
+        ghc-paths
     default-language: Haskell98
 
 Library
@@ -210,5 +216,6 @@ Library
         data-default,
         directory,
         filepath,
-        process
+        process,
+        ghc-paths
     Default-Language: Haskell98

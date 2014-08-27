@@ -59,12 +59,16 @@ get you less bugs.
 Portable installation
 ---------------------
 
-It is possible to install Haste along with its runtime system into a portable
-directory. Each user still has their own package database, which makes this
-handy for global installations. To do this, check out the source and run:
+It is possible to install Haste along with its runtime system and base
+libraries into a portable directory.
+Each user still has their own package database, which makes this handy
+for global installations. To do this, check out the source and run:
 
-    $ cabal configure -f portable-compiler
+    $ cabal configure -f portable
     $ cabal build
+
+A portable installation needs a working GHC install of the same version
+that was used to build Haste available on your `$PATH`.
 
 
 Usage
