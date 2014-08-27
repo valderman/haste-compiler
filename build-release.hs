@@ -74,9 +74,17 @@ bootPortable = do
     run_ "haste-compiler/bin/haste-boot" ["--force", "--local"] ""
 
     -- Remove unnecessary binaries
-    rm "haste-compiler/bin/haste-copy-pkg"
-    rm "haste-compiler/bin/haste-install-his"
-    rm "haste-compiler/bin/haste-boot"
+    case os of
+      "linux" -> do
+        rm "haste-compiler/bin/haste-copy-pkg"
+        rm "haste-compiler/bin/haste-install-his"
+        rm "haste-compiler/bin/haste-boot"
+      "ming32" -> do
+        rm "haste-compiler\\bin\\haste-copy-pkg.exe"
+        rm "haste-compiler\\bin\\haste-install-his.exe"
+        rm "haste-compiler\\bin\\haste-boot.exe"
+      _ -> do
+        return ()
     run_ "find" ["haste-compiler", "-name", "*.o", "-exec", "rm", "{}", ";"] ""
     run_ "find" ["haste-compiler", "-name", "*.a", "-exec", "rm", "{}", ";"] ""
 
