@@ -3,24 +3,43 @@ import Control.Shell
 import Data.Bits
 import System.Info
 import Control.Monad
+import System.Environment (getArgs)
 
+-- Pass 'deb' to build a deb package, 'tarball' to build a tarball, 'all' to
+-- build all supported formats, and 'no-rebuild' to avoid rebuilding stuff,
+-- only re-packaging it.
 main = do
-  res <- shell $ do
-    srcdir <- pwd
-    isdir <- isDirectory "_build"
-    when isdir $ rmdir "_build"
-    mkdir True "_build"
-    inDirectory "_build" $ do
-      run_ "git" ["clone", srcdir] ""
-      inDirectory "haste-compiler" $ do
-        (ver, ghcver) <- buildPortable
-        bootPortable
-        tar <- buildBinaryTarball ver ghcver
-        mv tar (".." </> tar)
-        buildDebianPackage srcdir ver ghcver
-  case res of
-    Left err -> error $ "FAILED: " ++ err
-    _        -> return ()
+    args <- fixAllArg `fmap` getArgs
+    res <- shell $ do
+      srcdir <- pwd
+      isdir <- isDirectory "_build"
+      when (isdir && not ("no-rebuild" `elem` args)) $ rmdir "_build"
+      mkdir True "_build"
+
+      inDirectory "_build" $ do
+        unless ("no-rebuild" `elem` args) $ do
+          run_ "git" ["clone", srcdir] ""
+        inDirectory "haste-compiler" $ do
+          (ver, ghcver) <- if ("no-rebuild" `elem` args)
+                             then do
+                               getVersions
+                             else do
+                               vers <- buildPortable
+                               bootPortable
+                               return vers
+
+          when ("tarball" `elem` args) $ do
+            tar <- buildBinaryTarball ver ghcver
+            mv tar (".." </> tar)
+
+          when ("deb" `elem` args) $ do
+            buildDebianPackage srcdir ver ghcver
+    case res of
+      Left err -> error $ "FAILED: " ++ err
+      _        -> return ()
+  where
+    fixAllArg args | "all" `elem` args = "deb" : "tarball" : args
+                   | otherwise         = args
 
 buildSourceTarball srcdir ver = do
     run_ "git" ["clone", srcdir, "haste-compiler-" ++ ver] ""
@@ -41,6 +60,9 @@ buildPortable = do
     run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
 
     -- Get versions
+    getVersions
+
+getVersions = do
     ver <- fmap init $ run "haste-compiler/bin/hastec" ["--version"] ""
     ghcver <- fmap init $ run "ghc" ["--numeric-version"] ""
     return (ver, ghcver)
@@ -75,6 +97,3 @@ buildBinaryTarball ver ghcver = do
 buildDebianPackage srcdir ver ghcver = do
     _ <- buildSourceTarball srcdir ver
     run_ "debuild" ["-us", "-uc", "-b"] ""
-    return deb
-  where
-    deb = concat ["haste-compiler_", ver, "-1_amd64.deb"]
