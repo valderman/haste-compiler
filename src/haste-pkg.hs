@@ -61,5 +61,7 @@ relocate packages pkg = do
     isKey key str =
       and $ zipWith (==) key str
 
-    importDir  = "${pkgroot}" </> "libraries" </> "lib"
+    importDir
+      | os == "windows" = "${pkgroot}" </> "libraries"
+      | otherwise       = "${pkgroot}" </> "libraries" </> "lib"
     includeDir = "${pkgroot}" </> "include"
