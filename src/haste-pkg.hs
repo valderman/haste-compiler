@@ -5,6 +5,7 @@ import Control.Monad
 import System.Environment (getArgs)
 import Haste.Environment
 import Control.Shell
+import System.Info (os)
 
 main = shell $ do
   args <- liftIO getArgs
