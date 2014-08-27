@@ -1,0 +1,3 @@
+/usr/lib/haste-compiler/bin/hastec /usr/bin/hastec
+/usr/lib/haste-compiler/bin/haste-pkg /usr/bin/haste-pkg
+/usr/lib/haste-compiler/bin/haste-inst /usr/bin/haste-inst
