@@ -1,0 +1,12 @@
+Source: haste-compiler
+Maintainer: Anton Ekblad <anton@ekblad.cc>
+Section: devel
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9)
+
+Package: haste-compiler
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Haskell to JavaScript compiler
+

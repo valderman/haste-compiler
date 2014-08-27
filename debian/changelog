@@ -1,0 +1,5 @@
+haste-compiler (0.4-1) UNRELEASED; urgency=medium
+
+  * Initial Debian release.
+
+ -- Anton Ekblad <anton@ekblad.cc>  Wed, 27 Aug 2014 20:30:51 +0100
