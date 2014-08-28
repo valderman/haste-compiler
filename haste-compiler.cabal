@@ -54,7 +54,10 @@ Executable haste-boot
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
-        GHC-Options: -static -optl-static -optl-pthread
+        if os(windows)
+          GHC-Options: -static -optl-static
+        else
+          GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         ghc,
         base < 5,
@@ -75,7 +78,10 @@ Executable hastec
     GHC-Options: -Wall -O2
     if flag(portable)
         CPP-Options: -DPORTABLE
-        GHC-Options: -static -optl-static -optl-pthread
+        if os(windows)
+          GHC-Options: -static -optl-static
+        else
+          GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         ghc-prim,
@@ -126,7 +132,10 @@ Executable haste-inst
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
-        GHC-Options: -static -optl-static -optl-pthread
+        if os(windows)
+          GHC-Options: -static -optl-static
+        else
+          GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate,
@@ -140,7 +149,10 @@ Executable haste-pkg
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
-        GHC-Options: -static -optl-static -optl-pthread
+        if os(windows)
+          GHC-Options: -static -optl-static
+        else
+          GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate,
@@ -155,7 +167,10 @@ Executable haste-install-his
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
-        GHC-Options: -static -optl-static -optl-pthread
+        if os(windows)
+          GHC-Options: -static -optl-static
+        else
+          GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate,
@@ -171,7 +186,10 @@ Executable haste-copy-pkg
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
-        GHC-Options: -static -optl-static -optl-pthread
+        if os(windows)
+          GHC-Options: -static -optl-static
+        else
+          GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate >= 0.1.5,
