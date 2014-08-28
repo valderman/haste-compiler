@@ -6,10 +6,6 @@ import Control.Monad
 import System.Environment (getArgs)
 import System.Exit
 
--- Pass 'deb' to build a deb package, 'tarball' to build a tarball, 'all' to
--- build all supported formats, and 'no-rebuild' to avoid rebuilding stuff,
--- only re-packaging it.
---
 -- Packages will end up in ghc-$GHC_MAJOR.$GHC_MINOR. If the directory does
 -- not exist, it is created. If the package already exists in that directory,
 -- it is overwritten.
@@ -103,8 +99,10 @@ bootPortable = do
         rm "haste-compiler\\bin\\haste-boot.exe"
       _ -> do
         return ()
-    run_ "find" ["haste-compiler", "-name", "*.o", "-exec", "rm", "{}", ";"] ""
-    run_ "find" ["haste-compiler", "-name", "*.a", "-exec", "rm", "{}", ";"] ""
+    forEachFile "haste-compiler" $ \f -> do
+      when ((f `hasExt` ".o") || (f `hasExt` ".a")) $ rm f
+  where
+    f `hasExt` e = takeExtension f == e
 
 buildBinaryTarball ver ghcver = do
     -- Get versions and create binary tarball
