@@ -1,13 +1,17 @@
 {-# LANGUAGE CPP #-}
 import Control.Shell
 import Data.Bits
-import System.Info
+import System.Info (os)
 import Control.Monad
 import System.Environment (getArgs)
 
 -- Pass 'deb' to build a deb package, 'tarball' to build a tarball, 'all' to
 -- build all supported formats, and 'no-rebuild' to avoid rebuilding stuff,
 -- only re-packaging it.
+--
+-- Packages will end up in ghc-$GHC_MAJOR.$GHC_MINOR. If the directory does
+-- not exist, it is created. If the package already exists in that directory,
+-- it is overwritten.
 main = do
     args <- fixAllArg `fmap` getArgs
     res <- shell $ do
@@ -28,12 +32,18 @@ main = do
                                bootPortable
                                return vers
 
+          let (major, '.':rest) = break (== '.') ghcver
+              (minor, _) = break (== '.') rest
+              outdir = ".." </> ".." </> ("ghc-" ++ major ++ "." ++ minor)
+          mkdir True outdir
+
           when ("tarball" `elem` args) $ do
             tar <- buildBinaryTarball ver ghcver
-            mv tar (".." </> tar)
+            mv tar (outdir </> tar)
 
           when ("deb" `elem` args) $ do
-            buildDebianPackage srcdir ver ghcver
+            deb <- buildDebianPackage srcdir ver ghcver
+            mv (".." </> deb) (outdir </> deb)
     case res of
       Left err -> error $ "FAILED: " ++ err
       _        -> return ()
@@ -95,7 +105,9 @@ buildBinaryTarball ver ghcver = do
   where
     tarball =
       concat ["haste-compiler-",ver,"-ghc-",ghcver,"-",os,"-",arch,".tar.bz2"]
-    arch = if bits == 64 then "amd64" else "i686"
+
+arch = if bits == 64 then "amd64" else "i686"
+  where
 #if __GLASGOW_HASKELL__ >= 708
     bits = finiteBitSize (0 :: Int)
 #else
@@ -106,3 +118,4 @@ buildBinaryTarball ver ghcver = do
 -- Requires build-essential, devscripts and debhelper.
 buildDebianPackage srcdir ver ghcver = do
     run_ "debuild" ["-us", "-uc", "-b"] ""
+    return $ "haste-compiler_" ++ ver ++ "-1_" ++ arch ++ ".deb"
