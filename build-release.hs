@@ -93,7 +93,7 @@ bootPortable = do
         rm "haste-compiler/bin/haste-copy-pkg"
         rm "haste-compiler/bin/haste-install-his"
         rm "haste-compiler/bin/haste-boot"
-      "ming32" -> do
+      "mingw32" -> do
         rm "haste-compiler\\bin\\haste-copy-pkg.exe"
         rm "haste-compiler\\bin\\haste-install-his.exe"
         rm "haste-compiler\\bin\\haste-boot.exe"
