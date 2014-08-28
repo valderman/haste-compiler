@@ -4,6 +4,7 @@ import Data.Bits
 import System.Info (os)
 import Control.Monad
 import System.Environment (getArgs)
+import System.Exit
 
 -- Pass 'deb' to build a deb package, 'tarball' to build a tarball, 'all' to
 -- build all supported formats, and 'no-rebuild' to avoid rebuilding stuff,
@@ -14,6 +15,13 @@ import System.Environment (getArgs)
 -- it is overwritten.
 main = do
     args <- fixAllArg `fmap` getArgs
+    when (null args) $ do
+      putStrLn $ "Usage: runghc build-release.hs [no-rebuild] formats\n"
+      putStrLn $ "Supported formats: deb, tarball, all\n"
+      putStrLn $ "no-rebuild\n  Repackage whatever is already in the " ++
+                 "_build directory\n  instead of rebuilding from scratch."
+      exitFailure
+
     res <- shell $ do
       srcdir <- pwd
       isdir <- isDirectory "_build"
