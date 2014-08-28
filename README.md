@@ -1,7 +1,7 @@
 Haste
 =====
 
-A compiler to generate Javascript code from Haskell.
+A compiler to generate JavaScript code from Haskell.
 
 It even has a [website](http://haste-lang.org) and a
 [mailing list](https://groups.google.com/d/forum/haste-compiler).
@@ -11,7 +11,7 @@ Features
 
 * Seamless, type-safe single program framework for client-server communication
 * Support for modern web technologies such as WebSockets, WebStorage and Canvas
-* Simple Javascript interoperability
+* Simple JavaScript interoperability
 * Generates small, fast programs
 * Supports all GHC extensions except Template Haskell
 * Uses standard Haskell libraries
@@ -28,9 +28,14 @@ Features
 Installation
 ------------
 
-You have two options for getting Haste: installing from Hackage or from
-Github. In both cases, you need to add add Cabal's bin directory, usually
+You have three options for getting Haste: installing from Hackage, from
+Github or from one of the pre-built
+[binary packages](http://haste-lang.org/#downloads).
+In the first two cases, you need to add add Cabal's bin directory, usually
 `~/.cabal/bin`, to your `$PATH` if you haven't already done so.
+When installing from the Windows or generic Linux package, you may want to
+add `path/to/haste-compiler/bin` to your `$PATH`. The Debian package takes
+care of this automatically.
 
 Then, installing the latest stable-ish version from cabal is easy:
 
@@ -67,6 +72,10 @@ for global installations. To do this, check out the source and run:
     $ cabal configure -f portable
     $ cabal build
 
+Building Haste this way yourself is not recommended however, as pre-booted
+[binary packages](http://haste-lang.org/#downloads) built this way are
+available for your convenience. Why jump through hoops if you don't have to?
+
 A portable installation needs a working GHC install of the same version
 that was used to build Haste available on your `$PATH`.
 
@@ -74,7 +83,7 @@ that was used to build Haste available on your `$PATH`.
 Usage
 -----
 
-To compile your Haskell program to a Javascript blob ready to be included in an
+To compile your Haskell program to a JavaScript blob ready to be included in an
 HTML document or run using a command line interpreter:
 
     $ hastec myprog.hs
@@ -86,9 +95,9 @@ You can pass the same flags to hastec as you'd normally pass to GHC:
 
     $ hastec -O2 -fglasgow-exts myprog.hs
 
-Haste also has its own set of command line arguments. Invoke it with --help to
-read more about them. In particular --opt-all, --opt-google-closure and
---with-js should be fairly interesting.
+Haste also has its own set of command line arguments. Invoke it with `--help`
+to read more about them. In particular `--opt-all`, `--opt-minify`,
+`--start` and `--with-js` should be fairly interesting.
 
 If you want your package to compile with both Haste and, say, GHC, you might
 want to use the CPP extension for conditional compilation. Haste defines the
@@ -100,11 +109,11 @@ with vanilla GHC and cabal:
 
     $ haste-inst install mtl
 
-This will only work for libraries, however, as installing Javascript
+This will only work for libraries, however, as installing JavaScript
 "executables" on your system doesn't make much sense. You can still use
 `haste-inst build` to build your "executables" locally, however.
 
-Finally, you can interact with Javascript code using the FFI. See
+Finally, you can interact with JavaScript code using the FFI. See
 `doc/js-externals.txt` for more information about that.
 
 For more information on how Haste works, see
@@ -116,10 +125,10 @@ You should also have a look at the documentation and/or source code for
 small programs in the `examples` directory, to get started.
 
 
-Interfacing with Javascript
+Interfacing with JavaScript
 ---------------------------
 
-When writing programs you will probably want to use some native Javascript
+When writing programs you will probably want to use some native JavaScript
 in your program; bindings to native libraries, for instance. There are two ways
 of doing this. You can either use the GHC FFI as described in
 `doc/js-externals.txt`, or you can use the Fay-like `ffi` function:
@@ -131,9 +140,9 @@ The `ffi` function is a little bit safer than the GHC FFI in that it enforces
 some type invariants on values returned from JS, and is more convenient. It is,
 however, quite a bit slower due to its dynamic nature.
 
-If you do not feel comfortable throwing out your entire legacy Javascript
+If you do not feel comfortable throwing out your entire legacy JavaScript
 code base, you can export selected functions from your Haste program and call
-them from Javascript:
+them from JavaScript:
 
 fun.hs:
 
@@ -156,7 +165,7 @@ fun.js:
     $ hastec '--start=%%(); mymain();' --with-js=fun.js fun.hs
 
 `fun.hs` will export the function `fun` when its `main` function is run.
-Our Javascript obviously needs to run after that, so we create our "real" main
+Our JavaScript obviously needs to run after that, so we create our "real" main
 function in `fun.js`. Finally, we tell the compiler to start the program by
 first executing Haste's `main` function (the `%%` gets replaced by whatever
 name the compiler chooses for the Haste `main`) and then executing our own
@@ -210,25 +219,6 @@ which work with Haste include [Yampa](http://hackage.haskell.org/package/Yampa),
 [elerea](http://hackage.haskell.org/package/elerea) and others.
 
 
-A note about security
----------------------
-
-As described in https://github.com/haskell/cabal/issues/936,
-Cabal is not entirely secure, and as haste-boot uses Cabal this obviously extends
-to Haste as well. If this troubles you, you can take the following steps in order
-to obtain a trusted Haste installation:
-
-* Install Haste from GitHub (don't forget to use HTTPS!) and run `haste-boot`
-  as usual.
-* Install `deepseq`, `containers`, `monads-tf` and `transformers` from a source
-  you trust, in that order, forcing reinstalls as necessary.
-* Manually reinstall `haste-lib` from the same source tree you
-  installed Haste from, in that order.
-
-That said, if you're comfortable trusting random Internet people
-(me, for instance), trusting Cabal shouldn't really be a big deal.
-
-
 Libraries
 ---------
 
@@ -236,11 +226,11 @@ Haste is able to use standard Haskell libraries. However, some primitive
 operations are still not implemented which means that any code making use 
 of them will give you a compiler warning, then die at runtime with an angry
 error. Some libraries also depend on external C code - if you wish to use such
-a library, you will need to port the C bits to Javascript yourself (perhaps
-using Escripten) and link them into your program using `--with-js`.
+a library, you will need to port the C bits to JavaScript yourself (perhaps
+using Emscripten) and link them into your program using `--with-js`.
 
 
-Why yet another Haskell to Javascript compiler?
+Why yet another Haskell to JavaScript compiler?
 -----------------------------------------------
 
 Existing implementations either produce huge code, require a fair amount of
@@ -254,3 +244,5 @@ Known issues
 * Not all GHC primops are implemented; if you encounter an unimplemented
   primop, please report it together with a small test case that demonstrates
   the problem.
+
+* Template Haskell is still broken.
