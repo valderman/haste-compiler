@@ -95,7 +95,7 @@ buildBinaryTarball ver ghcver = do
   where
     tarball =
       concat ["haste-compiler-",ver,"-ghc-",ghcver,"-",os,"-",arch,".tar.bz2"]
-    arch = if bits == 64 then "x86_64" else "i686"
+    arch = if bits == 64 then "amd64" else "i686"
 #if __GLASGOW_HASKELL__ >= 708
     bits = finiteBitSize (0 :: Int)
 #else
