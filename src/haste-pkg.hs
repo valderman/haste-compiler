@@ -27,19 +27,19 @@ ghcPkg packages args = do
   pkgDirExists <- isDirectory pkgUserDir
   when (not pkgDirExists) $ do
     mkdir True pkgUserLibDir
-    runInteractive "ghc-pkg" ["init", pkgUserDir]
+    runInteractive ghcPkgBinary ["init", pkgUserDir]
   pkgDirExists <- isDirectory pkgSysDir
   when (not pkgDirExists) $ do
     mkdir True pkgSysLibDir
-    runInteractive "ghc-pkg" ["init", pkgSysDir]
-  runInteractive "ghc-pkg" (packages ++ args)
+    runInteractive ghcPkgBinary ["init", pkgSysDir]
+  runInteractive ghcPkgBinary (packages ++ args)
 
 -- | Only global packages may be marked as relocatable!
 --   May break horribly for general use, only reliable for Haste base packages.
 relocate :: [String] -> String -> Shell ()
 relocate packages pkg = do
-    pi <- run "ghc-pkg" (packages ++ ["describe", pkg]) ""
-    run_ "ghc-pkg" (packages ++ ["update","-","--force","--global"]) (reloc pi)
+    pi <- run ghcPkgBinary (packages ++ ["describe", pkg]) ""
+    run_ ghcPkgBinary (packages++["update","-","--force","--global"]) (reloc pi)
   where
     reloc = unlines . map fixPath . lines
 

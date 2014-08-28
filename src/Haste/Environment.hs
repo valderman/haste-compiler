@@ -4,6 +4,7 @@ module Haste.Environment (
   hasteSysDir, jsmodSysDir, hasteInstSysDir, pkgSysDir, pkgSysLibDir, jsDir,
   hasteUserDir, jsmodUserDir, hasteInstUserDir, pkgUserDir, pkgUserLibDir,
   hostWordSize, ghcLibDir,
+  ghcBinary, ghcPkgBinary,
   hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
   hasteCopyPkgBinary, closureCompiler, portableHaste) where
 import System.IO.Unsafe
@@ -11,8 +12,11 @@ import Data.Bits
 import Foreign.C.Types (CIntPtr)
 import Control.Shell
 import System.Environment (getExecutablePath)
+import System.Directory (findExecutable)
 import Paths_haste_compiler
 import GHC.Paths (libdir)
+import Config (cProjectVersion)
+import Data.Maybe (catMaybes)
 
 #if defined(PORTABLE)
 portableHaste :: Bool
@@ -26,7 +30,7 @@ hasteSysDir =
 
 ghcLibDir :: FilePath
 ghcLibDir = unsafePerformIO $ do
-  Right out <- shell $ run "ghc" ["--print-libdir"] ""
+  Right out <- shell $ run ghcBinary ["--print-libdir"] ""
   return $ init out
 
 hasteBinDir :: FilePath
@@ -96,6 +100,28 @@ hostWordSize = finiteBitSize (undefined :: CIntPtr)
 #else
 hostWordSize = bitSize (undefined :: CIntPtr)
 #endif
+
+-- | Path to the GHC binary.
+ghcBinary :: FilePath
+ghcBinary = unsafePerformIO $ do
+  exes <- catMaybes `fmap` mapM findExecutable ["ghc-" ++ cProjectVersion,
+                                                "ghc"]
+  case exes of
+    (exe:_) -> return exe
+    _       -> error $  "No appropriate GHC executable in search path!\n"
+                     ++ "Are you sure you have GHC " ++ cProjectVersion
+                     ++ " installed?"
+
+-- | Path to the GHC binary.
+ghcPkgBinary :: FilePath
+ghcPkgBinary = unsafePerformIO $ do
+  exes <- catMaybes `fmap` mapM findExecutable ["ghc-pkg-" ++ cProjectVersion,
+                                                "ghc-pkg"]
+  case exes of
+    (exe:_) -> return exe
+    _       -> error $  "No appropriate ghc-pkg executable in search path!\n"
+                     ++ "Are you sure you have GHC " ++ cProjectVersion
+                     ++ " installed?"
 
 -- | The main Haste compiler binary.
 hasteBinary :: FilePath

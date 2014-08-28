@@ -27,7 +27,7 @@ main = do
 
 copyFromDB :: [String] -> String -> Shell ()
 copyFromDB pkgdbs package = do
-  pkgdesc <- run "ghc-pkg" (["describe", package] ++ pkgdbs) ""
+  pkgdesc <- run ghcPkgBinary (["describe", package] ++ pkgdbs) ""
   run_ hastePkgBinary ["update", "-", "--force", "--global"]
                       (fixPaths package pkgdesc)
 

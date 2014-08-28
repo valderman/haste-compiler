@@ -65,7 +65,9 @@ Executable haste-boot
         network,
         HTTP,
         shellmate >= 0.1.5,
-        ghc-paths
+        ghc-paths,
+        ghc,
+        directory
     Default-Language: Haskell98
 
 Executable hastec
@@ -90,7 +92,8 @@ Executable hastec
         random,
         system-fileio,
         shellmate >= 0.1.5,
-        either
+        either,
+        directory
     Main-Is:
         Main.hs
     Other-Modules:
@@ -127,7 +130,9 @@ Executable haste-inst
     Build-Depends:
         base < 5,
         shellmate,
-        ghc-paths
+        ghc-paths,
+        ghc,
+        directory
     default-language: Haskell98
 
 Executable haste-pkg
@@ -140,7 +145,9 @@ Executable haste-pkg
         base < 5,
         shellmate,
         ghc-paths,
-        process
+        ghc,
+        process,
+        directory
     default-language: Haskell98
 
 Executable haste-install-his
@@ -152,7 +159,9 @@ Executable haste-install-his
     Build-Depends:
         base < 5,
         shellmate,
-        ghc-paths
+        ghc-paths,
+        ghc,
+        directory
     default-language: Haskell98
 
 Executable haste-copy-pkg
@@ -166,7 +175,9 @@ Executable haste-copy-pkg
     Build-Depends:
         base < 5,
         shellmate >= 0.1.5,
-        ghc-paths
+        ghc-paths,
+        ghc,
+        directory
     default-language: Haskell98
 
 Library
@@ -223,5 +234,7 @@ Library
         directory,
         filepath,
         process,
-        ghc-paths
+        ghc-paths,
+        ghc,
+        directory
     Default-Language: Haskell98

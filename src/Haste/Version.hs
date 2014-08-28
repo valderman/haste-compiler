@@ -2,17 +2,21 @@
 module Haste.Version (hasteVersion, ghcVersion, bootVersion, needsReboot,
                       BootVer (..), bootFile) where
 import System.IO.Unsafe
-import Control.Shell ((</>), shell, isFile)
+import Control.Shell ((</>), shell, isFile, run)
 import System.IO
 import Data.Version
 import Config (cProjectVersion)
-import Haste.Environment (hasteSysDir)
+import Haste.Environment (hasteSysDir, ghcBinary)
 
 hasteVersion :: Version
 hasteVersion = Version [0, 4] []
 
 ghcVersion :: String
-ghcVersion = cProjectVersion
+ghcVersion = unsafePerformIO $ do
+  res <- shell $ run ghcBinary ["--numeric-version"] ""
+  case res of
+    Right ver -> return $ init ver -- remove trailing newline
+    _         -> return cProjectVersion
 
 bootVersion :: BootVer
 bootVersion = BootVer hasteVersion ghcVersion

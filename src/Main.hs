@@ -78,7 +78,7 @@ main = do
 -- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
-  _ <- Sh.shell $ Sh.run_ "ghc" (filter noHasteArgs args) ""
+  _ <- Sh.shell $ Sh.run_ ghcBinary (filter noHasteArgs args) ""
   return ()
   where
     noHasteArgs x =
@@ -91,7 +91,7 @@ initUserPkgDB = do
     pkgDirExists <- Sh.isDirectory pkgUserDir
     when (not pkgDirExists) $ do
       Sh.mkdir True pkgUserLibDir
-      Sh.runInteractive "ghc-pkg" ["init", pkgUserDir]
+      Sh.runInteractive ghcPkgBinary ["init", pkgUserDir]
   return ()
 
 -- | Run the compiler if everything's satisfactorily booted, otherwise whine
