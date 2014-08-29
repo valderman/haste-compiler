@@ -2,12 +2,12 @@
              EmptyDataDecls #-}
 -- | Concurrency for Haste. Includes MVars, forking, Ajax and more.
 module Haste.Concurrent (
-    module Monad, module Ajax,
+    module Haste.Concurrent.Monad, module Ajax,
     Recv, Send, Inbox, Outbox, MBox,
     receive, spawn, statefully, (!), (<!),
     wait
   ) where
-import Haste.Concurrent.Monad as Monad
+import Haste.Concurrent.Monad
 import Haste.Concurrent.Ajax as Ajax hiding ((!))
 import Haste.Callback
 
