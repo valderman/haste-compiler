@@ -46,18 +46,20 @@ enabling your JS code to call back into Haskell.
 
 As functions may be curried whichever way, you must use the A() primitive to
 call back into your Haskell code from JS; instead of foo(bar, baz), you have to
-do A(foo, [bar,baz]).
+do B(A(foo, [bar,baz])). Note that the B() primitive is also involved - this
+is the trampolining primitive, which ensures that your code will still work
+with tail calls.
 
 Also, as you might expect, the world state parameter rears its ugly head when
 calling back into Haskell as well. You must always pass one extra parameter to
 any Haskell function you call from your JS, so if you have a callback cb of
-type IO (), you have to call it as A(cb, [whatever]), NOT just A(cb, [])!
+type IO (), you have to call it as B(A(cb, [whatever])), NOT just B(A(cb, []))!
 
 Finally, the FFI doesn't do any nice marshalling for us here, so if you want to
 pass a primitive value back into your function, you have to wrap it back up
 in a data constructor again. Thus, pass [0, 42] rather than 42, [0, "hi!"]
 rather than just "hi!" and so on. Assuming f :: Int -> JSString -> IO (), you
-would call f as A(f, [[0,42], [0,"Hi!"], 0]).
+would call f as B(A(f, [[0,42], [0,"Hi!"], 0])).
 
 On the Haskell side, the FFI doesn't like us passing raw functions around, so
 you need to wrap your callbacks using the Ptr type. Here's a small example:
@@ -70,7 +72,7 @@ callFunction n f = js_callFunction n (toPtr f)
 
 // ffitest.js
 function js_callFunction(n, f) {
-  A(f, [[0, n], 0]);
+  B(A(f, [[0, n], 0]));
 }
 
 ...and don't forget to compile with --with-js=ffitest.js
@@ -122,5 +124,6 @@ function jspure(val) {
 
 // jscallme :: (JSString -> IO ()) -> IO ()
 function jscallme(callback) {
-    A(callback, [[0,'Hi, Haskell!'], 0]); // Note the A() and wrapped argument
+    // Note the B(A()) and wrapped argument
+    B(A(callback, [[0,'Hi, Haskell!'], 0]));
 }
