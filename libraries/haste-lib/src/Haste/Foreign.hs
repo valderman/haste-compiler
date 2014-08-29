@@ -271,7 +271,7 @@ instance Unpack a => IOFun (IO a) where
              "  return (function() {" ++
              "      var args=Array.prototype.slice.call(arguments,0);"++
              "      args.push(0);" ++
-             "      return E(A(f, args));" ++
+             "      return E(B(A(f, args)));" ++
              "    });" ++
              "})")
 

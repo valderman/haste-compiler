@@ -84,9 +84,9 @@ new :: URL
     -> IO ()
 new = ffi "(function(url, cb, f, err) {\
              \var ws = new WebSocket(url);\
-             \ws.onmessage = function(e) {A(cb,[ws, [0,e.data],0]);};\
-             \ws.onopen = function(e) {A(f,[ws,0]);};\
-             \ws.onerror = function(e) {A(err,[0]);};\
+             \ws.onmessage = function(e) {B(A(cb,[ws, [0,e.data],0]));};\
+             \ws.onopen = function(e) {B(A(f,[ws,0]));};\
+             \ws.onerror = function(e) {B(A(err,[0]));};\
              \return ws;\
            \})" 
 
@@ -98,9 +98,9 @@ newBin :: URL
 newBin = ffi "(function(url, cb, f, err) {\
                 \var ws = new WebSocket(url);\
                 \ws.binaryType = 'blob';\
-                \ws.onmessage = function(e) {A(cb,[ws,e.data,0]);};\
-                \ws.onopen = function(e) {A(f,[ws,0]);};\
-                \ws.onerror = function(e) {A(err,[0]);};\
+                \ws.onmessage = function(e) {B(A(cb,[ws,e.data,0]));};\
+                \ws.onopen = function(e) {B(A(f,[ws,0]));};\
+                \ws.onerror = function(e) {B(A(err,[0]));};\
                 \return ws;\
               \})" 
 

@@ -44,7 +44,7 @@ jsOnHashChange =
             \var oldhash = window.__old_hash;\
             \var newhash = window.location.hash.split('#')[1] || '';\
             \window.__old_hash = newhash;\
-            \A(cb, [[0,oldhash],[0,newhash],0]);\
+            \B(A(cb, [[0,oldhash],[0,newhash],0]));\
           \};\
        \})"
 
