@@ -1,3 +1,9 @@
 #!/usr/bin/make -f
+
+GHCDEPS=$(shell runghc build-release.hs --debghcdeps)
+
 %:
 	dh $@
+
+override_dh_gencontrol:
+	dh_gencontrol -- -Vghc:Depends="$(GHCDEPS)"

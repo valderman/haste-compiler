@@ -18,6 +18,17 @@ main = do
                  "_build directory\n  instead of rebuilding from scratch."
       exitFailure
 
+    when ("--debghcdeps" `elem` args) $ do
+      _ <- shell $ do
+        v <- init `fmap` run "ghc" ["--numeric-version"] ""
+        let (major, '.':rest) = break (== '.') v
+            (minor, _) = break (== '.') rest
+            intminor = read minor :: Int
+            minStr = major ++ "." ++ minor
+            maxStr = major ++ "." ++ show (intminor+1)
+        liftIO . putStr $ "ghc (>= " ++ minStr ++ "), ghc (<< " ++ maxStr ++ ")"
+      exitSuccess
+
     res <- shell $ do
       srcdir <- pwd
       isdir <- isDirectory "_build"
