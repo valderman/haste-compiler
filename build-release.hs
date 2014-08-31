@@ -73,18 +73,18 @@ buildPortable = do
 
     -- Strip symbols
     case os of
-      "linux" -> do
-        run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
-        run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
-        run_ "strip" ["-s", "haste-compiler/bin/haste-inst"] ""
-        run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
       "mingw32" -> do
+        -- windows
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-boot.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-inst.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\hastec.exe"] ""
       _ -> do
-        return ()
+        -- linux/darwin
+        run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/haste-inst"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
 
     -- Get versions
     getVersions
@@ -100,16 +100,16 @@ bootPortable = do
 
     -- Remove unnecessary binaries
     case os of
-      "linux" -> do
-        rm "haste-compiler/bin/haste-copy-pkg"
-        rm "haste-compiler/bin/haste-install-his"
-        rm "haste-compiler/bin/haste-boot"
       "mingw32" -> do
+        -- windows
         rm "haste-compiler\\bin\\haste-copy-pkg.exe"
         rm "haste-compiler\\bin\\haste-install-his.exe"
         rm "haste-compiler\\bin\\haste-boot.exe"
       _ -> do
-        return ()
+        -- linux/darwin
+        rm "haste-compiler/bin/haste-copy-pkg"
+        rm "haste-compiler/bin/haste-install-his"
+        rm "haste-compiler/bin/haste-boot"
     forEachFile "haste-compiler" $ \f -> do
       when ((f `hasExt` ".o") || (f `hasExt` ".a")) $ rm f
   where
