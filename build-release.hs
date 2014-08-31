@@ -79,12 +79,18 @@ buildPortable = do
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-inst.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\hastec.exe"] ""
-      _ -> do
-        -- linux/darwin
+      "linux" -> do
+        -- linux
         run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
         run_ "strip" ["-s", "haste-compiler/bin/haste-inst"] ""
         run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
+      _ -> do
+        -- darwin
+        run_ "strip" ["haste-compiler/bin/haste-boot"] ""
+        run_ "strip" ["haste-compiler/bin/haste-pkg"] ""
+        run_ "strip" ["haste-compiler/bin/haste-inst"] ""
+        run_ "strip" ["haste-compiler/bin/hastec"] ""
 
     -- Get versions
     getVersions
