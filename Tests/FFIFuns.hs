@@ -5,7 +5,7 @@ import Haste.Foreign
 
 #ifdef __HASTE__
 
-test3 :: (Maybe Int -> Maybe String -> Bool -> IO ()) -> IO String
+test3 :: (Maybe Int -> Maybe String -> Bool -> IO String) -> IO String
 test3 = ffi "(function(f) {return (f(null, 'str', true));})"
 
 test1 :: (Int -> IO Int) -> IO ()
@@ -19,7 +19,8 @@ testNothing = ffi "(function(f) {return [17, null];})"
 
 runTest = do
   test0 (return 42) >>= writeLog . show
-  test3 (\a b c -> writeLog $ show a ++ show (fmap reverse b) ++ show c)
+  res <- test3 (\a b c -> return $ show a ++ show (fmap reverse b) ++ show c)
+  writeLog res
   test1 (\x -> writeLog ("Got: " ++ show x) >> return 9)
   testNothing (writeLog "this should never happen") >>= writeLog . show
 
