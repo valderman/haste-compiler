@@ -15,6 +15,8 @@ import Data.Int
 import System.IO.Unsafe
 import Unsafe.Coerce
 
+import Debug.Trace
+
 #ifdef __HASTE__
 foreign import ccall eval :: JSString -> IO (Ptr a)
 foreign import ccall "String" jsString :: Double -> JSString
@@ -262,28 +264,45 @@ class IOFun a where
 
 instance Unpack a => IOFun (IO a) where
   type X (IO a) = Unpacked
-  packify = unsafePerformIO . unpack' . toOpaque . fmap unpack
-    where
-      {-# NOINLINE unpack' #-}
-      unpack' :: Opaque (IO a) -> IO Unpacked
-      unpack' =
-        ffi (toJSStr $ "(function(f) {" ++
-             "  return (function() {" ++
-             "      var args=Array.prototype.slice.call(arguments,0);"++
-             "      args.push(0);" ++
-             "      return E(B(A(f, args)));" ++
-             "    });" ++
-             "})")
+  packify m = unsafePerformIO $ do
+    x <- m
+    return $! unpack x
 
 instance (Pack a, IOFun b) => IOFun (a -> b) where
   type X (a -> b) = Unpacked -> X b
   packify f = \x -> packify (f $! pack x)
 
 instance Unpack a => Unpack (IO a) where
-  unpack = packify
+  unpack = unsafePerformIO . unpackAct . toOpaque . fmap unpack
+    where
+      {-# NOINLINE unpackAct #-}
+      unpackAct :: Opaque (IO Unpacked) -> IO Unpacked
+      unpackAct =
+        ffi (toJSStr $ "(function(m){" ++
+             "    return (function() {" ++
+             "        return (function(){return E(B(A(m,[0])));});" ++
+             "      });" ++
+             "})")
 
 instance (IOFun (a -> b)) => Unpack (a -> b) where
-  unpack = unsafeCoerce . packify
+  unpack = unpackFun
+
+unpackFun :: IOFun a => a -> Unpacked
+unpackFun =
+    unsafePerformIO . go . toOpaque . packify
+  where
+    {-# NOINLINE go #-}
+    go :: Opaque a -> IO Unpacked
+    go = ffi (toJSStr $ "(function(f) {" ++
+              "  return (function() {" ++
+              "      return (function(){" ++
+              "        var args=Array.prototype.slice.call(arguments,0);"++
+              "        args.push(0);" ++
+              "        return E(B(A(f, args)));" ++
+              "    });" ++
+              "  });" ++
+              "})")
+
 
 -- | Creates a function based on the given string of Javascript code. If this
 --   code is not well typed or is otherwise incorrect, your program may crash
