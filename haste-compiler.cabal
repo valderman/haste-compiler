@@ -57,7 +57,8 @@ Executable haste-boot
         if os(windows)
           GHC-Options: -static -optl-static
         else
-          GHC-Options: -static -optl-static -optl-pthread
+          if os(linux)
+            GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         ghc,
         base < 5,
@@ -81,7 +82,8 @@ Executable hastec
         if os(windows)
           GHC-Options: -static -optl-static
         else
-          GHC-Options: -static -optl-static -optl-pthread
+          if os(linux)
+            GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         ghc-prim,
@@ -135,7 +137,8 @@ Executable haste-inst
         if os(windows)
           GHC-Options: -static -optl-static
         else
-          GHC-Options: -static -optl-static -optl-pthread
+          if os(linux)
+            GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate,
@@ -152,7 +155,8 @@ Executable haste-pkg
         if os(windows)
           GHC-Options: -static -optl-static
         else
-          GHC-Options: -static -optl-static -optl-pthread
+          if os(linux)
+            GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate,
@@ -170,7 +174,8 @@ Executable haste-install-his
         if os(windows)
           GHC-Options: -static -optl-static
         else
-          GHC-Options: -static -optl-static -optl-pthread
+          if os(linux)
+            GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate,
@@ -189,7 +194,8 @@ Executable haste-copy-pkg
         if os(windows)
           GHC-Options: -static -optl-static
         else
-          GHC-Options: -static -optl-static -optl-pthread
+          if os(linux)
+            GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate >= 0.1.5,
