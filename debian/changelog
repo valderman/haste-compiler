@@ -4,4 +4,4 @@ haste-compiler (0.4.2-1) UNRELEASED; urgency=medium
   * Fix broken trampolined callbacks.
   * Fix broken IO FFI instances.
 
- -- Anton Ekblad <valderman@mitsuhide>  Sun, 31 Aug 2014 19:18:38 +0200
+ -- Anton Ekblad <anton@ekblad.cc>  Sun, 31 Aug 2014 19:18:38 +0200
