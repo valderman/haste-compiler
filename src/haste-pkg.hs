@@ -53,9 +53,13 @@ relocate packages pkg = do
 
     prefix s pfx path = pfx ++ ": " ++ path </> stripPrefix s
 
-    stripPrefix s =
-      case take 2 $ reverse $ splitPath s of
-        [second, first] -> first </> second
+    stripPrefix s
+      | os == "darwin" =
+        case take 3 $ reverse $ splitPath s of
+          [third, second, first] -> first </> second </> third
+      | otherwise =
+        case take 2 $ reverse $ splitPath s of
+          [second, first] -> first </> second
 
     isKey _ "" =
       False
@@ -63,6 +67,6 @@ relocate packages pkg = do
       and $ zipWith (==) key str
 
     importDir
-      | os == "mingw32" = "${pkgroot}" </> "libraries"
-      | otherwise       = "${pkgroot}" </> "libraries" </> "lib"
+      | os == "linux"  = "${pkgroot}" </> "libraries" </> "lib"
+      | otherwise      = "${pkgroot}" </> "libraries"
     includeDir = "${pkgroot}" </> "include"
