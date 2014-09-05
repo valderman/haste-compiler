@@ -12,19 +12,19 @@ data GenState cfg = GenState {
     deps         :: !(S.Set Name),
     locals       :: !(S.Set Name),
     continuation :: !(AST Stm -> AST Stm),
-    bindStack    :: [Var],
-    modName      :: String,
-    config       :: cfg
+    bindStack    :: ![Var],
+    modName      :: !String,
+    config       :: !cfg
   }
 
-initialState :: GenState cfg
-initialState = GenState {
+initialState :: cfg -> GenState cfg
+initialState cfg = GenState {
     deps         = S.empty,
     locals       = S.empty,
     continuation = id,
     bindStack    = [],
-    modName      = undefined,
-    config       = undefined
+    modName      = "",
+    config       = cfg
   }
 
 newtype JSGen cfg a =
@@ -65,7 +65,7 @@ genJS :: cfg         -- ^ Config to use for code generation.
       -> JSGen cfg a -- ^ The code generation computation.
       -> (a, S.Set J.Name, S.Set J.Name, AST Stm -> AST Stm)
 genJS cfg myModName (JSGen gen) =
-  case runState gen initialState {modName = myModName, config = cfg} of
+  case runState gen (initialState cfg) {modName = myModName} of
     (a, GenState dependencies loc cont _ _ _) ->
       (a, dependencies, loc, cont)
 
