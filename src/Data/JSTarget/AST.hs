@@ -1,7 +1,11 @@
-{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, FlexibleInstances #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, FlexibleInstances, CPP #-}
 module Data.JSTarget.AST where
 import qualified Data.Set as S
+#if __GLASGOW_HASKELL__ >= 708
+import qualified Data.Map.Strict as M
+#else
 import qualified Data.Map as M
+#endif
 import System.IO.Unsafe
 import System.Random (randomIO)
 import Data.IORef
@@ -16,7 +20,7 @@ type Reorderable = Bool
 -- | Shared statements.
 newtype Shared a = Shared Lbl deriving (Eq, Show)
 
-data Name = Name String (Maybe (String, String)) deriving (Eq, Ord, Show)
+data Name = Name !String !(Maybe (String, String)) deriving (Eq, Ord, Show)
 
 class HasModule a where
   moduleOf :: a -> Maybe String
@@ -34,8 +38,8 @@ instance HasModule Var where
 
 -- | Representation of variables.
 data Var where
-  Foreign  :: String -> Var
-  Internal :: Name -> Comment -> Var
+  Foreign  :: !String -> Var
+  Internal :: !Name -> !Comment -> Var
   deriving (Show)
 
 instance Eq Var where
@@ -53,8 +57,8 @@ instance Ord Var where
 --   but for some primops we need to assign array elements as well.
 --   LhsExp is never reorderable.
 data LHS where
-  NewVar :: Reorderable -> Var -> LHS
-  LhsExp :: Exp -> LHS
+  NewVar :: !Reorderable -> !Var -> LHS
+  LhsExp :: !Exp -> LHS
   deriving (Eq, Show)
 
 -- | Distinguish between normal, optimized and method calls.
@@ -63,48 +67,48 @@ data LHS where
 --   only be set to False when there is absolutely no possibility whatsoever
 --   that the called function will tailcall.
 data Call where
-  Normal   :: Bool -> Call
-  Fast     :: Bool -> Call
-  Method   :: String -> Call
+  Normal   :: !Bool -> Call
+  Fast     :: !Bool -> Call
+  Method   :: !String -> Call
   deriving (Eq, Show)
 
 -- | Literals; nothing fancy to see here.
 data Lit where
-  LNum  :: Double  -> Lit
-  LStr  :: String  -> Lit
-  LBool :: Bool    -> Lit
-  LInt  :: Integer -> Lit
+  LNum  :: !Double  -> Lit
+  LStr  :: !String  -> Lit
+  LBool :: !Bool    -> Lit
+  LInt  :: !Integer -> Lit
   LNull :: Lit
   deriving (Eq, Show)
 
 -- | Expressions. Completely predictable.
 data Exp where
-  Var       :: Var -> Exp
-  Lit       :: Lit -> Exp
-  Not       :: Exp -> Exp
-  BinOp     :: BinOp -> Exp -> Exp -> Exp
-  Fun       :: Maybe Name -> [Var] -> Stm -> Exp
-  Call      :: Arity -> Call -> Exp -> [Exp] -> Exp
-  Index     :: Exp -> Exp -> Exp
-  Arr       :: [Exp] -> Exp
-  AssignEx  :: Exp -> Exp -> Exp
-  IfEx      :: Exp -> Exp -> Exp -> Exp
-  Eval      :: Exp -> Exp
-  Thunk     :: Stm -> Exp
+  Var       :: !Var -> Exp
+  Lit       :: !Lit -> Exp
+  Not       :: !Exp -> Exp
+  BinOp     :: !BinOp -> Exp -> !Exp -> Exp
+  Fun       :: !(Maybe Name) -> ![Var] -> !Stm -> Exp
+  Call      :: !Arity -> !Call -> !Exp -> ![Exp] -> Exp
+  Index     :: !Exp -> !Exp -> Exp
+  Arr       :: ![Exp] -> Exp
+  AssignEx  :: !Exp -> !Exp -> Exp
+  IfEx      :: !Exp -> !Exp -> !Exp -> Exp
+  Eval      :: !Exp -> Exp
+  Thunk     :: !Stm -> Exp
   deriving (Eq, Show)
 
 -- | Statements. The only mildly interesting thing here are the Case and Jump
 --   constructors, which allow explicit sharing of continuations.
 data Stm where
-  Case     :: Exp -> Stm -> [Alt] -> Shared Stm -> Stm
-  Forever  :: Stm -> Stm
-  Assign   :: LHS -> Exp -> Stm -> Stm
-  Return   :: Exp -> Stm
+  Case     :: !Exp -> !Stm -> ![Alt] -> !(Shared Stm) -> Stm
+  Forever  :: !Stm -> Stm
+  Assign   :: !LHS -> !Exp -> !Stm -> Stm
+  Return   :: !Exp -> Stm
   Cont     :: Stm
-  Jump     :: Shared Stm -> Stm
+  Jump     :: !(Shared Stm) -> Stm
   NullRet  :: Stm
-  Tailcall :: Exp -> Stm
-  ThunkRet :: Exp -> Stm -- Return from a Thunk
+  Tailcall :: !Exp -> Stm
+  ThunkRet :: !Exp -> Stm -- Return from a Thunk
   deriving (Eq, Show)
 
 -- | Case alternatives - an expression to match and a branch.
