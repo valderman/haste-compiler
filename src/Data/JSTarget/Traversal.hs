@@ -7,7 +7,7 @@ import Data.JSTarget.AST
 import Data.Map as M ((!), insert)
 
 -- | AST nodes we'd like to fold and map over.
-data ASTNode = Exp Exp | Stm Stm | Label Lbl
+data ASTNode = Exp !Exp | Stm !Stm | Label !Lbl
 
 newtype TravM a = T (JumpTable -> (JumpTable, a))
 instance Monad TravM where

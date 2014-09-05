@@ -145,8 +145,8 @@ blackHoleVar = Internal (Name "" (Just ("$blackhole", "$blackhole"))) ""
 
 -- | An AST with local jumps.
 data AST a = AST {
-    astCode  :: a,
-    astJumps :: JumpTable
+    astCode  :: !a,
+    astJumps :: !JumpTable
   } deriving (Show, Eq)
 
 instance Functor AST where
