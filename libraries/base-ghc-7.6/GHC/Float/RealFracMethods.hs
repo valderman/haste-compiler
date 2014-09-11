@@ -119,7 +119,7 @@ ceilingFloatInt (F# x) =
         | otherwise                 -> I# n
 
 roundFloatInt :: Float -> Int
-roundFloatInt x = float2Int (c_rintFloat x)
+roundFloatInt x = c_rintFloat x
 
 -- Functions with Integer results
 
@@ -181,7 +181,9 @@ ceilingFloatInteger (F# x) =
 
 {-# INLINE roundFloatInteger #-}
 roundFloatInteger :: Float -> Integer
-roundFloatInteger x = float2Integer (c_rintFloat x)
+roundFloatInteger x =
+  case c_rintFloat x of
+    I# i -> smallInteger i
 
 ------------------------------------------------------------------------------
 --                              Double Methods                              --
@@ -215,7 +217,7 @@ ceilingDoubleInt (D# x) =
         | otherwise             -> I# n
 
 roundDoubleInt :: Double -> Int
-roundDoubleInt x = double2Int (c_rintDouble x)
+roundDoubleInt x = c_rintDouble x
 
 -- Functions with Integer results
 
@@ -284,7 +286,9 @@ ceilingDoubleInteger (D# x) =
 
 {-# INLINE roundDoubleInteger #-}
 roundDoubleInteger :: Double -> Integer
-roundDoubleInteger x = double2Integer (c_rintDouble x)
+roundDoubleInteger x =
+  case c_rintDouble x of
+    I# i -> smallInteger i
 
 -- Wrappers around double2Int#, int2Double#, float2Int# and int2Float#,
 -- we need them here, so we move them from GHC.Float and re-export them
@@ -337,8 +341,8 @@ float2Integer (F# x) =
 -- in Haskell for values of large modulus, so those are done in Haskell.
 
 foreign import ccall unsafe "jsRound"
-    c_rintDouble :: Double -> Double
+    c_rintDouble :: Double -> Int
 
 foreign import ccall unsafe "jsRound"
-    c_rintFloat :: Float -> Float
+    c_rintFloat :: Float -> Int
 
