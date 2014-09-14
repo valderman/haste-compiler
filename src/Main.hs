@@ -112,7 +112,7 @@ allSupported args =
   and args'
   where
     args' = [not $ any (`isSuffixOf` a) someoneElsesProblems | a <- args]
-    someoneElsesProblems = [".c", ".cmm", ".hs-boot", ".lhs-boot"]
+    someoneElsesProblems = [".c", ".cmm"]
 
 -- | The main compiler driver.
 compiler :: Bool -> [String] -> IO ()
