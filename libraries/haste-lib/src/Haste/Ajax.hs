@@ -7,7 +7,6 @@ module Haste.Ajax (Method (..), URL, Key, Val, textRequest, textRequest_,
 import Haste.Prim
 import Haste.Callback
 import Haste.JSON
-import Control.Monad.IO.Class
 
 #ifdef __HASTE__
 foreign import ccall ajaxReq :: JSString    -- method
@@ -26,14 +25,13 @@ type Key = String
 type Val = String
 
 -- | Make an AJAX request to a URL, treating the response as plain text.
-textRequest :: MonadIO m
-            => Method
+textRequest :: Method
             -> URL
             -> [(Key, Val)]
             -> (Maybe String -> IO ())
-            -> m ()
+            -> IO ()
 textRequest m url kv cb = do
-  _ <- liftIO $ ajaxReq (toJSStr $ show m) url' True "" cb'
+  _ <- ajaxReq (toJSStr $ show m) url' True "" cb'
   return ()
   where
     cb' = mkCallback $ cb . fmap fromJSStr
@@ -43,39 +41,36 @@ textRequest m url kv cb = do
              else catJSStr "?" [toJSStr url, toQueryString kv']
 
 -- | Same as 'textRequest' but deals with JSStrings instead of Strings.
-textRequest_ :: MonadIO m
-             => Method
+textRequest_ :: Method
              -> JSString
              -> [(JSString, JSString)]
              -> (Maybe JSString -> IO ())
-             -> m ()
-textRequest_ m url kv cb = liftIO $ do
+             -> IO ()
+textRequest_ m url kv cb = do
   _ <- ajaxReq (toJSStr $ show m) url' True "" (mkCallback cb)
   return ()
   where
     url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
 
 -- | Make an AJAX request to a URL, interpreting the response as JSON.
-jsonRequest :: MonadIO m
-            => Method
+jsonRequest :: Method
             -> URL
             -> [(Key, Val)]
             -> (Maybe JSON -> IO ())
-            -> m ()
-jsonRequest m url kv cb = liftIO $ do
+            -> IO ()
+jsonRequest m url kv cb = do
   jsonRequest_ m (toJSStr url)
                  (map (\(k,v) -> (toJSStr k, toJSStr v)) kv)
                  cb
 
 -- | Does the same thing as 'jsonRequest' but uses 'JSString's instead of
 --   Strings.
-jsonRequest_ :: MonadIO m
-             => Method
+jsonRequest_ :: Method
              -> JSString
              -> [(JSString, JSString)]
              -> (Maybe JSON -> IO ())
-             -> m ()
-jsonRequest_ m url kv cb = liftIO $ do
+             -> IO ()
+jsonRequest_ m url kv cb = do
     _ <- ajaxReq (toJSStr $ show m) url' True pd cb'
     return ()
   where
