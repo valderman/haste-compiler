@@ -2,15 +2,16 @@
 module Haste.DOM (
     Elem (..), PropID, ElemID,
     newElem, newTextElem,
-    elemById, setProp, getProp, setAttr, getAttr, setProp',
-    getProp', getValue, withElem , withElems, addChild,
-    addChildBefore, removeChild, clearChildren , getChildBefore,
+    elemById, elemByQuerySelector, elemsByQuerySelector,
+    setProp, getProp, setAttr, getAttr, setProp', getProp', getValue,
+    withElem , withElems, withQuerySelectorElem, withQuerySelectorElems,
+    addChild, addChildBefore, removeChild, clearChildren , getChildBefore,
     getFirstChild, getLastChild, getChildren, setChildren,
     getStyle, setStyle, getStyle', setStyle',
     getFileData, getFileName,
     setClass, toggleClass, hasClass,
     click, focus, blur,
-    documentBody
+    document, documentBody
   ) where
 import Haste.Prim
 import Haste.JSType
@@ -26,6 +27,7 @@ instance Unpack Elem
 
 type PropID = String
 type ElemID = String
+type QuerySelector = String
 
 #ifdef __HASTE__
 foreign import ccall jsGet :: Elem -> JSString -> IO JSString
@@ -35,6 +37,8 @@ foreign import ccall jsSetAttr :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsGetStyle :: Elem -> JSString -> IO JSString
 foreign import ccall jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsFind :: JSString -> IO (Ptr (Maybe Elem))
+foreign import ccall jsQuerySelector :: Elem -> JSString -> IO (Ptr (Maybe Elem))
+foreign import ccall jsQuerySelectorAll :: Elem -> JSString -> IO (Ptr [Elem])
 foreign import ccall jsCreateElem :: JSString -> IO Elem
 foreign import ccall jsCreateTextNode :: JSString -> IO Elem
 foreign import ccall jsAppendChild :: Elem -> Elem -> IO ()
@@ -54,6 +58,8 @@ jsSetAttr = error "Tried to use jsSetAttr on server side!"
 jsGetStyle = error "Tried to use jsGetStyle on server side!"
 jsSetStyle = error "Tried to use jsSetStyle on server side!"
 jsFind = error "Tried to use jsFind on server side!"
+jsQuerySelector = error "Tried to use jsQuerySelector on server side!"
+jsQuerySelectorAll = error "Tried to use jsQuerySelectorAll on server side!"
 jsCreateElem = error "Tried to use jsCreateElem on server side!"
 jsCreateTextNode = error "Tried to use jsCreateTextNode on server side!"
 jsAppendChild = error "Tried to use jsAppendChild on server side!"
@@ -157,6 +163,14 @@ setStyle' e prop val = liftIO $ jsSetStyle e prop val
 elemById :: MonadIO m => ElemID -> m (Maybe Elem)
 elemById eid = liftIO $ fromPtr `fmap` (jsFind $ toJSStr eid)
 
+-- | Get a child element by its query selector.
+elemByQuerySelector :: MonadIO m => Elem -> QuerySelector -> m (Maybe Elem)
+elemByQuerySelector el sel = liftIO $ fromPtr `fmap` (jsQuerySelector el (toJSStr sel))
+
+-- | Get all children elements matching a query selector.
+elemsByQuerySelector :: MonadIO m => Elem -> QuerySelector -> m ([Elem])
+elemsByQuerySelector el sel = liftIO $ fromPtr `fmap` (jsQuerySelectorAll el (toJSStr sel))
+
 -- | Perform an IO action on an element.
 withElem :: MonadIO m => ElemID -> (Elem -> m a) -> m a
 withElem e act = do
@@ -178,6 +192,19 @@ withElems es act = do
     findElems (i:is) (Nothing:mes) = i : findElems is mes
     findElems (_:is) (_:mes)       = findElems is mes
     findElems _ _                  = []
+
+-- | Perform an IO action over the first element which matches a query
+--   selector. Throws an error if no match is found.
+withQuerySelectorElem :: MonadIO m => Elem -> QuerySelector -> (Elem -> m a) -> m a
+withQuerySelectorElem el sel act = do
+  me' <- elemByQuerySelector el sel
+  case me' of
+    Just e' -> act e'
+    _       -> error $ "No element with selector " ++ sel ++ " could be found!"
+
+-- | Perform an IO action over elements which match a query selector.
+withQuerySelectorElems :: MonadIO m => Elem -> QuerySelector -> ([Elem] -> m a) -> m a
+withQuerySelectorElems el sel act = elemsByQuerySelector el sel >>= act
 
 -- | Remove all children from the given element.
 clearChildren :: MonadIO m => Elem -> m ()
@@ -261,6 +288,14 @@ blur = liftIO . blur'
     {-# NOINLINE blur' #-}
     blur' :: Elem -> IO ()
     blur' = ffi "(function(e) {e.blur();})"
+
+-- | The DOM node corresponding to document.
+document :: Elem
+document = unsafePerformIO getDocument
+  where
+    {-# NOINLINE getDocument #-}
+    getDocument :: IO Elem
+    getDocument = ffi "document"
 
 -- | The DOM node corresponding to document.body.
 documentBody :: Elem
