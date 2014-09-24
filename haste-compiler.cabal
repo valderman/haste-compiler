@@ -62,6 +62,7 @@ Executable haste-boot
         bzlib,
         transformers,
         network,
+        network-uri,
         HTTP,
         shellmate >= 0.1.5,
         ghc-paths,
