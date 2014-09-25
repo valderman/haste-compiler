@@ -9,7 +9,7 @@ import Config (cProjectVersion)
 import Haste.Environment (hasteSysDir, ghcBinary)
 
 hasteVersion :: Version
-hasteVersion = Version [0, 4, 2] []
+hasteVersion = Version [0, 4, 3] []
 
 ghcVersion :: String
 ghcVersion = unsafePerformIO $ do
