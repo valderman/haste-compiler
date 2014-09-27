@@ -233,22 +233,23 @@ closurize cfg cloPath f = do
 -- | Compile a module into a .jsmod intermediate file.
 compile :: (GhcMonad m) => Config -> DynFlags -> ModSummary -> m ()
 compile cfg dynflags modSummary = do
-    case ms_hsc_src modSummary of
-      HsBootFile -> liftIO $ logStr cfg $ "Skipping boot " ++ myName
-      _          -> do
-        (pgm, name) <- prepare dynflags modSummary
+    let boot = case ms_hsc_src modSummary of
+                 HsBootFile -> True
+                 _          -> False
+    (pgm, name) <- prepare dynflags modSummary
 #if __GLASGOW_HASKELL__ >= 706
-        let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
-            cfg' = cfg {showOutputable = showPpr dynflags}
+    let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
+        cfg' = cfg {showOutputable = showPpr dynflags}
 #else
-        let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
-            cfg' = cfg {showOutputable = showPpr}
+    let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
+        cfg' = cfg {showOutputable = showPpr}
 #endif
-            theCode = generate cfg' pkgid name pgm
-        liftIO $ logStr cfg $ "Compiling " ++ myName ++ " into " ++ targetpath
-        liftIO $ writeModule targetpath theCode
+        theCode = generate cfg' pkgid name pgm
+    liftIO $ logStr cfg $ "Compiling " ++ myName boot ++ " into " ++ targetpath
+    liftIO $ writeModule targetpath theCode boot
   where
-    myName = moduleNameString $ moduleName $ ms_mod modSummary
+    myName False = moduleNameString $ moduleName $ ms_mod modSummary
+    myName True = myName False ++ " [boot]"
     targetpath = targetLibPath cfg
 
 -- | Fill in linkage info, such as whether to link at all and what the program
