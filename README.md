@@ -33,9 +33,9 @@ Github or from one of the pre-built
 [binary packages](http://haste-lang.org/#downloads).
 In the first two cases, you need to add add Cabal's bin directory, usually
 `~/.cabal/bin`, to your `$PATH` if you haven't already done so.
-When installing from the Windows or generic Linux package, you may want to
-add `path/to/haste-compiler/bin` to your `$PATH`. The Debian package takes
-care of this automatically.
+When installing from the Mac, Windows or generic Linux package, you may want
+to add `path/to/haste-compiler/bin` to your `$PATH`.
+The Debian package takes care of this automatically.
 
 Then, installing the latest stable-ish version from cabal is easy:
 
