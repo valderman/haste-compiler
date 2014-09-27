@@ -10,7 +10,9 @@ import qualified Data.ByteString.Lazy.Char8 as BS
 
 main = do
   as <- getArgs
-  mapM_ printModule as
+  if null as
+    then putStrLn "Usage: haste-cat package-id:Module.To.Inspect"
+    else mapM_ printModule as
 
 printModule mpkg = do
   let (pkg, (_:m)) = break (== ':') mpkg
