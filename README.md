@@ -1,5 +1,6 @@
 Haste
 =====
+[![Build Status](https://travis-ci.org/valderman/haste-compiler.svg?branch=master)](https://travis-ci.org/valderman/haste-compiler.svg?branch=master)
 
 A compiler to generate JavaScript code from Haskell.
 
