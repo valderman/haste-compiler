@@ -8,12 +8,12 @@ import Data.JSTarget
 import Data.Binary
 
 -- | The file extension to use for modules.
-jsmodExt :: String
-jsmodExt = "jsmod"
+jsmodExt :: Bool -> String
+jsmodExt boot = if boot then "jsmod-boot" else "jsmod"
 
-moduleFilePath :: FilePath -> String -> String -> FilePath
-moduleFilePath basepath pkgid modname =
-  flip addExtension jsmodExt $
+moduleFilePath :: FilePath -> String -> String -> Bool -> FilePath
+moduleFilePath basepath pkgid modname boot =
+  flip addExtension (jsmodExt boot) $
     basepath </> pkgid </> (moduleNameSlashes $ mkModuleName modname)
 
 -- | Write a module to file, with the extension specified in `fileExt`.
@@ -21,19 +21,28 @@ moduleFilePath basepath pkgid modname =
 --   basepath/Foo/Bar.jsmod
 --   If any directory in the path where the module is to be written doesn't
 --   exist, it gets created.
-writeModule :: FilePath -> Module -> IO ()
-writeModule basepath m@(Module pkgid modname _ _) =
+writeModule :: FilePath -> Module -> Bool -> IO ()
+writeModule basepath m@(Module pkgid modname _ _) boot =
   fromRight "writeModule" . shell $ do
     mkdir True (takeDirectory path)
     liftIO $ B.writeFile path (encode m)
   where
-    path = moduleFilePath basepath pkgid modname
+    path = moduleFilePath basepath pkgid modname boot
 
 -- | Read a module from file. If the module is not found at the specified path,
---   libpath/path is tried instead. Panics if the module is found on neither
---   path.
+--   libpath/path is tried instead. Returns Nothing is the module is not found
+--   on either path.
 readModule :: FilePath -> String -> String -> IO (Maybe Module)
 readModule basepath pkgid modname = fromRight "readModule" . shell $ do
+  mm <- readMod basepath pkgid modname False
+  mmboot <- readMod basepath pkgid modname True
+  case (mm, mmboot) of
+    (Just m, Nothing)    -> return $ Just m
+    (Just m, Just mboot) -> return . Just $ merge mboot m
+    _                    -> return Nothing
+
+readMod :: FilePath -> String -> String -> Bool -> Shell (Maybe Module)
+readMod basepath pkgid modname boot = do
     x <- isFile path
     let path' = if x then path else syspath
     isF <- isFile path'
@@ -41,8 +50,8 @@ readModule basepath pkgid modname = fromRight "readModule" . shell $ do
        then Just . decode <$> liftIO (B.readFile path')
        else return Nothing
   where
-    path = moduleFilePath "." pkgid modname
-    syspath = moduleFilePath basepath pkgid modname
+    path = moduleFilePath "." pkgid modname boot
+    syspath = moduleFilePath basepath pkgid modname boot
 
 fromRight :: String -> IO (Either String b) -> IO b
 fromRight from m = do

@@ -4,7 +4,7 @@ module Data.JSTarget (
     PPOpts (..), pretty, runPP, prettyProg, def,
     Arity, Comment, Shared, Name (..), Var (..), LHS, Call,
     Lit, Exp, Stm, Alt, AST (..), Module (..),
-    foreignModule, moduleOf, pkgOf, blackHole, blackHoleVar
+    foreignModule, moduleOf, pkgOf, blackHole, blackHoleVar, merge
   ) where
 import Data.JSTarget.AST
 import Data.JSTarget.Op as Op

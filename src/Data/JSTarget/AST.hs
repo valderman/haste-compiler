@@ -124,6 +124,17 @@ data Module = Module {
     modDefs        :: !(M.Map Name (AST Exp))
   }
 
+-- | Merge two modules. The module and package IDs of the second argument are
+--   used, and the second argument will take precedence for symbols which exist
+--   in both.
+merge :: Module -> Module -> Module
+merge m1 m2 = Module {
+    modPackageId = modPackageId m2,
+    modName = modName m2,
+    modDeps = M.union (modDeps m1) (modDeps m2),
+    modDefs = M.union (modDefs m1) (modDefs m2)
+  }
+
 -- | Imaginary module for foreign code that may need one.
 foreignModule :: Module
 foreignModule = Module {
