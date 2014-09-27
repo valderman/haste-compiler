@@ -1,0 +1,11 @@
+language: haskell
+
+ghc:
+  - 7.6
+  - 7.8
+
+install: 
+  - cabal install -j --only-dependencies
+
+script:
+  - cabal install -j -f portable && haste-compiler/bin/haste-boot --force --local
