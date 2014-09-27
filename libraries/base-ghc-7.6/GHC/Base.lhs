@@ -608,6 +608,7 @@ instance  Monad IO  where
     {-# INLINE return #-}
     {-# INLINE (>>)   #-}
     {-# INLINE (>>=)  #-}
+    {-# INLINE fail   #-}
     m >> k    = m >>= \ _ -> k
     return    = returnIO
     (>>=)     = bindIO
