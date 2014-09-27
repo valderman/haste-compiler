@@ -190,6 +190,28 @@ Executable haste-copy-pkg
         directory
     default-language: Haskell98
 
+Executable haste-cat
+    Main-Is: haste-cat.hs
+    Other-Modules:
+        Haste.Environment
+    Hs-Source-Dirs: src
+    if flag(portable)
+        CPP-Options: -DPORTABLE
+    Build-Depends:
+        base < 5,
+        shellmate >= 0.1.5,
+        ghc-paths,
+        ghc,
+        binary,
+        containers,
+        blaze-builder,
+        bytestring,
+        array,
+        random,
+        data-default,
+        directory
+    default-language: Haskell98
+
 Library
     Hs-Source-Dirs: libraries/haste-lib/src, src
     GHC-Options: -Wall -O2
