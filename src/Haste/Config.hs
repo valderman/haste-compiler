@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, Rank2Types #-}
+{-# LANGUAGE OverloadedStrings, Rank2Types, PatternGuards #-}
 module Haste.Config (
   Config (..), AppStart, def, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, debugLib) where
@@ -10,7 +10,7 @@ import Data.Monoid
 import Haste.Environment
 import Outputable (Outputable)
 import Data.Default
-import Data.List (isPrefixOf, nub)
+import Data.List (stripPrefix, nub)
 
 type AppStart = Builder -> Builder
 
@@ -42,11 +42,10 @@ startCustom str      = insertSym str
 -- | Replace the first occurrence of $HASTE_MAIN with Haste's entry point
 --   symbol.
 insertSym :: String -> AppStart
-insertSym [] _                     = fromString ""
+insertSym [] _                              = fromString ""
 insertSym str sym
-  | "$HASTE_MAIN" `isPrefixOf` str = sym <> fromString str
-  | otherwise                      = case span (/= '$') str of
-                                       (l,r) -> fromString l <> insertSym r sym
+  | Just r <- stripPrefix "$HASTE_MAIN" str = sym <> fromString r
+  | (l,r) <- span (/= '$') str              = fromString l <> insertSym r sym
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart
