@@ -163,14 +163,14 @@ fun.js:
 
 ...then compile with:
 
-    $ hastec '--start=%%(); mymain();' --with-js=fun.js fun.hs
+    $ hastec '--start=$HASTE_MAIN(); mymain();' --with-js=fun.js fun.hs
 
 `fun.hs` will export the function `fun` when its `main` function is run.
 Our JavaScript obviously needs to run after that, so we create our "real" main
 function in `fun.js`. Finally, we tell the compiler to start the program by
-first executing Haste's `main` function (the `%%` gets replaced by whatever
-name the compiler chooses for the Haste `main`) and then executing our own
-`mymain`.
+first executing Haste's `main` function (the `$HASTE_MAIN` gets replaced by
+whatever name the compiler chooses for the Haste `main`) and then executing
+our own `mymain`.
 
 
 Effortless type-safe client-server communication
