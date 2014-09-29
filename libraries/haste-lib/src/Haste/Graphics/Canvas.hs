@@ -23,7 +23,9 @@ module Haste.Graphics.Canvas (
   -- Creating shapes
   line, path, rect, circle, arc,
   -- Working with text
-  font, text
+  font, text,
+  -- Extending the library
+  withContext
   ) where
 import Control.Applicative
 import Control.Monad.IO.Class
@@ -274,6 +276,12 @@ buffer w h pict = liftIO $ do
       return $ Bitmap el
     _ -> do
       Bitmap <$> newElem "img"
+
+-- | Perform a computation over the drawing context of the picture.
+--   This is handy for operations which are either impossible, hard or
+--   inefficient to express using the Haste.Graphics.Canvas API.
+withContext :: (Ctx -> IO a) -> Picture a
+withContext f = Picture $ \ctx -> f ctx
 
 -- | Set a new color for strokes.
 setStrokeColor :: Color -> Picture ()
