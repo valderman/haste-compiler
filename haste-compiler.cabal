@@ -276,5 +276,7 @@ Library
             network-uri < 2.6
     else
         Build-Depends:
-            websockets >= 0.8
+            websockets >= 0.8,
+            network >= 2.6,
+            network-uri >= 2.6
     Default-Language: Haskell98
