@@ -15,8 +15,6 @@ import Data.Int
 import System.IO.Unsafe
 import Unsafe.Coerce
 
-import Debug.Trace
-
 #ifdef __HASTE__
 foreign import ccall eval :: JSString -> IO (Ptr a)
 foreign import ccall "String" jsString :: Double -> JSString

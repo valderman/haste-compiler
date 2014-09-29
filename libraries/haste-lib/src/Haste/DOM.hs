@@ -1,4 +1,5 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, CPP #-}
+{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, CPP,
+             GeneralizedNewtypeDeriving #-}
 module Haste.DOM (
     Elem (..), PropID, ElemID,
     newElem, newTextElem,
@@ -22,8 +23,7 @@ import Haste.Binary.Types
 import System.IO.Unsafe (unsafePerformIO)
 
 newtype Elem = Elem JSAny
-instance Pack Elem
-instance Unpack Elem
+  deriving (Pack, Unpack)
 
 type PropID = String
 type ElemID = String

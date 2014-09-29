@@ -1,5 +1,6 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings,
-             TypeSynonymInstances, FlexibleInstances, GADTs, CPP #-}
+             TypeSynonymInstances, FlexibleInstances, GADTs, CPP,
+             GeneralizedNewtypeDeriving #-}
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
   -- Types
@@ -26,8 +27,10 @@ module Haste.Graphics.Canvas (
   ) where
 import Control.Applicative
 import Control.Monad.IO.Class
+import System.IO.Unsafe
 import Haste
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
+import Haste.Foreign (Pack (..), Unpack (..))
 
 #ifdef __HASTE__
 foreign import ccall jsHasCtx2D :: Elem -> IO Bool
@@ -78,7 +81,10 @@ jsArc = error "Tried to use Canvas in native code!"
 jsCanvasToDataURL = error "Tried to use Canvas in native code!"
 #endif
 
+-- | A bitmap, backed by an IMG element.
+--   JS representation is a reference to the backing IMG element.
 newtype Bitmap = Bitmap Elem
+  deriving (Pack, Unpack)
 
 -- | Any type that contains a buffered image which can be drawn onto a canvas.
 class ImageBuffer a where
@@ -154,12 +160,24 @@ color2JSString (RGBA r g b a) =
                         toJSString a, ")"]
 
 -- | A drawing context; part of a canvas.
+--   JS representation is the drawing context object itself.
 newtype Ctx = Ctx JSAny
+  deriving (Pack, Unpack)
 
 -- | A canvas; a viewport into which a picture can be rendered.
 --   The origin of the coordinate system used by the canvas is the top left
 --   corner of the canvas element.
+--   JS representation is a reference to the backing canvas element.
 data Canvas = Canvas Ctx Elem
+
+instance Pack Canvas where
+  pack c =
+    case unsafePerformIO . getCanvas $ pack c of
+      Just c' -> c'
+      _       -> error "Attempted to pack a non-canvas element into a Canvas!"
+
+instance Unpack Canvas where
+  unpack (Canvas _ el) = unpack el
 
 -- | A picture that can be drawn onto a canvas.
 newtype Picture a = Picture {unP :: Ctx -> IO a}
@@ -211,7 +229,7 @@ getCanvasById eid = liftIO $ do
 
 -- | Create a 2D drawing context from a DOM element.
 getCanvas :: MonadIO m => Elem -> m (Maybe Canvas)
-getCanvas e = liftIO $ do 
+getCanvas e = liftIO $ do
   hasCtx <- jsHasCtx2D e
   case hasCtx of
     True -> do
