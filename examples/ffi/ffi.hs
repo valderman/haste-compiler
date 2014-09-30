@@ -4,7 +4,7 @@
 --
 --   For more information, see doc/js-externals.txt.
 module Main where
-import Haste
+import Haste hiding (click)
 import Control.Monad (when)
 
 newtype JQuery = JQuery JSAny
