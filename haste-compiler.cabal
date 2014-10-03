@@ -13,7 +13,7 @@ Cabal-Version:  >= 1.10
 Build-Type:     Custom
 Author:         Anton Ekblad <anton@ekblad.cc>
 Maintainer:     anton@ekblad.cc
-Homepage:       http://github.com/valderman/haste-compiler
+Homepage:       http://haste-lang.org/
 Bug-reports:    http://github.com/valderman/haste-compiler/issues
 Stability:      Experimental
 
