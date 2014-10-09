@@ -29,6 +29,7 @@ module Haste.Graphics.Canvas (
   ) where
 import Control.Applicative
 import Control.Monad.IO.Class
+import Data.Maybe (fromJust)
 import System.IO.Unsafe
 import Haste
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
@@ -240,12 +241,12 @@ getCanvas e = liftIO $ do
     _    -> return Nothing
 
 -- | Create an off-screen buffer of the specified size.
-createCanvas :: Int -> Int -> IO (Maybe Canvas)
+createCanvas :: Int -> Int -> IO Canvas
 createCanvas w h = do
   buf <- newElem "canvas"
   setProp buf "width" (toString w)
   setProp buf "height" (toString h)
-  getCanvas buf
+  fromJust <$> getCanvas buf
 
 -- | Clear a canvas, then draw a picture onto it.
 {-# SPECIALISE render :: Canvas -> Picture a -> IO a #-}
@@ -269,13 +270,9 @@ toDataURL (Canvas _ el) = liftIO $ do
 -- | Create a new off-screen buffer and store the given picture in it.
 buffer :: MonadIO m => Int -> Int -> Picture () -> m Bitmap
 buffer w h pict = liftIO $ do
-  mbuf <- createCanvas w h
-  case mbuf of
-    Just buf@(Canvas _ el) -> do
-      render buf pict
-      return $ Bitmap el
-    _ -> do
-      Bitmap <$> newElem "img"
+  buf@(Canvas _ el) <- createCanvas w h
+  render buf pict
+  return $ Bitmap el
 
 -- | Perform a computation over the drawing context of the picture.
 --   This is handy for operations which are either impossible, hard or
