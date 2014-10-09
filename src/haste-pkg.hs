@@ -13,14 +13,9 @@ main = shell $ do
     ["relocate", pkg] -> relocate packages pkg
     _                 -> ghcPkg packages args
   where
-#if __GLASGOW_HASKELL__ >= 706
     packages = ["--global-package-db=" ++ pkgSysDir,
                 "--package-db=" ++ pkgSysDir,
                 "--package-db=" ++ pkgUserDir]
-#else
-    packages = ["--no-user-package-conf",
-                "--global-conf=" ++ pkgUserDir]
-#endif
 
 ghcPkg :: [String] -> [String] -> Shell ()
 ghcPkg packages args = do

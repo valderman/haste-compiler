@@ -31,7 +31,6 @@ import Name
 import Type
 import TysPrim
 import TyCon
-import BasicTypes
 -- AST stuff
 import Data.JSTarget as J hiding ((.&.))
 import Data.JSTarget.AST (Exp (..), Stm (..), LHS (..))
@@ -143,11 +142,7 @@ genEx (StgOpApp op args _) = do
         StgPrimCallOp (PrimCall f _) ->
           Right $ maybeTrace cfg fs args' $ callForeign fs args'
           where fs = unpackFS f
-#if __GLASGOW_HASKELL__ >= 706
         StgFCallOp (CCall (CCallSpec (StaticTarget f _ _) _ _)) _t ->
-#else
-        StgFCallOp (CCall (CCallSpec (StaticTarget f _) _ _)) _t ->
-#endif
           Right $ maybeTrace cfg fs args' $ callForeign fs args'
           where fs = unpackFS f
         _ ->
@@ -167,13 +162,8 @@ genEx (StgSCC _ _ _ ex) = do
   genEx ex
 genEx (StgTick _ _ ex) = do
   genEx ex
-#if __GLASGOW_HASKELL__ >= 706
 genEx (StgLam _ _) = do
   error "StgLam caught during code generation - that's impossible!"
-#else
-genEx (StgLam _ _ _) = do
-  error "StgLam caught during code generation - that's impossible!"
-#endif
 -- | Trace the given expression, if tracing is on.
 maybeTrace :: Config -> String -> [AST Exp] -> AST Exp -> AST Exp
 maybeTrace cfg msg args ex =
@@ -350,13 +340,8 @@ genVar _ = do
 
 -- | Extracts the name of a foreign var.
 foreignName :: ForeignCall -> String
-#if __GLASGOW_HASKELL__ >= 706
 foreignName (CCall (CCallSpec (StaticTarget str _ _) _ _)) =
   unpackFS str
-#else
-foreignName (CCall (CCallSpec (StaticTarget str _) _ _)) =
-  unpackFS str
-#endif
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 

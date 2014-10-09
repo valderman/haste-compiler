@@ -59,9 +59,7 @@ genOp cfg op xs =
     -- FIXME: this is correct but slow!
     IntMulMayOfloOp -> intMath $ Right $ multiplyIntOp cfg (xs !! 0) (xs !! 1)
     IntQuotOp ->       callF "quot"
-#if __GLASGOW_HASKELL__ >= 706
     IntQuotRemOp ->    callF "quotRemI"
-#endif
     IntRemOp ->        bOp Mod -- JS % operator is actually rem, not mod!
     IntAddCOp -> callF "addC"
     IntSubCOp -> callF "subC"
@@ -80,9 +78,7 @@ genOp cfg op xs =
     WordSubOp ->  wordMath $ bOp Sub
     WordMulOp ->  wordMath $ callF "imul"
     WordQuotOp -> callF "quot"
-#if __GLASGOW_HASKELL__ >= 706
     WordQuotRemOp -> callF "quotRemI"
-#endif
     WordRemOp ->  bOp Mod
     AndOp ->      wordMath $ bOp BitAnd
     OrOp ->       wordMath $ bOp BitOr

@@ -66,15 +66,10 @@ main = do
         then hasteMain args
         else callVanillaGHC args
   where
-#if __GLASGOW_HASKELL__ >= 706
     packageDBArgs = ["-no-global-package-db",
                      "-no-user-package-db",
                      "-package-db " ++ pkgSysDir,
                      "-package-db " ++ pkgUserDir ]
-#else
-    packageDBArgs = ["-no-user-package-conf",
-                     "-package-conf " ++ pkgSysDir]
-#endif
 -- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
@@ -157,11 +152,7 @@ compiler unbooted cmdargs = do
             flip mapM_ files' $ \file -> do
               let outfile = outFile cfg cfg file
               logStr cfg $ "Linking program " ++ outfile
-#if __GLASGOW_HASKELL__ >= 706
               let pkgid = showPpr dynflags $ thisPackage dynflags'
-#else
-              let pkgid = showPpr $ thisPackage dynflags'
-#endif
               link cfg pkgid file
               case useGoogleClosure cfg of
                 Just clopath -> closurize cfg clopath outfile
@@ -205,11 +196,7 @@ prepare dynflags theMod = do
   return (pgm, name)
   where
     prepPgm env tidy = liftIO $ do
-#if __GLASGOW_HASKELL__ >= 706
       prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
-#else
-      prepd <- corePrepPgm dynflags (cg_binds tidy) (cg_tycons tidy)
-#endif
       return prepd
 
 -- | Run Google Closure on a file.
@@ -237,13 +224,8 @@ compile cfg dynflags modSummary = do
                  HsBootFile -> True
                  _          -> False
     (pgm, name) <- prepare dynflags modSummary
-#if __GLASGOW_HASKELL__ >= 706
     let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
         cfg' = cfg {showOutputable = showPpr dynflags}
-#else
-    let pkgid = showPpr $ modulePackageId $ ms_mod modSummary
-        cfg' = cfg {showOutputable = showPpr}
-#endif
         theCode = generate cfg' pkgid name pgm
     liftIO $ logStr cfg $ "Compiling " ++ myName boot ++ " into " ++ targetpath
     liftIO $ writeModule targetpath theCode boot
