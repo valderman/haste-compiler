@@ -264,6 +264,8 @@ finalStm = go
     go s@(Return _)               = return s
     go (Cont)                     = return Cont
     go (NullRet)                  = return NullRet
+    go s@(Tailcall _)             = return s
+    go s@(ThunkRet _)             = return s
 
 -- | Returns statement's returned expression, if any.
 finalExp :: Stm -> TravM (Maybe Exp)
