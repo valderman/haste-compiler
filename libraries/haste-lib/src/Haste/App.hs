@@ -1,7 +1,9 @@
 -- | Type-safe client-server communication framework for Haste.
---   This module re-exports most of the Haste module for convenience since some
---   functions are exported by both Haste and Haste.App with different
---   definitions. For simplicity, import one or the other, not both.
+--
+--   In addition to the Haste.App extras, this module exports the same API as
+--   "Haste", modified slightly to work better with the automatic program
+--   slicing Haste.App provides. This means that you should import either this
+--   module *or* Haste, but *not* both.
 module Haste.App (
     MonadIO, Remotable, App, Server, Remote, Done,
     Sessions, SessionID,
