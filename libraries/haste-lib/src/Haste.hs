@@ -1,4 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, CPP #-}
+-- | Haste's companion to the Prelude.
+--
+--   Note that this module should *not* be imported together with
+--   "Haste.App", which provides the same functionality but slightly modified
+--   for automatic program slicing.
 module Haste (
     JSString, JSAny, URL, CB.GenericCallback,
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
