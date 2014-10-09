@@ -31,6 +31,9 @@ import Name
 import Type
 import TysPrim
 import TyCon
+#if __GLASGOW_HASKELL__ <= 706
+import BasicTypes
+#endif
 -- AST stuff
 import Data.JSTarget as J hiding ((.&.))
 import Data.JSTarget.AST (Exp (..), Stm (..), LHS (..))
