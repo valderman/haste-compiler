@@ -5,7 +5,7 @@
 module Haste.Graphics.Canvas (
   -- Types
   Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..),
-  AnyImageBuffer (..),
+  Ctx, AnyImageBuffer (..),
   -- Classes
   ImageBuffer (..), BitmapSource (..),
   -- Obtaining a canvas for drawing
