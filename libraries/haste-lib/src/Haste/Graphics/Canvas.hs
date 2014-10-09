@@ -1,6 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings,
              TypeSynonymInstances, FlexibleInstances, GADTs, CPP,
              GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
   -- Types
@@ -62,6 +63,27 @@ foreign import ccall jsArc :: Ctx
                            -> IO ()
 foreign import ccall jsCanvasToDataURL :: Elem -> IO JSString
 #else
+jsHasCtx2D :: Elem -> IO Bool
+jsGetCtx2D :: Elem -> IO Ctx
+jsBeginPath :: Ctx -> IO ()
+jsMoveTo :: Ctx -> Double -> Double -> IO ()
+jsLineTo :: Ctx -> Double -> Double -> IO ()
+jsStroke :: Ctx -> IO ()
+jsFill :: Ctx -> IO ()
+jsRotate :: Ctx -> Double -> IO ()
+jsTranslate :: Ctx -> Double -> Double -> IO ()
+jsScale :: Ctx -> Double -> Double -> IO ()
+jsPushState :: Ctx -> IO ()
+jsPopState :: Ctx -> IO ()
+jsResetCanvas :: Elem -> IO ()
+jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
+jsDrawImageClipped :: Ctx -> Elem -> Double -> Double
+                                  -> Double -> Double -> Double -> Double 
+                                  -> IO ()
+jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
+jsClip :: Ctx -> IO ()
+jsArc :: Ctx -> Double -> Double -> Double -> Double -> Double -> IO ()
+jsCanvasToDataURL :: Elem -> IO JSString
 jsHasCtx2D = error "Tried to use Canvas in native code!"
 jsGetCtx2D = error "Tried to use Canvas in native code!"
 jsBeginPath = error "Tried to use Canvas in native code!"
@@ -259,7 +281,7 @@ render (Canvas ctx el) (Picture p) = liftIO $ do
 {-# SPECIALISE renderOnTop :: Canvas -> Picture a -> IO a #-}
 {-# SPECIALISE renderOnTop :: Canvas -> Picture a -> CIO a #-}
 renderOnTop :: MonadIO m => Canvas -> Picture a -> m a
-renderOnTop (Canvas ctx el) (Picture p) = liftIO $ p ctx
+renderOnTop (Canvas ctx _) (Picture p) = liftIO $ p ctx
 
 -- | Generate a data URL from the contents of a canvas.
 toDataURL :: MonadIO m => Canvas -> m URL
