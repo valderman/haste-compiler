@@ -114,7 +114,7 @@ class BitmapSource src where
 instance BitmapSource URL where
   loadBitmap url = liftIO $ do
     img <- newElem "img"
-    setProp img "src" url
+    setProp' img "src" (toJSString url)
     loadBitmap img
 
 instance BitmapSource Elem where
@@ -243,9 +243,9 @@ getCanvas e = liftIO $ do
 createCanvas :: Int -> Int -> IO (Maybe Canvas)
 createCanvas w h = do
   buf <- newElem "canvas"
-  setProp buf "width" (toString w)
-  setProp buf "height" (toString h)
-  getCanvas buf
+  setProp' buf "width" (toJSString w)
+  setProp' buf "height" (toJSString h)
+  fromJust <$> getCanvas buf
 
 -- | Clear a canvas, then draw a picture onto it.
 {-# SPECIALISE render :: Canvas -> Picture a -> IO a #-}
