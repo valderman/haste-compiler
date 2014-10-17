@@ -163,15 +163,15 @@ type Vector = (Double, Double)
 type Angle = Double
 
 -- | A rectangle.
-data Rect = Rect {rect_x :: Double,
-                  rect_y :: Double,
-                  rect_w :: Double,
-                  rect_h :: Double}
+data Rect = Rect {rect_x :: !Double,
+                  rect_y :: !Double,
+                  rect_w :: !Double,
+                  rect_h :: !Double}
 
 -- | A color, specified using its red, green and blue components, with an
 --   optional alpha component.
-data Color = RGB Int Int Int
-           | RGBA Int Int Int Double
+data Color = RGB  !Int !Int !Int
+           | RGBA !Int !Int !Int !Double
 
 -- | Somewhat efficient conversion from Color to JSString.
 color2JSString :: Color -> JSString
@@ -192,7 +192,7 @@ newtype Ctx = Ctx JSAny
 --   The origin of the coordinate system used by the canvas is the top left
 --   corner of the canvas element.
 --   JS representation is a reference to the backing canvas element.
-data Canvas = Canvas Ctx Elem
+data Canvas = Canvas !Ctx !Elem
 
 instance Pack Canvas where
   pack c =
