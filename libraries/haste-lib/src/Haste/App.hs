@@ -9,7 +9,7 @@ module Haste.App (
     Sessions, SessionID,
     liftServerIO, forkServerIO, remote, runApp,
     (<.>), getSessionID, getActiveSessions, onSessionEnd,
-    AppCfg, cfgURL, cfgPort, mkConfig,
+    AppCfg, cfgHost, cfgPort, mkConfig,
     Client,
     runClient, onServer, liftIO,
     JSString, JSAny, URL, alert, prompt, eval, writeLog, catJSStr, fromJSStr,

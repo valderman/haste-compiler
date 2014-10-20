@@ -122,7 +122,8 @@ runClient_ url (Client m) = concurrent $ do
 --   the program terminates.
 runClient :: Client () -> App Done
 runClient m = do
-  url <- cfgURL `fmap` getAppConfig
+  cfg <- getAppConfig
+  let url = "ws://" ++ cfgHost cfg ++ ":" ++ show (cfgPort cfg)
   return . Done $ runClient_ url m
 
 -- | Run a client computation from the CIO monad, using a pre-specified state.
