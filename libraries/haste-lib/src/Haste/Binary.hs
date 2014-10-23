@@ -220,13 +220,13 @@ instance Binary a => GBinary (K1 i a) where
 instance ( GSum     a, GSum     b
          , GBinary a, GBinary b
          , SumSize    a, SumSize    b) => GBinary (a :+: b) where
-    gput | PUTSUM(Word8) | PUTSUM(Word16) | PUTSUM(Word32) -- | PUTSUM(Word64)
+    gput | PUTSUM(Word8) | PUTSUM(Word16) | PUTSUM(Word32) --  | PUTSUM(Word64)
          | otherwise = sizeError "encode" size
       where
         size = unTagged (sumSize :: Tagged (a :+: b) Word32)
     {-# INLINE gput #-}
 
-    gget | GETSUM(Word8) | GETSUM(Word16) | GETSUM(Word32) -- | GETSUM(Word64)
+    gget | GETSUM(Word8) | GETSUM(Word16) | GETSUM(Word32) --  | GETSUM(Word64)
          | otherwise = sizeError "decode" size
       where
         size = unTagged (sumSize :: Tagged (a :+: b) Word32)
