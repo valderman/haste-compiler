@@ -95,8 +95,8 @@ newVars prefix n =
     newVar i = Internal (Name (prefix ++ show i) Nothing) ""
 
 -- | Create a thunk.
-thunk :: AST Stm -> AST Exp
-thunk = fmap Thunk
+thunk :: Bool -> AST Stm -> AST Exp
+thunk updatable = fmap (Thunk updatable)
 
 -- | Evaluate an expression that may or may not be a thunk.
 eval :: AST Exp -> AST Exp

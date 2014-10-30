@@ -146,7 +146,7 @@ genOp cfg op xs =
     
     -- Array ops
     NewArrayOp -> callF "newArr"
-    SameMutableArrayOp -> fmap (thunk . ret) $ bOp Eq
+    SameMutableArrayOp -> fmap (thunk True . ret) $ bOp Eq
     ReadArrayOp -> Right $ index arr ix
     WriteArrayOp -> Right $ assignEx (index arr ix) rhs
       where (_arr:_ix:rhs:_) = xs
@@ -160,7 +160,7 @@ genOp cfg op xs =
     -- Byte Array ops
     NewByteArrayOp_Char      -> callF "newByteArr"
     NewPinnedByteArrayOp_Char-> callF "newByteArr"
-    SameMutableByteArrayOp   -> fmap (thunk . ret) $ bOp Eq
+    SameMutableByteArrayOp   -> fmap (thunk True . ret) $ bOp Eq
     IndexByteArrayOp_Char    -> readArr xs "i8"
     IndexByteArrayOp_Int     -> readArr xs "i32"
     IndexByteArrayOp_Int8    -> readArr xs "i8"

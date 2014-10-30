@@ -94,7 +94,7 @@ data Exp where
   AssignEx  :: !Exp -> !Exp -> Exp
   IfEx      :: !Exp -> !Exp -> !Exp -> Exp
   Eval      :: !Exp -> Exp
-  Thunk     :: !Stm -> Exp
+  Thunk     :: !Bool -> !Stm -> Exp -- Thunk may be updatable or not
   deriving (Eq, Show)
 
 -- | Statements. The only mildly interesting thing here are the Case and Jump

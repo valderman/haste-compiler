@@ -110,8 +110,8 @@ instance JSTrav Exp where
                            return (acc''', IfEx c' th' el')
                          Eval x         -> do
                            fmap Eval <$> mapEx acc x
-                         Thunk x        -> do
-                           fmap Thunk <$> foldMapJS tr fe fs acc x
+                         Thunk upd x    -> do
+                           fmap (Thunk upd) <$> foldMapJS tr fe fs acc x
                      else do
                        return (acc, ast)
       fe acc' x
@@ -151,7 +151,7 @@ instance JSTrav Exp where
                     foldJS tr f acc'' el
                   Eval ex       -> do
                     foldJS tr f acc ex
-                  Thunk stm     -> do
+                  Thunk upd stm -> do
                     foldJS tr f acc stm
               else do
                 return acc
@@ -294,7 +294,7 @@ isShared _         = False
 -- | Thunks and explicit lambdas count as lambda abstractions.
 isLambda :: ASTNode -> Bool
 isLambda (Exp (Fun _ _ _)) = True
-isLambda (Exp (Thunk _))   = True
+isLambda (Exp (Thunk _ _)) = True
 isLambda _                 = False
 
 isJump :: ASTNode -> Bool
