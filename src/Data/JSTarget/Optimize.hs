@@ -174,7 +174,7 @@ zapJSStringConversions ast =
     opt (Call _ _ (Var (Foreign "toJSStr")) [
            Eval (Call _ _ (Var (Foreign "unCStr")) [x])]) =
       return x
-    opt (Thunk (Return x@(Call _ _ (Var (Foreign "unCStr")) [Lit _]))) =
+    opt (Thunk _ (Return x@(Call _ _ (Var (Foreign "unCStr")) [Lit _]))) =
       return x
     opt x =
       return x
@@ -207,8 +207,8 @@ optimizeThunks ast =
 
 -- | Unpack the given expression if it's a thunk.
 fromThunk :: Exp -> Maybe Stm
-fromThunk (Thunk body) = Just body
-fromThunk _            = Nothing
+fromThunk (Thunk _ body) = Just body
+fromThunk _              = Nothing
 
 -- | Unpack the given expression if it's a thunk without internal bindings.
 fromThunkEx :: Exp -> Maybe Exp
@@ -234,7 +234,7 @@ computingEx ex =
     Var _      -> False
     Lit _      -> False
     Fun _ _ _  -> False
-    Thunk _    -> False
+    Thunk _ _  -> False
     Arr arr    -> any computingEx arr
     _          -> True
 
@@ -264,7 +264,7 @@ mayTailcall ast = do
   foldJS enter countTCs False ast
   where
     enter True _              = False
-    enter _ (Exp (Thunk _))   = False
+    enter _ (Exp (Thunk _ _)) = False
     enter _ (Exp (Fun _ _ _)) = False
     enter _ _                 = True
     countTCs _ (Stm (Tailcall _)) = return True
@@ -466,7 +466,7 @@ tailLoopify f fun@(Fun mname args body) = do
     -- Only traverse until we find a closure
     createsClosures = foldJS (\acc _ -> not acc) isClosure False
     isClosure _ (Exp (Fun _ _ _)) = pure True
-    isClosure _ (Exp (Thunk _))   = pure True
+    isClosure _ (Exp (Thunk _ _)) = pure True
     isClosure acc _               = pure acc
 
     -- Assign any changed vars, then loop.
@@ -502,6 +502,6 @@ tailLoopify f fun@(Fun mname args body) = do
     contains (AssignEx l r) var   = l `contains` var || r `contains` var
     contains (IfEx c t e) var     = any (`contains` var) [c,t,e]
     contains (Eval x) var         = x `contains` var
-    contains (Thunk _) _          = False
+    contains (Thunk _ _) _        = False
 tailLoopify _ fun = do
   return fun

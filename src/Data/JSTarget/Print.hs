@@ -108,11 +108,17 @@ instance Pretty Exp where
     pp c .+. sp .+. "?" .+. sp .+. pp th .+. sp .+. ":" .+. sp .+. pp el
   pp (Eval x) = do
     "E(" .+. pp x .+. ")"
-  pp (Thunk x) = do
+  pp (Thunk True x) = do
     "new T(function(){" .+. newl .+. indent (pp x) .+. "})"
+  pp (Thunk False x) = do
+    "new T(function(){" .+. newl .+. indent (pp x) .+. "},1)"
 
 instance Pretty (Var, Exp) where
   pp (v, ex) = pp v .+. sp .+. "=" .+. sp .+. pp ex
+
+instance Pretty Bool where
+  pp True  = "true"
+  pp False = "false"
 
 -- | Print a series of NewVars at once, to avoid unnecessary "var" keywords.
 ppAssigns :: Stm -> PP ()

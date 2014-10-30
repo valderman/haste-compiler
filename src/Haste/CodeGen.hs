@@ -216,7 +216,7 @@ genRhs recursive (StgRhsCon _ con args) = do
   -- Constructors are never partially applied, and we have arguments, so this
   -- is obviously a full application.
   if recursive
-     then thunk . ret <$> genEx (StgConApp con args)
+     then thunk True . ret <$> genEx (StgConApp con args)
      else genEx (StgConApp con args)
 genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
     args' <- mapM genVar args
@@ -224,11 +224,13 @@ genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
       mapM_ addLocal args'
       genEx body
     return $ if null args
-               then thunk' (body' $ thunkRet retExp)
+               then thunk' upd (body' $ thunkRet retExp)
                else fun args' (body' $ ret retExp)
   where
-    thunk' (AST (Return l@(Lit _)) js) = AST l js
-    thunk' stm                         = thunk stm
+    thunk' _ (AST (Return l@(Lit _)) js) = AST l js
+    thunk' Updatable stm                 = thunk True stm
+    thunk' ReEntrant stm                 = thunk True stm
+    thunk' SingleEntry stm               = thunk False stm
 
 -- | Turn a recursive binding into a list of non-recursive ones, together with
 --   information about whether they came from a recursive group or not.
