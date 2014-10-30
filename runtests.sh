@@ -55,7 +55,6 @@ runTest() {
         echo "  GHC disagrees with hastec -O2 output!"
         if [[ "$ghc_output" != "$haste_opt_output" ]] ; then
             echo "  GHC says '$ghc_output', but hastec says '$haste_opt_output'"
-            echo "  GHC says '$ghc_output', but hastec says '$haste_opt_output'"
         else
             echo "  Mismatch on STDERR."
             echo "  GHC says '$ghc_stderr', but hastec says '$haste_opt_stderr'"
