@@ -88,6 +88,7 @@ data Event m a where
   OnKeyPress  :: Event m (Int -> m ())
   OnKeyUp     :: Event m (Int -> m ())
   OnKeyDown   :: Event m (Int -> m ())
+  OnSubmit    :: Event m (m ())
 
 asEvtTypeOf :: Event m a -> a -> a
 asEvtTypeOf _ = id
@@ -117,6 +118,7 @@ evtName evt =
     OnChange    -> "change"
     OnFocus     -> "focus"
     OnBlur      -> "blur"
+    OnSubmit    -> "submit"
 
 -- | Friendlier name for @setCallback@.
 onEvent :: MonadIO m => Elem -> Event IO a -> a -> m Bool
