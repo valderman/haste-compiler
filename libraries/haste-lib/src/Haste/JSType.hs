@@ -153,6 +153,10 @@ instance JSType String where
   toJSString     = toJSStr
   fromJSString   = Just . fromJSStr
 
+instance JSType JSString where
+  toJSString   = id
+  fromJSString = Just
+
 instance JSType () where
   toJSString _ = toJSStr "()"
   fromJSString s | s == toJSStr "()" = Just ()
