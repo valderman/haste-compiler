@@ -6,7 +6,7 @@
 -- Module      :  Debug.Trace
 -- Copyright   :  (c) The University of Glasgow 2001
 -- License     :  BSD-style (see the file libraries/base/LICENSE)
--- 
+--
 -- Maintainer  :  libraries@haskell.org
 -- Stability   :  provisional
 -- Portability :  portable
@@ -21,10 +21,14 @@
 module Debug.Trace (
         -- * Tracing
         -- $tracing
-        trace,            -- :: String -> a -> a
+        trace,
+        traceId,
         traceShow,
+        traceShowId,
         traceStack,
-        traceIO,          -- :: String -> IO ()
+        traceIO,
+        traceM,
+        traceShowM,
         putTraceMsg,
 
         -- * Eventlog tracing
@@ -59,6 +63,7 @@ import System.IO (hPutStrLn,stderr)
 -- | The 'traceIO' function outputs the trace message from the IO monad.
 -- This sequences the output with respect to other IO actions.
 --
+-- /Since: 4.5.0.0/
 traceIO :: String -> IO ()
 traceIO msg = do
     hPutStrLn stderr msg
@@ -68,11 +73,10 @@ traceIO msg = do
 foreign import ccall unsafe "HsBase.h debugBelch2"
    debugBelch :: CString -> CString -> IO ()
 
-
--- | Deprecated. Use 'traceIO'.
+-- |
 putTraceMsg :: String -> IO ()
 putTraceMsg = traceIO
-{-# DEPRECATED putTraceMsg "Use Debug.Trace.traceIO" #-}
+{-# DEPRECATED putTraceMsg "Use 'Debug.Trace.traceIO'" #-} -- deprecated in 7.4
 
 
 {-# NOINLINE trace #-}
@@ -95,6 +99,14 @@ trace string expr = unsafePerformIO $ do
     return expr
 
 {-|
+Like 'trace' but returns the message instead of a third value.
+
+/Since: 4.7.0.0/
+-}
+traceId :: String -> String
+traceId a = trace a a
+
+{-|
 Like 'trace', but uses 'show' on the argument to convert it to a 'String'.
 
 This makes it convenient for printing the values of interesting variables or
@@ -109,6 +121,61 @@ variables @x@ and @z@:
 -}
 traceShow :: (Show a) => a -> b -> b
 traceShow = trace . show
+
+{-|
+Like 'traceShow' but returns the shown value instead of a third value.
+
+/Since: 4.7.0.0/
+-}
+traceShowId :: (Show a) => a -> a
+traceShowId a = trace (show a) a
+
+{-|
+Like 'trace' but returning unit in an arbitrary monad. Allows for convenient
+use in do-notation. Note that the application of 'trace' is not an action in the
+monad, as 'traceIO' is in the 'IO' monad.
+
+> ... = do
+>   x <- ...
+>   traceM $ "x: " ++ show x
+>   y <- ...
+>   traceM $ "y: " ++ show y
+
+/Since: 4.7.0.0/
+-}
+traceM :: (Monad m) => String -> m ()
+traceM string = trace string $ return ()
+
+{-|
+Like 'traceM', but uses 'show' on the argument to convert it to a 'String'.
+
+> ... = do
+>   x <- ...
+>   traceMShow $ x
+>   y <- ...
+>   traceMShow $ x + y
+
+/Since: 4.7.0.0/
+-}
+traceShowM :: (Show a, Monad m) => a -> m ()
+traceShowM = traceM . show
+
+-- | like 'trace', but additionally prints a call stack if one is
+-- available.
+--
+-- In the current GHC implementation, the call stack is only
+-- availble if the program was compiled with @-prof@; otherwise
+-- 'traceStack' behaves exactly like 'trace'.  Entries in the call
+-- stack correspond to @SCC@ annotations, so it is a good idea to use
+-- @-fprof-auto@ or @-fprof-auto-calls@ to add SCC annotations automatically.
+--
+-- /Since: 4.5.0.0/
+traceStack :: String -> a -> a
+traceStack str expr = unsafePerformIO $ do
+   traceIO str
+   stack <- currentCallStack
+   when (not (null stack)) $ traceIO (renderStack stack)
+   return expr
 
 
 -- $eventlog_tracing
@@ -135,6 +202,7 @@ traceShow = trace . show
 -- duplicate events emitted if two CPUs simultaneously evaluate the same thunk
 -- that uses 'traceEvent'.
 --
+-- /Since: 4.5.0.0/
 traceEvent :: String -> a -> a
 traceEvent msg expr = unsafeDupablePerformIO $ do
     traceEventIO msg
@@ -146,21 +214,6 @@ traceEvent msg expr = unsafeDupablePerformIO $ do
 -- Compared to 'traceEvent', 'traceEventIO' sequences the event with respect to
 -- other IO actions.
 --
+-- /Since: 4.5.0.0/
 traceEventIO :: String -> IO ()
 traceEventIO msg = (return $! length msg) >> return ()
-
--- | like 'trace', but additionally prints a call stack if one is
--- available.
---
--- In the current GHC implementation, the call stack is only
--- availble if the program was compiled with @-prof@; otherwise
--- 'traceStack' behaves exactly like 'trace'.  Entries in the call
--- stack correspond to @SCC@ annotations, so it is a good idea to use
--- @-fprof-auto@ or @-fprof-auto-calls@ to add SCC annotations automatically.
---
-traceStack :: String -> a -> a
-traceStack str expr = unsafePerformIO $ do
-   traceIO str
-   stack <- currentCallStack
-   when (not (null stack)) $ traceIO (renderStack stack)
-   return expr
