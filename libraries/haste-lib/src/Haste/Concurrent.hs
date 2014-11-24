@@ -8,7 +8,7 @@ module Haste.Concurrent (
     wait
   ) where
 import Haste.Concurrent.Monad
-import Haste.Concurrent.Ajax as Ajax hiding ((!))
+import Haste.Concurrent.Ajax as Ajax
 import Haste.Callback
 
 -- | Wait for n milliseconds.

@@ -16,7 +16,7 @@ import Data.Int
 import Data.Word
 import Data.Char
 import Haste.Prim
-import Haste.Concurrent hiding (encode, decode)
+import Haste.Concurrent
 import Haste.Foreign
 import Haste.Binary.Types
 import Haste.Binary.Put

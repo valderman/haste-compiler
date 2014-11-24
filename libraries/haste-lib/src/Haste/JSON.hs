@@ -9,9 +9,9 @@
 --   browser that supports JSON.parse; IE does this from version 8 and up, and
 --   everyone else has done it since just about forever.
 module Haste.JSON (JSON (..), encodeJSON, decodeJSON, toObject, (!), (~>)) where
+import Prelude hiding (null)
 import Haste
 import Haste.Prim
-import Haste.JSType
 import Data.String as S
 #ifndef __HASTE__
 import Control.Applicative
@@ -169,26 +169,26 @@ decodeJSON = liftMaybe . runParser json . fromJSStr
     boolean = oneOf [string "true" >> pure True, string "false" >> pure False]
     null = string "null" >> pure Null
     array = do
-      char '[' >> possibly whitespace
+      _ <- char '[' >> possibly whitespace
       elements <- commaSeparated json
-      possibly whitespace >> char ']'
+      _ <- possibly whitespace >> char ']'
       return elements
     commaSeparated p =
       oneOf [do x <- p
-                possibly whitespace >> char ',' >> possibly whitespace
+                _ <- possibly whitespace >> char ',' >> possibly whitespace
                 xs <- commaSeparated p
                 return (x:xs),
              do x <- p
                 return [x],
              do return []]
     object = do
-      char '{' >> possibly whitespace
+      _ <- char '{' >> possibly whitespace
       pairs <- commaSeparated kvPair
-      possibly whitespace >> char '}'
+      _ <- possibly whitespace >> char '}'
       return pairs
     kvPair = do
       k <- jsstring
-      possibly whitespace >> char ':' >> possibly whitespace
+      _ <- possibly whitespace >> char ':' >> possibly whitespace
       v <- json
       return (k, v)
 #endif
