@@ -7,7 +7,7 @@ module Haste.WebSockets (
   ) where
 import Haste
 import Haste.Foreign
-import Haste.Concurrent hiding (encode, decode)
+import Haste.Concurrent
 import Haste.Binary (Blob)
 import Unsafe.Coerce
 

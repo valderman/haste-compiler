@@ -2,11 +2,10 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
 -- | Low level XMLHttpRequest support. IE6 and older are not supported.
-module Haste.Ajax (Method (..), URL, Key, Val, textRequest, textRequest_,
-                   jsonRequest, jsonRequest_) where
+module Haste.Ajax (Method (..), URL, ajaxRequest) where
 import Haste.Prim
+import Haste.JSType
 import Haste.Callback
-import Haste.JSON
 import Control.Monad.IO.Class
 
 #ifdef __HASTE__
@@ -22,73 +21,35 @@ ajaxReq = error "Tried to use ajaxReq in native code!"
 #endif
 
 data Method = GET | POST deriving Show
-type Key = String
-type Val = String
 
--- | Make an AJAX request to a URL, treating the response as plain text.
-textRequest :: MonadIO m
-            => Method
-            -> URL
-            -> [(Key, Val)]
-            -> (Maybe String -> IO ())
+-- | Perform an AJAX request.
+ajaxRequest :: (MonadIO m, JSType a, JSType b, JSType c)
+            => Method   -- ^ GET or POST. For GET, pass all params in URL.
+                        --   For POST, pass all params as post data.
+            -> URL      -- ^ URL to make AJAX request to.
+            -> [(a, b)] -- ^ A list of (key, value) parameters.
+            -> (Maybe c -> IO ()) -- ^ Callback to invoke on completion.
             -> m ()
-textRequest m url kv cb = do
-  _ <- liftIO $ ajaxReq (toJSStr $ show m) url' True "" cb'
-  return ()
-  where
-    cb' = mkCallback $ cb . fmap fromJSStr
-    kv' = map (\(k,v) -> (toJSStr k, toJSStr v)) kv
-    url' = if null kv
-             then toJSStr url
-             else catJSStr "?" [toJSStr url, toQueryString kv']
-
--- | Same as 'textRequest' but deals with JSStrings instead of Strings.
-textRequest_ :: MonadIO m
-             => Method
-             -> JSString
-             -> [(JSString, JSString)]
-             -> (Maybe JSString -> IO ())
-             -> m ()
-textRequest_ m url kv cb = liftIO $ do
-  _ <- ajaxReq (toJSStr $ show m) url' True "" (mkCallback cb)
-  return ()
-  where
-    url' = if null kv then url else catJSStr "?" [url, toQueryString kv]
-
--- | Make an AJAX request to a URL, interpreting the response as JSON.
-jsonRequest :: MonadIO m
-            => Method
-            -> URL
-            -> [(Key, Val)]
-            -> (Maybe JSON -> IO ())
-            -> m ()
-jsonRequest m url kv cb = liftIO $ do
-  jsonRequest_ m (toJSStr url)
-                 (map (\(k,v) -> (toJSStr k, toJSStr v)) kv)
-                 cb
-
--- | Does the same thing as 'jsonRequest' but uses 'JSString's instead of
---   Strings.
-jsonRequest_ :: MonadIO m
-             => Method
-             -> JSString
-             -> [(JSString, JSString)]
-             -> (Maybe JSON -> IO ())
-             -> m ()
-jsonRequest_ m url kv cb = liftIO $ do
-    _ <- ajaxReq (toJSStr $ show m) url' True pd cb'
+ajaxRequest m url kv cb = liftIO $ do
+    _ <- ajaxReq (showm m) url' True pd cb'
     return ()
   where
-    liftEither (Right x) = Just x
-    liftEither _         = Nothing
-    cb' = mkCallback $ \mjson -> cb (mjson >>= liftEither . decodeJSON)
+    showm GET  = "GET"
+    showm POST = "POST"
+    cb' = mkCallback $ cb . fromJSS
+    fromJSS (Just jss) = fromJSString jss
+    fromJSS _          = Nothing
     url' = case m of
-             GET -> if null kv then url else catJSStr "?" [url, toQueryString kv]
-             POST -> url
+           GET
+             | null kv   -> toJSString url
+             | otherwise -> catJSStr "?" [toJSString url, toQueryString kv]
+           POST -> toJSString url
     pd = case m of
            GET -> ""
-           POST -> if null kv then "" else toQueryString kv
+           POST
+             | null kv   -> ""
+             | otherwise -> toQueryString kv
 
-
-toQueryString :: [(JSString, JSString)] -> JSString
-toQueryString = catJSStr "&" . map (\(k,v) -> catJSStr "=" [k,v])
+toQueryString :: (JSType a, JSType b) =>[(a, b)] -> JSString
+toQueryString = catJSStr "&" . map f
+  where f (k, v) = catJSStr "=" [toJSString k,toJSString v]

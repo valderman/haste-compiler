@@ -11,6 +11,7 @@
 module Haste.JSON (JSON (..), encodeJSON, decodeJSON, toObject, (!), (~>)) where
 import Haste
 import Haste.Prim
+import Haste.JSType
 import Data.String as S
 #ifndef __HASTE__
 import Control.Applicative
@@ -41,6 +42,13 @@ data JSON
 
 instance IsString JSON where
   fromString = Str . S.fromString
+
+instance JSType JSON where
+  toJSString = encodeJSON
+  fromJSString x =
+    case decodeJSON x of
+      Right x' -> Just x'
+      _        -> Nothing
 
 numFail :: a
 numFail = error "Num JSON: not a numeric JSON node!"
