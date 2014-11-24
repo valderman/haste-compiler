@@ -340,7 +340,7 @@ lineWidth w (Picture pict) = Picture $ \(Ctx ctx) -> do
   lw <- getProp' (Elem ctx) "lineWidth"
   setProp' (Elem ctx) "lineWidth" (toJSString w)
   pict (Ctx ctx)
-  setProp' (Elem ctx) "lineWidth" (toJSString lw)
+  setProp' (Elem ctx) "lineWidth" lw
 
 -- | Draw the specified picture using the given point as the origin.
 translate :: Vector -> Picture () -> Picture ()
