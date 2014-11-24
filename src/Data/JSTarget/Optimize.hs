@@ -259,13 +259,19 @@ gatherInlinable ast = do
       pure m
 
 -- | May the given expression ever tailcall?
+--   TODO:
+--     Be slightly smarter about handling locally defined functions; always
+--     counting a tailcall from a local as a tailcall from the containing
+--     function seems a bit too restrictive. On the other hand, this makes
+--     only a very slight difference in the number of unnecessary tailcalls
+--     eliminated.
 mayTailcall :: JSTrav ast => ast -> TravM Bool
 mayTailcall ast = do
   foldJS enter countTCs False ast
   where
     enter True _              = False
     enter _ (Exp (Thunk _ _)) = False
-    enter _ (Exp (Fun _ _ _)) = False
+--    enter _ (Exp (Fun _ _ _)) = False
     enter _ _                 = True
     countTCs _ (Stm (Tailcall _)) = return True
     countTCs acc _                = return acc
