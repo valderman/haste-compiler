@@ -128,7 +128,8 @@ compiler unbooted cmdargs = do
 
       runGhc (Just ghcLibDir) $ do
         -- Handle dynamic GHC flags. Make sure __HASTE__ is #defined.
-        let args = "-D__HASTE__" : map unLoc ghcargs'
+        let hastever = "-D__HASTE__=" ++ show intVersion
+            args = hastever : map unLoc ghcargs'
             justDie = const $ liftIO exitFailure
         dynflags <- getSessionDynFlags
         defaultCleanupHandler dynflags $ handleSourceError justDie $ do
