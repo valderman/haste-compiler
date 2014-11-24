@@ -2,7 +2,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings        #-}
 -- | Low level XMLHttpRequest support. IE6 and older are not supported.
-module Haste.Ajax (Method (..), URL, ajaxRequest) where
+module Haste.Ajax (Method (..), URL, ajaxRequest, noParams) where
 import Haste.Prim
 import Haste.JSType
 import Haste.Callback
@@ -21,6 +21,11 @@ ajaxReq = error "Tried to use ajaxReq in native code!"
 #endif
 
 data Method = GET | POST deriving Show
+
+-- | Pass to 'ajaxRequest' instead of @[]@ when no parameters are needed, to
+--   avoid type ambiguity errors.
+noParams :: [((), ())]
+noParams = []
 
 -- | Perform an AJAX request.
 ajaxRequest :: (MonadIO m, JSType a, JSType b, JSType c)

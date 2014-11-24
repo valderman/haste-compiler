@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, FlexibleInstances, UndecidableInstances #-}
 -- | Concurrent Ajax calls. IE6 and older are not supported.
 module Haste.Concurrent.Ajax (
-    Method (..), URL,
+    Method (..), URL, noParams,
     Haste.Concurrent.Ajax.ajaxRequest
   ) where
 import Haste.Concurrent.Monad
