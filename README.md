@@ -111,7 +111,11 @@ to read more about them. In particular `--opt-all`, `--opt-minify`,
 
 If you want your package to compile with both Haste and, say, GHC, you might
 want to use the CPP extension for conditional compilation. Haste defines the
-preprocessor symbol `__HASTE__` in all modules it compiles.
+preprocessor symbol `__HASTE__` in all modules it compiles. This symbol may
+also be used to differentiate between Haste versions, since it is defined
+as an integer representation of the current Haste version. Its format is
+`MAJOR*10 000 + MINOR*100 + MICRO`. Version 1.2.3 would thus be represented as
+10203, and 0.4.3 as 403.
 
 Haste also comes with wrappers for cabal and ghc-pkg, named haste-inst and
 haste-pkg respectively. You can use them to install packages just as you would
