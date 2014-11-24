@@ -26,6 +26,10 @@ class JSNum a where
   toNumber   :: a -> Double
   fromNumber :: Double -> a
 
+instance JSType JSString where
+  toJSString   = id
+  fromJSString = Just
+
 #ifdef __HASTE__
 
 foreign import ccall "Number" jsNumber          :: JSString -> Double
@@ -152,10 +156,6 @@ instance JSType Integer where
 instance JSType String where
   toJSString     = toJSStr
   fromJSString   = Just . fromJSStr
-
-instance JSType JSString where
-  toJSString   = id
-  fromJSString = Just
 
 instance JSType () where
   toJSString _ = toJSStr "()"
