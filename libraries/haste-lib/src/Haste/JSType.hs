@@ -34,7 +34,8 @@ instance JSType JSString where
 
 foreign import ccall "Number" jsNumber          :: JSString -> Double
 foreign import ccall "String" jsString          :: Double -> JSString
-foreign import ccall jsRound                    :: Double -> Int
+foreign import ccall jsTrunc                    :: Double -> Int
+foreign import ccall jsTruncW                   :: Double -> Int
 foreign import ccall "I_toInt" jsIToInt         :: ByteArray# -> Int
 foreign import ccall "I_toString" jsIToString   :: ByteArray# -> JSString
 foreign import ccall "I_fromString" jsStringToI :: JSString -> ByteArray#
@@ -47,12 +48,18 @@ unsafeIntFromJSString :: JSString -> Maybe a
 unsafeIntFromJSString s =
     case jsNumber s of
       d | isNaN d   -> Nothing
-        | otherwise -> Just (unsafeCoerce# (jsRound d))
+        | otherwise -> Just (unsafeCoerce# (jsTrunc d))
+
+unsafeWordFromJSString :: JSString -> Maybe a
+unsafeWordFromJSString s =
+    case jsNumber s of
+      d | isNaN d   -> Nothing
+        | otherwise -> Just (unsafeCoerce# (jsTruncW d))
 
 -- JSNum instances
 
 instance JSNum Int where
-  fromNumber = unsafeCoerce# jsRound
+  fromNumber = unsafeCoerce# jsTrunc
   toNumber = unsafeCoerce#
 
 instance JSNum Int8 where
@@ -64,12 +71,12 @@ instance JSNum Int16 where
   toNumber = unsafeCoerce#
 
 instance JSNum Int32 where
-  fromNumber = unsafeCoerce# jsRound
+  fromNumber = unsafeCoerce# jsTrunc
   toNumber = unsafeCoerce#
 
 instance JSNum Word where
   fromNumber n =
-    case jsRound (unsafeCoerce# n) of
+    case jsTrunc (unsafeCoerce# n) of
       I# n' -> W# (int2Word# n')
   toNumber = unsafeCoerce#
 
@@ -114,16 +121,16 @@ instance JSType Int32 where
   fromJSString = unsafeIntFromJSString
 instance JSType Word where
   toJSString = unsafeToJSString
-  fromJSString = unsafeIntFromJSString
+  fromJSString = unsafeWordFromJSString
 instance JSType Word8 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeIntFromJSString
+  fromJSString = unsafeWordFromJSString
 instance JSType Word16 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeIntFromJSString
+  fromJSString = unsafeWordFromJSString
 instance JSType Word32 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeIntFromJSString
+  fromJSString = unsafeWordFromJSString
 
 instance JSType Float where
   fromJSString s =
