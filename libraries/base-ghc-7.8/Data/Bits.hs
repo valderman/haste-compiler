@@ -6,7 +6,7 @@
 -- Module      :  Data.Bits
 -- Copyright   :  (c) The University of Glasgow 2001
 -- License     :  BSD-style (see the file libraries/base/LICENSE)
--- 
+--
 -- Maintainer  :  libraries@haskell.org
 -- Stability   :  experimental
 -- Portability :  portable
@@ -19,7 +19,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Data.Bits ( 
+module Data.Bits (
   Bits(
     (.&.), (.|.), xor, -- :: a -> a -> a
     complement,        -- :: a -> a
@@ -30,6 +30,7 @@ module Data.Bits (
     clearBit,          -- :: a -> Int -> a
     complementBit,     -- :: a -> Int -> a
     testBit,           -- :: a -> Int -> Bool
+    bitSizeMaybe,      -- :: a -> Maybe Int
     bitSize,           -- :: a -> Int
     isSigned,          -- :: a -> Bool
     shiftL, shiftR,    -- :: a -> Int -> a
@@ -53,6 +54,7 @@ module Data.Bits (
 #include "MachDeps.h"
 #endif
 
+import Data.Maybe
 import GHC.HasteWordInt
 #ifdef __GLASGOW_HASKELL__
 import GHC.Enum
@@ -69,7 +71,9 @@ infixl 7 .&.
 infixl 6 `xor`
 infixl 5 .|.
 
-{-| 
+{-# DEPRECATED bitSize "Use 'bitSizeMaybe' or 'finiteBitSize' instead" #-} -- deprecated in 7.8
+
+{-|
 The 'Bits' class defines bitwise operations over integral types.
 
 * Bits are numbered from 0 with bit 0 being the least
@@ -82,6 +86,11 @@ be implemented using `testBitDefault', 'bitDefault, and 'popCountDefault', if
 @a@ is also an instance of 'Num'.
 -}
 class Eq a => Bits a where
+    {-# MINIMAL (.&.), (.|.), xor, complement,
+                (shift | (shiftL, shiftR)),
+                (rotate | (rotateL, rotateR)),
+                bitSize, bitSizeMaybe, isSigned, testBit, bit, popCount #-}
+
     -- | Bitwise \"and\"
     (.&.) :: a -> a -> a
 
@@ -151,6 +160,14 @@ class Eq a => Bits a where
 
     -- | Return 'True' if the @n@th bit of the argument is 1
     testBit           :: a -> Int -> Bool
+
+    {-| Return the number of bits in the type of the argument.  The actual
+        value of the argument is ignored.  Returns Nothing
+        for types that do not have a fixed bitsize, like 'Integer'.
+
+        /Since: 4.7.0.0/
+        -}
+    bitSizeMaybe      :: a -> Maybe Int
 
     {-| Return the number of bits in the type of the argument.  The actual
         value of the argument is ignored.  The function 'bitSize' is
@@ -239,6 +256,79 @@ class Eq a => Bits a where
         known as the population count or the Hamming weight. -}
     popCount          :: a -> Int
 
+-- |The 'FiniteBits' class denotes types with a finite, fixed number of bits.
+--
+-- /Since: 4.7.0.0/
+class Bits b => FiniteBits b where
+    -- | Return the number of bits in the type of the argument.
+    -- The actual value of the argument is ignored. Moreover, 'finiteBitSize'
+    -- is total, in contrast to the deprecated 'bitSize' function it replaces.
+    --
+    -- @
+    -- 'finiteBitSize' = 'bitSize'
+    -- 'bitSizeMaybe' = 'Just' . 'finiteBitSize'
+    -- @
+    --
+    -- /Since: 4.7.0.0/
+    finiteBitSize :: b -> Int
+
+    -- | Count number of zero bits preceding the most significant set bit.
+    --
+    -- @
+    -- 'countLeadingZeros' ('zeroBits' :: a) = finiteBitSize ('zeroBits' :: a)
+    -- @
+    --
+    -- 'countLeadingZeros' can be used to compute log base 2 via
+    --
+    -- @
+    -- logBase2 x = 'finiteBitSize' x - 1 - 'countLeadingZeros' x
+    -- @
+    --
+    -- Note: The default implementation for this method is intentionally
+    -- naive. However, the instances provided for the primitive
+    -- integral types are implemented using CPU specific machine
+    -- instructions.
+    --
+    -- /Since: 4.8.0.0/
+    countLeadingZeros :: b -> Int
+    countLeadingZeros x = (w-1) - go (w-1)
+      where
+        go i | i < 0       = i -- no bit set
+             | testBit x i = i
+             | otherwise   = go (i-1)
+
+        w = finiteBitSize x
+
+    -- | Count number of zero bits following the least significant set bit.
+    --
+    -- @
+    -- 'countTrailingZeros' ('zeroBits' :: a) = finiteBitSize ('zeroBits' :: a)
+    -- 'countTrailingZeros' . 'negate' = 'countTrailingZeros'
+    -- @
+    --
+    -- The related
+    -- <http://en.wikipedia.org/wiki/Find_first_set find-first-set operation>
+    -- can be expressed in terms of 'countTrailingZeros' as follows
+    --
+    -- @
+    -- findFirstSet x = 1 + 'countTrailingZeros' x
+    -- @
+    --
+    -- Note: The default implementation for this method is intentionally
+    -- naive. However, the instances provided for the primitive
+    -- integral types are implemented using CPU specific machine
+    -- instructions.
+    --
+    -- /Since: 4.8.0.0/
+    countTrailingZeros :: b -> Int
+    countTrailingZeros x = go 0
+      where
+        go i | i >= w      = i
+             | testBit x i = i
+             | otherwise   = go (i+1)
+
+        w = finiteBitSize x
+
 -- | Default implementation for 'bit'.
 --
 -- Note that: @bitDefault i = 1 `shiftL` i@
@@ -263,6 +353,41 @@ popCountDefault = go 0
    go !c 0 = c
    go c w = go (c+1) (w .&. (w - 1)) -- clear the least significant
 {-# INLINABLE popCountDefault #-}
+
+-- Interpret 'Bool' as 1-bit bit-field; /Since: 4.7.0.0/
+instance Bits Bool where
+    (.&.) = (&&)
+
+    (.|.) = (||)
+
+    xor = (/=)
+
+    complement = not
+
+    shift x 0 = x
+    shift _ _ = False
+
+    rotate x _ = x
+
+    bit 0 = True
+    bit _ = False
+
+    testBit x 0 = x
+    testBit _ _ = False
+
+    bitSizeMaybe _ = Just 1
+
+    bitSize _ = 1
+
+    isSigned _ = False
+
+    popCount False = 0
+    popCount True  = 1
+
+instance FiniteBits Bool where
+    finiteBitSize _ = 1
+    countTrailingZeros x = if x then 0 else 1
+    countLeadingZeros  x = if x then 0 else 1
 
 instance Bits Int where
     {-# INLINE shift #-}
@@ -298,6 +423,7 @@ instance Bits Int where
         !x'# = i2w x#
         !i'# = w2i (i2w i# `and#` i2w (wsib -# 1#))
         !wsib = WORD_SIZE_IN_BITS#   {- work around preprocessor problem (??) -}
+    bitSizeMaybe i         = Just (finiteBitSize i)
     bitSize  _             = WORD_SIZE_IN_BITS
 
     popCount (I# x#) = I# (w2i (popCnt# (i2w x#)))
@@ -348,6 +474,9 @@ foreign import ccall nhc_primIntRsh :: Int -> Int -> Int
 foreign import ccall nhc_primIntCompl :: Int -> Int
 #endif /* __NHC__ */
 
+instance FiniteBits Int where
+    finiteBitSize _ = WORD_SIZE_IN_BITS
+
 #if defined(__GLASGOW_HASKELL__)
 instance Bits Word where
     {-# INLINE shift #-}
@@ -372,12 +501,16 @@ instance Bits Word where
         where
         !i'# = w2i (i2w i# `and#` i2w (wsib -# 1#))
         !wsib = WORD_SIZE_IN_BITS#  {- work around preprocessor problem (??) -}
+    bitSizeMaybe i           = Just (finiteBitSize i)
     bitSize  _               = WORD_SIZE_IN_BITS
     isSigned _               = False
     popCount (W# x#)         = I# (w2i (popCnt# x#))
     bit                      = bitDefault
     testBit                  = testBitDefault
 #endif
+
+instance FiniteBits Word where
+    finiteBitSize _ = WORD_SIZE_IN_BITS
 
 instance Bits Integer where
 #if defined(__GLASGOW_HASKELL__)
@@ -392,10 +525,10 @@ instance Bits Integer where
 
    x .&. y   | x<0 && y<0 = complement (complement x `posOr` complement y)
              | otherwise  = x `posAnd` y
-   
+
    x .|. y   | x<0 || y<0 = complement (complement x `posAnd` complement y)
              | otherwise  = x `posOr` y
-   
+
    x `xor` y | x<0 && y<0 = complement x `posXOr` complement y
              | x<0        = complement (complement x `posXOr` y)
              |        y<0 = complement (x `posXOr` complement y)
@@ -413,6 +546,7 @@ instance Bits Integer where
 
    rotate x i = shift x i   -- since an Integer never wraps around
 
+   bitSizeMaybe _ = Nothing
    bitSize _  = error "Data.Bits.bitSize(Integer)"
    isSigned _ = True
 
@@ -471,5 +605,5 @@ own to enable constant folding; for example 'shift':
            __DEFAULT -> Main.$wfold (+# ww_sOb 56) (+# wild_XM 1);
            10000000 -> ww_sOb
          }
--} 
+-}
 
