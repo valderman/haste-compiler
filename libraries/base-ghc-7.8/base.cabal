@@ -122,6 +122,7 @@ Library {
         Data.Bits,
         Data.Bool,
         Data.Char,
+        Data.Coerce,
         Data.Complex,
         Data.Dynamic,
         Data.Either,
