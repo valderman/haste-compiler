@@ -12,7 +12,7 @@ import Haste.Environment (hasteSysDir, ghcBinary)
 
 -- | Current Haste version.
 hasteVersion :: Version
-hasteVersion = Version [0, 4, 3] []
+hasteVersion = Version [0, 5, 0] []
 
 -- | Current Haste version as an Int. The format of this version number is
 --   MAJOR*10 000 + MINOR*100 + MICRO.
