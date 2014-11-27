@@ -40,11 +40,12 @@ downloadFile f = do
     _         -> fail $ "Failed to download " ++ f ++ ": " ++ rspReason rsp
 
 data Cfg = Cfg {
-    getLibs      :: Bool,
-    getClosure   :: Bool,
-    useLocalLibs :: Bool,
-    tracePrimops :: Bool,
-    forceBoot    :: Bool
+    getLibs               :: Bool,
+    getClosure            :: Bool,
+    useLocalLibs          :: Bool,
+    tracePrimops          :: Bool,
+    forceBoot             :: Bool,
+    populateSetupExeCache :: Bool
   }
 
 defCfg :: Cfg
@@ -53,11 +54,24 @@ defCfg = Cfg {
     getClosure = True,
     useLocalLibs = False,
     tracePrimops = False,
-    forceBoot = False
+    forceBoot = False,
+    populateSetupExeCache = True
+  }
+
+devBoot :: Cfg -> Cfg
+devBoot cfg = cfg {
+    useLocalLibs          = True,
+    forceBoot             = True,
+    getClosure            = False,
+    populateSetupExeCache = False
   }
 
 specs :: [OptDescr (Cfg -> Cfg)]
 specs = [
+    Option "" ["dev"]
+           (NoArg devBoot) $
+           "Boot Haste for development. Implies --force " ++
+           "--local --no-closure --no-populate-setup-exe-cache",
     Option "" ["force"]
            (NoArg $ \cfg -> cfg {forceBoot = True}) $
            "Re-boot Haste even if already properly booted.",
@@ -78,6 +92,11 @@ specs = [
            (NoArg $ \cfg -> cfg {getLibs = False}) $
            "Don't install any libraries. This is probably not " ++
            "what you want.",
+    Option "" ["no-populate-setup-exe-cache"]
+           (NoArg $ \cfg -> cfg {populateSetupExeCache = False}) $
+           "Don't populate Cabal's setup-exe-cache. Speeds up boot, " ++
+           "but vill fail spectacularly unless your setup-exe-cache " ++
+           "is already populated.",
     Option "" ["trace-primops"]
            (NoArg $ \cfg -> cfg {tracePrimops = True}) $
            "Build standard libs for tracing of primitive " ++
@@ -109,6 +128,10 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
   removeBootFile <- isFile bootFile
   when removeBootFile $ rm bootFile
   when (getLibs cfg) $ do
+    when (populateSetupExeCache cfg) $ do
+      void $ run "cabal" ["update"] ""
+      void $ run "cabal" ["install", "-j", "populate-setup-exe-cache"] ""
+      void $ run "ghc-pkg" ["unregister", "populate-setup-exe-cache"] ""
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
     mapM_ clearDir [hasteInstUserDir, jsmodUserDir, pkgUserDir,
