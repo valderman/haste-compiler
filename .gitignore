@@ -5,3 +5,5 @@
 *.o
 *.jsmod
 dist/
+TestDriver.js
+TestDriver.O2.js
