@@ -19,6 +19,7 @@ import Data.Word
 import Control.Concurrent (ThreadId)
 import Data.IORef
 import Data.Default
+import System.IO.Unsafe
 #ifndef __HASTE__
 import Haste.Binary.Types
 import Control.Concurrent (forkIO)
@@ -61,6 +62,10 @@ data Remote a = Remote CallID [Blob]
 #else
 data Remote a = Remote
 #endif
+
+-- | Has 'runApp' already been invoked?
+hasteAppRunning :: IORef Bool
+hasteAppRunning = unsafePerformIO $ newIORef False
 
 -- | Apply an exported function to an argument.
 --   TODO: look into making this Applicative.
@@ -183,19 +188,24 @@ getAppConfig = App $ \cfg _ cid exports -> return (cfg, cid, exports, cfg)
 -- | Run a Haste.App application. runApp never returns before the program
 --   terminates.
 --
---   Note that @runApp@'s arguments *must not* depend on any external IO,
---   or the client and server computations may diverge.
---   Ideally, calling runApp should be the first and only thing that happens
---   in main.
+--   Note that @runApp@ is single-entry, and that its argument must not
+--   depend on any external IO. It is *strongly* recommended that the main
+--   function of any Haste.App program *only* consists of a single call to
+--   @runApp@.
 runApp :: AppCfg -> App Done -> IO ()
 runApp cfg (App s) = do
+    running <- atomicModifyIORef hasteAppRunning $ \r -> (True, r)
+    if running
+      then do
+        error "runApp is single-entry!"
+      else do
 #ifdef __HASTE__
-    (Done client, _, _, _) <- s cfg undefined 0 undefined
-    client
+        (Done client, _, _, _) <- s cfg undefined 0 undefined
+        client
 #else
-    sessions <- newIORef S.empty
-    (_, _, exports, cfg') <- s cfg sessions 0 M.empty
-    serverEventLoop cfg' sessions exports
+        sessions <- newIORef S.empty
+        (_, _, exports, cfg') <- s cfg sessions 0 M.empty
+        serverEventLoop cfg' sessions exports
 #endif
 
 #ifndef __HASTE__
@@ -233,7 +243,7 @@ serverEventLoop cfg sessions exports = do
                       srResult = result
                     }
                   sendBinaryData c bs
-              Left e -> do
+              _ -> do
                 error $ "Got bad method call: " ++ show msg
           go
 #endif
