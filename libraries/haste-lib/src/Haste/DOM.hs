@@ -3,7 +3,7 @@
 module Haste.DOM (
     Elem (..), PropID, ElemID,
     newElem, newTextElem,
-    elemById, elemsByQS,
+    elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, setProp', getProp', getValue,
     withElem , withElems, withElemsQS, mapQS, mapQS_,
     addChild, addChildBefore, removeChild, clearChildren , getChildBefore,
@@ -28,6 +28,7 @@ newtype Elem = Elem JSAny
 type PropID = String
 type ElemID = String
 type QuerySelector = String
+type ElemClass = String
 
 #ifdef __HASTE__
 foreign import ccall jsGet :: Elem -> JSString -> IO JSString
@@ -38,6 +39,7 @@ foreign import ccall jsGetStyle :: Elem -> JSString -> IO JSString
 foreign import ccall jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsFind :: JSString -> IO (Ptr (Maybe Elem))
 foreign import ccall jsQuerySelectorAll :: Elem -> JSString -> IO (Ptr [Elem])
+foreign import ccall jsElemsByClassName :: JSString -> IO (Ptr [Elem])
 foreign import ccall jsCreateElem :: JSString -> IO Elem
 foreign import ccall jsCreateTextNode :: JSString -> IO Elem
 foreign import ccall jsAppendChild :: Elem -> Elem -> IO ()
@@ -57,6 +59,7 @@ jsSetAttr = error "Tried to use jsSetAttr on server side!"
 jsGetStyle = error "Tried to use jsGetStyle on server side!"
 jsSetStyle = error "Tried to use jsSetStyle on server side!"
 jsFind = error "Tried to use jsFind on server side!"
+jsElemsByClassName = error "Tried to use jsElemsByClassName on server side!"
 jsQuerySelectorAll = error "Tried to use jsQuerySelectorAll on server side!"
 jsCreateElem = error "Tried to use jsCreateElem on server side!"
 jsCreateTextNode = error "Tried to use jsCreateTextNode on server side!"
@@ -160,6 +163,10 @@ setStyle' e prop val = liftIO $ jsSetStyle e prop val
 -- | Get an element by its HTML ID attribute.
 elemById :: MonadIO m => ElemID -> m (Maybe Elem)
 elemById eid = liftIO $ fromPtr `fmap` (jsFind $ toJSStr eid)
+
+-- | Get all elements of the given class.
+elemsByClass :: MonadIO m => ElemClass -> m [Elem]
+elemsByClass cls = liftIO $ fromPtr `fmap` (jsElemsByClassName (toJSStr cls))
 
 -- | Get all children elements matching a query selector.
 elemsByQS :: MonadIO m => Elem -> QuerySelector -> m [Elem]
