@@ -211,7 +211,7 @@ Examples of Haste.App in action is available in `examples/haste-app` and
 `examples/chatbox`.
 
 For more information about how exactly this works, see this
-[draft paper](http://haste-lang.org/haskell14.pdf).
+[paper](http://haste-lang.org/haskell14.pdf).
 
 
 Base library and documentation
