@@ -224,6 +224,7 @@ Library
         Haste.JSON
         Haste.Ajax
         Haste.DOM
+        Haste.DOM.JSString
         Haste.Prim
         Haste.Concurrent
         Haste.Graphics.Canvas
