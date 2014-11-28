@@ -39,7 +39,8 @@ link cfg pkgid target = do
     $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp
   where
     assembleProg True extlibs rtslibs progText callMain launchApp =
-      fromString (unlines extlibs)
+      (if useStrict cfg then fromString "\"use strict\";\n" else mempty)
+      <> fromString (unlines extlibs)
       <> fromString "var hasteMain = function() {"
       <> fromString (unlines rtslibs)
       <> progText
@@ -47,7 +48,8 @@ link cfg pkgid target = do
       <> fromString "};\n"
       <> launchApp
     assembleProg _ extlibs rtslibs progText callMain launchApp =
-      fromString (unlines extlibs)
+      (if useStrict cfg then fromString "\"use strict\";\n" else mempty)
+      <> fromString (unlines extlibs)
       <> fromString (unlines rtslibs)
       <> progText
       <> fromString "\nvar hasteMain = function() {" <> callMain

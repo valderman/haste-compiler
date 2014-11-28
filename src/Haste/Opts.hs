@@ -40,6 +40,11 @@ hasteOpts unbooted = [
                                  performLink = False}) $
            "Install .jsmod files into the user's library. " ++
            "Implies --dont-link.",
+    Option "" ["no-use-strict"]
+           (NoArg $ \cfg -> cfg {useStrict = False}) $
+           "Do not emit '\"use strict\";' declaration. Does not affect " ++
+           "minifier behavior, but *does* affect any external JS included " ++
+           "with --with-js.",
     Option "" ["onexec"]
            (NoArg $ \cfg -> cfg {appStart = startCustom "onexec"}) $
            "Launch application immediately when the JS file is loaded. " ++

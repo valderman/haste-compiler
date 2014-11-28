@@ -68,53 +68,78 @@ fastMultiply = binOp Mul
 data Config = Config {
     -- | Runtime files to dump into the JS blob.
     rtsLibs :: [FilePath],
+
     -- | Path to directory where system jsmods are located.
     libPaths :: [FilePath],
+
     -- | Write all jsmods to this path.
     targetLibPath :: FilePath,
+
     -- | A function that takes the main symbol as its input and outputs the
     --   code that starts the program.
     appStart :: AppStart,
+
     -- | Wrap the program in its own namespace?
     wrapProg :: Bool,
+
     -- | Options to the pretty printer.
     ppOpts :: PPOpts,
+
     -- | A function that takes the name of the a target as its input and
     --   outputs the name of the file its JS blob should be written to.
     outFile :: Config -> String -> String,
+
     -- | Link the program?
     performLink :: Bool,
+
     -- | A function to call on each Int arithmetic primop.
     wrapIntMath :: AST Exp -> AST Exp,
+
     -- | Operation to use for Int multiplication.
     multiplyIntOp :: AST Exp -> AST Exp -> AST Exp,
+
     -- | Be verbose about warnings, etc.?
     verbose :: Bool,
+
     -- | Perform optimizations over the whole program at link time?
     wholeProgramOpts :: Bool,
+
     -- | Allow the possibility that some tail recursion may not be optimized
     --   in order to gain slightly smaller code?
     sloppyTCE :: Bool,
+
     -- | Turn on run-time tracing of primops?
     tracePrimops :: Bool,
+
     -- | Run the entire thing through Google Closure when done?
     useGoogleClosure :: Maybe FilePath,
+
     -- | Extra flags for Google Closure to take?
     useGoogleClosureFlags :: [String],
+
     -- | Any external Javascript to link into the JS bundle.
     jsExternals :: [FilePath],
+
     -- | Produce a skeleton HTML file containing the program rather than a
     --   JS file.
     outputHTML :: Bool,
+
     -- | GHC DynFlags used for STG generation.
     --   Currently only used for printing StgSyn values.
     showOutputable :: forall a. Outputable a => a -> String,
+
     -- | Which module contains the program's main function?
     --   Defaults to Just ("main", "Main")
     mainMod :: Maybe (String, String),
+
     -- | Perform optimizations.
     --   Defaults to True.
-    optimize :: Bool
+    optimize :: Bool,
+
+    -- | Emit @"use strict";@ declaration. Does not affect minification, but
+    --   *does* affect any external JS.
+    --   Defaults to True.
+    useStrict :: Bool
   }
 
 -- | Default compiler configuration.
@@ -143,7 +168,8 @@ defConfig = Config {
     outputHTML       = False,
     showOutputable   = const "No showOutputable defined in config!",
     mainMod          = Just ("main", "Main"),
-    optimize         = True
+    optimize         = True,
+    useStrict        = True
   }
 
 instance Default Config where
