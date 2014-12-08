@@ -48,11 +48,20 @@ Flag static
         portable.
     Default: False
 
+Flag only-library
+    Description:
+        Only install the Haste server-side libraries; no binaries.
+        This is useful if you installed pre-built binaries but still want
+        to use Haste with vanilla GHC, for Haste.App for instance.
+    Default: False
+
 source-repository head
     type:       git
     location:   https://github.com/valderman/haste-compiler.git
 
 Executable haste-boot
+    if flag(only-library)
+        buildable: False
     Main-Is: haste-boot.hs
     Other-Modules:
         Haste.Version
@@ -77,6 +86,8 @@ Executable haste-boot
     Default-Language: Haskell98
 
 Executable hastec
+    if flag(only-library)
+        buildable: False
     Hs-Source-Dirs: src
     GHC-Options: -Wall -O2
     if flag(portable)
@@ -133,6 +144,8 @@ Executable hastec
     default-language: Haskell98
 
 Executable haste-inst
+    if flag(only-library)
+        buildable: False
     Main-Is: haste-inst.hs
     Hs-Source-Dirs: src
     if flag(portable)
@@ -152,6 +165,8 @@ Executable haste-inst
     default-language: Haskell98
 
 Executable haste-pkg
+    if flag(only-library)
+        buildable: False
     Main-Is: haste-pkg.hs
     Hs-Source-Dirs: src
     if flag(portable)
@@ -172,6 +187,8 @@ Executable haste-pkg
     default-language: Haskell98
 
 Executable haste-install-his
+    if flag(only-library)
+        buildable: False
     Main-Is: haste-install-his.hs
     Hs-Source-Dirs: src
     if flag(portable)
@@ -185,6 +202,8 @@ Executable haste-install-his
     default-language: Haskell98
 
 Executable haste-copy-pkg
+    if flag(only-library)
+        buildable: False
     Main-Is: haste-copy-pkg.hs
     Other-Modules:
         Haste.Environment
@@ -200,6 +219,8 @@ Executable haste-copy-pkg
     default-language: Haskell98
 
 Executable haste-cat
+    if flag(only-library)
+        buildable: False
     Main-Is: haste-cat.hs
     Other-Modules:
         Haste.Environment
