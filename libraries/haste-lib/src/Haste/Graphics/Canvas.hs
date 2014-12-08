@@ -10,7 +10,7 @@ module Haste.Graphics.Canvas (
   -- Classes
   ImageBuffer (..), BitmapSource (..),
   -- Obtaining a canvas for drawing
-  getCanvasById, getCanvas, createCanvas,
+  getCanvasById, getCanvas, createCanvas, canvasElem,
   -- Working with bitmaps
   bitmapElem,
   -- Rendering pictures, extracting data from a canvas
@@ -148,6 +148,10 @@ data AnyImageBuffer where
 instance ImageBuffer AnyImageBuffer where
   draw (AnyImageBuffer buf) = draw buf
   drawClipped (AnyImageBuffer buf) = drawClipped buf
+
+-- | Get the DOM node backing a given canvas.
+canvasElem :: Canvas -> Elem
+canvasElem (Canvas _ctx e) = e
 
 -- | Get the HTML element associated with the given bitmap.
 bitmapElem :: Bitmap -> Elem
