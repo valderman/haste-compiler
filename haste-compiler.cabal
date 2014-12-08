@@ -42,6 +42,12 @@ Flag portable
         still local to each user. Primarily useful for global installs.
     Default: False
 
+Flag static
+    Description:
+        Build a statically linked binary. Only really useful together with
+        portable.
+    Default: False
+
 source-repository head
     type:       git
     location:   https://github.com/valderman/haste-compiler.git
@@ -75,6 +81,7 @@ Executable hastec
     GHC-Options: -Wall -O2
     if flag(portable)
         CPP-Options: -DPORTABLE
+    if flag(static)
         if os(windows)
           GHC-Options: -static -optl-static
         else
@@ -130,6 +137,7 @@ Executable haste-inst
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
+    if flag(static)
         if os(windows)
           GHC-Options: -static -optl-static
         else
@@ -148,6 +156,7 @@ Executable haste-pkg
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
+    if flag(static)
         if os(windows)
           GHC-Options: -static -optl-static
         else
