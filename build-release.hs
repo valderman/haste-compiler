@@ -68,7 +68,7 @@ main = do
 
 buildPortable = do
     -- Build compiler
-    run_ "cabal" ["configure", "-f", "portable"] ""
+    run_ "cabal" ["configure", "-f", "portable", "-f", "static"] ""
     run_ "cabal" ["build"] ""
 
     -- Strip symbols
