@@ -1,12 +1,20 @@
 module Tests.Weak where
 
+import Control.Applicative ((<$>))
+import Control.Concurrent
 import System.Mem.Weak
+
+sampleFinalizer::MVar String->IO ()
+sampleFinalizer var = putMVar var "Done!"
 
 runTest :: IO String
 runTest = do
-  let v = "test string"
-  p1 <- mkWeak 1 v Nothing
+  let val = "test string"
 
-  p1' <- deRefWeak p1
+  var <- newEmptyMVar
+  weakptr <- mkWeak 1 val . Just . sampleFinalizer $ var
+  val' <- deRefWeak weakptr
+  finalize weakptr
+  finalizerTest <- takeMVar var
 
-  return $ show p1'
+  return $ show val' ++ " " ++ finalizerTest
