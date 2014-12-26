@@ -286,6 +286,12 @@ genOp cfg op xs =
     EqStablePtrOp     -> bOp Eq
     DeRefStablePtrOp  -> Right $ head xs
 
+    -- Weak pointers - no concern of GC in JS
+    MkWeakOp            -> callF "mkWeak"
+    MkWeakNoFinalizerOp -> callF "mkWeak"
+    DeRefWeakOp         -> callF "derefWeak"
+    FinalizeWeakOp      -> callF "finalizeWeak"
+
     -- Exception masking
     -- There's only one thread anyway, so async exceptions can't happen.
     MaskAsyncExceptionsOp   -> Right $ callSaturated (head xs) []
