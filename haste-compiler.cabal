@@ -35,6 +35,7 @@ Data-Files:
     debug.js
     Canvas.js
     Handle.js
+    Weak.js
 
 Flag portable
     Description:
