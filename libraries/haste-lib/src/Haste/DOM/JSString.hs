@@ -2,7 +2,7 @@
              GeneralizedNewtypeDeriving #-}
 -- | DOM manipulation functions using 'JSString' for string representation.
 module Haste.DOM.JSString (
-    Elem (..), PropID, ElemID, QuerySelector, ElemClass,
+    IsElem (..), Elem (..), PropID, ElemID, QuerySelector, ElemClass,
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, getValue,
@@ -75,39 +75,51 @@ jsKillChild = error "Tried to use jsKillChild on server side!"
 jsClearChildren = error "Tried to use jsClearChildren on server side!"
 #endif
 
+-- | The class of types backed by DOM elements.
+class IsElem a where
+  -- | Get the element representing the object.
+  elemOf :: a -> Elem
+
+instance IsElem Elem where
+  elemOf = id
+
 -- | Append the first element as a child of the second element.
-addChild :: MonadIO m => Elem -> Elem -> m ()
-addChild child parent = liftIO $ jsAppendChild child parent
+addChild :: (IsElem parent, IsElem child, MonadIO m) => child -> parent -> m ()
+addChild child parent = liftIO $ jsAppendChild (elemOf child) (elemOf parent)
 
 -- | Insert the first element as a child into the second, before the third.
 --   For instance:
 -- @
 --   addChildBefore childToAdd theContainer olderChild
 -- @
-addChildBefore :: MonadIO m => Elem -> Elem -> Elem -> m ()
+addChildBefore :: (IsElem parent, IsElem child, MonadIO m)
+               => child -> parent -> child -> m ()
 addChildBefore child parent oldChild =
-  liftIO $ jsAddChildBefore child parent oldChild
+  liftIO $ jsAddChildBefore (elemOf child) (elemOf parent) (elemOf oldChild)
 
 -- | Get the sibling before the given one, if any.
-getChildBefore :: MonadIO m => Elem -> m (Maybe Elem)
-getChildBefore e = liftIO $ fromPtr `fmap` jsGetChildBefore e
+getChildBefore :: (IsElem e, MonadIO m) => e -> m (Maybe Elem)
+getChildBefore e = liftIO $ fromPtr `fmap` jsGetChildBefore (elemOf e)
 
 -- | Get the first of an element's children.
-getFirstChild :: MonadIO m => Elem -> m (Maybe Elem)
-getFirstChild e = liftIO $ fromPtr `fmap` jsGetFirstChild e
+getFirstChild :: (IsElem e, MonadIO m) => e -> m (Maybe Elem)
+getFirstChild e = liftIO $ fromPtr `fmap` jsGetFirstChild (elemOf e)
 
 -- | Get the last of an element's children.
-getLastChild :: MonadIO m => Elem -> m (Maybe Elem)
-getLastChild e = liftIO $ fromPtr `fmap` jsGetLastChild e
+getLastChild :: (IsElem e, MonadIO m) => e -> m (Maybe Elem)
+getLastChild e = liftIO $ fromPtr `fmap` jsGetLastChild (elemOf e)
 
 -- | Get a list of all children belonging to a certain element.
-getChildren :: MonadIO m => Elem -> m [Elem]
-getChildren e = liftIO $ fromPtr `fmap` jsGetChildren e
+getChildren :: (IsElem e, MonadIO m) => e -> m [Elem]
+getChildren e = liftIO $ fromPtr `fmap` jsGetChildren (elemOf e)
 
 -- | Clear the given element's list of children, and append all given children
 --   to it.
-setChildren :: MonadIO m => Elem -> [Elem] -> m ()
-setChildren e ch = liftIO $ jsSetChildren e (toPtr ch)
+setChildren :: (IsElem parent, IsElem child, MonadIO m)
+            => parent
+            -> [child]
+            -> m ()
+setChildren e ch = liftIO $ jsSetChildren (elemOf e) (toPtr $ map elemOf ch)
 
 -- | Create an element.
 newElem :: MonadIO m => JSString -> m Elem
@@ -118,32 +130,32 @@ newTextElem :: MonadIO m => JSString -> m Elem
 newTextElem = liftIO . jsCreateTextNode
 
 -- | Set a property of the given element.
-setProp :: MonadIO m => Elem -> PropID -> JSString -> m ()
-setProp e prop val = liftIO $ jsSet e prop val
+setProp :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
+setProp e prop val = liftIO $ jsSet (elemOf e) prop val
 
 -- | Set an attribute of the given element.
-setAttr :: MonadIO m => Elem -> PropID -> JSString -> m ()
-setAttr e prop val = liftIO $ jsSetAttr e prop val
+setAttr :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
+setAttr e prop val = liftIO $ jsSetAttr (elemOf e) prop val
 
 -- | Get the value property of an element; a handy shortcut.
-getValue :: (MonadIO m, JSType a) => Elem -> m (Maybe a)
-getValue e = liftIO $ fromJSString `fmap` jsGet e "value"
+getValue :: (IsElem e, MonadIO m, JSType a) => e -> m (Maybe a)
+getValue e = liftIO $ fromJSString `fmap` jsGet (elemOf e) "value"
 
 -- | Get a property of an element.
-getProp :: MonadIO m => Elem -> PropID -> m JSString
-getProp e prop = liftIO $ jsGet e prop
+getProp :: (IsElem e, MonadIO m) => e -> PropID -> m JSString
+getProp e prop = liftIO $ jsGet (elemOf e) prop
 
 -- | Get an attribute of an element.
-getAttr :: MonadIO m => Elem -> PropID -> m JSString
-getAttr e prop = liftIO $ jsGetAttr e prop
+getAttr :: (IsElem e, MonadIO m) => e -> PropID -> m JSString
+getAttr e prop = liftIO $ jsGetAttr (elemOf e) prop
 
 -- | Get a CSS style property of an element.
-getStyle :: MonadIO m => Elem -> PropID -> m JSString
-getStyle e prop = liftIO $ jsGetStyle e prop
+getStyle :: (IsElem e, MonadIO m) => e -> PropID -> m JSString
+getStyle e prop = liftIO $ jsGetStyle (elemOf e) prop
 
 -- | Set a CSS style property on an element.
-setStyle :: MonadIO m => Elem -> PropID -> JSString -> m ()
-setStyle e prop val = liftIO $ jsSetStyle e prop val
+setStyle :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
+setStyle e prop val = liftIO $ jsSetStyle (elemOf e) prop val
 
 -- | Get an element by its HTML ID attribute.
 elemById :: MonadIO m => ElemID -> m (Maybe Elem)
@@ -154,8 +166,8 @@ elemsByClass :: MonadIO m => ElemClass -> m [Elem]
 elemsByClass cls = liftIO $ fromPtr `fmap` (jsElemsByClassName cls)
 
 -- | Get all children elements matching a query selector.
-elemsByQS :: MonadIO m => Elem -> QuerySelector -> m [Elem]
-elemsByQS el sel = liftIO $ fromPtr `fmap` (jsQuerySelectorAll el sel)
+elemsByQS :: (IsElem e, MonadIO m) => e -> QuerySelector -> m [Elem]
+elemsByQS el sel = liftIO $ fromPtr `fmap` (jsQuerySelectorAll (elemOf el) sel)
 
 -- | Perform an IO action on an element.
 withElem :: MonadIO m => ElemID -> (Elem -> m a) -> m a
@@ -181,31 +193,38 @@ withElems es act = do
 
 -- | Perform an IO action over the a list of elements matching a query
 --   selector.
-withElemsQS :: MonadIO m => Elem -> QuerySelector -> ([Elem] -> m a) -> m a
+withElemsQS :: (IsElem e, MonadIO m)
+            => e
+            -> QuerySelector
+            -> ([Elem] -> m a)
+            -> m a
 withElemsQS el sel act = elemsByQS el sel >>= act
 
 -- | Map an IO computation over the list of elements matching a query selector.
-mapQS :: MonadIO m => Elem -> QuerySelector -> (Elem -> m a) -> m [a]
+mapQS :: (IsElem e, MonadIO m) => e -> QuerySelector -> (Elem -> m a) -> m [a]
 mapQS el sel act = elemsByQS el sel >>= mapM act
 
 -- | Like @mapQS@ but returns no value.
-mapQS_ :: MonadIO m => Elem -> QuerySelector -> (Elem -> m a) -> m ()
+mapQS_ :: (IsElem e, MonadIO m) => e -> QuerySelector -> (Elem -> m a) -> m ()
 mapQS_ el sel act = elemsByQS el sel >>= mapM_ act
 
 -- | Remove all children from the given element.
-clearChildren :: MonadIO m => Elem -> m ()
-clearChildren = liftIO . jsClearChildren
+clearChildren :: (IsElem e, MonadIO m) => e -> m ()
+clearChildren = liftIO . jsClearChildren . elemOf
 
 -- | Remove the first element from the second's children.
-removeChild :: MonadIO m => Elem -> Elem -> m ()
-removeChild child parent = liftIO $ jsKillChild child parent
+removeChild :: (IsElem parent, IsElem child, MonadIO m)
+            => child
+            -> parent
+            -> m ()
+removeChild child parent = liftIO $ jsKillChild (elemOf child) (elemOf parent)
 
 -- | Get a file from a file input element.
-getFileData :: MonadIO m => Elem -> Int -> m (Maybe Blob)
+getFileData :: (IsElem e, MonadIO m) => e -> Int -> m (Maybe Blob)
 getFileData e ix = liftIO $ do
-    num <- getFiles e
+    num <- getFiles (elemOf e)
     if ix < num
-      then Just `fmap` getFile e ix
+      then Just `fmap` getFile (elemOf e) ix
       else return Nothing
   where
     {-# NOINLINE getFiles #-}
@@ -218,7 +237,7 @@ getFileData e ix = liftIO $ do
 -- | Get the name of the currently selected file from a file input element.
 --   Any directory information is stripped, and only the actual file name is
 --   returned, as the directory information is useless (and faked) anyway.
-getFileName :: MonadIO m => Elem -> m JSString
+getFileName :: (IsElem e, MonadIO m) => e -> m JSString
 getFileName e = liftIO $ do
     fn <- fromJSStr `fmap` getProp e "value"
     return $ toJSStr $ reverse $ takeWhile (not . separator) $ reverse fn
@@ -228,48 +247,48 @@ getFileName e = liftIO $ do
     separator _    = False
 
 -- | Add or remove a class from an element's class list.
-setClass :: MonadIO m => Elem -> JSString -> Bool -> m ()
-setClass e c x = liftIO $ setc e c x
+setClass :: (IsElem e, MonadIO m) => e -> JSString -> Bool -> m ()
+setClass e c x = liftIO $ setc (elemOf e) c x
   where
     {-# NOINLINE setc #-}
     setc :: Elem -> JSString -> Bool -> IO ()
     setc = ffi "(function(e,c,x){x?e.classList.add(c):e.classList.remove(c);})"
 
 -- | Toggle the existence of a class within an elements class list.
-toggleClass :: MonadIO m => Elem -> JSString -> m ()
-toggleClass e c = liftIO $ toggc e c
+toggleClass :: (IsElem e, MonadIO m) => e -> JSString -> m ()
+toggleClass e c = liftIO $ toggc (elemOf e) c
   where
     {-# NOINLINE toggc #-}
     toggc :: Elem -> JSString -> IO ()
     toggc = ffi "(function(e,c) {e.classList.toggle(c);})"
 
 -- | Does the given element have a particular class?
-hasClass :: MonadIO m => Elem -> JSString -> m Bool
-hasClass e c = liftIO $ getc e c
+hasClass :: (IsElem e, MonadIO m) => e -> JSString -> m Bool
+hasClass e c = liftIO $ getc (elemOf e) c
   where
     {-# NOINLINE getc #-}
     getc :: Elem -> JSString -> IO Bool
     getc = ffi "(function(e,c) {return e.classList.contains(c);})"
 
 -- | Generate a click event on an element.
-click :: MonadIO m => Elem -> m ()
-click = liftIO . click'
+click :: (IsElem e, MonadIO m) => e -> m ()
+click = liftIO . click' . elemOf
   where
     {-# NOINLINE click' #-}
     click' :: Elem -> IO ()
     click' = ffi "(function(e) {e.click();})"
 
 -- | Generate a focus event on an element.
-focus :: MonadIO m => Elem -> m ()
-focus = liftIO . focus'
+focus :: (IsElem e, MonadIO m) => e -> m ()
+focus = liftIO . focus' . elemOf
   where
     {-# NOINLINE focus' #-}
     focus' :: Elem -> IO ()
     focus' = ffi "(function(e) {e.focus();})"
 
 -- | Generate a blur event on an element.
-blur :: MonadIO m => Elem -> m ()
-blur = liftIO . blur'
+blur :: (IsElem e, MonadIO m) => e -> m ()
+blur = liftIO . blur' . elemOf
   where
     {-# NOINLINE blur' #-}
     blur' :: Elem -> IO ()
