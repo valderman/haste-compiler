@@ -8,7 +8,7 @@ module Haste.Callback (
     jsSetCB, jsSetTimeout, evtName
   ) where
 import Haste.Prim
-import Haste.DOM
+import Haste.DOM.Core
 import Haste.Concurrent.Monad
 import Data.String
 import Control.Monad.IO.Class

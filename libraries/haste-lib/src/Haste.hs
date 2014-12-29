@@ -7,7 +7,7 @@
 module Haste (
     JSString, JSAny, URL, CB.GenericCallback,
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
-    module Haste.JSType, module Haste.DOM, module Haste.Callback,
+    module Haste.JSType, module Haste.DOM.Core, module Haste.Callback,
     module Haste.Random, module Haste.Hash
   ) where
 import Haste.Prim
@@ -15,7 +15,7 @@ import Haste.Callback hiding (jsSetCB, jsSetTimeout, GenericCallback)
 import qualified Haste.Callback as CB (GenericCallback)
 import Haste.Random
 import Haste.JSType
-import Haste.DOM
+import Haste.DOM.Core
 import Haste.Hash
 import Control.Monad.IO.Class
 

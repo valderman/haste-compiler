@@ -135,7 +135,7 @@ class BitmapSource src where
 
 instance BitmapSource URL where
   loadBitmap url = liftIO $ do
-    img <- newElem "img"
+    img <- J.newElem "img"
     J.setProp img "src" (toJSString url)
     loadBitmap img
 
@@ -248,9 +248,9 @@ instance Monad Shape where
     unS (f x) ctx
 
 -- | Create a 2D drawing context from a DOM element identified by its ID.
-getCanvasById :: MonadIO m => ElemID -> m (Maybe Canvas)
+getCanvasById :: MonadIO m => String -> m (Maybe Canvas)
 getCanvasById eid = liftIO $ do
-  e <- elemById eid
+  e <- J.elemById (toJSString eid)
   maybe (return Nothing) getCanvas e
 
 -- | Create a 2D drawing context from a DOM element.
@@ -266,7 +266,7 @@ getCanvas e = liftIO $ do
 -- | Create an off-screen buffer of the specified size.
 createCanvas :: Int -> Int -> IO Canvas
 createCanvas w h = do
-  buf <- newElem "canvas"
+  buf <- J.newElem "canvas"
   J.setProp buf "width" (toJSString w)
   J.setProp buf "height" (toJSString h)
   fromJust <$> getCanvas buf

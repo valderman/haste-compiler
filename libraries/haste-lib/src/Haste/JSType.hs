@@ -16,6 +16,7 @@ import GHC.Types (Int (..))
 import GHC.Float
 #endif
 
+-- | Any type which can be converted to/from a 'JSString'.
 class JSType a where
   toJSString   :: a -> JSString
   fromJSString :: JSString -> Maybe a

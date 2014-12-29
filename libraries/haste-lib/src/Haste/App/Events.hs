@@ -10,7 +10,7 @@ module Haste.App.Events (
 import qualified Haste.Callback as CB
 import Haste.App.Client
 import Haste.Concurrent
-import Haste.DOM
+import Haste.DOM.Core
 
 -- | Bake a value of type a -> ... -> Client b into a -> ... -> IO b
 class ClientCallback a where
