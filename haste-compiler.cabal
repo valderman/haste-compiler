@@ -268,6 +268,7 @@ Library
         Haste.JSType
         Haste.Callback
         Haste.Compiler.Flags
+        Haste.DOM.Core
         Haste.Environment
         Paths_haste_compiler
         Haste.Hash

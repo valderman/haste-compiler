@@ -46,6 +46,7 @@ Library
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
         Haste.Compiler.Flags
+        Haste.DOM.Core
         Haste.App.Client
         Haste.App.Events
         Haste.App.Monad

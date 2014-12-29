@@ -1,21 +1,17 @@
 -- | DOM manipulation functions using 'String' for string representation.
 module Haste.DOM (
+    module Core,
     IsElem (..), Elem (..), PropID, ElemID, QuerySelector, ElemClass,
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, J.getValue,
     withElem , withElems, withElemsQS, mapQS, mapQS_,
-    J.addChild, J.addChildBefore, J.removeChild, J.clearChildren,
-    J.getChildBefore, J.getFirstChild, J.getLastChild, J.getChildren,
-    J.setChildren,
     getStyle, setStyle,
     J.getFileData, getFileName,
-    setClass, toggleClass, hasClass,
-    J.click, J.focus, J.blur,
-    J.document, J.documentBody
+    setClass, toggleClass, hasClass
   ) where
 import qualified Haste.DOM.JSString as J
-import Haste.DOM.JSString (Elem, IsElem (..))
+import Haste.DOM.Core as Core
 import Haste.Prim (fromJSStr, toJSStr)
 import Control.Monad.IO.Class
 
