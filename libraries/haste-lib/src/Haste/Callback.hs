@@ -123,26 +123,34 @@ evtName evt =
     OnWheel     -> "wheel"
 
 -- | Friendlier name for @setCallback@.
-onEvent :: MonadIO m => Elem -> Event IO a -> a -> m Bool
+onEvent :: (IsElem e, MonadIO m) => e -> Event IO a -> a -> m Bool
 onEvent = setCallback
 
 -- | Friendlier name for @setCallback'@.
-onEvent' :: (ToConcurrent a, MonadIO m) => Elem -> Event CIO a -> Async a -> m Bool
+onEvent' :: (IsElem e, ToConcurrent a, MonadIO m)
+         => e
+         -> Event CIO a
+         -> Async a
+         -> m Bool
 onEvent' = setCallback'
 
 -- | Set a callback for the given event.
-setCallback :: MonadIO m => Elem -> Event IO a -> a -> m Bool
+setCallback :: (IsElem e, MonadIO m)
+            => e
+            -> Event IO a
+            -> a
+            -> m Bool
 setCallback e evt f =
-  liftIO $ jsSetCB e (evtName evt) (mkCallback $! f)
+  liftIO $ jsSetCB (elemOf e) (evtName evt) (mkCallback $! f)
 
 -- | Like @setCallback@, but takes a callback in the CIO monad instead of IO.
-setCallback' :: (ToConcurrent a, MonadIO m)
-             => Elem
+setCallback' :: (IsElem e, ToConcurrent a, MonadIO m)
+             => e
              -> Event CIO a
              -> Async a
              -> m Bool
 setCallback' e evt f =
-    liftIO $ jsSetCB e (evtName evt) (mkCallback $! f')
+    liftIO $ jsSetCB (elemOf e) (evtName evt) (mkCallback $! f')
   where
     f' = asEvtTypeOf evt (async f)
 
