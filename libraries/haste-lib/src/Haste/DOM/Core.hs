@@ -3,7 +3,7 @@
 -- | Core types and operations for DOM manipulation.
 module Haste.DOM.Core (
     Elem (..), IsElem (..), Attribute, AttrName (..),
-    set, attribute,
+    set, with, attribute,
     click, focus, blur,
     document, documentBody,
     removeChild, clearChildren,
@@ -81,14 +81,25 @@ attribute :: AttrName -> JSString -> Attribute
 attribute = Attribute
 
 -- | Set a number of 'Attribute's on an element.
-set :: IsElem a => a -> [Attribute] -> IO ()
+set :: (IsElem e, MonadIO m) => e -> [Attribute] -> m ()
 set e as =
-    mapM_ set' as
+    liftIO $ mapM_ set' as
   where
     e' = elemOf e
     set' (Attribute (PropName k) v)  = jsSet e' k v
     set' (Attribute (StyleName k) v) = jsSetStyle e' k v
     set' (Attribute (AttrName k) v)  = jsSetAttr e' k v
+
+-- | Set a number of 'Attribute's on the element produced by an IO action.
+--   Gives more convenient syntax when creating elements:
+--
+--     newElem "div" `with` [
+--         style "border" := "1px solid black",
+--         ...
+--       ]
+--
+with :: (IsElem e, MonadIO m) => m e -> [Attribute] -> m ()
+with m attrs = m >>= flip set attrs
 
 -- | Generate a click event on an element.
 click :: (IsElem e, MonadIO m) => e -> m ()

@@ -3,8 +3,8 @@
 module Haste.DOM (
     module Core,
     IsElem (..), Elem, PropID, ElemID, QuerySelector, ElemClass,
-    Attribute, AttrName, AttrValue,
-    set, style, attr, (=:),
+    AttrName, AttrValue,
+    style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, J.getValue,
@@ -15,7 +15,7 @@ module Haste.DOM (
   ) where
 import qualified Haste.DOM.JSString as J
 import qualified Haste.DOM.Core as Core
-  hiding (Elem (..), Attribute, AttrName (..), set)
+  hiding (Elem (..), AttrName (..))
 import Haste.DOM.Core
 import Haste.Prim (fromJSStr, toJSStr)
 import Control.Monad.IO.Class
