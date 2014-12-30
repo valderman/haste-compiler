@@ -3,7 +3,7 @@
 -- | Core types and operations for DOM manipulation.
 module Haste.DOM.Core (
     Elem (..), IsElem (..), Attribute, AttrName (..),
-    set, with, attribute,
+    set, with, attribute, children,
     click, focus, blur,
     document, documentBody,
     removeChild, clearChildren,
@@ -65,16 +65,19 @@ instance IsElem Elem where
 -- | The name of an attribute. May be either a common property, an HTML
 --   attribute or a style attribute.
 data AttrName
-  = PropName  JSString
-  | StyleName JSString
-  | AttrName  JSString
+  = PropName  !JSString
+  | StyleName !JSString
+  | AttrName  !JSString
 
 instance IsString AttrName where
   fromString = PropName . fromString
 
 -- | A key/value pair representing the value of an attribute.
---   May represent a property, an HTML attribute or a style attribute.
-data Attribute = Attribute AttrName JSString
+--   May represent a property, an HTML attribute, a style attribute or a list
+--   of child elements.
+data Attribute
+  = Attribute !AttrName !JSString
+  | Children ![Elem]
 
 -- | Construct an 'Attribute'.
 attribute :: AttrName -> JSString -> Attribute
@@ -89,6 +92,11 @@ set e as =
     set' (Attribute (PropName k) v)  = jsSet e' k v
     set' (Attribute (StyleName k) v) = jsSetStyle e' k v
     set' (Attribute (AttrName k) v)  = jsSetAttr e' k v
+    set' (Children cs)               = mapM_ (flip jsAppendChild e') cs
+
+-- | Attribute adding a list of child nodes to an element.
+children :: [Elem] -> Attribute
+children = Children
 
 -- | Set a number of 'Attribute's on the element produced by an IO action.
 --   Gives more convenient syntax when creating elements:
