@@ -3,7 +3,7 @@
 module Haste.DOM (
     Elem (..), PropID, ElemID, QuerySelector, ElemClass,
     Attribute, AttrName, AttrValue,
-    set, style, attr, (=:),
+    set, style, attr, with, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, setProp', getProp', getValue,
@@ -341,10 +341,21 @@ attribute :: AttrName -> JSString -> Attribute
 attribute = Attribute
 
 -- | Set a number of 'Attribute's on an element.
-set :: Elem -> [Attribute] -> IO ()
+set :: MonadIO m => Elem -> [Attribute] -> m ()
 set e as =
-    mapM_ set' as
+    liftIO $ mapM_ set' as
   where
     set' (Attribute (PropName k) v)  = jsSet e k v
     set' (Attribute (StyleName k) v) = jsSetStyle e k v
     set' (Attribute (AttrName k) v)  = jsSetAttr e k v
+
+-- | Set a number of 'Attribute's on the element produced by an IO action.
+--   Gives more convenient syntax when creating elements:
+--
+--     newElem "div" `with` [
+--         style "border" := "1px solid black",
+--         ...
+--       ]
+--
+with :: MonadIO m => m Elem -> [Attribute] -> m ()
+with m attrs = m >>= flip set attrs
