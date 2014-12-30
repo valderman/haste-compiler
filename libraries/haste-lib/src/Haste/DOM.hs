@@ -1,7 +1,10 @@
+{-# LANGUAGE GADTs #-}
 -- | DOM manipulation functions using 'String' for string representation.
 module Haste.DOM (
     module Core,
-    IsElem (..), Elem (..), PropID, ElemID, QuerySelector, ElemClass,
+    IsElem (..), Elem, PropID, ElemID, QuerySelector, ElemClass,
+    Attribute, AttrName, AttrValue,
+    set, style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, J.getValue,
@@ -11,7 +14,9 @@ module Haste.DOM (
     setClass, toggleClass, hasClass
   ) where
 import qualified Haste.DOM.JSString as J
-import Haste.DOM.Core as Core
+import qualified Haste.DOM.Core as Core
+  hiding (Elem (..), Attribute, AttrName (..), set)
+import Haste.DOM.Core
 import Haste.Prim (fromJSStr, toJSStr)
 import Control.Monad.IO.Class
 
@@ -19,6 +24,19 @@ type PropID = String
 type ElemID = String
 type QuerySelector = String
 type ElemClass = String
+type AttrValue = String
+
+-- | Create a style attribute name.
+style :: String -> AttrName
+style = StyleName . toJSStr
+
+-- | Create an HTML attribute name.
+attr :: String -> AttrName
+attr = AttrName . toJSStr
+
+-- | Create an 'Attribute'.
+(=:) :: AttrName -> AttrValue -> Attribute
+name =: val = attribute name (toJSStr val)
 
 -- | Create an element.
 newElem :: (Functor m, MonadIO m) => String -> m Elem

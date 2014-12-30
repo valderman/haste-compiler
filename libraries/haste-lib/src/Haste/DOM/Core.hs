@@ -1,13 +1,26 @@
 {-# LANGUAGE CPP, ForeignFunctionInterface, GeneralizedNewtypeDeriving,
              OverloadedStrings #-}
 -- | Core types and operations for DOM manipulation.
-module Haste.DOM.Core where
+module Haste.DOM.Core (
+    Elem (..), IsElem (..), Attribute, AttrName (..),
+    set, attribute,
+    click, focus, blur,
+    document, documentBody,
+    removeChild, clearChildren,
+    setChildren, getChildren,
+    getLastChild, getFirstChild, getChildBefore,
+    addChildBefore, addChild    
+  ) where
 import Haste.Prim
 import Control.Monad.IO.Class
 import Haste.Foreign
 import System.IO.Unsafe (unsafePerformIO)
+import Data.String
 
 #ifdef __HASTE__
+foreign import ccall jsSet :: Elem -> JSString -> JSString -> IO ()
+foreign import ccall jsSetAttr :: Elem -> JSString -> JSString -> IO ()
+foreign import ccall jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsAppendChild :: Elem -> Elem -> IO ()
 foreign import ccall jsGetFirstChild :: Elem -> IO (Ptr (Maybe Elem))
 foreign import ccall jsGetLastChild :: Elem -> IO (Ptr (Maybe Elem))
@@ -27,6 +40,9 @@ jsAddChildBefore = error "Tried to use jsAddChildBefore on server side!"
 jsGetChildBefore = error "Tried to use jsGetChildBefore on server side!"
 jsKillChild = error "Tried to use jsKillChild on server side!"
 jsClearChildren = error "Tried to use jsClearChildren on server side!"
+jsSet = error "Tried to use jsSet on server side!"
+jsSetAttr = error "Tried to use jsSetAttr on server side!"
+jsSetStyle = error "Tried to use jsSetStyle on server side!"
 #endif
 
 -- | A DOM node.
@@ -38,8 +54,41 @@ class IsElem a where
   -- | Get the element representing the object.
   elemOf :: a -> Elem
 
+  -- | Attempt to create an object from an 'Elem'.
+  fromElem :: Elem -> IO (Maybe a)
+  fromElem = const $ return Nothing
+
 instance IsElem Elem where
   elemOf = id
+  fromElem = return . Just
+
+-- | The name of an attribute. May be either a common property, an HTML
+--   attribute or a style attribute.
+data AttrName
+  = PropName  JSString
+  | StyleName JSString
+  | AttrName  JSString
+
+instance IsString AttrName where
+  fromString = PropName . fromString
+
+-- | A key/value pair representing the value of an attribute.
+--   May represent a property, an HTML attribute or a style attribute.
+data Attribute = Attribute AttrName JSString
+
+-- | Construct an 'Attribute'.
+attribute :: AttrName -> JSString -> Attribute
+attribute = Attribute
+
+-- | Set a number of 'Attribute's on an element.
+set :: IsElem a => a -> [Attribute] -> IO ()
+set e as =
+    mapM_ set' as
+  where
+    e' = elemOf e
+    set' (Attribute (PropName k) v)  = jsSet e' k v
+    set' (Attribute (StyleName k) v) = jsSetStyle e' k v
+    set' (Attribute (AttrName k) v)  = jsSetAttr e' k v
 
 -- | Generate a click event on an element.
 click :: (IsElem e, MonadIO m) => e -> m ()

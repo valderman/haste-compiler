@@ -2,7 +2,9 @@
 -- | DOM manipulation functions using 'JSString' for string representation.
 module Haste.DOM.JSString (
     module Core,
-    IsElem (..), Elem (..), PropID, ElemID, QuerySelector, ElemClass,
+    IsElem (..), Elem, PropID, ElemID, QuerySelector, ElemClass,
+    Attribute, AttrName, AttrValue,
+    set, style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, getValue,
@@ -13,7 +15,9 @@ module Haste.DOM.JSString (
   ) where
 import Haste.Prim
 import Haste.JSType
-import Haste.DOM.Core as Core
+import qualified Haste.DOM.Core as Core
+  hiding (Elem (..), Attribute, AttrName (..), set)
+import Haste.DOM.Core
 import Data.Maybe (isNothing, fromJust)
 import Control.Monad.IO.Class
 import Haste.Foreign
@@ -23,6 +27,7 @@ type PropID = JSString
 type ElemID = JSString
 type QuerySelector = JSString
 type ElemClass = JSString
+type AttrValue = JSString
 
 #ifdef __HASTE__
 foreign import ccall jsGet :: Elem -> JSString -> IO JSString
@@ -49,6 +54,18 @@ jsQuerySelectorAll = error "Tried to use jsQuerySelectorAll on server side!"
 jsCreateElem = error "Tried to use jsCreateElem on server side!"
 jsCreateTextNode = error "Tried to use jsCreateTextNode on server side!"
 #endif
+
+-- | Create a style attribute name.
+style :: JSString -> AttrName
+style = StyleName
+
+-- | Create an HTML attribute name.
+attr :: JSString -> AttrName
+attr = AttrName
+
+-- | Create an 'Attribute'.
+(=:) :: AttrName -> AttrValue -> Attribute
+(=:) = attribute
 
 -- | Create an element.
 newElem :: MonadIO m => JSString -> m Elem
