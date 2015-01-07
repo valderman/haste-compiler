@@ -106,8 +106,11 @@ children = Children
 --         ...
 --       ]
 --
-with :: (IsElem e, MonadIO m) => m e -> [Attribute] -> m ()
-with m attrs = m >>= flip set attrs
+with :: (IsElem e, MonadIO m) => m e -> [Attribute] -> m e
+with m attrs = do
+  x <- m
+  set x attrs
+  return x
 
 -- | Generate a click event on an element.
 click :: (IsElem e, MonadIO m) => e -> m ()
