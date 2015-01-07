@@ -69,7 +69,7 @@ main = do
 buildPortable = do
     -- Build compiler
     run_ "cabal" ["configure", "-f", "portable", "-f", "static"] ""
-    run_ "cabal" ["build"] ""
+    run_ "dist/setup/setup" ["build"] ""
 
     -- Strip symbols
     case os of
