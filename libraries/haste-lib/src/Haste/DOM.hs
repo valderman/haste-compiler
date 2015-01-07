@@ -357,5 +357,8 @@ set e as =
 --         ...
 --       ]
 --
-with :: MonadIO m => m Elem -> [Attribute] -> m ()
-with m attrs = m >>= flip set attrs
+with :: MonadIO m => m Elem -> [Attribute] -> m Elem
+with m attrs = do
+  x <- m
+  set x attrs
+  return x
