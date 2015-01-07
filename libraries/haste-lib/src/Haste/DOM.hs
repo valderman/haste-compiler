@@ -1,7 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, CPP,
              GeneralizedNewtypeDeriving #-}
 module Haste.DOM (
-    Elem (..), PropID, ElemID,
+    Elem (..), PropID, ElemID, QuerySelector, ElemClass,
+    Attribute, AttrName, AttrValue,
+    set, style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, setProp', getProp', getValue,
@@ -21,6 +23,7 @@ import Control.Monad.IO.Class
 import Haste.Foreign
 import Haste.Binary.Types
 import System.IO.Unsafe (unsafePerformIO)
+import qualified Data.String as S
 
 newtype Elem = Elem JSAny
   deriving (Pack, Unpack)
@@ -29,6 +32,19 @@ type PropID = String
 type ElemID = String
 type QuerySelector = String
 type ElemClass = String
+type AttrValue = String
+
+-- | Create a style attribute name.
+style :: String -> AttrName
+style = StyleName . toJSStr
+
+-- | Create an HTML attribute name.
+attr :: String -> AttrName
+attr = AttrName . toJSStr
+
+-- | Create an 'Attribute'.
+(=:) :: AttrName -> AttrValue -> Attribute
+name =: val = attribute name (toJSStr val)
 
 #ifdef __HASTE__
 foreign import ccall jsGet :: Elem -> JSString -> IO JSString
@@ -305,3 +321,30 @@ documentBody = unsafePerformIO getBody
     {-# NOINLINE getBody #-}
     getBody :: IO Elem
     getBody = ffi "document.body"
+
+-- | The name of an attribute. May be either a common property, an HTML
+--   attribute or a style attribute.
+data AttrName
+  = PropName  JSString
+  | StyleName JSString
+  | AttrName  JSString
+
+instance S.IsString AttrName where
+  fromString = PropName . S.fromString
+
+-- | A key/value pair representing the value of an attribute.
+--   May represent a property, an HTML attribute or a style attribute.
+data Attribute = Attribute AttrName JSString
+
+-- | Construct an 'Attribute'.
+attribute :: AttrName -> JSString -> Attribute
+attribute = Attribute
+
+-- | Set a number of 'Attribute's on an element.
+set :: Elem -> [Attribute] -> IO ()
+set e as =
+    mapM_ set' as
+  where
+    set' (Attribute (PropName k) v)  = jsSet e k v
+    set' (Attribute (StyleName k) v) = jsSetStyle e k v
+    set' (Attribute (AttrName k) v)  = jsSetAttr e k v

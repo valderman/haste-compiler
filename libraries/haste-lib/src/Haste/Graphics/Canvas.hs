@@ -271,7 +271,7 @@ createCanvas w h = do
   buf <- newElem "canvas"
   setProp' buf "width" (toJSString w)
   setProp' buf "height" (toJSString h)
-  fromJust <$> getCanvas buf
+  getCanvas buf
 
 -- | Clear a canvas, then draw a picture onto it.
 {-# SPECIALISE render :: Canvas -> Picture a -> IO a #-}
