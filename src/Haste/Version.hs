@@ -41,7 +41,7 @@ bootVersion = BootVer hasteVersion ghcVersion
 data BootVer = BootVer {
     bootHasteVersion :: !Version,
     bootGhcVersion   :: !Version
-  }
+  } deriving (Show, Read)
 
 showBootVersion :: BootVer -> String
 showBootVersion (BootVer ver ghcver) =
