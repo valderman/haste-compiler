@@ -273,6 +273,7 @@ Library
         Haste.Callback
         Haste.Compiler.Flags
         Haste.DOM.Core
+        Haste.Version
         Haste.Environment
         Haste.GHCPaths
         Paths_haste_compiler
