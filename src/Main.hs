@@ -42,7 +42,7 @@ printInfo = do
 preArgs :: [String] -> IO Bool
 preArgs args
   | "--numeric-version" `elem` args =
-    putStrLn ghcVersion >> return False
+    putStrLn (showVersion ghcVersion) >> return False
   | "--info" `elem` args =
     printInfo >> return False
   | "--print-libdir" `elem` args =
