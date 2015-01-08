@@ -1,14 +1,16 @@
 -- | Contains version information for Haste.
 module Haste.Version (
     BootVer (..),
-    hasteVersion, intVersion, ghcVersion, bootVersion, needsReboot, bootFile
+    hasteVersion, intVersion, ghcVersion, bootVersion,
+    showBootVersion, parseBootVersion
   ) where
 import System.IO.Unsafe
-import Control.Shell ((</>), shell, isFile, run)
-import System.IO
+import Control.Shell (shell, run)
 import Data.Version
 import Config (cProjectVersion)
-import Haste.Environment (hasteSysDir, ghcBinary)
+import Haste.GHCPaths (ghcBinary)
+import Text.ParserCombinators.ReadP
+import Data.Maybe (listToMaybe)
 
 -- | Current Haste version.
 hasteVersion :: Version
@@ -22,35 +24,36 @@ intVersion = foldl (\a x -> a*100+x) 0 ver
   where Version ver _ = hasteVersion
 
 -- | The version of GHC used to build this binary.
-ghcVersion :: String
-ghcVersion = unsafePerformIO $ do
-  res <- shell $ run ghcBinary ["--numeric-version"] ""
-  case res of
-    Right ver -> return $ init ver -- remove trailing newline
-    _         -> return cProjectVersion
+ghcVersion :: Version
+ghcVersion =
+    fst $ head $ filter (\(_,s) -> null s) parses
+  where
+    parses = readP_to_S parseVersion . unsafePerformIO $ do
+      res <- shell $ run ghcBinary ["--numeric-version"] ""
+      case res of
+        Right ver -> return $ init ver -- remove trailing newline
+        _         -> return cProjectVersion
 
+-- | Haste + GHC version combo.
 bootVersion :: BootVer
 bootVersion = BootVer hasteVersion ghcVersion
 
-bootFile :: FilePath
-bootFile = hasteSysDir </> "booted"
+data BootVer = BootVer {
+    bootHasteVersion :: !Version,
+    bootGhcVersion   :: !Version
+  }
 
-data BootVer = BootVer Version String deriving (Read, Show)
+showBootVersion :: BootVer -> String
+showBootVersion (BootVer ver ghcver) =
+  "haste-" ++ showVersion ver ++ "_ghc-" ++ showVersion ghcver
 
--- | Returns which parts of Haste need rebooting. A change in the boot file
---   format triggers a full reboot.
-needsReboot :: Bool
-needsReboot = unsafePerformIO $ do
-  exists <- shell $ isFile bootFile
-  case exists of
-    Right True -> do
-      fh <- openFile bootFile ReadMode
-      bootedVerString <- hGetLine fh
-      hClose fh
-      case reads bootedVerString of
-        [(BootVer hasteVer ghcVer, _)] ->
-          return $ hasteVer /= hasteVersion || ghcVer /= ghcVersion
-        _ ->
-          return True
-    _ -> do
-      return True
+parseBootVersion :: String -> Maybe BootVer
+parseBootVersion =
+    fmap fst . listToMaybe . filter (\(_,s) -> null s) . parse
+  where
+    parse = readP_to_S $ do
+      _ <- string "haste-"
+      hastever <- parseVersion
+      _ <- string "_ghc-"
+      ghcver <- parseVersion
+      return $ BootVer hastever ghcver

@@ -147,7 +147,7 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
                       "monads-tf", "old-locale", "transformers"]
   when (getClosure cfg) $ do
     installClosure
-  file bootFile (show bootVersion)
+  file bootFile (showBootVersion bootVersion)
 
 clearDir :: FilePath -> Shell ()
 clearDir dir = do

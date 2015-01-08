@@ -1,24 +1,25 @@
 {-# LANGUAGE CPP #-}
 -- | Paths, host bitness and other environmental information about Haste.
 module Haste.Environment (
-  hasteSysDir, jsmodSysDir, hasteInstSysDir, pkgSysDir, pkgSysLibDir, jsDir,
-  hasteUserDir, jsmodUserDir, hasteInstUserDir, pkgUserDir, pkgUserLibDir,
-  hostWordSize, ghcLibDir,
-  ghcBinary, ghcPkgBinary,
-  hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
-  hasteCopyPkgBinary, closureCompiler, portableHaste) where
+    hasteSysDir, jsmodSysDir, hasteInstSysDir, pkgSysDir, pkgSysLibDir, jsDir,
+    hasteUserDir, jsmodUserDir, hasteInstUserDir, pkgUserDir, pkgUserLibDir,
+    hostWordSize, ghcLibDir,
+    ghcBinary, ghcPkgBinary,
+    hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
+    hasteCopyPkgBinary, closureCompiler, portableHaste,
+    needsReboot, bootFile
+  ) where
 import System.IO.Unsafe
 import Data.Bits
 import Foreign.C.Types (CIntPtr)
-import Control.Shell
-import System.Environment (getExecutablePath)
-import System.Directory (findExecutable)
+import Control.Shell hiding (hClose)
 import Paths_haste_compiler
-import GHC.Paths (libdir)
-import Config (cProjectVersion)
-import Data.Maybe (catMaybes)
+import System.IO
+import Haste.GHCPaths (ghcBinary, ghcPkgBinary, ghcLibDir)
+import Haste.Version
 
 #if defined(PORTABLE)
+-- | Was Haste built in portable mode or not?
 portableHaste :: Bool
 portableHaste = True
 
@@ -28,38 +29,39 @@ hasteSysDir :: FilePath
 hasteSysDir =
   joinPath . init . init . splitPath $ unsafePerformIO getExecutablePath
 
-ghcLibDir :: FilePath
-ghcLibDir = unsafePerformIO $ do
-  Right out <- shell $ run ghcBinary ["--print-libdir"] ""
-  return $ init out
-
+-- | Haste @bin@ directory.
 hasteBinDir :: FilePath
 hasteBinDir = hasteSysDir </> "bin"
 
+-- | Haste JS file directory.
 jsDir :: FilePath
 jsDir = hasteSysDir </> "js"
+
 #else
+
+-- | Was Haste built in portable mode or not?
 portableHaste :: Bool
 portableHaste = False
 
--- | Haste system directory. Identical to @hasteUserDir@ unless built with
+-- | Haste system directory. Identical to 'hasteUserDir' unless built with
 --   -f portable.
 hasteSysDir :: FilePath
 hasteSysDir = hasteUserDir
 
-ghcLibDir :: FilePath
-ghcLibDir = libdir
-
+-- | Haste @bin@ directory.
 hasteBinDir :: FilePath
 hasteBinDir = unsafePerformIO $ getBinDir
 
+-- | Haste JS file directory.
 jsDir :: FilePath
 jsDir = unsafePerformIO $ getDataDir
 #endif
 
 -- | Haste user directory. Usually ~/.haste.
 hasteUserDir :: FilePath
-Right hasteUserDir = unsafePerformIO . shell $ withAppDirectory "haste" return
+Right hasteUserDir =
+  unsafePerformIO . shell . withAppDirectory "haste" $ \d -> do
+    return $ d </> showBootVersion bootVersion
 
 -- | Directory where user .jsmod files are stored.
 jsmodSysDir :: FilePath
@@ -101,28 +103,6 @@ hostWordSize = finiteBitSize (undefined :: CIntPtr)
 hostWordSize = bitSize (undefined :: CIntPtr)
 #endif
 
--- | Path to the GHC binary.
-ghcBinary :: FilePath
-ghcBinary = unsafePerformIO $ do
-  exes <- catMaybes `fmap` mapM findExecutable ["ghc-" ++ cProjectVersion,
-                                                "ghc"]
-  case exes of
-    (exe:_) -> return exe
-    _       -> error $  "No appropriate GHC executable in search path!\n"
-                     ++ "Are you sure you have GHC " ++ cProjectVersion
-                     ++ " installed?"
-
--- | Path to the GHC binary.
-ghcPkgBinary :: FilePath
-ghcPkgBinary = unsafePerformIO $ do
-  exes <- catMaybes `fmap` mapM findExecutable ["ghc-pkg-" ++ cProjectVersion,
-                                                "ghc-pkg"]
-  case exes of
-    (exe:_) -> return exe
-    _       -> error $  "No appropriate ghc-pkg executable in search path!\n"
-                     ++ "Are you sure you have GHC " ++ cProjectVersion
-                     ++ " installed?"
-
 -- | The main Haste compiler binary.
 hasteBinary :: FilePath
 hasteBinary = hasteBinDir </> "hastec"
@@ -146,3 +126,26 @@ hasteInstHisBinary = hasteBinDir </> "haste-install-his"
 -- | JAR for Closure compiler.
 closureCompiler :: FilePath
 closureCompiler = hasteBinDir </> "compiler.jar"
+
+-- | File indicating whether Haste is booted or not, and for which Haste+GHC
+--   version combo.
+bootFile :: FilePath
+bootFile = hasteSysDir </> "booted"
+
+-- | Returns which parts of Haste need rebooting. A change in the boot file
+--   format triggers a full reboot.
+needsReboot :: Bool
+needsReboot = unsafePerformIO $ do
+  exists <- shell $ isFile bootFile
+  case exists of
+    Right True -> do
+      fh <- openFile bootFile ReadMode
+      bootedVerString <- hGetLine fh
+      hClose fh
+      case parseBootVersion bootedVerString of
+        Just (BootVer hasteVer ghcVer) ->
+          return $ hasteVer /= hasteVersion || ghcVer /= ghcVersion
+        _ ->
+          return True
+    _ -> do
+      return True

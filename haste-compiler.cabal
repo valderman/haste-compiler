@@ -67,6 +67,7 @@ Executable haste-boot
     Other-Modules:
         Haste.Version
         Haste.Environment
+        Haste.GHCPaths
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
@@ -125,6 +126,7 @@ Executable hastec
         Haste.Opts
         Haste.Version
         Haste.Environment
+        Haste.GHCPaths
         Haste.Config
         Haste.Monad
         Haste.PrimOps
@@ -208,6 +210,7 @@ Executable haste-copy-pkg
     Main-Is: haste-copy-pkg.hs
     Other-Modules:
         Haste.Environment
+        Haste.GHCPaths
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
@@ -225,6 +228,7 @@ Executable haste-cat
     Main-Is: haste-cat.hs
     Other-Modules:
         Haste.Environment
+        Haste.GHCPaths
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
@@ -268,6 +272,7 @@ Library
         Haste.Callback
         Haste.Compiler.Flags
         Haste.Environment
+        Haste.GHCPaths
         Paths_haste_compiler
         Haste.Hash
         Haste.Random
