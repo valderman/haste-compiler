@@ -15,6 +15,7 @@ import Foreign.C.Types (CIntPtr)
 import Control.Shell hiding (hClose)
 import Paths_haste_compiler
 import System.IO
+import System.Environment (getExecutablePath)
 import Haste.GHCPaths (ghcBinary, ghcPkgBinary, ghcLibDir)
 import Haste.Version
 
