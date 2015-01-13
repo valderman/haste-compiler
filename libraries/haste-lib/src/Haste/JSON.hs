@@ -32,9 +32,9 @@ toObject j = error $ "Call to toObject in non-browser: " ++ show j
 
 -- Remember to update jsParseJSON if this data type changes!
 data JSON
-  = Num  !Double
-  | Str  !JSString
-  | Bool !Bool
+  = Num  {-# UNPACK #-} !Double
+  | Str  {-# UNPACK #-} !JSString
+  | Bool {-# UNPACK #-} !Bool
   | Arr  ![JSON]
   | Dict ![(JSString, JSON)]
   | Null
