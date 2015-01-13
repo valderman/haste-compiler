@@ -1,9 +1,10 @@
-haste-compiler (0.4.4-1) UNRELEASED; urgency=medium
+haste-compiler (0.4.4.1-1) UNRELEASED; urgency=medium
 
   * Initial Debian release.
   * Fix broken trampolined callbacks.
   * Fix broken IO FFI instances.
   * Whole bunch of updates.
   * Bug fixes and API improvements.
+  * Fix critical JSON bug.
 
- -- Anton Ekblad <anton@ekblad.cc>  Wed, 07 Jan 2015 15:52:41 +0100
+ -- Anton Ekblad <anton@ekblad.cc>  Tue, 13 Jan 2015 14:27:20 +0100
