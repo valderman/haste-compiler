@@ -83,14 +83,11 @@ jsStringify = toJSStr . ('"' :) . unq . fromJSStr
   where
     unq ('"' : cs) = "\\\"" ++ unq cs
     unq (c : cs)
-      | c < ' ' || c > '~' = unicodeChar c (unq cs)
       | c == '\\'          = "\\\\" ++ unq cs
       | otherwise          = c : unq cs
     unq _          = ['"']
 
-    unicodeChar c str =
-      case showHex (ord c) "" of
-        s -> "\\u" ++ replicate (4-length s) '0' ++ s ++ str
+    unicodeChar c str = c : str
 #endif
 
 -- | Look up a JSON object from a JSON dictionary. Panics if the dictionary
