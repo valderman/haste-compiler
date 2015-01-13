@@ -28,16 +28,16 @@ runTest() {
     ghc_output=`runghc $CABAL_SANDBOX_ARGS -w -DTEST_MODULE=$module TestDriver.hs 2> $ghc_stderr_file`
 
     if [[ $quiet == 1 ]] ; then
-        $hastec --onexec -O0 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
+        $hastec -fforce-recomp --onexec -O0 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
     else
-        $hastec -O0 --verbose --debug --onexec -DTEST_MODULE=$module TestDriver.hs
+        $hastec -fforce-recomp -O0 --verbose --debug --onexec -DTEST_MODULE=$module TestDriver.hs
     fi
     haste_output=`$JS TestDriver.js 2> $haste_stderr_file`
 
     if [[ $quiet == 1 ]] ; then
-        $hastec --opt-whole-program --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs > /dev/null 2>&1
+        $hastec -fforce-recomp --opt-whole-program --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs > /dev/null 2>&1
     else
-        $hastec --opt-whole-program --verbose --debug --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs
+        $hastec -fforce-recomp --opt-whole-program --verbose --debug --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs
     fi
     haste_opt_output=`$JS TestDriver.O2.js 2> $haste_opt_stderr_file`
 
