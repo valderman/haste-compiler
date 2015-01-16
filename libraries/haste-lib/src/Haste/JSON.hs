@@ -35,7 +35,7 @@ toObject j = error $ "Call to toObject in non-browser: " ++ show j
 data JSON
   = Num  {-# UNPACK #-} !Double
   | Str  {-# UNPACK #-} !JSString
-  | Bool {-# UNPACK #-} !Bool
+  | Bool !Bool
   | Arr  ![JSON]
   | Dict ![(JSString, JSON)]
   | Null
