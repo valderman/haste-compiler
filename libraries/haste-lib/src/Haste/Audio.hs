@@ -30,7 +30,6 @@ instance IsElem Audio where
     tn <- getProp e "tagName"
     return $ case tn of
       "AUDIO" -> Just $ Audio e
-      "audio" -> Just $ Audio e
       _       -> Nothing
 
 data AudioState = Playing | Paused | Ended
