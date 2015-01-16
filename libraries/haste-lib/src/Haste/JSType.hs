@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses, ForeignFunctionInterface, MagicHash, 
              TypeSynonymInstances, FlexibleInstances, EmptyDataDecls,
-             UnliftedFFITypes, UndecidableInstances, CPP #-}
+             UnliftedFFITypes, UndecidableInstances, CPP, OverloadedStrings #-}
 -- | Efficient conversions to and from JS native types.
 module Haste.JSType (
     JSType (..), JSNum (..), toString, fromString, convert
@@ -107,7 +107,12 @@ instance JSNum Double where
   toNumber = id
 
 -- JSType instances
--- TODO: fromJSString is unsafe for Words; they may end up negative! fix asap!
+instance JSType Bool where
+  toJSString True = "true"
+  toJSString _    = "false"
+  fromJSString "true"  = Just True
+  fromJSString "false" = Just False
+  fromJSString _       = Nothing
 instance JSType Int where
   toJSString = unsafeToJSString
   fromJSString = unsafeIntFromJSString

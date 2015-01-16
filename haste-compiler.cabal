@@ -254,6 +254,7 @@ Library
         Haste
         Haste.App
         Haste.App.Concurrent
+        Haste.Audio
         Haste.Binary
         Haste.Compiler
         Haste.JSON
