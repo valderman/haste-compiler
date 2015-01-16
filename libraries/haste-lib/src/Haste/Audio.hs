@@ -17,6 +17,7 @@ import Haste.DOM.JSString
 import Haste.Foreign
 import Control.Applicative
 import Control.Monad
+import Control.Monad.IO.Class
 import Data.Default
 import Data.String
 
@@ -106,8 +107,8 @@ mimeStr OGG = "audio/ogg"
 mimeStr WAV = "audio/wav"
 
 -- | Create a new audio element.
-newAudio :: AudioSettings -> [AudioSource] -> IO Audio
-newAudio cfg sources = do
+newAudio :: MonadIO m => AudioSettings -> [AudioSource] -> m Audio
+newAudio cfg sources = liftIO $ do
   srcs <- forM sources $ \(AudioSource t url) -> do
     newElem "source" `with` ["type" =: mimeStr t, "src" =: toJSString url]
   Audio <$> newElem "audio" `with` [
@@ -126,42 +127,43 @@ falseAsEmpty True = "true"
 falseAsEmpty _    = ""
 
 -- | (Un)mute the given audio object.
-setMute :: Audio -> Bool -> IO ()
+setMute :: MonadIO m => Audio -> Bool -> m ()
 setMute (Audio e) = setAttr e "muted" . falseAsEmpty
 
 -- | Is the given audio object muted?
-isMute :: Audio -> IO Bool
-isMute (Audio e) = maybe False id . fromJSString <$> getProp e "muted"
+isMute :: MonadIO m => Audio -> m Bool
+isMute (Audio e) = liftIO $ maybe False id . fromJSString <$> getProp e "muted"
 
 -- | Mute/unmute.
-toggleMute :: Audio -> IO ()
+toggleMute :: MonadIO m => Audio -> m ()
 toggleMute a = isMute a >>= setMute a . not
 
 -- | Set whether the given sound should loop upon completion or not.
-setLooping :: Audio -> Bool -> IO ()
+setLooping :: MonadIO m => Audio -> Bool -> m ()
 setLooping (Audio e) = setAttr e "loop" . falseAsEmpty
 
 -- | Is the given audio object looping?
-isLooping :: Audio -> IO Bool
-isLooping (Audio e) = maybe False id . fromJSString <$> getProp e "looping"
+isLooping :: MonadIO m => Audio -> m Bool
+isLooping (Audio e) =
+  liftIO $ maybe False id . fromJSString <$> getProp e "looping"
 
 -- | Toggle looping on/off.
-toggleLooping :: Audio -> IO ()
+toggleLooping :: MonadIO m => Audio -> m ()
 toggleLooping a = isLooping a >>= setLooping a . not
 
 -- | Starts playing audio from the given element.
-play :: Audio -> IO ()
+play :: MonadIO m => Audio -> m ()
 play a@(Audio e) = do
     st <- getState a
     when (st == Ended) $ seek a Start
-    play' e
+    liftIO $ play' e
   where
     play' :: Elem -> IO ()
     play' = ffi "(function(x){x.play();})"
 
 -- | Get the current state of the given audio object.
-getState :: Audio -> IO AudioState
-getState (Audio e) = do
+getState :: MonadIO m => Audio -> m AudioState
+getState (Audio e) = liftIO $ do
   ended <- maybe False id . fromJSString <$> getProp e "ended"
   if ended
     then return Ended
@@ -171,14 +173,15 @@ getState (Audio e) = do
     paused _    = Playing
 
 -- | Pause the given audio element.
-pause :: Audio -> IO ()
-pause (Audio e) = pause' e
+pause :: MonadIO m => Audio -> m ()
+pause (Audio e) =
+    liftIO $ pause' e
   where
     pause' :: Elem -> IO ()
     pause' = ffi "(function(x){x.pause();})"
 
 -- | If playing, stop. Otherwise, start playing.
-togglePlaying :: Audio -> IO ()
+togglePlaying :: MonadIO m => Audio -> m ()
 togglePlaying a = do
   st <- getState a
   case st of
@@ -187,30 +190,30 @@ togglePlaying a = do
     Paused     -> play a
 
 -- | Stop playing a track, and seek back to its beginning.
-stop :: Audio -> IO ()
+stop :: MonadIO m => Audio -> m ()
 stop a = pause a >> seek a Start
 
 -- | Get the volume for the given audio element as a value between 0 and 1.
-getVolume :: Audio -> IO Double
-getVolume (Audio e) = maybe 0 id . fromJSString <$> getProp e "volume"
+getVolume :: MonadIO m => Audio -> m Double
+getVolume (Audio e) = liftIO $ maybe 0 id . fromJSString <$> getProp e "volume"
 
 -- | Set the volume for the given audio element. The value will be clamped to
 --   [0, 1].
-setVolume :: Audio -> Double -> IO ()
-setVolume (Audio e) = setProp e "volume" . toJSString . clamp 0 1
+setVolume :: MonadIO m => Audio -> Double -> m ()
+setVolume (Audio e) = setProp e "volume" . toJSString . clamp
 
 -- | Modify the volume for the given audio element. The resulting volume will
 --   be clamped to [0, 1].
-modVolume :: Audio -> Double -> IO ()
+modVolume :: MonadIO m => Audio -> Double -> m ()
 modVolume a diff = getVolume a >>= setVolume a . (+ diff)
 
--- | Clamp a value to [lo, hi].
-clamp :: Double -> Double -> Double -> Double
-clamp lo hi = max lo . min hi
+-- | Clamp a value to [0, 1].
+clamp :: Double -> Double
+clamp = max 0 . min 1
 
 -- | Seek to the specified time.
-seek :: Audio -> Seek -> IO ()
-seek a@(Audio e) st = do
+seek :: MonadIO m => Audio -> Seek -> m ()
+seek a@(Audio e) st = liftIO $ do
     case st of
       Start     -> seek' e 0
       End       -> getDuration a >>= seek' e
@@ -220,7 +223,7 @@ seek a@(Audio e) st = do
     seek' = ffi "(function(e,t) {e.currentTime = t;})"
 
 -- | Get the duration of the loaded sound, in seconds.
-getDuration :: Audio -> IO Int
+getDuration :: MonadIO m => Audio -> m Int
 getDuration (Audio e) = do
   dur <- getProp e "duration"
   case fromJSString dur of
@@ -228,5 +231,5 @@ getDuration (Audio e) = do
     _      -> return 0
 
 -- | Set the source of the given audio element.
-setSource :: Audio -> AudioSource -> IO ()
+setSource :: MonadIO m => Audio -> AudioSource -> m ()
 setSource (Audio e) (AudioSource _ url) = setProp e "src" (toJSString url)
