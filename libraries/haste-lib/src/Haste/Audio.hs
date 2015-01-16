@@ -61,7 +61,7 @@ data AudioSettings = AudioSettings {
     audioAutoplay :: !Bool,
     -- | Initially looping?
     --   Default: False
-    audioLoop     :: !Bool,
+    audioLooping  :: !Bool,
     -- | How much audio to preload.
     --   Default: Auto
     audioPreload  :: !AudioPreload,
@@ -77,7 +77,7 @@ instance Default AudioSettings where
   def = AudioSettings {
       audioControls = False,
       audioAutoplay = False,
-      audioLoop = False,
+      audioLooping = False,
       audioPreload = Auto,
       audioMuted = False,
       audioVolume = 0
@@ -113,7 +113,7 @@ newAudio cfg sources = do
   Audio <$> newElem "audio" `with` [
       "controls" =: falseAsEmpty (audioControls cfg),
       "autoplay" =: falseAsEmpty (audioAutoplay cfg),
-      "looping"  =: falseAsEmpty (audioLoop cfg),
+      "loop"     =: falseAsEmpty (audioLooping cfg),
       "muted"    =: falseAsEmpty (audioMuted cfg),
       "volume"   =: toJSString (audioVolume cfg),
       "preload"  =: toJSString (audioPreload cfg),
@@ -162,12 +162,13 @@ play a@(Audio e) = do
 -- | Get the current state of the given audio object.
 getState :: Audio -> IO AudioState
 getState (Audio e) = do
-  paused <- maybe False id . fromJSString <$> getProp e "paused"
   ended <- maybe False id . fromJSString <$> getProp e "ended"
-  return $ case (paused, ended) of
-    (True, _) -> Paused
-    (_, True) -> Ended
-    _         -> Playing
+  if ended
+    then return Ended
+    else maybe Playing paused . fromJSString <$> getProp e "paused"
+  where
+    paused True = Paused
+    paused _    = Playing
 
 -- | Pause the given audio element.
 pause :: Audio -> IO ()
