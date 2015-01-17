@@ -5,14 +5,13 @@
 --   "Haste.App", which provides the same functionality but slightly modified
 --   for automatic program slicing.
 module Haste (
-    JSString, JSAny, URL, CB.GenericCallback,
+    JSString, JSAny, URL,
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
-    module Haste.JSType, module Haste.DOM.Core, module Haste.Callback,
+    module Haste.JSType, module Haste.DOM.Core, module Haste.Timer,
     module Haste.Random, module Haste.Hash
   ) where
 import Haste.Prim
-import Haste.Callback hiding (jsSetCB, jsSetTimeout, GenericCallback)
-import qualified Haste.Callback as CB (GenericCallback)
+import Haste.Timer
 import Haste.Random
 import Haste.JSType
 import Haste.DOM.Core

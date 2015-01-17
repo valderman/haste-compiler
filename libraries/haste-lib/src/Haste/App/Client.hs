@@ -55,13 +55,6 @@ instance MonadIO Client where
     x <- liftIO m
     return x
 
-instance GenericCallback (Client ()) Client where
-  type CB (Client ()) = IO ()
-  mkcb toIO m = toIO m
-  mkIOfier _ = do
-    st <- get id
-    return $ concurrent . runClientCIO st
-
 instance MonadBlob Client where
   getBlobData = liftCIO . getBlobData
   getBlobText' = liftCIO . getBlobText'

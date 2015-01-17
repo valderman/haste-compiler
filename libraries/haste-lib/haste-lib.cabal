@@ -22,32 +22,26 @@ Library
     GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
+        Haste.Ajax
         Haste.App
         Haste.App.Concurrent
         Haste.Audio
         Haste.Binary
         Haste.Compiler
-        Haste.JSON
-        Haste.Ajax
+        Haste.Concurrent
         Haste.DOM
         Haste.DOM.JSString
-        Haste.Prim
-        Haste.Concurrent
-        Haste.Graphics.Canvas
+        Haste.Events
         Haste.Foreign
-        Haste.Serialize
-        Haste.Parsing
-        Haste.WebSockets
+        Haste.Graphics.Canvas
+        Haste.JSON
         Haste.LocalStorage
+        Haste.Object
+        Haste.Parsing
+        Haste.Prim
+        Haste.Serialize
+        Haste.WebSockets
     Other-Modules:
-        Haste.JSType
-        Haste.Callback
-        Haste.Hash
-        Haste.Random
-        Haste.Concurrent.Monad
-        Haste.Concurrent.Ajax
-        Haste.Compiler.Flags
-        Haste.DOM.Core
         Haste.App.Client
         Haste.App.Events
         Haste.App.Monad
@@ -55,6 +49,19 @@ Library
         Haste.Binary.Get
         Haste.Binary.Put
         Haste.Binary.Types
+        Haste.Callback
+        Haste.Compiler.Flags
+        Haste.Concurrent.Monad
+        Haste.Concurrent.Ajax
+        Haste.DOM.Core
+        Haste.Events.BasicEvents
+        Haste.Events.Core
+        Haste.Events.KeyEvents
+        Haste.Events.MouseEvents
+        Haste.Hash
+        Haste.JSType
+        Haste.Random
+        Haste.Timer
     Build-Depends:
         integer-gmp,
         transformers,
