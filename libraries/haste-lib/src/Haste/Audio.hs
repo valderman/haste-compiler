@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | High-ish level bindings to the HTML5 audio tag and JS API.
 module Haste.Audio (
+    module Events,
     Audio, AudioSettings (..), AudioType (..), AudioSource (..),
     AudioPreload (..), AudioState (..), Seek (..),
     def,
@@ -12,9 +13,11 @@ module Haste.Audio (
     play, pause, stop, togglePlaying,
     seek, getDuration
   ) where
-import Haste
+import Haste.Audio.Events as Events
 import Haste.DOM.JSString
 import Haste.Foreign
+import Haste.JSType
+import Haste.Prim
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class

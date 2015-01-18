@@ -276,6 +276,7 @@ Library
         Haste.App.Events
         Haste.App.Monad
         Haste.App.Protocol
+        Haste.Audio.Events
         Haste.Binary.Get
         Haste.Binary.Put
         Haste.Binary.Types
