@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies, TupleSections #-}
 -- | Events relating to mouse clicks and movement.
 module Haste.Events.MouseEvents (MouseEvent (..), MouseData (..)) where
 import Haste.Object
 import Haste.JSType
 import Haste.Events.Core
+import Haste.Foreign
 import Control.Applicative
 import Data.Maybe
 
@@ -12,18 +13,12 @@ data MouseButton = MouseLeft | MouseMiddle | MouseRight
 
 -- | Event data for mouse events.
 data MouseData = MouseData {
-    -- | X mouse coordinate.
-    mouseX      :: !Int,
-    -- | Y mouse coordinate.
-    mouseY      :: !Int,
+    -- | Mouse coordinates.
+    mouseCoords      :: !(Int, Int),
     -- | Pressed mouse button, if any.
-    mouseButton :: !(Maybe MouseButton),
-    -- | Mouse wheel delta X. Always 0 except for 'Wheel'.
-    mouseWheelX :: !Double,
-    -- | Mouse wheel delta Y. Always 0 except for 'Wheel'.
-    mouseWheelY :: !Double,
-    -- | Mouse wheel delta Z. Always 0 except for 'Wheel'.
-    mouseWheelZ :: !Double
+    mouseButton      :: !(Maybe MouseButton),
+    -- | (x, y, z) mouse wheel delta. Always all zeroes except for 'Wheel'.
+    mouseWheelDeltas :: !(Double, Double, Double)
   }
 
 data MouseEvent
@@ -47,17 +42,17 @@ instance Event MouseEvent where
   eventName MouseOut  = "mouseout"
   eventName Wheel     = "wheel"
   eventData Wheel e =
-    MouseData <$> (e # "pageX" >>= fmap (convert . fromJust) . asNumber)
-              <*> (e # "pageY" >>= fmap (convert . fromJust) . asNumber)
+    MouseData <$> jsGetMouseCoords e
               <*> pure Nothing
-              <*> (e # "deltaX" >>= fmap fromJust . asNumber)
-              <*> (e # "deltaY" >>= fmap fromJust . asNumber)
-              <*> (e # "deltaZ" >>= fmap fromJust . asNumber)
+              <*> ((,,) <$> (e # "deltaX" >>= fmap fromJust . asNumber)
+                        <*> (e # "deltaY" >>= fmap fromJust . asNumber)
+                        <*> (e # "deltaZ" >>= fmap fromJust . asNumber))
 
   eventData _ e =
-    MouseData <$> (e # "pageX" >>= fmap (convert . fromJust) . asNumber)
-              <*> (e # "pageY" >>= fmap (convert . fromJust) . asNumber)
+    MouseData <$> jsGetMouseCoords e
               <*> (e # "button" >>= fmap (fmap (toEnum . convert)) . asNumber)
-              <*> pure 0
-              <*> pure 0
-              <*> pure 0
+              <*> pure (0,0,0)
+
+{-# NOINLINE jsGetMouseCoords #-}
+jsGetMouseCoords :: JSObj -> IO (Int, Int)
+jsGetMouseCoords = ffi "jsGetMouseCoords"
