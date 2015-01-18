@@ -11,7 +11,7 @@ module Haste.Audio (
     setLooping, isLooping, toggleLooping,
     getVolume, setVolume, modVolume,
     play, pause, stop, togglePlaying,
-    seek, getDuration
+    seek, getDuration, getCurrentTime
   ) where
 import Haste.Audio.Events as Events
 import Haste.DOM.JSString
@@ -43,7 +43,7 @@ data AudioSource = AudioSource !AudioType !JSString
   deriving (Show, Eq)
 data AudioPreload = None | Metadata | Auto
   deriving Eq
-data Seek = Start | End | Seconds Int
+data Seek = Start | End | Seconds Double
   deriving Eq
 
 instance JSType AudioPreload where
@@ -221,13 +221,21 @@ seek a@(Audio e) st = liftIO $ do
       End       -> getDuration a >>= seek' e
       Seconds s -> seek' e s
   where
-    seek' :: Elem -> Int -> IO ()
+    seek' :: Elem -> Double -> IO ()
     seek' = ffi "(function(e,t) {e.currentTime = t;})"
 
 -- | Get the duration of the loaded sound, in seconds.
-getDuration :: MonadIO m => Audio -> m Int
+getDuration :: MonadIO m => Audio -> m Double
 getDuration (Audio e) = do
   dur <- getProp e "duration"
+  case fromJSString dur of
+    Just d -> return d
+    _      -> return 0
+
+-- | Get the current play time of the loaded sound, in seconds.
+getCurrentTime :: MonadIO m => Audio -> m Double
+getCurrentTime (Audio e) = do
+  dur <- getProp e "currentTime"
   case fromJSString dur of
     Just d -> return d
     _      -> return 0
