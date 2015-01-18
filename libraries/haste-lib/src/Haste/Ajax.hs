@@ -5,7 +5,6 @@
 module Haste.Ajax (Method (..), URL, ajaxRequest, noParams) where
 import Haste.Prim
 import Haste.JSType
-import Haste.Callback
 import Control.Monad.IO.Class
 
 #ifdef __HASTE__
@@ -13,10 +12,10 @@ foreign import ccall ajaxReq :: JSString    -- method
                              -> JSString    -- url
                              -> Bool        -- async?
                              -> JSString    -- POST data
-                             -> JSFun (Maybe JSString -> IO ())
+                             -> Ptr (Maybe JSString -> IO ())
                              -> IO ()
 #else
-ajaxReq :: JSString -> JSString -> Bool -> JSString -> JSFun (Maybe JSString -> IO ()) -> IO ()
+ajaxReq :: JSString -> JSString -> Bool -> JSString -> Ptr (Maybe JSString -> IO ()) -> IO ()
 ajaxReq = error "Tried to use ajaxReq in native code!"
 #endif
 
@@ -41,7 +40,7 @@ ajaxRequest m url kv cb = liftIO $ do
   where
     showm GET  = "GET"
     showm POST = "POST"
-    cb' = mkCallback $ cb . fromJSS
+    cb' = toPtr $ cb . fromJSS
     fromJSS (Just jss) = fromJSString jss
     fromJSS _          = Nothing
     url' = case m of

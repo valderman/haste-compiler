@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Haste.Timer (Timer, setTimer, stopTimer) where
+module Haste.Timer (Timer, Interval (..), setTimer, stopTimer) where
 import Control.Applicative
 import Control.Monad.IO.Class
 import Haste.Foreign

@@ -279,7 +279,6 @@ Library
         Haste.Binary.Get
         Haste.Binary.Put
         Haste.Binary.Types
-        Haste.Callback
         Haste.Compiler.Flags
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax

@@ -5,7 +5,6 @@ module Haste.Hash (
   ) where
 import Haste.Foreign
 import Control.Monad.IO.Class
-import Haste.Callback
 import Haste.Prim
 import Unsafe.Coerce
 
@@ -18,22 +17,22 @@ instance Unpack HashCallback where
 
 -- | Register a callback to be run whenever the URL hash changes.
 --   The two arguments of the callback are the new and old hash respectively.
-onHashChange :: (MonadIO m, GenericCallback (m ()) m, CB (m ()) ~ IO ())
-              => (String -> String -> m ())
-              -> m ()
+onHashChange :: MonadIO m
+             => (String -> String -> IO ())
+             -> m ()
 onHashChange f = do
     firsthash <- getHash'
-    f' <- toCallback $ \old new -> f (fromJSStr old) (fromJSStr new)
-    liftIO $ jsOnHashChange firsthash (HashCallback f')
+    liftIO $ jsOnHashChange firsthash (HashCallback cb)
+  where
+    cb = \old new -> f (fromJSStr old) (fromJSStr new)
 
 -- | JSString version of @onHashChange@.
-onHashChange' :: (MonadIO m, GenericCallback (m ()) m, CB (m ()) ~ IO ())
-              => (JSString -> JSString -> m ())
+onHashChange' :: MonadIO m
+              => (JSString -> JSString -> IO ())
               -> m ()
 onHashChange' f = do
     firsthash <- getHash'
-    f' <- toCallback f
-    liftIO $ jsOnHashChange firsthash (HashCallback f')
+    liftIO $ jsOnHashChange firsthash (HashCallback f)
 
 {-# NOINLINE jsOnHashChange #-}
 jsOnHashChange :: JSString -> HashCallback -> IO ()

@@ -1,11 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 -- | Basic events: load, unload, focus, submit, etc.
 module Haste.Events.BasicEvents (BasicEvent (..)) where
-import Haste.Object
-import Haste.JSType
 import Haste.Events.Core
-import Control.Applicative
-import Data.Maybe
 
 data BasicEvent
   = Load

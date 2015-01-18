@@ -9,19 +9,14 @@ module Haste.Concurrent (
   ) where
 import Haste.Concurrent.Monad
 import Haste.Concurrent.Ajax as Ajax
-import Haste.Callback
+import Haste.Timer
 
 -- | Wait for n milliseconds.
 wait :: Int -> CIO ()
 wait ms = do
   v <- newEmptyMVar
-  liftIO $ setTimeout' ms $ putMVar v ()
+  _ <- liftIO $ setTimer (Once ms) $ concurrent $ putMVar v ()
   takeMVar v
-
-instance GenericCallback (CIO ()) CIO where
-  type CB (CIO ()) = IO ()
-  mkcb toIO m = toIO m
-  mkIOfier _ = return concurrent
 
 -- | An MBox is a read/write-only MVar, depending on its first type parameter.
 --   Used to communicate with server processes.
