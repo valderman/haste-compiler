@@ -43,7 +43,6 @@ Library
         Haste.WebSockets
     Other-Modules:
         Haste.App.Client
-        Haste.App.Events
         Haste.App.Monad
         Haste.App.Protocol
         Haste.Audio.Events

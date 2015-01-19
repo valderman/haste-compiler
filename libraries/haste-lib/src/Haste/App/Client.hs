@@ -6,6 +6,7 @@ module Haste.App.Client (
   ) where
 import Haste
 import Haste.WebSockets
+import Haste.Events.Core
 import Haste.Binary hiding (get)
 import Haste.App.Monad
 import Haste.App.Protocol
@@ -59,6 +60,10 @@ instance MonadBlob Client where
   getBlobData = liftCIO . getBlobData
   getBlobText' = liftCIO . getBlobText'
 
+instance MonadEvent Client where
+  mkHandler f = do
+    st <- get id
+    return $ concurrent . runClientCIO st . f
 
 -- | Lift a CIO action into the Client monad.
 liftCIO :: CIO a -> Client a

@@ -10,6 +10,10 @@ module Haste.Concurrent (
 import Haste.Concurrent.Monad
 import Haste.Concurrent.Ajax as Ajax
 import Haste.Timer
+import Haste.Events.Core (MonadEvent (..))
+
+instance MonadEvent CIO where
+  mkHandler = return . fmap concurrent
 
 -- | Wait for n milliseconds.
 wait :: Int -> CIO ()

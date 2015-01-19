@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, FlexibleContexts #-}
 -- | Basic framework for event handling.
 module Haste.Events.Core (
-    Event (..),
+    Event (..), MonadEvent (..),
     HandlerInfo,
     unregisterHandler, onEvent, preventDefault
   ) where
@@ -12,6 +12,13 @@ import Haste.Object
 import Control.Monad.IO.Class
 import Data.IORef
 import System.IO.Unsafe
+
+-- | Any monad in which we're able to handle events.
+class MonadIO m => MonadEvent m where
+  mkHandler :: (a -> m ()) -> m (a -> IO ())
+
+instance MonadEvent IO where
+  mkHandler = return
 
 -- | Any type that describes an event.
 class Event evt where
@@ -56,16 +63,14 @@ preventDefault = readIORef evtRef >>= go
     go = ffi "(function(e){if(e){e.preventDefault();}})"
 
 -- | Set an event handler on a DOM element.
-onEvent :: (MonadIO m, IsElem el, Event evt)
+onEvent :: (MonadEvent m, IsElem el, Event evt)
         => el            -- ^ Element to set handler on.
         -> evt           -- ^ Event to handle.
-        -> (EventData evt -> IO ()) -- ^ Event handler.
+        -> (EventData evt -> m ()) -- ^ Event handler.
         -> m HandlerInfo -- ^ Information about the handler.
-onEvent el evt f = liftIO $ do
-  hdl <- setEvt e name $ \o -> do
-    let o' = Just o
-    setEvtRef o'
-    eventData evt o' >>= f
+onEvent el evt f = do
+  f' <- mkHandler $ \o -> prepareEvent o >>= f
+  hdl <- liftIO $ setEvt e name f'
   return $ HandlerInfo {
       handlerEvent = name,
       handlerElem  = e,
@@ -74,6 +79,10 @@ onEvent el evt f = liftIO $ do
   where
     name = eventName evt
     e    = elemOf el
+    prepareEvent o = liftIO $ do
+      let o' = Just o
+      setEvtRef o'
+      eventData evt o'
 
 -- | Set an event handler on an element, returning a reference to the handler
 --   exactly as seen by @addEventListener@. We can't reuse the reference to

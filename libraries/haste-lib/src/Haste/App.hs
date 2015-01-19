@@ -13,7 +13,6 @@ module Haste.App (
     Client,
     runClient, onServer, liftIO,
     JSString, JSAny, URL, alert, prompt, eval, writeLog, catJSStr, fromJSStr,
-    module Haste.App.Events,
     module Haste.DOM.Core,
     module Haste.Random,
     module Haste.JSType,
@@ -23,7 +22,6 @@ module Haste.App (
   ) where
 import Haste.App.Client
 import Haste.App.Monad
-import Haste.App.Events
 import Haste.Binary (Binary (..))
 import Haste.DOM.Core
 import Haste.Random
