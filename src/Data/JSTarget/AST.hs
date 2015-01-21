@@ -20,6 +20,8 @@ type Reorderable = Bool
 -- | Shared statements.
 newtype Shared a = Shared Lbl deriving (Eq, Show)
 
+-- | A Name consists of a variable name and optional (package, module)
+--   information.
 data Name = Name !String !(Maybe (String, String)) deriving (Eq, Ord, Show)
 
 class HasModule a where
@@ -55,9 +57,12 @@ instance Ord Var where
 
 -- | Left hand side of an assignment. Normally we only assign internal vars,
 --   but for some primops we need to assign array elements as well.
---   LhsExp is never reorderable.
 data LHS where
+  -- | Introduce a new variable. May be reorderable.
   NewVar :: !Reorderable -> !Var -> LHS
+  -- | Assign a value to an old variable. May be reorderable.
+  OldVar :: !Reorderable -> !Var -> LHS
+  -- | Assign a value to an arbitrary LHS expression. Never reorderable.
   LhsExp :: !Exp -> LHS
   deriving (Eq, Show)
 
@@ -87,7 +92,7 @@ data Exp where
   Lit       :: !Lit -> Exp
   Not       :: !Exp -> Exp
   BinOp     :: !BinOp -> Exp -> !Exp -> Exp
-  Fun       :: !(Maybe Name) -> ![Var] -> !Stm -> Exp
+  Fun       :: ![Var] -> !Stm -> Exp
   Call      :: !Arity -> !Call -> !Exp -> ![Exp] -> Exp
   Index     :: !Exp -> !Exp -> Exp
   Arr       :: ![Exp] -> Exp
@@ -179,6 +184,7 @@ instance Monad AST where
 expPrec :: Exp -> Int
 expPrec (BinOp Sub (Lit (LNum 0)) _) = 500 -- 0-n is always printed as -n
 expPrec (BinOp op _ _)               = opPrec op
+expPrec (AssignEx _ _)               = 0
 expPrec (Not _)                      = 500
 expPrec _                            = 1000
 

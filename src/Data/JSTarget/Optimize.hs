@@ -17,6 +17,9 @@ optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ast js) =
   flip runTravM js $ do
     shrinkCase ast
+    >>= inlineOldVars
+    >>= zapDoubleAssigns
+    >>= zapUselessAssigns
     >>= inlineAssigns
     >>= optimizeArrays
     >>= inlineReturns
@@ -49,8 +52,8 @@ tryTernary self scrut retEx def [(m, alt)] =
       AST (Just ex) js -> Just (AST ex js)
       _                -> Nothing
   where
-    selfOccurs (Exp (Var v)) = v == self
-    selfOccurs _             = False
+    selfOccurs (Exp (Var v) _) = v == self
+    selfOccurs _               = False
     def' = def $ Return <$> retEx
     alt' = alt $ Return <$> retEx
     AST _ allJumps = scrut >> m >> def' >> alt'
@@ -86,13 +89,6 @@ occurrences tr p ast =
     count n node | p node = pure $ n + Once
     count n _             = pure n
 
--- | Replace all occurrences of an expression, without entering shared code
---   paths. IO ordering is preserved even when entering lambdas thanks to
---   State# RealWorld.
-replaceEx :: JSTrav ast => (ASTNode -> Bool) -> Exp -> Exp -> ast -> TravM ast
-replaceEx trav old new =
-  mapJS trav (\x -> if x == old then pure new else pure x) pure
-
 -- | Inline assignments where the assignee is only ever used once.
 --   Does not inline anything into a shared code path, as that would break
 --   things horribly.
@@ -106,9 +102,9 @@ inlineAssigns ast = do
     inlinable <- gatherInlinable ast
     mapJS (const True) return (inl inlinable) ast
   where
-    varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
-    varOccurs _ _                  = False
-    inl m keep@(Assign (NewVar mayReorder lhs) ex next) = do
+    varOccurs lhs (Exp (Var lhs') _) = lhs == lhs'
+    varOccurs _ _                    = False
+    inl m keep@(Assign l ex next) | Just lhs <- inlinableAssignLHS l = do
       occursRec <- occurrences (const True) (varOccurs lhs) ex
       if occursRec == Never
         then do
@@ -116,8 +112,11 @@ inlineAssigns ast = do
           case M.lookup lhs m of
             Just occ | occ == occursLocal ->
               case occ of
+                -- Don't inline lambdas currently.
+                _    | Fun vs body <- ex -> do
+                  return keep
                 -- Inline of any non-lambda value
-                Once | mayReorder -> do
+                Once -> do
                   if computingThunk ex
                     then do
                       let notSharedOrLambda = (not <$> (isShared .|. isLambda))
@@ -127,10 +126,6 @@ inlineAssigns ast = do
                         else return keep
                     else do
                       replaceEx (not <$> isShared) (Var lhs) ex next
-                -- Don't inline lambdas, but use less verbose syntax.
-                _    | Fun Nothing vs body <- ex,
-                       Internal lhsname _ <- lhs -> do
-                  return $ Assign blackHole (Fun (Just lhsname) vs body) next
                 _ -> do
                   return keep
             _ ->
@@ -138,6 +133,11 @@ inlineAssigns ast = do
         else do
           return keep
     inl _ stm = return stm
+
+inlinableAssignLHS :: LHS -> Maybe Var
+inlinableAssignLHS (NewVar True v) = Just v
+inlinableAssignLHS (OldVar True v) = Just v
+inlinableAssignLHS _               = Nothing
 
 -- | Turn if(foo) {return bar;} else {return baz;} into return foo ? bar : baz.
 ifReturnToTernary :: JSTrav ast => ast -> TravM ast
@@ -197,7 +197,7 @@ optimizeThunks ast =
   where
     optEx (Eval x)
       | Just x' <- fromThunkEx x = return x'
-      | Fun _ _ _ <- x           = return x
+      | Fun _ _ <- x             = return x
     optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
       return $ Call arity calltype f' args
 --    optEx ex | Just ex' <- fromThunkEx ex, not (computingEx ex') =
@@ -233,7 +233,7 @@ computingEx ex =
   case ex of
     Var _      -> False
     Lit _      -> False
-    Fun _ _ _  -> False
+    Fun _ _    -> False
     Thunk _ _  -> False
     Arr arr    -> any computingEx arr
     _          -> True
@@ -251,9 +251,11 @@ gatherInlinable ast = do
     updVar _           = Just Once
     updVarAss (Just o) = Just o
     updVarAss _        = Just Never
-    countOccs m (Exp (Var v@(Internal _ _))) =
+    countOccs m (Exp (Var v@(Internal _ _)) _) =
       pure (M.alter updVar v m)
-    countOccs m (Stm (Assign (NewVar _ v) _ _)) =
+    countOccs m (Stm (Assign (NewVar _ v) _ _) _) =
+      pure (M.alter updVarAss v m)
+    countOccs m (Stm (Assign (OldVar _ v) ex _) _) =
       pure (M.alter updVarAss v m)
     countOccs m _ =
       pure m
@@ -269,12 +271,12 @@ mayTailcall :: JSTrav ast => ast -> TravM Bool
 mayTailcall ast = do
   foldJS enter countTCs False ast
   where
-    enter True _              = False
-    enter _ (Exp (Thunk _ _)) = False
---    enter _ (Exp (Fun _ _ _)) = False
-    enter _ _                 = True
-    countTCs _ (Stm (Tailcall _)) = return True
-    countTCs acc _                = return acc
+    enter True _                = False
+    enter _ (Exp (Thunk _ _) _) = False
+--    enter _ (Exp (Fun _ _) _)   = False
+    enter _ _                   = True
+    countTCs _ (Stm (Tailcall _) _) = return True
+    countTCs acc _                  = return acc
 
 -- | Gather a map of all symbols which we know will never make tail calls.
 --   All calls to functions in this set can then safely be de-trampolined.
@@ -282,14 +284,14 @@ gatherNonTailcalling :: Stm -> TravM (S.Set Var)
 gatherNonTailcalling stm = do
     foldJS (\_ _ -> True) countTCs S.empty stm
   where
-    countTCs s (Exp (Var v@(Foreign _))) = do
+    countTCs s (Exp (Var v@(Foreign _)) _) = do
       return $ S.insert v s
-    countTCs s (Stm (Assign (NewVar _ v) (Fun _ _ body) _)) = do
+    countTCs s (Stm (Assign (NewVar _ v) (Fun _ body) _) _) = do
       tc <- mayTailcall body
       return $ if not tc then S.insert v s else s      
-    countTCs s (Exp (Fun (Just name) _ body)) = do
+    countTCs s (Stm (Assign (OldVar _ v) (Fun _ body) _) _) = do
       tc <- mayTailcall body
-      return $ if not tc then S.insert (Internal name "") s else s
+      return $ if not tc then S.insert v s else s
     countTCs s _ = do
       return s
 
@@ -319,10 +321,10 @@ unTrampoline s = go s >>= go >>= go
     unTr ntcs (Call ar (Fast True) f@(Var v) xs)
       | v `S.member` ntcs =
         return $ Call ar (Fast False) f xs
-    unTr _ c@(Call ar (Normal True) f@(Fun _ _ body) xs) = do
+    unTr _ c@(Call ar (Normal True) f@(Fun _ body) xs) = do
         tc <- mayTailcall body
         return $ if tc then c else Call ar (Normal False) f xs
-    unTr _ c@(Call ar (Fast True) f@(Fun _ _ body) xs) = do
+    unTr _ c@(Call ar (Fast True) f@(Fun _ body) xs) = do
         tc <- mayTailcall body
         return $ if tc then c else Call ar (Fast False) f xs
     unTr _ x =
@@ -335,30 +337,107 @@ unTrampoline s = go s >>= go >>= go
     unTC ntcs (Tailcall c@(Call _ _ (Var v) _))
       | v `S.member` ntcs =
         return $ Return c
-    unTC _ tc@(Tailcall c@(Call _ _ (Fun _ _ body) _)) = do
+    unTC _ tc@(Tailcall c@(Call _ _ (Fun _ body) _)) = do
         maytc <- mayTailcall body
         if not maytc then return (Return c) else return tc
     unTC _ x =
         return x
 
--- | Like `inlineAssigns`, but doesn't care what happens beyond a jump.
+-- | Inline all reorderable x = ... into the next occurrence of x outside of a
+--   lambda, keeping the assignment.
+inlineOldVars :: JSTrav ast => ast -> TravM ast
+inlineOldVars ast = do
+    mapJS (const True) return inl ast
+  where
+    inl (Assign (OldVar True v) rhs next) =
+      replaceFirst enter (Var v) (AssignEx (Var v) rhs) next
+    inl stm =
+      return stm
+    enter = not . (isLambda .|. isConditional)
+
+-- | Turn all @var x = y = z@ into @y = z@.
+zapDoubleAssigns :: JSTrav ast => ast -> TravM ast
+zapDoubleAssigns ast = do
+    mapJS (const True) return inl ast
+  where
+    inl (Assign (NewVar True v) (AssignEx (Var v') rhs) next) = do
+      next' <- replaceEx (const True) (Var v) (Var v') next
+      return $ Assign (OldVar True v') rhs next'
+    inl stm =
+      return stm
+
+-- | Turn all @x = y@ where @x@ is never used into @y@.
+--   TODO: use this as basis for smarter inlining?
+zapUselessAssigns :: JSTrav ast => ast -> TravM ast
+zapUselessAssigns ast = do
+    mapJS (const True) doLam return ast
+  where
+    inl occs keep@(AssignEx (Var v) rhs) = do
+      case M.lookup v occs of
+        Just n
+          | n < 1     -> return rhs
+          | otherwise -> return keep
+    inl _ stm =
+      return stm
+
+    withLam (Fun as body) f    = Fun as <$> f body
+    withLam (Thunk upd body) f = Thunk upd <$> f body
+    withLam ex _               = return ex
+    doLam ex = withLam ex $ \body -> do
+      occs <- foldJS (\_ _ -> True) countOccs M.empty body
+      mapJS (const True) (inl occs) return body
+
+    -- Subtract non-lambda recursive occurrences and the assignment occurrence.
+    countOccs m (Exp (AssignEx (Var v) rhs) _) = do
+      rhsOccs <- nonLamOccs (equals $ Var v) rhs
+      return $ M.alter (subtr (rhsOccs+1)) v m
+    countOccs m (Exp (Var v) _) = do
+      return $ M.alter oneMore v m
+    countOccs m _ = do
+      return m
+
+    equals ex (Exp ex' _) = ex == ex'
+    equals _ _            = False
+
+    subtr s Nothing  = Just $ 0-s
+    subtr s (Just n) = Just $ n-s
+
+    oneMore Nothing  = Just 1
+    oneMore (Just n) = Just (n+1)
+
+    nonLamOccs pred = foldJS (const $ not . isLambda) (count pred) 0
+    count p n node
+      | p node    = pure $ n + 1
+      | otherwise = pure n
+
+-- | Replace the first occurrence of an expression with another expression.
+replaceFirst :: JSTrav ast => (ASTNode -> Bool) -> Exp -> Exp -> ast -> TravM ast
+replaceFirst enter from to ast = do
+    snd <$> foldMapJS enter' step (\found n -> return (found, n)) False ast
+  where
+    enter' True _   = False
+    enter' _      n = enter n
+    step found e
+      | e == from = return (True, to)
+      | otherwise = return (found, e)
+
+-- | Like 'inlineAssigns', but doesn't care what happens beyond a jump.
 inlineAssignsLocal :: JSTrav ast => ast -> TravM ast
 inlineAssignsLocal ast = do
     mapJS (\n -> not (isLambda n || isShared n)) return inl ast
   where
-    varOccurs lhs (Exp (Var lhs')) = lhs == lhs'
-    varOccurs _ _                  = False
-    inl keep@(Assign (NewVar mayReorder lhs) ex next) = do
+    varOccurs lhs (Exp (Var lhs') _) = lhs == lhs'
+    varOccurs _ _                    = False
+    inl keep@(Assign l ex next) | Just lhs <- inlinableAssignLHS l = do
       occurs <- occurrences (const True) (varOccurs lhs) next
-      occurs' <- occurrences (const True) (varOccurs lhs) ex
-      case occurs + occurs' of
+      occursRec <- occurrences (const True) (varOccurs lhs) ex
+      case occurs + occursRec of
         Never ->
           return (Assign blackHole ex next)
-        -- Don't inline lambdas at the moment, but use less verbose syntax.
-        _     | Fun Nothing vs body <- ex,
-                Internal lhsname _ <- lhs ->
-          return $ Assign blackHole (Fun (Just lhsname) vs body) next
-        Once | mayReorder ->
+        -- Don't inline lambdas at the moment.
+        _     | Fun vs body <- ex -> do
+          return keep
+        Once ->
           -- can't be recursive - inline
           replaceEx (not <$> isShared) (Var lhs) ex next
         _ ->
@@ -377,17 +456,33 @@ inlineReturns ast = do
     return ast'
   where
     pure2 s x = pure (s,x)
-    foldRet s (Assign (NewVar _ lhs) rhs (Return (Var v))) | v == lhs = do
-      return (s, Return rhs)
-    foldRet s keep@(Assign (NewVar _ lhs) rhs (Jump (Shared lbl))) = do
-      next <- getRef lbl
-      case next of
-        Return (Var v) | v == lhs ->
-          return (S.insert lbl s, Return rhs)
-        _ ->
-          return (s, keep)
+    foldRet s (Assign l rhs next)
+      | Just (Var v, ret) <- returnLike next,
+        Just (lhs,_) <- notLhsExp l,
+        v == lhs = do
+        return (s, ret rhs)
+    foldRet s keep@(Assign l rhs (Jump (Shared lbl)))
+      | Just (lhs, _) <- notLhsExp l = do
+        next <- getRef lbl
+        case returnLike next of
+          Just (Var v, ret) | v == lhs ->
+            return (S.insert lbl s, ret rhs)
+          _ ->
+            return (s, keep)
     foldRet s keep = do
       return (s, keep)
+
+-- | Extract the expression returned from a Return of ThunkRet, as well as
+--   a function to recreate that type of return.
+returnLike :: Stm -> Maybe (Exp, Exp -> Stm)
+returnLike (Return e)   = Just (e, Return)
+returnLike (ThunkRet e) = Just (e, ThunkRet)
+returnLike _            = Nothing
+
+notLhsExp :: LHS -> Maybe (Var, Reorderable)
+notLhsExp (NewVar r v) = Just (v, r)
+notLhsExp (OldVar r v) = Just (v, r)
+notLhsExp _            = Nothing
 
 -- | Inline all occurrences of the given shared code path.
 --   Use with caution - preferrably not at all!
@@ -438,7 +533,7 @@ trampoline = mapJS (pure True) pure bounce
 --     }
 --   }
 tailLoopify :: Var -> Exp -> TravM Exp
-tailLoopify f fun@(Fun mname args body) = do
+tailLoopify f fun@(Fun args body) = do
     tailrecs <- occurrences (not <$> isLambda) isTailRec body
     if tailrecs > Never
       then do
@@ -453,27 +548,27 @@ tailLoopify f fun@(Fun mname args body) = do
                 nv = NewVar False nn
                 body' =
                   Forever $
-                  Assign nv (Call 0 (Fast False) (Fun Nothing args b)
+                  Assign nv (Call 0 (Fast False) (Fun args b)
                                                  (map Var args')) $
                   Case (Var nn) (Return (Var nn)) [(Lit $ LNull, NullRet)] $
                   (Shared nullRetLbl)
             putRef nullRetLbl NullRet
-            return $ Fun mname args' body'
+            return $ Fun args' body'
           False -> do
             let c = Cont
             body' <- mapJS (not <$> isLambda) pure (replaceByAssign c args) body
-            return $ Fun mname args (Forever body')
+            return $ Fun args (Forever body')
       else do
         return fun
   where
-    isTailRec (Stm (Return (Call _ _ (Var f') _))) = f == f'
-    isTailRec _                                    = False
+    isTailRec (Stm (Return (Call _ _ (Var f') _)) _) = f == f'
+    isTailRec _                                      = False
     
     -- Only traverse until we find a closure
     createsClosures = foldJS (\acc _ -> not acc) isClosure False
-    isClosure _ (Exp (Fun _ _ _)) = pure True
-    isClosure _ (Exp (Thunk _ _)) = pure True
-    isClosure acc _               = pure acc
+    isClosure _ (Exp (Fun _ _) _)   = pure True
+    isClosure _ (Exp (Thunk _ _) _) = pure True
+    isClosure acc _                 = pure acc
 
     -- Assign any changed vars, then loop.
     replaceByAssign end as (Return (Call _ _ (Var f') as')) | f == f' = do
@@ -501,7 +596,7 @@ tailLoopify f fun@(Fun mname args body) = do
     contains (Lit _) _            = False
     contains (Not x) var          = x `contains` var
     contains (BinOp _ a b) var    = a `contains` var || b `contains` var
-    contains (Fun _ _ _) _        = False
+    contains (Fun _ _) _          = False
     contains (Call _ _ f' xs) var = f' `contains` var||any (`contains` var) xs
     contains (Index a i) var      = a `contains` var || i `contains` var
     contains (Arr xs) var         = any (`contains` var) xs

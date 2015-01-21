@@ -80,8 +80,8 @@ foldApp (Call arity (Normal tramp) (Call _ (Normal _) f args) args') =
 foldApp (Call 0 (Normal tramp) f args) =
   Call 0 (Fast tramp) f args
 foldApp (Call arity (Normal tramp) f args) | arity > 0 =
-    Fun Nothing newargs $ Return
-                        $ Call arity (Fast tramp) f (args ++ map Var newargs)
+    Fun  newargs $ Return
+                 $ Call arity (Fast tramp) f (args ++ map Var newargs)
   where
     newargs = newVars "_fa_" arity
 foldApp ex =
@@ -120,7 +120,7 @@ index arr ix = Index <$> arr <*> ix
 
 -- | Create a function.
 fun :: [Var] -> AST Stm -> AST Exp
-fun args = fmap (Fun Nothing args)
+fun args = fmap (Fun args)
 
 -- | Create an array of expressions.
 array :: [AST Exp] -> AST Exp
@@ -155,9 +155,14 @@ thunkRet = fmap ThunkRet
 newVar :: Reorderable -> Var -> AST Exp -> AST Stm -> AST Stm
 newVar r lhs = liftA2 $ \rhs -> Assign (NewVar r lhs) rhs
 
--- | Assignment without var.
-assign :: AST Exp -> AST Exp -> AST Stm -> AST Stm
-assign = liftA3 $ \lhs rhs -> Assign (LhsExp lhs) rhs
+-- | Reuse an old variable.
+assignVar :: Reorderable -> Var -> AST Exp -> AST Stm -> AST Stm
+assignVar r lhs = liftA2 $ \rhs -> Assign (OldVar r lhs) rhs
+
+-- | Assignment without var. Performed for the side effect, so never
+--   reorderable.
+sideEffectingAssign :: AST Exp -> AST Exp -> AST Stm -> AST Stm
+sideEffectingAssign = liftA3 $ \lhs rhs -> Assign (LhsExp lhs) rhs
 
 -- | Assignment expression.
 assignEx :: AST Exp -> AST Exp -> AST Exp

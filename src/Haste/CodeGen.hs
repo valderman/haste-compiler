@@ -248,41 +248,49 @@ genArgVarsPair vps = do
 genCase :: AltType -> StgExpr -> Id -> [StgAlt] -> JSGen Config (AST Exp)
 genCase t ex scrut alts = do
   ex' <- genEx ex
+  -- Return a scrutinee variable and a function to replace all occurrences of
+  -- the STG scrutinee with our JS one, if needed.
+  (scrut', withScrutinee) <- case ex' of
+    AST (Eval (Var v)) _ -> do
+      continue $ assignVar (reorderableType scrut) v ex'
+      oldscrut <- genVar scrut
+      return (v, rename oldscrut v)
+    _ -> do
+      scrut' <- genVar scrut
+      addLocal scrut'
+      continue $ newVar (reorderableType scrut) scrut' ex'
+      return (scrut', id)
   -- If we have a unary unboxed tuple, we want to eliminate the case
   -- entirely (modulo evaluation), so just generate the expression in the
   -- sole alternative.
-  case (isUnaryUnboxedTuple scrut, alts) of
-    (True, [(_, as, _, expr)]) | [arg] <- filter hasRepresentation as -> do
-      scrut' <- genVar scrut
-      arg' <- genVar arg
-      addLocal [scrut', arg']
-      continue (newVar (reorderableType scrut) scrut' ex')
-      continue (newVar (reorderableType scrut) arg' (varExp scrut'))
-      genEx expr
-    (True, _) -> do
-        error "Case on unary unboxed tuple with more than one alt! WTF?!"
-    _ -> do
-      -- Generate scrutinee and result vars
-      scrut' <- genVar scrut
-      res <- genResultVar scrut
-      addLocal [scrut', res]
-      -- Split alts into default and general, and generate code for them
-      let (defAlt, otherAlts) = splitAlts alts
-          scrutinee = cmp (varExp scrut')
-      (_, defAlt') <- genAlt scrut' res defAlt
-      alts' <- mapM (genAlt scrut' res) otherAlts
-      -- Use the ternary operator where possible.
-      useSloppyTCE <- sloppyTCE `fmap` getCfg
-      self <- if useSloppyTCE then return blackHoleVar else getCurrentBinding
-      case tryTernary self scrutinee (varExp res) defAlt' alts' of
-        Just ifEx -> do
-          continue $ newVar (reorderableType scrut) scrut' ex'
-          continue $ newVar True res ifEx
-          return (varExp res)
-        _ -> do
-          continue $ newVar (reorderableType scrut) scrut' ex'
-          continue $ case_ scrutinee defAlt' alts'
-          return (varExp res)
+  withScrutinee $ do
+    case (isUnaryUnboxedTuple scrut, alts) of
+      (True, [(_, as, _, expr)]) | [arg] <- filter hasRepresentation as -> do
+        arg' <- genVar arg
+        addLocal arg'
+        continue $ newVar (reorderableType scrut) arg' (varExp scrut')
+        genEx expr
+      (True, _) -> do
+          error "Case on unary unboxed tuple with more than one alt! WTF?!"
+      _ -> do
+        -- Generate scrutinee and result vars
+        res <- genResultVar scrut
+        addLocal res
+        -- Split alts into default and general, and generate code for them
+        let (defAlt, otherAlts) = splitAlts alts
+            scrutinee = cmp (varExp scrut')
+        (_, defAlt') <- genAlt scrut' res defAlt
+        alts' <- mapM (genAlt scrut' res) otherAlts
+        -- Use the ternary operator where possible.
+        useSloppyTCE <- sloppyTCE `fmap` getCfg
+        self <- if useSloppyTCE then return blackHoleVar else getCurrentBinding
+        case tryTernary self scrutinee (varExp res) defAlt' alts' of
+          Just ifEx -> do
+            continue $ newVar True res ifEx
+            return (varExp res)
+          _ -> do
+            continue $ case_ scrutinee defAlt' alts'
+            return (varExp res)
   where
     getTag s = index s (litN 0)
     cmp = case t of
@@ -317,7 +325,7 @@ genAlt scrut res (con, args, used, body) = do
   (_, body') <- isolate $ do
     continue $ foldr (.) id binds
     retEx <- genEx body
-    continue $ newVar True res retEx
+    continue $ newVar False res retEx
   return $ construct body'
   where
     bindVar v ix = newVar True v (index (varExp scrut) (litN ix))
@@ -325,8 +333,12 @@ genAlt scrut res (con, args, used, body) = do
 -- | Generate a result variable for the given scrutinee variable.
 genResultVar :: Var.Var -> JSGen Config J.Var
 genResultVar v = do
-  cfg <- getCfg
-  (\mn -> toJSVar cfg mn v (Just "#result")) <$> getModName
+  v' <- genVar v >>= getActualName
+  case v' of
+    Foreign n ->
+      return $ Internal (Name (n ++ "#result") Nothing) ""
+    Internal (Name n mp) _ ->
+      return $ Internal (Name (n ++ "#result") mp) ""
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
@@ -337,7 +349,7 @@ genVar v | hasRepresentation v = do
     _       -> do
       mymod <- getModName
       cfg <- getCfg
-      v' <- return $ toJSVar cfg mymod v Nothing
+      v' <- getActualName $ toJSVar cfg mymod v
       dependOn v'
       return v'
 genVar _ = do
@@ -350,22 +362,19 @@ foreignName (CCall (CCallSpec (StaticTarget str _ _) _ _)) =
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 
-toJSVar :: Config -> String -> Var.Var -> Maybe String -> J.Var
-toJSVar c thisMod v msuffix =
+toJSVar :: Config -> String -> Var.Var -> J.Var
+toJSVar c thisMod v =
   case idDetails v of
     FCallId fc -> foreignVar (foreignName fc)
     _
       | isLocalId v && not hasMod ->
-        internalVar (name (unique ++ suffix) (Just (myPkg, myMod))) ""
+        internalVar (name (unique) (Just (myPkg, myMod))) ""
       | isGlobalId v || hasMod ->
-        internalVar (name (extern ++ suffix) (Just (myPkg, myMod))) comment
+        internalVar (name (extern) (Just (myPkg, myMod))) comment
     _ ->
       error $ "Var is not local, global or external!"
   where
-    comment = myMod ++ "." ++ extern ++ suffix
-    suffix = case msuffix of
-               Just s -> s
-               _      -> ""
+    comment = myMod ++ "." ++ extern
     vname  = Var.varName v
     hasMod = case nameModule_maybe vname of
                Nothing -> False

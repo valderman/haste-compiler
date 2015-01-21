@@ -14,17 +14,21 @@ import Numeric (showHex)
 instance Pretty Var where
   pp (Foreign name) =
     put $ fromString name
-  pp (Internal name comment) = do
+  pp (Internal name@(Name n _) comment) = do
     pp name
     doComment <- getOpt nameComments
-    when (doComment && not (null comment)) $
-      put $ "/* " <> fromString comment <> " */"
+    when doComment $ do
+      when (not $ null comment) $ do
+        put $ fromString "/* "
+        put $ fromString comment
+        put $ fromString " */"
 
 instance Pretty Name where
   pp name = finalNameFor name >>= put . buildFinalName
 
 instance Pretty LHS where
   pp (NewVar _ v) = "var " .+. pp v
+  pp (OldVar _ v) = pp v
   pp (LhsExp ex)  = pp ex
 
 instance Pretty Lit where
@@ -70,7 +74,7 @@ instance Pretty Exp where
     pp v
   pp (Lit l) =
     pp l
-  pp (Not ex) =
+  pp (Not ex) = do
     case neg ex of
       Just ex' -> pp ex'
       _ -> if expPrec (Not ex) > expPrec ex
@@ -80,12 +84,10 @@ instance Pretty Exp where
     case norm bop of
       BinOp op a b -> opParens op a b
       ex           -> pp ex
-  pp (Fun mname args body) = do
-      "function" .+. lambdaname .+. "(" .+. ppList sep args .+. "){" .+. newl
-      indent $ pp body
-      ind .+. "}"
-    where
-      lambdaname = maybe "" (\n -> " " .+. pp n) mname
+  pp (Fun args body) = do
+    "function(" .+. ppList sep args .+. "){" .+. newl
+    indent $ pp body
+    ind .+. "}"
   pp (Call _ call f args) = do
       case call of
         Normal True  -> "B(" .+. normalCall .+. ")"
@@ -96,16 +98,22 @@ instance Pretty Exp where
     where
       normalCall = "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
       fastCall = ppCallFun f .+. "(" .+. ppList sep args .+. ")"
-      ppCallFun fun@(Fun _ _ _) = "(" .+. pp fun .+. ")"
-      ppCallFun fun             = pp fun
-  pp (Index arr ix) = do
-    pp arr .+. "[" .+. pp ix .+. "]"
+      ppCallFun fun@(Fun _ _) = "(" .+. pp fun .+. ")"
+      ppCallFun fun           = pp fun
+  pp e@(Index arr ix) = do
+    if expPrec e > expPrec arr
+       then "(" .+. pp arr .+. ")"
+       else pp arr
+    "[" .+. pp ix .+. "]"
   pp (Arr exs) = do
     "[" .+. ppList sep exs .+. "]"
   pp (AssignEx l r) = do
     pp l .+. sp .+. "=" .+. sp .+. pp r
-  pp (IfEx c th el) = do
-    pp c .+. sp .+. "?" .+. sp .+. pp th .+. sp .+. ":" .+. sp .+. pp el
+  pp e@(IfEx c th el) = do
+    if expPrec e > expPrec c
+       then "(" .+. pp c .+. ")"
+       else pp c
+    sp .+. "?" .+. sp .+. pp th .+. sp .+. ":" .+. sp .+. pp el
   pp (Eval x) = do
     "E(" .+. pp x .+. ")"
   pp (Thunk True x) = do
@@ -153,6 +161,8 @@ instance Pretty Stm where
         line (pp ex .+. ";") >> pp next
       NewVar _ _ ->
         ppAssigns s
+      OldVar _ _ ->
+        line (pp lhs .+. sp .+. "=" .+. sp .+. pp ex .+. ";") >> pp next
       LhsExp _ ->
         line (pp lhs .+. sp .+. "=" .+. sp .+. pp ex .+. ";") >> pp next
   pp (Return ex) = do

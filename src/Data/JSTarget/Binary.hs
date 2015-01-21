@@ -26,9 +26,12 @@ instance Binary Var where
 
 instance Binary LHS where
   put (NewVar r v) = putWord8 0 >> put r >> put v
-  put (LhsExp e)   = putWord8 1 >> put e
+  put (OldVar r v) = putWord8 1 >> put r >> put v
+  put (LhsExp e)   = putWord8 2 >> put e
   
-  get = getWord8 >>= ([NewVar <$>get<*>get, LhsExp <$> get] !!) . fromIntegral
+  get = getWord8 >>= ([NewVar <$> get <*> get,
+                       OldVar <$> get <*> get,
+                       LhsExp <$> get] !!) . fromIntegral
 
 instance Binary Call where
   put (Normal tr) = putWord8 0 >> put tr
@@ -52,18 +55,18 @@ instance Binary Lit where
       fromIntegral t
 
 instance Binary Exp where
-  put (Var v)           = putWord8 0 >> put v
-  put (Lit l)           = putWord8 1 >> put l
-  put (Not ex)          = putWord8 2 >> put ex
-  put (BinOp op a b)    = putWord8 3 >> put op >> put a >> put b
-  put (Fun nam as body) = putWord8 4 >> put nam >> put as >> put body
-  put (Call a c f xs)   = putWord8 5 >> put a >> put c >> put f >> put xs
-  put (Index arr ix)    = putWord8 6 >> put arr >> put ix
-  put (Arr exs)         = putWord8 7 >> put exs
-  put (AssignEx l r)    = putWord8 8 >> put l >> put r
-  put (IfEx c th el)    = putWord8 9 >> put c >> put th >> put el
-  put (Eval x)          = putWord8 10 >> put x
-  put (Thunk upd x)     = putWord8 11 >> put upd >> put x
+  put (Var v)         = putWord8 0 >> put v
+  put (Lit l)         = putWord8 1 >> put l
+  put (Not ex)        = putWord8 2 >> put ex
+  put (BinOp op a b)  = putWord8 3 >> put op >> put a >> put b
+  put (Fun as body)   = putWord8 4 >> put as >> put body
+  put (Call a c f xs) = putWord8 5 >> put a >> put c >> put f >> put xs
+  put (Index arr ix)  = putWord8 6 >> put arr >> put ix
+  put (Arr exs)       = putWord8 7 >> put exs
+  put (AssignEx l r)  = putWord8 8 >> put l >> put r
+  put (IfEx c th el)  = putWord8 9 >> put c >> put th >> put el
+  put (Eval x)        = putWord8 10 >> put x
+  put (Thunk upd x)   = putWord8 11 >> put upd >> put x
   
   get = do
     tag <- getWord8
@@ -72,7 +75,7 @@ instance Binary Exp where
       1  -> Lit <$> get
       2  -> Not <$> get
       3  -> BinOp <$> get <*> get <*> get
-      4  -> Fun <$> get <*> get <*> get
+      4  -> Fun <$> get <*> get
       5  -> Call <$> get <*> get <*> get <*> get
       6  -> Index <$> get <*> get
       7  -> Arr <$> get

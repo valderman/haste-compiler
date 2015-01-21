@@ -4,10 +4,10 @@ module Data.JSTarget.Traversal where
 import Control.Applicative
 import Control.Monad
 import Data.JSTarget.AST
-import Data.Map as M ((!), insert)
+import Data.Map as M ((!), insert, empty)
 
 -- | AST nodes we'd like to fold and map over.
-data ASTNode = Exp !Exp | Stm !Stm | Label !Lbl
+data ASTNode = Exp !Exp !Bool | Stm !Stm !Bool | Label !Lbl
 
 newtype TravM a = T (JumpTable -> (JumpTable, a))
 instance Monad TravM where
@@ -74,7 +74,7 @@ instance JSTrav a => JSTrav [a] where
 
 instance JSTrav Exp where
   foldMapJS tr fe fs acc ast = do
-      (acc', x) <- if tr acc (Exp ast)
+      (acc', x) <- if tr acc (Exp ast False)
                      then do
                        case ast of
                          v@(Var _)      -> do
@@ -87,8 +87,8 @@ instance JSTrav Exp where
                            (acc', a') <- mapEx acc a
                            (acc'', b') <- mapEx acc' b
                            return (acc'', BinOp op a' b')
-                         Fun nam vs stm -> do
-                           fmap (Fun nam vs) <$> foldMapJS tr fe fs acc stm
+                         Fun vs stm     -> do
+                           fmap (Fun vs) <$> foldMapJS tr fe fs acc stm
                          Call ar c f xs -> do
                            (acc', f') <- mapEx acc f
                            (acc'', xs') <- foldMapJS tr fe fs acc' xs
@@ -105,8 +105,12 @@ instance JSTrav Exp where
                            return (acc'', AssignEx l' r')
                          IfEx c th el   -> do
                            (acc', c') <- mapEx acc c
-                           (acc'', th') <- mapEx acc' th
-                           (acc''', el') <- mapEx acc'' el
+                           (acc'', th') <- if tr acc (Exp th True)
+                                             then mapEx acc' th
+                                             else return (acc', th)
+                           (acc''', el') <- if tr acc (Exp el True)
+                                              then mapEx acc'' el
+                                              else return (acc'', el)
                            return (acc''', IfEx c' th' el')
                          Eval x         -> do
                            fmap Eval <$> mapEx acc x
@@ -119,7 +123,7 @@ instance JSTrav Exp where
       mapEx = foldMapJS tr fe fs
   
   foldJS tr f acc ast = do
-    let expast = Exp ast
+    let expast = Exp ast False
     acc' <- if tr acc expast
               then do
                 case ast of
@@ -132,7 +136,7 @@ instance JSTrav Exp where
                   BinOp _ a b  -> do
                     acc' <- foldJS tr f acc a
                     foldJS tr f acc' b
-                  Fun _ _ stm    -> do
+                  Fun _ stm      -> do
                     foldJS tr f acc stm
                   Call _ _ fun xs -> do
                     acc' <- foldJS tr f acc fun
@@ -147,11 +151,15 @@ instance JSTrav Exp where
                     foldJS tr f acc' r
                   IfEx c th el  -> do
                     acc' <- foldJS tr f acc c
-                    acc'' <- foldJS tr f acc' th
-                    foldJS tr f acc'' el
+                    acc'' <- if tr acc (Exp th True)
+                               then foldJS tr f acc' th
+                               else return acc'
+                    if tr acc (Exp th True)
+                      then foldJS tr f acc'' el
+                      else return acc''
                   Eval ex       -> do
                     foldJS tr f acc ex
-                  Thunk upd stm -> do
+                  Thunk _upd stm -> do
                     foldJS tr f acc stm
               else do
                 return acc
@@ -159,7 +167,7 @@ instance JSTrav Exp where
 
 instance JSTrav Stm where
   foldMapJS tr fe fs acc ast = do
-      (acc', x) <- if tr acc (Stm ast)
+      (acc', x) <- if tr acc (Stm ast False)
                      then do
                        case ast of
                          Case ex def alts next -> do
@@ -192,7 +200,7 @@ instance JSTrav Stm where
       fs acc' x
 
   foldJS tr f acc ast = do
-    let stmast = Stm ast
+    let stmast = Stm ast False
     acc' <- if tr acc stmast
               then do
                 case ast of
@@ -225,17 +233,27 @@ instance JSTrav Stm where
 
 instance JSTrav (Exp, Stm) where
   foldMapJS tr fe fs acc (ex, stm) = do
-    (acc', stm') <- foldMapJS tr fe fs acc stm
-    (acc'', ex') <- foldMapJS tr fe fs acc' ex
+    (acc', stm') <- if tr acc (Stm stm True)
+                      then foldMapJS tr fe fs acc stm
+                      else return (acc, stm)
+    (acc'', ex') <- if tr acc (Exp ex True)
+                      then foldMapJS tr fe fs acc' ex
+                      else return (acc', ex)
     return (acc'', (ex', stm'))
   foldJS tr f acc (ex, stm) = do
-    acc' <- foldJS tr f acc stm
-    foldJS tr f acc' ex
+    acc' <- if tr acc (Stm stm True)
+              then foldJS tr f acc stm
+              else return acc
+    if tr acc (Exp ex True)
+      then foldJS tr f acc' ex
+      else return acc'
 
 instance JSTrav LHS where
   foldMapJS _ _ _ acc lhs@(NewVar _ _) = return (acc, lhs)
+  foldMapJS _ _ _ acc lhs@(OldVar _ _) = return (acc, lhs)
   foldMapJS t fe fs a (LhsExp ex)      = fmap LhsExp <$> foldMapJS t fe fs a ex
   foldJS _ _ acc (NewVar _ _)  = return acc
+  foldJS _ _ acc (OldVar _ _)  = return acc
   foldJS tr f acc (LhsExp ex)  = foldJS tr f acc ex
 
 instance JSTrav a => JSTrav (Shared a) where
@@ -293,13 +311,18 @@ isShared _         = False
 
 -- | Thunks and explicit lambdas count as lambda abstractions.
 isLambda :: ASTNode -> Bool
-isLambda (Exp (Fun _ _ _)) = True
-isLambda (Exp (Thunk _ _)) = True
-isLambda _                 = False
+isLambda (Exp (Fun _ _) _)   = True
+isLambda (Exp (Thunk _ _) _) = True
+isLambda _                   = False
 
 isJump :: ASTNode -> Bool
-isJump (Stm (Jump _)) = True
-isJump _              = False
+isJump (Stm (Jump _) _) = True
+isJump _                = False
+
+isConditional :: ASTNode -> Bool
+isConditional (Exp _ cond) = cond
+isConditional (Stm _ cond) = cond
+isConditional _            = False
 
 -- | Counts occurrences. Use ints or something for a more exact count.
 data Occs = Never | Once | Lots deriving (Eq, Show)
@@ -324,7 +347,19 @@ instance Num Occs where
   x * Once  = x
   _ * _     = Lots
 
+  Never - _ = Never
+  x - Never = x
+  Once - _  = Never
+  Lots - _  = Lots
+
   abs = id
 
   signum Never = Never
   signum _     = Once
+
+-- | Replace all occurrences of an expression, without entering shared code
+--   paths. IO ordering is preserved even when entering lambdas thanks to
+--   State# RealWorld.
+replaceEx :: JSTrav ast => (ASTNode -> Bool) -> Exp -> Exp -> ast -> TravM ast
+replaceEx trav old new =
+  mapJS trav (\x -> if x == old then pure new else pure x) pure
