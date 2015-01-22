@@ -363,3 +363,19 @@ instance Num Occs where
 replaceEx :: JSTrav ast => (ASTNode -> Bool) -> Exp -> Exp -> ast -> TravM ast
 replaceEx trav old new =
   mapJS trav (\x -> if x == old then pure new else pure x) pure
+
+-- | Replace all occurrences of an expression, without entering shared code
+--   paths. IO ordering is preserved even when entering lambdas thanks to
+--   State# RealWorld.
+replaceExWithCount :: JSTrav ast
+                   => (ASTNode -> Bool) -- ^ Which nodes to enter?
+                   -> Exp               -- ^ Expression to replace.
+                   -> Exp               -- ^ Replacement expression.
+                   -> ast               -- ^ AST to perform replacement on.
+                   -> TravM (Int, ast)  -- ^ New AST + count of replacements.
+replaceExWithCount trav old new ast =
+    foldMapJS (const trav) rep (\count x -> return (count, x)) 0 ast
+  where
+    rep count ex
+      | ex == old = return (count+1, new)
+      | otherwise = return (count, ex)

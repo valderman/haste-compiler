@@ -19,7 +19,7 @@ optimizeFun f (AST ast js) =
     shrinkCase ast
     >>= inlineOldVars
     >>= zapDoubleAssigns
-    >>= zapUselessAssigns
+--    >>= zapUselessAssigns - Not quite correct yet; disable for now.
     >>= inlineAssigns
     >>= optimizeArrays
     >>= inlineReturns
@@ -368,6 +368,7 @@ zapDoubleAssigns ast = do
 
 -- | Turn all @x = y@ where @x@ is never used into @y@.
 --   TODO: use this as basis for smarter inlining?
+--   TODO: not quite correct yet, so disabled. Fix ASAP!
 zapUselessAssigns :: JSTrav ast => ast -> TravM ast
 zapUselessAssigns ast = do
     mapJS (const True) doLam return ast
