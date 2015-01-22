@@ -53,4 +53,4 @@ instance Event KeyEvent where
             <*> (e # "ctrlKey"  >>= fmap fromJust . asBool)
             <*> (e # "altKey"   >>= fmap fromJust . asBool)
             <*> (e # "shiftKey" >>= fmap fromJust . asBool)
-            <*> (e # "meyaKey"  >>= fmap fromJust . asBool)
+            <*> (e # "metaKey"  >>= fmap fromJust . asBool)
