@@ -3,6 +3,7 @@ module Haste.Timer (Timer, Interval (..), setTimer, stopTimer) where
 import Control.Applicative
 import Control.Monad.IO.Class
 import Haste.Foreign
+import Haste.Events.Core
 
 -- | Timer handle.
 data Timer = Timer {
@@ -16,14 +17,16 @@ data Interval
   | Repeat !Int -- ^ Fire every n milliseconds.
 
 -- | Set a timer.
-setTimer :: MonadIO m
+setTimer :: MonadEvent m
          => Interval -- ^ Milliseconds until timer fires.
-         -> IO ()    -- ^ Function to call when timer fires.
+         -> m ()     -- ^ Function to call when timer fires.
          -> m Timer  -- ^ Timer handle for interacting with the timer.
-setTimer i f = liftIO $ do
-    flip Timer i <$> case i of
-      Once n   -> timeout n f
-      Repeat n -> interval n f
+setTimer i f = do
+    f' <- mkHandler $ const f
+    liftIO $ do
+      flip Timer i <$> case i of
+        Once n   -> timeout n (f' ())
+        Repeat n -> interval n (f' ())
   where
     {-# NOINLINE timeout #-}
     timeout :: Int -> IO () -> IO Int
