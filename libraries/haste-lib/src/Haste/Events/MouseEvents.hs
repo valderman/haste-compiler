@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, TupleSections #-}
 -- | Events relating to mouse clicks and movement.
-module Haste.Events.MouseEvents (MouseEvent (..), MouseData (..)) where
+module Haste.Events.MouseEvents (MouseEvent (..), MouseData (..), MouseButton (..)) where
 import Haste.Object
 import Haste.JSType
 import Haste.Events.Core
