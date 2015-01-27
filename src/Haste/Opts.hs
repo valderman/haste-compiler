@@ -111,6 +111,11 @@ hasteOpts unbooted = [
            "--start='$(\"foo\").onclick($HASTE_MAIN);' " ++
            "will use jQuery to launch the application whenever the element " ++
            "with the id \"foo\" is clicked.",
+    Option "" ["output-jsflow"]
+           (NoArg enableJSFlow) $
+           "Output code for use with the JSFlow interpreter. Note that " ++
+           "this may leave your code crippled, since JSFlow doesn't " ++
+           "all of Haste's needs.",
     Option "v" ["verbose"]
            (NoArg $ \cfg -> cfg {verbose = True}) $
            "Display even the most obnoxious warnings and messages.",
@@ -183,6 +188,17 @@ updateClosureFlags arg cfg = cfg {
 -- | Enable optimizations over the entire program.
 enableWholeProgramOpts :: Config -> Config
 enableWholeProgramOpts cfg = cfg {wholeProgramOpts = True}
+
+-- | Produce output for the JSFlow interpreter.
+enableJSFlow :: Config -> Config
+enableJSFlow cfg = cfg {
+    rtsLibs = [libfile |
+               libfile <- rtsLibs cfg,
+               not $ any (`isSuffixOf` libfile) jsflowIncompatible] ++
+              [jsDir </> "jsflow.js"]
+  }
+  where
+    jsflowIncompatible = ["floatdecode.js", "endian.js"]
 
 -- | Save some space and performance by using degenerate implementations of
 --   the Unicode functions.

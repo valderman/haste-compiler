@@ -18,6 +18,9 @@ import Control.Applicative
 import Data.Char (ord)
 import Haste.Parsing
 import Numeric (showHex)
+#else
+import System.IO.Unsafe
+import Haste.Foreign
 #endif
 
 -- | Create a Javascript object from a JSON object. Only makes sense in a
@@ -25,7 +28,12 @@ import Numeric (showHex)
 toObject :: JSON -> JSAny
 #ifdef __HASTE__
 toObject = jsJSONParse . encodeJSON
-foreign import ccall jsJSONParse :: JSString -> JSAny
+jsJSONParse :: JSString -> JSAny
+jsJSONParse = unsafePerformIO . go
+  where
+    {-# NOINLINE go #-}
+    go :: JSString -> IO JSAny
+    go = ffi "(function(s){return JSON.parse(s);})"
 #else
 toObject j = error $ "Call to toObject in non-browser: " ++ show j
 #endif

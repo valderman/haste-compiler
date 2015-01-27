@@ -36,6 +36,9 @@ Data-Files:
     Canvas.js
     Handle.js
     Weak.js
+    endian.js
+    floatdecode.js
+    jsflow.js
 
 Flag portable
     Description:
