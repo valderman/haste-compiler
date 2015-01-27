@@ -47,7 +47,7 @@ instance Event KeyEvent where
   type EventData KeyEvent = KeyData
   eventName KeyPress = "keypress"
   eventName KeyUp    = "keyup"
-  eventName KeyDown  = "dblclick"
+  eventName KeyDown  = "keydown"
   eventData _ e =
     KeyData <$> (e # "keyCode"  >>= fmap (convert . fromJust) . asNumber)
             <*> (e # "ctrlKey"  >>= fmap fromJust . asBool)
