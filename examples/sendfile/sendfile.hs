@@ -3,6 +3,8 @@
 --   a client on the server, as is done in this example!
 import Haste.App
 import Haste.Binary
+import Haste.DOM
+import Haste.Events
 import qualified Data.ByteString.Lazy as BS
 
 main = runApp def $ do
@@ -11,7 +13,7 @@ main = runApp def $ do
     liftIO $ BS.writeFile name (toByteString filedata)
 
   runClient $ withElems ["file","upload"] $ \[file,btn] -> do
-    btn `onEvent` OnClick $ \_ _ -> do
+    btn `onEvent` Click $ \_ -> do
       mfd <- getFileData file 0
       case mfd of
         Just fd -> do
@@ -20,3 +22,4 @@ main = runApp def $ do
           alert "File uploaded!"
         _ -> do
           alert "You need to specify a file first."
+    return ()
