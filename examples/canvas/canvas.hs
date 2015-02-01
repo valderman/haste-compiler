@@ -1,5 +1,7 @@
 -- Example of using the Canvas library to render simple tile maps.
 import Haste
+import Haste.DOM
+import Haste.Events
 import Haste.Graphics.Canvas
 import Data.IORef
 import Data.Array
@@ -90,14 +92,15 @@ main = do
     }
 
   -- When the user clicks the toolbox, mark the clicked tile as selected.
-  tilemapElem `onEvent` OnClick $ \_button (x, y) -> do
+  tilemapElem `onEvent` Click $ \(MouseData (x, y) _ _) -> do
     modifyIORef state $ \st ->
       st {selectedTile = (x `quot` 32, y `quot` 32)}
     readIORef state >>= drawEverything allTiles tiles c
+    return ()
 
   -- When the user clicks the map, overwrite the clicked tile with the
   -- currently selected one.
-  ce `onEvent` OnClick $ \_button (x, y) -> do
+  ce `onEvent` Click $ \(MouseData (x, y) _ _) -> do
     st <- readIORef state
     let (tx, ty) = selectedTile st
         tile = ty*11 + tx
@@ -110,7 +113,7 @@ main = do
   render c $ text (110, 120) "Loading, please wait..."
   
   -- When the tileset finished loading, draw everything.
-  bitmapElem tileset `onEvent` OnLoad $ do
+  elemOf tileset `onEvent` Load $ \_ -> do
     readIORef state >>= drawEverything allTiles tiles c
   return ()
 
