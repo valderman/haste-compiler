@@ -12,4 +12,6 @@ main = do
 
 handleRemove :: Elem -> Elem -> IO HandlerInfo
 handleRemove ul li = do
-  onEvent li Click $ \_ -> removeChild li ul
+  onEvent li Click $ \_ -> do
+    removeChild li ul
+    preventDefault
