@@ -1,12 +1,14 @@
 module Main where
 import Haste
+import Haste.DOM
+import Haste.Events
 
 main = withElems ["a","b","op","result"] calculator
 
 calculator [a,b,op,result] = do
-    onEvent a  OnKeyUp $ \_ -> recalculate
-    onEvent b  OnKeyUp $ \_ -> recalculate
-    onEvent op OnChange $ recalculate
+    onEvent a  KeyUp $ \_ -> recalculate
+    onEvent b  KeyUp $ \_ -> recalculate
+    onEvent op Change $ \_ -> recalculate
   where
     recalculate = do
       ma <- getValue a

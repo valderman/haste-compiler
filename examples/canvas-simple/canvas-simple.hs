@@ -38,4 +38,5 @@ animate can angle = do
       translate (100, 100) . rotate (-angle) . color (RGB 255 0 0) $ filledSquare
     color (RGBA 0 0 255 0.5) . font "20px Bitstream Vera" $ do
       text (10, 160) "You can use transparency too!"
-  setTimeout 10 $ animate can (angle + 0.01)
+  setTimer (Once 10) $ animate can (angle + 0.01)
+  return ()

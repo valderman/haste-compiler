@@ -7,6 +7,8 @@
 --   server state, and how to export and call server API functions.
 import Haste.App
 import qualified Haste.App.Concurrent as H
+import Haste.DOM
+import Haste.Events
 import qualified Control.Concurrent as C
 
 main :: IO ()
@@ -21,7 +23,8 @@ main = do
                   return oldmsg
 
     runClient $ withElem "button" $ \button -> do
-      button `onEvent` OnClick $ \_ _ -> do
+      button `onEvent` Click $ \_ -> do
         newmsg <- prompt "Enter a message"
         oldmsg <- onServer $ trade <.> newmsg
         alert $ "The old message was: " ++ oldmsg
+      return ()

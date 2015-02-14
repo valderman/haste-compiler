@@ -1,5 +1,6 @@
 module Main where
 import Haste
+import Haste.DOM
 import Haste.Concurrent
 
 main = concurrent $ do
