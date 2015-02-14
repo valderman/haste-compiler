@@ -152,8 +152,11 @@ instance Binary a => Binary [a] where
     putWord32le (fromIntegral $ length xs)
     mapM_ put xs
   get = do
-    len <- getWord32le
-    flip mapM [1..len] $ \_ -> get
+      len <- getWord32le
+      getList len []
+    where
+      getList 0 xs = return $ reverse xs
+      getList n xs = get >>= \x -> getList (n-1) (x:xs)
 
 instance Binary Blob where
   {-# NOINLINE put #-}
@@ -168,7 +171,9 @@ instance Binary Blob where
 
 instance Binary Char where
   put = put . ord
-  get = chr <$> get
+  get = get >>= \x ->
+    case chr x of
+      !x' -> return x'
 
 encode :: Binary a => a -> Blob
 encode x = runPut (put x)
