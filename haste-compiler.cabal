@@ -4,10 +4,10 @@ License:        BSD3
 License-File:   LICENSE
 Synopsis:       Haskell To ECMAScript compiler
 Description:    This package provides a featureful compiler from Haskell to
-                Javascript. It generates small, fast code, makes use of
-                standard Haskell libraries, integrates with Cabal, supports
-                most GHC extensions and works on Windows, Linux and OSX.
-                Bug reports are highly appreciated.
+                JavaScript based on GHC. It generates small, fast code, makes
+                use of standard Haskell libraries, integrates with Cabal,
+                supports most GHC extensions and works on Windows, Linux and
+                OSX.
 Category:       Javascript, Compiler, Web
 Cabal-Version:  >= 1.10
 Build-Type:     Custom
