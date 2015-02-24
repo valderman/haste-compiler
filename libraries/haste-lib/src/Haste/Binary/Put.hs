@@ -4,11 +4,12 @@ module Haste.Binary.Put (
     putWord8, putWord16le, putWord32le,
     putInt8, putInt16le, putInt32le,
     putFloat32le, putFloat64le,
-    putBlob,
+    putBlob, putJSString,
     runPut
   ) where
 import Data.Int
 import Data.Word
+import Data.Char
 import Haste.Prim
 import Haste.Foreign
 import Haste.Binary.Types
@@ -84,11 +85,24 @@ putBlob :: Blob -> Put
 putBlob b = PutM $ \a -> push a (unpack b)
 
 toAB :: Marshal a => JSString -> Int -> a -> Unpacked
-toAB view size elem = unsafePerformIO $ toABle view size (unpack elem)
+toAB view size el = unsafePerformIO $ toABle view size (unpack el)
 
 {-# NOINLINE toABle #-}
 toABle :: Marshal a => JSString -> Int -> a -> IO Unpacked
 toABle = ffi "window['toABle']"
+
+-- | Serialize a 'JSString' as UTF-16 (somewhat) efficiently.
+putJSString :: JSString -> Put
+putJSString s = PutM $ \a -> push a (unsafePerformIO $ str2ab s)
+
+str2ab :: JSString -> IO Unpacked
+str2ab = ffi "(function(s) {\
+  var l = s.length;\
+  var v = new Uint16Array(new ArrayBuffer(l*2));\
+  for (var i=0; i<l; ++i) {\
+    v[i]=s.charCodeAt(i);\
+  }\
+  return v.buffer;})"
 
 -- | Run a Put computation.
 runPut :: Put -> Blob
@@ -133,5 +147,9 @@ putFloat64le = PutM . BI.putFloat64le
 
 putBlob :: Blob -> Put
 putBlob (Blob b) = PutM $ BP.putLazyByteString b
+
+-- | Serialize a 'JSString' as UTF-16 (somewhat) efficiently.
+putJSString :: JSString -> Put
+putJSString = mapM_ (putWord16le . fromIntegral . ord) . fromJSStr
 
 #endif

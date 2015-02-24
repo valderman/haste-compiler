@@ -4,7 +4,7 @@ module Haste.Binary.Get (
     getWord8, getWord16le, getWord32le,
     getInt8, getInt16le, getInt32le,
     getFloat32le, getFloat64le,
-    getBytes, skip,
+    getBytes, getJSString, skip,
     runGet
   ) where
 import Data.Int
@@ -16,6 +16,7 @@ import Control.Applicative
 import Control.Monad
 import System.IO.Unsafe
 #ifndef __HASTE__
+import Data.Char (chr)
 import qualified Data.Binary as B
 import qualified Data.Binary.IEEE754 as BI
 import qualified Data.Binary.Get as BG
@@ -107,9 +108,18 @@ getFloat64le =
 getBytes :: Int -> Get BlobData
 getBytes len = Get $ \buf next -> Right (next+len, BlobData next len buf)
 
+-- | Read a 'JSString' of @n@ characters. Encoding is assumed to be UTF-16.
+getJSString :: Word32 -> Get JSString
+getJSString len = Get $ \buf next ->
+  Right (next+fromIntegral len, unsafePerformIO $ getJSS buf next len)
+
+{-# NOINLINE getJSS #-}
+getJSS :: Unpacked -> Int -> Word32 -> IO JSString
+getJSS = ffi "(function(b,off,len){return String.fromCharCode.apply(null,new Uint16Array(b.buffer,off,len));})"
+
 -- | Skip n bytes of input.
 skip :: Int -> Get ()
-skip len = Get $ \buf next -> Right (next+len, ())
+skip len = Get $ \_buf next -> Right (next+len, ())
 
 -- | Run a Get computation.
 runGet :: Get a -> BlobData -> Either String a
@@ -158,6 +168,10 @@ getBytes :: Int -> Get BlobData
 getBytes len = Get $ do
   bs <- BG.getLazyByteString (fromIntegral len)
   return (BlobData bs)
+
+getJSString :: Int -> Get JSString
+getJSString len = Get $ do
+  toJSStr `fmap` forM [1..len] (\_ -> fmap (chr . fromIntegral) BG.getWord16le)
 
 -- | Skip n bytes of input.
 skip :: Int -> Get ()

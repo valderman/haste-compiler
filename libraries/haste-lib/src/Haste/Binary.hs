@@ -10,11 +10,12 @@ module Haste.Binary (
     MonadBlob (..), Binary (..), getBlobText,
     Blob, BlobData,
     blobSize, blobDataSize, toByteString, toBlob, strToBlob,
-    encode, decode
+    encode, decode, decodeBlob
   )where
 import Data.Int
 import Data.Word
 import Data.Char
+import Haste (lengthJSStr)
 import Haste.Prim
 import Haste.Concurrent
 import Haste.Foreign
@@ -24,6 +25,9 @@ import Haste.Binary.Get
 import Control.Applicative
 import GHC.Generics
 import Data.Bits
+#ifndef __HASTE__
+import qualified Data.ByteString.Lazy.Char8 as BS (unpack)
+#endif
 
 class Monad m => MonadBlob m where
   -- | Retrieve the raw data from a blob.
@@ -36,17 +40,14 @@ getBlobText :: MonadBlob m => Blob -> m String
 getBlobText b = getBlobText' b >>= return . fromJSStr
 
 instance MonadBlob CIO where
+#ifdef __HASTE__
   getBlobData b = do
       res <- newEmptyMVar
       liftIO $ convertBlob b (toOpaque $ mkBlobData res (blobSize b))
       takeMVar res
     where
-#ifdef __HASTE__
       mkBlobData res len x = concurrent $ do
         putMVar res (BlobData 0 len x)
-#else
-      mkBlobData = undefined
-#endif
 
       convertBlob :: Blob -> Opaque (Unpacked -> IO ()) -> IO ()
       convertBlob = ffi
@@ -60,6 +61,10 @@ instance MonadBlob CIO where
       convertBlob :: Blob -> Opaque (JSString -> IO ()) -> IO ()
       convertBlob = ffi
         "(function(b,cb){var r=new FileReader();r.onload=function(){B(A(cb,[[0,r.result],0]));};r.readAsText(b);})"
+#else
+  getBlobData (Blob b) = return (BlobData b)
+  getBlobText' (Blob b) = return . toJSStr $ BS.unpack b
+#endif
 
 -- | Somewhat efficient serialization/deserialization to/from binary Blobs.
 --   The layout of the binaries produced/read by get/put and encode/decode may
@@ -158,6 +163,14 @@ instance Binary a => Binary [a] where
       getList 0 xs = return $ reverse xs
       getList n xs = get >>= \x -> getList (n-1) (x:xs)
 
+instance Binary JSString where
+  {-# NOINLINE put #-}
+  put s = do
+    putWord32le $ fromIntegral $ lengthJSStr s
+    putJSString s
+  {-# NOINLINE get #-}
+  get = get >>= getJSString
+    
 instance Binary Blob where
   {-# NOINLINE put #-}
   put b = do
@@ -175,12 +188,19 @@ instance Binary Char where
     case chr x of
       !x' -> return x'
 
+-- | Encode any serializable data into a 'Blob'.
 encode :: Binary a => a -> Blob
 encode x = runPut (put x)
 
+-- | Decode any deserializable data from a 'BlobData'.
 decode :: Binary a => BlobData -> Either String a
 decode = runGet get
 
+-- | Decode a 'Blob' into some deserializable value, inconveniently locked up
+--   inside the 'CIO' monad (or any other concurrent monad) due to the somewhat
+--   special way JavaScript uses to deal with binary data.
+decodeBlob :: (MonadBlob m, Binary a) => Blob -> m (Either String a)
+decodeBlob b = getBlobData b >>= return . decode
 
 -- Type without constructors
 instance GBinary V1 where

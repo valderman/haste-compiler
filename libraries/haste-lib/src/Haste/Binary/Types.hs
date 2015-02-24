@@ -5,14 +5,20 @@ module Haste.Binary.Types (
   ) where
 import Haste.Prim
 import Haste.Foreign
-import System.IO.Unsafe
 import qualified Data.ByteString.Lazy as BS
 #ifndef __HASTE__
 import qualified Data.ByteString.UTF8 as BU
+#else
+import System.IO.Unsafe
 #endif
 
 #ifdef __HASTE__
+-- | In a browser context, BlobData is essentially a DataView, with an
+--   accompanying offset and length for fast slicing.
+--   In a server context, it is simply a 'BS.ByteString'.
 data BlobData = BlobData Int Int Unpacked
+
+-- | A JavaScript Blob on the client, a 'BS.ByteString' on the server.
 newtype Blob = Blob Unpacked deriving (Pack, Unpack)
 
 -- | The size, in bytes, of the contents of the given blob.
@@ -53,7 +59,12 @@ jsNewBlob =
   ffi "(function(b){try {return new Blob([b]);} catch (e) {return new Blob([b.buffer]);}})"
 #else
 
+-- | In a browser context, BlobData is essentially a DataView, with an
+--   accompanying offset and length for fast slicing.
+--   In a server context, it is simply a 'BS.ByteString'.
 newtype BlobData = BlobData BS.ByteString
+
+-- | A JavaScript Blob on the client, a 'BS.ByteString' on the server.
 newtype Blob = Blob BS.ByteString
 
 -- Never used except for type checking

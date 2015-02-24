@@ -1,4 +1,5 @@
-{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, CPP #-}
+{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, CPP,
+             OverloadedStrings #-}
 -- | Haste's companion to the Prelude.
 --
 --   Note that this module should *not* be imported together with
@@ -6,23 +7,35 @@
 --   for automatic program slicing.
 module Haste (
     JSString, JSAny, URL,
-    alert, prompt, eval, writeLog, catJSStr, fromJSStr,
+    alert, prompt, eval, writeLog, catJSStr, fromJSStr, lengthJSStr,
     module Haste.JSType, module Haste.DOM.Core, module Haste.Timer,
     module Haste.Random, module Haste.Hash
   ) where
 import Haste.Prim
+import Haste.Foreign
 import Haste.Timer
 import Haste.Random
 import Haste.JSType
 import Haste.DOM.Core
 import Haste.Hash
 import Control.Monad.IO.Class
+import System.IO.Unsafe
+
+-- | Get the length of a 'JSString'.
+lengthJSStr :: JSString -> Int
 
 #ifdef __HASTE__
 foreign import ccall jsAlert  :: JSString -> IO ()
 foreign import ccall jsLog    :: JSString -> IO ()
 foreign import ccall jsPrompt :: JSString -> IO JSString
 foreign import ccall jsEval   :: JSString -> IO JSString
+
+lengthJSStr = unsafePerformIO . go
+  where
+    {-# NOINLINE go #-}
+    go :: JSString -> IO Int
+    go = ffi "(function(x){return x.length;})"
+
 #else
 jsAlert  :: JSString -> IO ()
 jsAlert = error "Tried to use jsAlert on server side!"
@@ -32,6 +45,8 @@ jsPrompt :: JSString -> IO JSString
 jsPrompt = error "Tried to use jsPrompt on server side!"
 jsEval   :: JSString -> IO JSString
 jsEval = error "Tried to use jsEval on server side!"
+
+lengthJSStr = length . fromJSStr
 #endif
 
 -- | Javascript alert() function.
