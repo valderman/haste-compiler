@@ -4,8 +4,14 @@
 --
 --   Many functions have linear time complexity due to JavaScript engines not
 --   implementing slicing, etc. in constant time.
+--
+--   All functions are supported on both client and server, with the exception
+--   of 'match', 'matches', 'regex' and 'replace', which are wrappers on top of
+--   JavaScript's native regular expressions and thus only supported on the
+--   client.
 module Haste.JSString where
 import Data.List
+import Data.String
 import Haste.Prim
 import Haste.Foreign
 
@@ -26,6 +32,10 @@ foreign import ccall _jss_index :: JSString -> Int -> Double
 foreign import ccall _jss_substr :: JSString -> Int -> JSString
 foreign import ccall _jss_take :: Int -> JSString -> JSString
 foreign import ccall _jss_rev :: JSString -> JSString
+foreign import ccall _jss_re_match :: JSString -> RegEx -> Bool
+foreign import ccall _jss_re_compile :: JSString -> JSString -> RegEx
+foreign import ccall _jss_re_replace :: JSString -> RegEx -> JSString -> JSString
+foreign import ccall _jss_re_find :: RegEx -> JSString -> Ptr [JSString]
 
 _jss_map :: (Char -> Char) -> JSString -> JSString
 _jss_map f = _jss_cmap (_jss_singleton . f)
@@ -63,6 +73,7 @@ for(var i = s.length-1; i >= 0; --i) {\
 return x;})"
 
 #else
+
 {-# INLINE d2c #-}
 d2c :: Char -> Char
 d2c = id
@@ -108,7 +119,30 @@ _jss_foldl f x = Data.List.foldl' f x . fromJSStr
 
 _jss_foldr :: (Char -> a -> a) -> a -> JSString -> a
 _jss_foldr f x = Data.List.foldr f x . fromJSStr
+
+_jss_re_compile :: JSString -> JSString -> RegEx
+_jss_re_compile _ _ =
+  error "Regular expressions are only supported client-side!"
+
+_jss_re_match :: JSString -> RegEx -> Bool
+_jss_re_match _ _ =
+  error "Regular expressions are only supported client-side!"
+
+_jss_re_replace :: JSString -> RegEx -> JSString -> JSString
+_jss_re_replace _ _ _ =
+  error "Regular expressions are only supported client-side!"
+
+_jss_re_find :: RegEx -> JSString -> Ptr [JSString]
+_jss_re_find _ _ =
+  error "Regular expressions are only supported client-side!"
+
 #endif
+
+-- | A regular expression. May be used to match and replace JSStrings.
+newtype RegEx = RegEx JSAny
+
+instance IsString RegEx where
+  fromString s = _jss_re_compile (fromString s) ""
 
 -- | O(1) The empty JSString.
 empty :: JSString
@@ -231,3 +265,30 @@ replicate n c = Haste.JSString.pack $ Data.List.replicate n c
 -- | O(n) Equivalent to (take n xs, drop n xs).
 splitAt :: Int -> JSString -> (JSString, JSString)
 splitAt n s = (Haste.JSString.take n s, Haste.JSString.drop n s)
+
+-- | O(n) Determines whether the given JSString matches the given regular
+--   expression or not.
+matches :: JSString -> RegEx -> Bool
+matches = _jss_re_match
+
+-- | O(n) Find all strings corresponding to the given regular expression.
+match :: RegEx -> JSString -> [JSString]
+match re s = fromPtr $ _jss_re_find re s
+
+-- | O(n) Compile a regular expression and an (optionally empty) list of flags
+--   into a 'RegEx' which can be used to match, replace, etc. on JSStrings.
+--
+--   The regular expression and flags are passed verbatim to the browser's
+--   RegEx constructor, meaning that the syntax is the same as when using
+--   regular expressions in raw JavaScript.
+regex :: JSString -- ^ Regular expression.
+      -> JSString -- ^ Potential flags.
+      -> RegEx
+regex re flags = _jss_re_compile re flags
+
+-- | O(n) String substitution using regular expressions.
+replace :: JSString -- ^ String perform substitution on.
+        -> RegEx    -- ^ Regular expression to match.
+        -> JSString -- ^ Replacement string.
+        -> JSString
+replace = _jss_re_replace
