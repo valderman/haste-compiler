@@ -35,6 +35,7 @@ Library
         Haste.Foreign
         Haste.Graphics.Canvas
         Haste.JSON
+        Haste.JSString
         Haste.LocalStorage
         Haste.Object
         Haste.Parsing

@@ -16,8 +16,8 @@ type AppStart = Builder -> Builder
 
 stdJSLibs :: [FilePath]
 stdJSLibs = map (jsDir </>)  [
-    "rts.js", "floatdecode.js", "stdlib.js", "endian.js", "MVar.js",
-    "StableName.js", "Integer.js", "Int64.js", "md5.js", "array.js",
+    "rts.js", "jsstring.js", "floatdecode.js", "stdlib.js", "endian.js",
+    "MVar.js", "StableName.js", "Integer.js", "Int64.js", "md5.js", "array.js",
     "pointers.js", "cheap-unicode.js", "Canvas.js", "Handle.js", "Weak.js"
   ]
 

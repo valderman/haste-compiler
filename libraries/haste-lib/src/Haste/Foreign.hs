@@ -65,6 +65,8 @@ instance Pack Double
 instance Pack JSAny
 instance Pack JSString where
   pack = jsString . unsafePack
+instance Pack Char where
+  pack x = convert (unsafePack x :: Double)
 instance Pack Int where
   pack x = convert (unsafePack x :: Double)
 instance Pack Int8 where
@@ -151,6 +153,7 @@ instance Unpack Float
 instance Unpack Double
 instance Unpack JSAny
 instance Unpack JSString
+instance Unpack Char
 instance Unpack Int
 instance Unpack Int8
 instance Unpack Int16

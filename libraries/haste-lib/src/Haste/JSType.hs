@@ -13,6 +13,7 @@ import GHC.Prim
 import GHC.Integer.GMP.Internals
 import GHC.Types (Int (..))
 #else
+import Data.Char
 import GHC.Float
 #endif
 
@@ -58,6 +59,10 @@ unsafeWordFromJSString s =
         | otherwise -> Just (unsafeCoerce# (jsTruncW d))
 
 -- JSNum instances
+
+instance JSNum Char where
+  fromNumber = unsafeCoerce# jsTrunc
+  toNumber = unsafeCoerce#
 
 instance JSNum Int where
   fromNumber = unsafeCoerce# jsTrunc
@@ -176,6 +181,10 @@ instance JSType () where
                  | otherwise = Nothing
 
 #else
+
+instance JSNum Char where
+  toNumber = fromIntegral . ord
+  fromNumber = chr . round
 
 instance JSNum Int where
   toNumber = fromIntegral

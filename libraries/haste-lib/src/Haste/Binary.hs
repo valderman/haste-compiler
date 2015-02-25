@@ -15,7 +15,7 @@ module Haste.Binary (
 import Data.Int
 import Data.Word
 import Data.Char
-import Haste (lengthJSStr)
+import qualified Haste.JSString as J (length)
 import Haste.Prim
 import Haste.Concurrent
 import Haste.Foreign
@@ -166,7 +166,7 @@ instance Binary a => Binary [a] where
 instance Binary JSString where
   {-# NOINLINE put #-}
   put s = do
-    putWord32le $ fromIntegral $ lengthJSStr s
+    putWord32le $ fromIntegral $ J.length s
     putJSString s
   {-# NOINLINE get #-}
   get = get >>= getJSString

@@ -39,6 +39,7 @@ Data-Files:
     endian.js
     floatdecode.js
     jsflow.js
+    jsstring.js
 
 Flag portable
     Description:
@@ -268,6 +269,7 @@ Library
         Haste.Foreign
         Haste.Graphics.Canvas
         Haste.JSON
+        Haste.JSString
         Haste.LocalStorage
         Haste.Object
         Haste.Parsing
