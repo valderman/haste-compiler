@@ -194,7 +194,7 @@ ppList sep (x:xs) =
 ppList _ _ =
   return ()
 
-#if MIN_VERSION_bytestring(0,10,4)
+#if MIN_VERSION_bytestring(0,10,4) || MIN_VERSION_bytestring_builder(0,10,4)
 -- bytestring contains this instance from 0.10.4.0 onwards
 #else
 instance IsString Builder where
