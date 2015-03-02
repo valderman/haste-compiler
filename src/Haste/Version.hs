@@ -14,7 +14,7 @@ import Data.Maybe (listToMaybe)
 
 -- | Current Haste version.
 hasteVersion :: Version
-hasteVersion = Version [0, 4, 4, 1] []
+hasteVersion = Version [0, 4, 4, 2] []
 
 -- | Current Haste version as an Int. The format of this version number is
 --   MAJOR*10 000 + MINOR*100 + MICRO.
