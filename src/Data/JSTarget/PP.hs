@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE OverloadedStrings, FlexibleInstances,
-             GeneralizedNewtypeDeriving #-}
+             GeneralizedNewtypeDeriving, CPP #-}
 -- | JSTarget pretty printing machinery. The actual printing happens in 
 --   Data.JSTarget.Print.
 module Data.JSTarget.PP where
@@ -194,8 +194,12 @@ ppList sep (x:xs) =
 ppList _ _ =
   return ()
 
+#if MIN_VERSION_bytestring(0,10,4)
+-- bytestring contains this instance from 0.10.4.0 onwards
+#else
 instance IsString Builder where
   fromString = B.fromString
+#endif
 
 instance IsString (PP ()) where
   fromString = put . B.fromString
