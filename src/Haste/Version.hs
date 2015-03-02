@@ -20,7 +20,7 @@ hasteVersion = Version [0, 5, 0] []
 --   MAJOR*10 000 + MINOR*100 + MICRO.
 --   Version 1.2.3 would thus be represented as 10203.
 intVersion :: Int
-intVersion = foldl (\a x -> a*100+x) 0 ver
+intVersion = foldl (\a x -> a*100+x) 0 $ take 3 ver
   where Version ver _ = hasteVersion
 
 -- | The version of GHC used to build this binary.
