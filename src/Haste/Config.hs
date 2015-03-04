@@ -4,8 +4,7 @@ module Haste.Config (
   safeMultiply, debugLib) where
 import Data.JSTarget
 import Control.Shell (replaceExtension, (</>))
-import Blaze.ByteString.Builder
-import Blaze.ByteString.Builder.Char.Utf8
+import Data.ByteString.Builder
 import Data.Monoid
 import Haste.Environment
 import Outputable (Outputable)
@@ -42,10 +41,10 @@ startCustom str      = insertSym str
 -- | Replace the first occurrence of $HASTE_MAIN with Haste's entry point
 --   symbol.
 insertSym :: String -> AppStart
-insertSym [] _                              = fromString ""
+insertSym [] _                              = stringUtf8 ""
 insertSym str sym
-  | Just r <- stripPrefix "$HASTE_MAIN" str = sym <> fromString r
-  | (l,r) <- span (/= '$') str              = fromString l <> insertSym r sym
+  | Just r <- stripPrefix "$HASTE_MAIN" str = sym <> stringUtf8 r
+  | (l,r) <- span (/= '$') str              = stringUtf8 l <> insertSym r sym
 
 -- | Execute the program when the document has finished loading.
 startOnLoadComplete :: AppStart

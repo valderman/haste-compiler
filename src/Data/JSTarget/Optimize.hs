@@ -7,6 +7,7 @@ import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Data.JSTarget.Traversal
 import Control.Applicative
+import Control.Monad
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -34,6 +35,7 @@ topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
   flip runTravM js $ do
     unTrampoline ast
+--    return ast
     >>= inlineAssigns
     >>= optimizeArrays
     >>= optimizeThunks
@@ -309,7 +311,7 @@ gatherNonTailcalling stm = do
 --   guaranteed to use no more stack frames than we would have without this
 --   optimization.
 unTrampoline :: Stm -> TravM Stm
-unTrampoline s = go s >>= go >>= go
+unTrampoline = go >=> go >=> go
   where
     go s = do
       ntcs <- gatherNonTailcalling s

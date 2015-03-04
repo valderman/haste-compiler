@@ -9,8 +9,7 @@ import Control.Monad.Trans.Either
 import Control.Applicative
 import Data.JSTarget
 import qualified Data.ByteString.Lazy as B
-import Blaze.ByteString.Builder
-import Blaze.ByteString.Builder.Char.Utf8
+import Data.ByteString.Builder
 import Data.Monoid
 import System.IO (hPutStrLn, stderr)
 
@@ -29,8 +28,8 @@ link cfg pkgid target = do
   ds <- getAllDefs cfg (targetLibPath cfg : libPaths cfg) mainmod pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
       (progText, myMain') = prettyProg (ppOpts cfg) mainSym myDefs
-      callMain = fromString "B(A(" <> myMain' <> fromString ", [0]));"
-      launchApp = appStart cfg (fromString "hasteMain")
+      callMain = stringUtf8 "B(A(" <> myMain' <> stringUtf8 ", [0]));"
+      launchApp = appStart cfg (stringUtf8 "hasteMain")
   
   rtslibs <- mapM readFile $ rtsLibs cfg
   extlibs <- mapM readFile $ jsExternals cfg
@@ -39,21 +38,21 @@ link cfg pkgid target = do
     $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp
   where
     assembleProg True extlibs rtslibs progText callMain launchApp =
-      (if useStrict cfg then fromString "\"use strict\";\n" else mempty)
-      <> fromString (unlines extlibs)
-      <> fromString "var hasteMain = function() {"
-      <> fromString (unlines rtslibs)
+      (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
+      <> stringUtf8 (unlines extlibs)
+      <> stringUtf8 "var hasteMain = function() {"
+      <> stringUtf8 (unlines rtslibs)
       <> progText
       <> callMain
-      <> fromString "};\n"
+      <> stringUtf8 "};\n"
       <> launchApp
     assembleProg _ extlibs rtslibs progText callMain launchApp =
-      (if useStrict cfg then fromString "\"use strict\";\n" else mempty)
-      <> fromString (unlines extlibs)
-      <> fromString (unlines rtslibs)
+      (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
+      <> stringUtf8 (unlines extlibs)
+      <> stringUtf8 (unlines rtslibs)
       <> progText
-      <> fromString "\nvar hasteMain = function() {" <> callMain
-                                                     <> fromString "};"
+      <> stringUtf8 "\nvar hasteMain = function() {" <> callMain
+                                                     <> stringUtf8 "};"
       <> launchApp
 
 -- | Produce an info message if verbose reporting is enabled.

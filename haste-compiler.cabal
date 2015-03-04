@@ -112,9 +112,8 @@ Executable hastec
         binary,
         containers,
         data-default,
-        bytestring >= 0.9.2.1,
+        bytestring >= 0.10.4,
         utf8-string,
-        blaze-builder,
         array,
         ghc-paths,
         random,
@@ -308,12 +307,7 @@ Library
         random,
         binary,
         data-binary-ieee754,
-        bytestring >= 0.9.2.1,
-        -- We don't use bytestring-builder directly, but its instances
-        -- propagate into Haste anyway, like it or not, so we must be able to
-        -- check which version is used to know if we should make a custom
-        -- IsString instance for Builder or not.
-        bytestring-builder,
+        bytestring,
         utf8-string,
         -- For Haste.Compiler
         shellmate >= 0.1.5,
