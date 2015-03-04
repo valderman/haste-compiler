@@ -5,7 +5,7 @@ import Prelude hiding (LT, GT)
 import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Data.JSTarget.PP as PP
-import Blaze.ByteString.Builder.Char.Utf8
+import Data.ByteString.Builder
 import Data.Monoid
 import Control.Monad
 import Data.Char
@@ -13,12 +13,12 @@ import Numeric (showHex)
 
 instance Pretty Var where
   pp (Foreign name) =
-    put $ fromString name
+    put $ stringUtf8 name
   pp (Internal name comment) = do
     pp name
     doComment <- getOpt nameComments
     when (doComment && not (null comment)) $
-      put $ "/* " <> fromString comment <> " */"
+      put $ "/* " <> stringUtf8 comment <> " */"
 
 instance Pretty Name where
   pp name = finalNameFor name >>= put . buildFinalName
@@ -237,7 +237,7 @@ opParens op a b = do
   let bparens = case b of
                   Lit (LNum n) | n < 0 -> \x -> "(".+. pp x .+. ")"
                   _                          -> parensR
-  parensL a .+. put (fromString $ show op) .+. bparens b
+  parensL a .+. put (stringUtf8 $ show op) .+. bparens b
   where
     parensL x = if expPrec x < opPrec op
                   then "(" .+. pp x .+. ")"
