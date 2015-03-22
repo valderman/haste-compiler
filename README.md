@@ -55,7 +55,7 @@ though, to verify that everything is working. To do that, execute
 test by executing `./runtests.sh NameOfTest`.  The test suite uses the `nodejs`
 interpreter by default, but this may be modified by setting the `JS` environment
 variable as such: `JS=other-js-interpreter ./runtests.sh`. Other JavaScript
-interpreters may or may not work. runtests.sh isn’t downloaded when installing
+interpreters may or may not work. `runtests.sh` isn’t downloaded when installing
 from Hackage. You would have to download it from GitHub.
 
 Haste has been tested to work on Windows and OSX platforms, but is primarily
