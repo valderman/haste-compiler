@@ -49,13 +49,14 @@ Building from Github source is equally easy. After checking out the source,
     $ cabal install
     $ haste-boot --force --local
 
-You should probably run the test suite first though, to verify that everything
-is working. To do that, execute `./runtests.sh` in the Haste root directory.
-You may also run only a particular test by executing `./runtests.sh NameOfTest`.
-The test suite uses the `nodejs` interpreter by default, but this may be
-modified by setting the `JS` environment variable as such:
-`JS=other-js-interpreter ./runtests.sh`. Other JavaScript interpreters may or
-may not work.
+When installing from GitHub, you should probably run the test suite first
+though, to verify that everything is working. To do that, execute
+`./runtests.sh` in the Haste root directory.  You may also run only a particular
+test by executing `./runtests.sh NameOfTest`.  The test suite uses the `nodejs`
+interpreter by default, but this may be modified by setting the `JS` environment
+variable as such: `JS=other-js-interpreter ./runtests.sh`. Other JavaScript
+interpreters may or may not work. runtests.sh isn’t downloaded when installing
+from Hackage. You would have to download it from GitHub.
 
 Haste has been tested to work on Windows and OSX platforms, but is primarily
 developed on GNU/Linux. As such, running on a GNU/Linux platform will likely
@@ -162,10 +163,10 @@ fun.hs:
 
     import Haste.Foreign
     import Haste.Prim (toJSStr)
-    
+
     fun :: Int -> String -> IO String
     fun n s = return $ "The number is " ++ show n ++ " and the string is " ++ s
-    
+
     main = do
       export (toJSStr "fun") fun
 
@@ -238,7 +239,7 @@ Libraries
 ---------
 
 Haste is able to use standard Haskell libraries. However, some primitive
-operations are still not implemented which means that any code making use 
+operations are still not implemented which means that any code making use
 of them will give you a compiler warning, then die at runtime with an angry
 error. Some libraries also depend on external C code - if you wish to use such
 a library, you will need to port the C bits to JavaScript yourself (perhaps
