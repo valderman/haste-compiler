@@ -18,8 +18,8 @@ optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ast js) =
   flip runTravM js $ do
     shrinkCase ast
-    >>= inlineOldVars
-    >>= zapDoubleAssigns
+--    >>= inlineOldVars
+--    >>= zapDoubleAssigns
 --    >>= zapUselessAssigns - Not quite correct yet; disable for now.
     >>= inlineAssigns
     >>= optimizeArrays
@@ -35,7 +35,6 @@ topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
   flip runTravM js $ do
     unTrampoline ast
---    return ast
     >>= inlineAssigns
     >>= optimizeArrays
     >>= optimizeThunks
