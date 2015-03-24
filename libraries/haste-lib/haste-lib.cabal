@@ -33,7 +33,6 @@ Library
         Haste.DOM.JSString
         Haste.Events
         Haste.Foreign
-        Haste.Foreign.Generic
         Haste.Graphics.Canvas
         Haste.JSON
         Haste.JSString
