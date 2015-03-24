@@ -9,6 +9,6 @@ runTest = return $ S.toList $ S.map S.toList $ cartProd xs ys
 xs = S.fromList "abc"
 ys = S.fromList "def"
 
-cartProd xs ys = S.foldr outerFold S.empty xs
-  where outerFold x zss = S.foldr (innerFold x) S.empty ys `S.union` zss
+cartProd xs ys = S.fold outerFold S.empty xs
+  where outerFold x zss = S.fold (innerFold x) S.empty ys `S.union` zss
         innerFold x y zs = S.fromList [x,y] `S.insert` zs
