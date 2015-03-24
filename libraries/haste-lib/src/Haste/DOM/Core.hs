@@ -14,7 +14,6 @@ module Haste.DOM.Core (
 import Haste.Prim
 import Control.Monad.IO.Class
 import Haste.Foreign
-import System.IO.Unsafe (unsafePerformIO)
 import Data.String
 
 #ifdef __HASTE__
@@ -47,7 +46,7 @@ jsSetStyle = error "Tried to use jsSetStyle on server side!"
 
 -- | A DOM node.
 newtype Elem = Elem JSAny
-  deriving (Pack, Unpack)
+  deriving (ToAny, FromAny)
 
 -- | The class of types backed by DOM elements.
 class IsElem a where
@@ -138,19 +137,11 @@ blur = liftIO . blur' . elemOf
 
 -- | The DOM node corresponding to document.
 document :: Elem
-document = unsafePerformIO getDocument
-  where
-    {-# NOINLINE getDocument #-}
-    getDocument :: IO Elem
-    getDocument = ffi "document"
+document = constant "document"
 
 -- | The DOM node corresponding to document.body.
 documentBody :: Elem
-documentBody = unsafePerformIO getBody
-  where
-    {-# NOINLINE getBody #-}
-    getBody :: IO Elem
-    getBody = ffi "document.body"
+documentBody = constant "document.body"
 
 -- | Append the first element as a child of the second element.
 addChild :: (IsElem parent, IsElem child, MonadIO m) => child -> parent -> m ()

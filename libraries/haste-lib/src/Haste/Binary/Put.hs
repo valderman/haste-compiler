@@ -26,11 +26,11 @@ import qualified Data.Binary.Put as BP
 type Put = PutM ()
 
 #ifdef __HASTE__
-type JSArr = Unpacked
+type JSArr = JSAny
 newArr :: IO JSArr
 newArr = ffi "(function(){return [];})"
 
-push :: Marshal a => JSArr -> a -> IO ()
+push :: ToAny a => JSArr -> a -> IO ()
 push = ffi "(function(a,x) {a.push(x);})"
 
 data PutM a = PutM {unP :: JSArr -> IO a}
@@ -70,32 +70,32 @@ putFloat32le :: Float -> Put
 putFloat32le f = PutM $ \a -> push a (unsafePerformIO $ f2ab f)
 
 {-# NOINLINE f2ab #-}
-f2ab :: Float -> IO Unpacked
+f2ab :: Float -> IO JSAny
 f2ab = ffi "(function(f) {var a=new ArrayBuffer(4);new DataView(a).setFloat32(0,f,true);return a;})"
 
 putFloat64le :: Double -> Put
 putFloat64le f = PutM $ \a -> push a (unsafePerformIO $ d2ab f)
 
 {-# NOINLINE d2ab #-}
-d2ab :: Double -> IO Unpacked
+d2ab :: Double -> IO JSAny
 d2ab = ffi "(function(f) {var a=new ArrayBuffer(8);new DataView(a).setFloat64(0,f,true);return a;})"
 
 -- | Write a Blob verbatim into the output stream.
 putBlob :: Blob -> Put
-putBlob b = PutM $ \a -> push a (unpack b)
+putBlob b = PutM $ \a -> push a (toAny b)
 
-toAB :: Marshal a => JSString -> Int -> a -> Unpacked
-toAB view size el = unsafePerformIO $ toABle view size (unpack el)
+toAB :: ToAny a => JSString -> Int -> a -> JSAny
+toAB view size el = unsafePerformIO $ toABle view size (toAny el)
 
 {-# NOINLINE toABle #-}
-toABle :: Marshal a => JSString -> Int -> a -> IO Unpacked
+toABle :: ToAny a => JSString -> Int -> a -> IO JSAny
 toABle = ffi "window['toABle']"
 
 -- | Serialize a 'JSString' as UTF-16 (somewhat) efficiently.
 putJSString :: JSString -> Put
 putJSString s = PutM $ \a -> push a (unsafePerformIO $ str2ab s)
 
-str2ab :: JSString -> IO Unpacked
+str2ab :: JSString -> IO JSAny
 str2ab = ffi "(function(s) {\
   var l = s.length;\
   var v = new Uint16Array(new ArrayBuffer(l*2));\

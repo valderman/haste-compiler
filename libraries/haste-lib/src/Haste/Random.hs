@@ -14,7 +14,7 @@ import qualified System.Random as SR
 
 #ifdef __HASTE__
 
-newtype Seed = Seed Unpacked deriving (Pack, Unpack)
+newtype Seed = Seed JSAny deriving (ToAny, FromAny)
 
 {-# NOINLINE nxt #-}
 nxt :: Seed -> IO Seed

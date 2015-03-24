@@ -17,27 +17,27 @@ newtype WSComputation = WSComputation (WebSocket -> IO ())
 newtype WSOnError = WSOnError (IO ())
 data WebSocket
 
-instance Pack WebSocket where
-  pack = unsafeCoerce
-instance Pack WSOnMsg where
-  pack = unsafeCoerce
-instance Pack WSOnBinMsg where
-  pack = unsafeCoerce
-instance Pack WSComputation where
-  pack = unsafeCoerce
-instance Pack WSOnError where
-  pack = unsafeCoerce
+instance FromAny WebSocket where
+  fromAny = unsafeCoerce
+instance FromAny WSOnMsg where
+  fromAny = unsafeCoerce
+instance FromAny WSOnBinMsg where
+  fromAny = unsafeCoerce
+instance FromAny WSComputation where
+  fromAny = unsafeCoerce
+instance FromAny WSOnError where
+  fromAny = unsafeCoerce
 
-instance Unpack WebSocket where
-  unpack = unsafeCoerce
-instance Unpack WSOnMsg where
-  unpack = unsafeCoerce
-instance Unpack WSOnBinMsg where
-  unpack = unsafeCoerce
-instance Unpack WSComputation where
-  unpack = unsafeCoerce
-instance Unpack WSOnError where
-  unpack = unsafeCoerce
+instance ToAny WebSocket where
+  toAny = unsafeCoerce
+instance ToAny WSOnMsg where
+  toAny = unsafeCoerce
+instance ToAny WSOnBinMsg where
+  toAny = unsafeCoerce
+instance ToAny WSComputation where
+  toAny = unsafeCoerce
+instance ToAny WSOnError where
+  toAny = unsafeCoerce
 
 -- | Run a computation with a web socket. The computation will not be executed
 --   until a connection to the server has been established.

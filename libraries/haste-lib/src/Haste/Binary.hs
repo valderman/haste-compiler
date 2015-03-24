@@ -49,7 +49,7 @@ instance MonadBlob CIO where
       mkBlobData res len x = concurrent $ do
         putMVar res (BlobData 0 len x)
 
-      convertBlob :: Blob -> Opaque (Unpacked -> IO ()) -> IO ()
+      convertBlob :: Blob -> Opaque (JSAny -> IO ()) -> IO ()
       convertBlob = ffi
         "(function(b,cb){var r=new FileReader();r.onload=function(){B(A(cb,[new DataView(r.result),0]));};r.readAsArrayBuffer(b);})"
 

@@ -38,7 +38,7 @@ data HandlerInfo = HandlerInfo {
     -- | Element the handler is set on.
     handlerElem  :: Elem,
     -- | Handle to handler function.
-    handlerFun   :: Unpacked
+    handlerFun   :: JSAny
   }
 
 -- | Unregister an event handler.
@@ -58,7 +58,6 @@ setEvtRef = writeIORef evtRef
 preventDefault :: IO ()
 preventDefault = readIORef evtRef >>= go
   where
-    {-# NOINLINE go #-}
     go :: JSObj -> IO ()
     go = ffi "(function(e){if(e){e.preventDefault();}})"
 
@@ -89,8 +88,7 @@ onEvent el evt f = do
 --   the Haskell function as the FFI does some marshalling to functions,
 --   meaning that the same function marshalled twice won't be reference equal
 --   to each other.
-{-# NOINLINE setEvt #-}
-setEvt :: Elem -> JSString -> (JSAny -> IO ()) -> IO Unpacked
+setEvt :: Elem -> JSString -> (JSAny -> IO ()) -> IO JSAny
 setEvt = ffi "(function(e,name,f){e.addEventListener(name,f,false);\
              \return [f];})"
 
@@ -98,6 +96,5 @@ setEvt = ffi "(function(e,name,f){e.addEventListener(name,f,false);\
 --   Note @f[0]@ and corresponding @[f]@ in 'setEvt'; this is a workaround for
 --   a bug causing functions being packed into anything to be accidentally
 --   called. Remove when properly fixed.
-{-# NOINLINE unregEvt #-}
-unregEvt :: Elem -> JSString -> Unpacked -> IO ()
+unregEvt :: Elem -> JSString -> JSAny -> IO ()
 unregEvt = ffi "(function(e,name,f){e.removeEventListener(name,f[0]);})"

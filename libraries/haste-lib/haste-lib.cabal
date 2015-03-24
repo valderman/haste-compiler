@@ -33,6 +33,7 @@ Library
         Haste.DOM.JSString
         Haste.Events
         Haste.Foreign
+        Haste.Foreign.Generic
         Haste.Graphics.Canvas
         Haste.JSON
         Haste.JSString
@@ -43,6 +44,7 @@ Library
         Haste.Serialize
         Haste.WebSockets
     Other-Modules:
+        Haste.Any
         Haste.App.Client
         Haste.App.Monad
         Haste.App.Protocol

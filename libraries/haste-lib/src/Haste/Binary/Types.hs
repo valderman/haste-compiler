@@ -16,10 +16,10 @@ import System.IO.Unsafe
 -- | In a browser context, BlobData is essentially a DataView, with an
 --   accompanying offset and length for fast slicing.
 --   In a server context, it is simply a 'BS.ByteString'.
-data BlobData = BlobData Int Int Unpacked
+data BlobData = BlobData Int Int JSAny
 
 -- | A JavaScript Blob on the client, a 'BS.ByteString' on the server.
-newtype Blob = Blob Unpacked deriving (Pack, Unpack)
+newtype Blob = Blob JSAny deriving (ToAny, FromAny)
 
 -- | The size, in bytes, of the contents of the given blob.
 blobSize :: Blob -> Int
@@ -45,16 +45,16 @@ toBlob (BlobData off len buf) =
 
 -- | Create a Blob from a JSString.
 strToBlob :: JSString -> Blob
-strToBlob = newBlob . unpack
+strToBlob = newBlob . toAny
 
 sliceBlob :: Blob -> Int -> Int -> Blob
 sliceBlob b off len = unsafePerformIO $ do
   ffi "(function(b,off,len){return b.slice(off,len);})" b off len
 
-newBlob :: Unpacked -> Blob
+newBlob :: JSAny -> Blob
 newBlob = unsafePerformIO . jsNewBlob
 
-jsNewBlob :: Unpacked -> IO Blob
+jsNewBlob :: JSAny -> IO Blob
 jsNewBlob =
   ffi "(function(b){try {return new Blob([b]);} catch (e) {return new Blob([b.buffer]);}})"
 #else
@@ -68,10 +68,10 @@ newtype BlobData = BlobData BS.ByteString
 newtype Blob = Blob BS.ByteString
 
 -- Never used except for type checking
-instance Pack BlobData
-instance Unpack BlobData
-instance Pack Blob
-instance Unpack Blob
+instance ToAny BlobData
+instance FromAny BlobData
+instance ToAny Blob
+instance FromAny Blob
 
 -- | The size, in bytes, of the contents of the given blob.
 blobSize :: Blob -> Int

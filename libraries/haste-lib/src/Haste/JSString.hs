@@ -54,7 +54,7 @@ return s2;})"
 _ret :: a -> IO a
 _ret = return
 
-_jss_foldl :: (Pack a, Unpack a) => (a -> Char -> a) -> a -> JSString -> a
+_jss_foldl :: (ToAny a, FromAny a) => (a -> Char -> a) -> a -> JSString -> a
 _jss_foldl f x s = unsafePerformIO $ go (\a c -> a `seq` _ret (f a c)) x s
   where
     go = ffi "(function(f,x,s){\
@@ -63,7 +63,7 @@ for(var i in s) {\
 }\
 return x;})"
 
-_jss_foldr :: (Pack a, Unpack a) => (Char -> a -> a) -> a -> JSString -> a
+_jss_foldr :: (ToAny a, FromAny a) => (Char -> a -> a) -> a -> JSString -> a
 _jss_foldr f x s = unsafePerformIO $ go (\c a -> _ret $ f c a) x s
   where
     go = ffi "(function(f,x,s){\
@@ -232,11 +232,11 @@ intercalate :: JSString -> [JSString] -> JSString
 intercalate = catJSStr
 
 -- | O(n) Left fold over a JSString.
-foldl' :: (Pack a, Unpack a) => (a -> Char -> a) -> a -> JSString -> a
+foldl' :: (ToAny a, FromAny a) => (a -> Char -> a) -> a -> JSString -> a
 foldl' = _jss_foldl
 
 -- | O(n) Right fold over a JSString.
-foldr :: (Pack a, Unpack a) => (Char -> a -> a) -> a -> JSString -> a
+foldr :: (ToAny a, FromAny a) => (Char -> a -> a) -> a -> JSString -> a
 foldr = _jss_foldr
 
 -- | O(n) Concatenate a list of JSStrings.

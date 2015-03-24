@@ -10,10 +10,8 @@ import Unsafe.Coerce
 
 newtype HashCallback = HashCallback (JSString -> JSString -> IO ())
 
-instance Pack HashCallback where
-  pack = unsafeCoerce
-instance Unpack HashCallback where
-  unpack = unsafeCoerce
+instance ToAny HashCallback where
+  toAny = unsafeCoerce
 
 -- | Register a callback to be run whenever the URL hash changes.
 --   The two arguments of the callback are the new and old hash respectively.

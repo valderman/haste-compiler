@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances,
-             MagicHash #-}
+             MagicHash, GeneralizedNewtypeDeriving #-}
 -- | Dealing with JavaScript objects on a low, low level.
 module Haste.Object (
-    JSObj, Type (..),
-    (#), asString, asBool, asNumber, typeOf, update, newObj, lookupPath
+    JSObj, Type (..), Build,
+    (#), asString, asBool, asNumber, typeOf, update, newObj, lookupPath, mkObj
   ) where
 import Haste.Prim
 import Haste.Foreign
+import Control.Applicative
+import System.IO.Unsafe
 
 -- | A JS object: either null/undefined or 'Just' an actual value.
 type JSObj = Maybe JSAny
@@ -15,8 +17,8 @@ type JSObj = Maybe JSAny
 data Type = TUndefined | TNumber | TBoolean | TString | TFunction | TObject
   deriving (Show, Eq, Enum)
 
-instance Pack Type where
-  pack = toEnum . pack
+instance FromAny Type where
+  fromAny = toEnum . fromAny
 
 -- | Any type on which we can look up a JS property.
 class JSLookup a where
@@ -33,7 +35,6 @@ instance JSLookup a => JSLookup (IO a) where
 
 -- | Lookup a whole path at once. More efficient for long paths.
 --   @x `lookupPath` ["a", "b"]@ is equivalent to @x.a.b@.
-{-# NOINLINE lookupPath #-}
 lookupPath :: JSObj -> [JSString] -> IO JSObj
 lookupPath = ffi "(function(o,as){\
                  \  for(var i in as){\
@@ -42,7 +43,6 @@ lookupPath = ffi "(function(o,as){\
                  \  }\
                  \  return o;})"
 
-{-# NOINLINE look #-}
 look :: JSAny -> JSString -> IO (Maybe JSAny)
 look = ffi "(function(o,s){return o[s] === undefined ? null : o[s];})"
 
@@ -50,21 +50,18 @@ look = ffi "(function(o,s){return o[s] === undefined ? null : o[s];})"
 asString :: JSObj -> IO (Maybe JSString)
 asString = maybe (return Nothing) go
   where
-    {-# NOINLINE go #-}
     go = ffi "(function(o){return String(o);})"
 
 -- | Convert the object to a 'Bool'.
 asBool :: JSObj -> IO (Maybe Bool)
 asBool = maybe (return Nothing) go
   where
-    {-# NOINLINE go #-}
     go = ffi "(function(o){return Boolean(o);})"
 
 -- | Convert the object to a 'Double'.
 asNumber :: JSObj -> IO (Maybe Double)
 asNumber = maybe (return Nothing) go
   where
-    {-# NOINLINE go #-}
     go = ffi "(function(o){return Number(o);})"
 
 -- | Get the type of a JS object.
@@ -85,18 +82,34 @@ typeOf = maybe (return TUndefined) go
 
 -- | Update a property on an object. Raise an error if object is null or not
 --   an object type.
-update :: Unpack a => JSObj -> JSString -> a -> IO ()
-update o i x = do
+update :: ToAny a => JSObj -> JSString -> a -> Build ()
+update o i x = Build $ update' o i x
+
+-- | Update a property on an object. Raise an error if object is null or not
+--   an object type.
+update' :: ToAny a => JSObj -> JSString -> a -> IO ()
+update' o i x = do
     t <- typeOf o
     case t of
-      TObject   -> go o i (unpack x)
-      TFunction -> go o i (unpack x)
+      TObject   -> go o i (toAny x)
+      TFunction -> go o i (toAny x)
       _         -> error "Tried to update non-object!"
   where
-    {-# NOINLINE go #-}
-    go :: JSObj -> JSString -> Unpacked -> IO ()
+    go :: JSObj -> JSString -> JSAny -> IO ()
     go = ffi "(function(o,i,x){o[i]=x;})"
 
--- | Create a new JS object.
+-- | Create a new, empty JS object.
 newObj :: IO JSObj
 newObj = ffi "(function(){return {};})"
+
+-- | Create a new JS object.
+{-# NOINLINE mkObj #-}
+mkObj :: (JSObj -> Build ()) -> JSObj
+mkObj f = unsafePerformIO $ do
+  o <- newObj
+  unBuild $ f o
+  return o
+
+-- | JS object builder monad. Essentially just prevents random IO.
+newtype Build a = Build {unBuild :: IO a}
+  deriving (Functor, Applicative, Monad)

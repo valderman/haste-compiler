@@ -40,6 +40,7 @@ Data-Files:
     floatdecode.js
     jsflow.js
     jsstring.js
+    Foreign.js
 
 Flag portable
     Description:
@@ -276,6 +277,7 @@ Library
         Haste.Serialize
         Haste.WebSockets
     Other-Modules:
+        Haste.Any
         Haste.App.Client
         Haste.App.Monad
         Haste.App.Protocol
@@ -304,6 +306,7 @@ Library
         monads-tf,
         containers,
         base < 5,
+        ghc-prim,
         random,
         binary,
         data-binary-ieee754,

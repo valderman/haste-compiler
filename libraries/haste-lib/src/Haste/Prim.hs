@@ -1,21 +1,22 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
     TypeSynonymInstances, FlexibleInstances, OverlappingInstances, CPP #-}
-module Haste.Prim (JSString, URL, toJSStr, fromJSStr, catJSStr, JSAny,
+module Haste.Prim (JSString (..), URL, toJSStr, fromJSStr, catJSStr, JSAny,
                    Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
 import Data.String
 #ifdef __HASTE__
 import Unsafe.Coerce
 import GHC.CString
-import GHC.Prim
 import qualified GHC.HastePrim as HP
 #else
 import Data.List (intercalate)
 #endif
+import GHC.Prim
 
 type URL = String
-type JSAny = Ptr Haste.Prim.Any
-data Any
+
+-- | Any JS value, with one layer of indirection.
+type JSAny = Ptr Any
 
 -- | Concatenate a series of JSStrings using the specified separator.
 catJSStr :: JSString -> [JSString] -> JSString
@@ -33,8 +34,8 @@ foreign import ccall strOrd :: JSString -> JSString -> Ptr Ordering
 -- | "Pointers" need to be wrapped in a data constructor.
 data FakePtr a = FakePtr a
 
-type JSString = Ptr JSChr
-data JSChr
+-- | Native JavaScript strings.
+newtype JSString = JSString JSAny
 
 instance Eq JSString where
   (==) = strEq
@@ -59,15 +60,19 @@ fromPtr ptr =
 
 {-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
 {-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
-{-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) = toPtr (unsafeCoerce# s) #-}
-{-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) = toPtr (unsafeCoerce# s) #-}
+{-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) =
+                                     JSString (toPtr (unsafeCoerce# s)) #-}
+{-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) =
+                                       JSString (toPtr (unsafeCoerce# s)) #-}
 
+-- | Convert a 'String' to a 'JSString'.
 toJSStr :: String -> JSString
 toJSStr = unsafeCoerce# HP.toJSStr
 
 instance IsString JSString where
   fromString = toJSStr
 
+-- | Convert a 'JSString' to a 'String'.
 fromJSStr :: JSString -> String
 fromJSStr = unsafeCoerce# HP.fromJSStr
 

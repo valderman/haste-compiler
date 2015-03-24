@@ -17,7 +17,8 @@ stdJSLibs :: [FilePath]
 stdJSLibs = map (jsDir </>)  [
     "rts.js", "floatdecode.js", "stdlib.js", "jsstring.js", "endian.js",
     "MVar.js", "StableName.js", "Integer.js", "Int64.js", "md5.js", "array.js",
-    "pointers.js", "cheap-unicode.js", "Canvas.js", "Handle.js", "Weak.js"
+    "pointers.js", "cheap-unicode.js", "Canvas.js", "Handle.js", "Weak.js",
+    "Foreign.js"
   ]
 
 debugLib :: FilePath
