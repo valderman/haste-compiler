@@ -1,6 +1,11 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, BangPatterns, CPP #-}
-{-# LANGUAGE TypeFamilies, FlexibleInstances, OverlappingInstances, UndecidableInstances #-}
-module Haste.Foreign (module Haste.Any, FFI, ffi, constant, export) where
+{-# LANGUAGE TypeFamilies, FlexibleInstances, OverlappingInstances,
+             UndecidableInstances #-}
+module Haste.Foreign (
+    module Haste.Any,
+    FFI, JSFunc,
+    ffi, constant, export
+  ) where
 import Haste.Prim
 import Haste.Any
 import GHC.Prim
@@ -127,6 +132,10 @@ instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
 instance JSFunc a => ToAny a where
   toAny = unsafePerformIO . createJSFunc . toAny . toOpaque . mkJSFunc
 
+instance FFI a => FromAny a where
+  fromAny f = __ffi f []
+
+-- | Create a JS function that applies a Haskell function to its arguments.
 createJSFunc :: JSAny -> IO JSAny
 createJSFunc =
   ffi "(function(f){return (function(){\
