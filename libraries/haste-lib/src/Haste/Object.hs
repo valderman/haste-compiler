@@ -1,14 +1,12 @@
-{-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances,
-             MagicHash, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, TypeSynonymInstances,
+             FlexibleInstances, MagicHash, GeneralizedNewtypeDeriving, CPP #-}
 -- | Dealing with JavaScript objects on a low, low level.
 module Haste.Object (
-    JSObj, Type (..), Build,
-    (#), asString, asBool, asNumber, typeOf, update, newObj, lookupPath, mkObj
+    JSObj, Type (..),
+    (#), asString, asBool, asNumber, typeOf, lookupPath, mkObj
   ) where
 import Haste.Prim
 import Haste.Foreign
-import Control.Applicative
-import System.IO.Unsafe
 
 -- | A JS object: either null/undefined or 'Just' an actual value.
 type JSObj = Maybe JSAny
@@ -37,11 +35,11 @@ instance JSLookup a => JSLookup (IO a) where
 --   @x `lookupPath` ["a", "b"]@ is equivalent to @x.a.b@.
 lookupPath :: JSObj -> [JSString] -> IO JSObj
 lookupPath = ffi "(function(o,as){\
-                 \  for(var i in as){\
-                 \    o = o[as[i]];\
-                 \    if(typeof o==='undefined'){return null;}\
-                 \  }\
-                 \  return o;})"
+                   for(var i in as){\
+                     o = o[as[i]];\
+                     if(typeof o==='undefined'){return null;}\
+                   }\
+                   return o;})"
 
 look :: JSAny -> JSString -> IO (Maybe JSAny)
 look = ffi "(function(o,s){return o[s] === undefined ? null : o[s];})"
@@ -68,48 +66,13 @@ asNumber = maybe (return Nothing) go
 typeOf :: JSObj -> IO Type
 typeOf = maybe (return TUndefined) go
   where
-    {-# NOINLINE go #-}
     go = ffi "(function(o){\
-             \  switch(typeof o){\
-             \    case 'undefined': return 0;\
-             \    case 'number':    return 1;\
-             \    case 'boolean':   return 2;\
-             \    case 'string':    return 3;\
-             \    case 'function':  return 4;\
-             \    default:          return 5;\
-             \  }\
-             \})"
-
--- | Update a property on an object. Raise an error if object is null or not
---   an object type.
-update :: ToAny a => JSObj -> JSString -> a -> Build ()
-update o i x = Build $ update' o i x
-
--- | Update a property on an object. Raise an error if object is null or not
---   an object type.
-update' :: ToAny a => JSObj -> JSString -> a -> IO ()
-update' o i x = do
-    t <- typeOf o
-    case t of
-      TObject   -> go o i (toAny x)
-      TFunction -> go o i (toAny x)
-      _         -> error "Tried to update non-object!"
-  where
-    go :: JSObj -> JSString -> JSAny -> IO ()
-    go = ffi "(function(o,i,x){o[i]=x;})"
-
--- | Create a new, empty JS object.
-newObj :: IO JSObj
-newObj = ffi "(function(){return {};})"
-
--- | Create a new JS object.
-{-# NOINLINE mkObj #-}
-mkObj :: (JSObj -> Build ()) -> JSObj
-mkObj f = unsafePerformIO $ do
-  o <- newObj
-  unBuild $ f o
-  return o
-
--- | JS object builder monad. Essentially just prevents random IO.
-newtype Build a = Build {unBuild :: IO a}
-  deriving (Functor, Applicative, Monad)
+               switch(typeof o){\
+                 case 'undefined': return 0;\
+                 case 'number':    return 1;\
+                 case 'boolean':   return 2;\
+                 case 'string':    return 3;\
+                 case 'function':  return 4;\
+                 default:          return 5;\
+               }\
+             })"

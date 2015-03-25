@@ -15,9 +15,7 @@ import Haste.Prim
 import Data.String as S
 #ifndef __HASTE__
 import Control.Applicative
-import Data.Char (ord)
 import Haste.Parsing
-import Numeric (showHex)
 #else
 import System.IO.Unsafe
 import Haste.Foreign
@@ -42,7 +40,7 @@ toObject j = error $ "Call to toObject in non-browser: " ++ show j
 -- Remember to update jsParseJSON if this data type changes!
 data JSON
   = Num  {-# UNPACK #-} !Double
-  | Str  {-# UNPACK #-} !JSString
+  | Str  !JSString
   | Bool !Bool
   | Arr  ![JSON]
   | Dict ![(JSString, JSON)]
@@ -94,8 +92,6 @@ jsStringify = toJSStr . ('"' :) . unq . fromJSStr
       | c == '\\'          = "\\\\" ++ unq cs
       | otherwise          = c : unq cs
     unq _          = ['"']
-
-    unicodeChar c str = c : str
 #endif
 
 -- | Look up a JSON object from a JSON dictionary. Panics if the dictionary

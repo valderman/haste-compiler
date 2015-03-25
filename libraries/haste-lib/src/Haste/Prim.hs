@@ -18,13 +18,19 @@ type URL = String
 -- | Any JS value, with one layer of indirection.
 type JSAny = Ptr Any
 
+instance Eq JSAny where
+  (==) = __eq
+
 -- | Concatenate a series of JSStrings using the specified separator.
 catJSStr :: JSString -> [JSString] -> JSString
 #ifdef __HASTE__
-foreign import ccall jsCat    :: Ptr [JSString] -> JSString -> JSString
+foreign import ccall jsCat :: Ptr [JSString] -> JSString -> JSString
+foreign import ccall __eq  :: JSAny -> JSAny -> Bool
 catJSStr sep strs = jsCat (toPtr strs) sep
 #else
 catJSStr sep strs = toJSStr $ intercalate (fromJSStr sep) (map fromJSStr strs)
+__eq :: JSAny -> JSAny -> Bool
+__eq _ _ = undefined
 #endif
 
 #ifdef __HASTE__

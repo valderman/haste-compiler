@@ -68,10 +68,11 @@ newtype BlobData = BlobData BS.ByteString
 newtype Blob = Blob BS.ByteString
 
 -- Never used except for type checking
-instance ToAny BlobData
-instance FromAny BlobData
-instance ToAny Blob
-instance FromAny Blob
+clientOnly = error "ToAny/FromAny only usable client-side!"
+instance ToAny BlobData where toAny = clientOnly
+instance FromAny BlobData where fromAny = clientOnly
+instance ToAny Blob where toAny = clientOnly
+instance FromAny Blob where fromAny = clientOnly
 
 -- | The size, in bytes, of the contents of the given blob.
 blobSize :: Blob -> Int
