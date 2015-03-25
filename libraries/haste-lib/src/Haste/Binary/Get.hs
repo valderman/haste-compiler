@@ -10,17 +10,18 @@ module Haste.Binary.Get (
 import Data.Int
 import Data.Word
 import Haste.Prim
-import Haste.Foreign
 import Haste.Binary.Types
 import Control.Applicative
 import Control.Monad
 import System.IO.Unsafe
-#ifndef __HASTE__
+#ifdef __HASTE__
+import Haste.Foreign
+#else
+import qualified Control.Exception as Ex
 import Data.Char (chr)
 import qualified Data.Binary as B
 import qualified Data.Binary.IEEE754 as BI
 import qualified Data.Binary.Get as BG
-import qualified Control.Exception as Ex
 #endif
 
 #ifdef __HASTE__

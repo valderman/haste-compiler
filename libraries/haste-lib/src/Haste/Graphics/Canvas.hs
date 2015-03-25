@@ -31,10 +31,12 @@ import Control.Monad.IO.Class
 import Data.Maybe (fromJust)
 import System.IO.Unsafe
 import Haste
-import Haste.Prim (JSString (..))
 import qualified Haste.DOM.JSString as J
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
 import Haste.Foreign (ToAny (..), FromAny (..))
+#ifdef __HASTE__
+import Haste.Prim (JSString (..))
+#endif
 
 #ifdef __HASTE__
 foreign import ccall jsHasCtx2D :: Elem -> IO Bool

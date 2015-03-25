@@ -19,7 +19,7 @@ Flag haste-inst {
 
 Library
     Hs-Source-Dirs: src
-    GHC-Options: -Wall -O2
+    GHC-Options: -Wall -Werror -O2
     Exposed-Modules:
         Haste
         Haste.Ajax

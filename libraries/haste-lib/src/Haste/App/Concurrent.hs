@@ -1,4 +1,5 @@
 {-# LANGUAGE EmptyDataDecls #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Wraps Haste.Concurrent to work with Haste.App.
 --   Task switching happens whenever a thread is blocked in an MVar, so things
 --   like polling an IORef in a loop will starve all other threads.

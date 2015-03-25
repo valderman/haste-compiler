@@ -23,6 +23,10 @@ instance Monad Parse where
     (s', x) <- m s
     unP (f x) s'
 
+instance Alternative Parse where
+  empty = mzero
+  (<|>) = mplus
+
 instance MonadPlus Parse where
   mplus (Parse p1) (Parse p2) = Parse $ \s ->
     case p1 s of

@@ -10,6 +10,7 @@ import Control.Monad.Cont.Class
 import Control.Monad
 import Control.Applicative
 import Data.IORef
+import Haste.Events.Core (MonadEvent (..))
 
 -- | Any monad which supports concurrency.
 class Monad m => MonadConc m where
@@ -19,6 +20,9 @@ class Monad m => MonadConc m where
 instance MonadConc CIO where
   liftConc = id
   fork = forkIO
+
+instance MonadEvent CIO where
+  mkHandler = return . fmap concurrent
 
 -- | Embed concurrent computations into non-concurrent ones.
 class ToConcurrent a where

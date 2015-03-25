@@ -42,16 +42,27 @@ foreign import ccall jsElemsByClassName :: JSString -> IO (Ptr [Elem])
 foreign import ccall jsCreateElem :: JSString -> IO Elem
 foreign import ccall jsCreateTextNode :: JSString -> IO Elem
 #else
+jsGet :: Elem -> JSString -> IO JSString
 jsGet = error "Tried to use jsGet on server side!"
+jsSet :: Elem -> JSString -> JSString -> IO ()
 jsSet = error "Tried to use jsSet on server side!"
+jsGetAttr :: Elem -> JSString -> IO JSString
 jsGetAttr = error "Tried to use jsGetAttr on server side!"
+jsSetAttr :: Elem -> JSString -> JSString -> IO ()
 jsSetAttr = error "Tried to use jsSetAttr on server side!"
+jsGetStyle :: Elem -> JSString -> IO JSString
 jsGetStyle = error "Tried to use jsGetStyle on server side!"
+jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 jsSetStyle = error "Tried to use jsSetStyle on server side!"
+jsFind :: JSString -> IO (Ptr (Maybe Elem))
 jsFind = error "Tried to use jsFind on server side!"
-jsElemsByClassName = error "Tried to use jsElemsByClassName on server side!"
+jsQuerySelectorAll :: Elem -> JSString -> IO (Ptr [Elem])
 jsQuerySelectorAll = error "Tried to use jsQuerySelectorAll on server side!"
+jsElemsByClassName :: JSString -> IO (Ptr [Elem])
+jsElemsByClassName = error "Tried to use jsElemsByClassName on server side!"
+jsCreateElem :: JSString -> IO Elem
 jsCreateElem = error "Tried to use jsCreateElem on server side!"
+jsCreateTextNode :: JSString -> IO Elem
 jsCreateTextNode = error "Tried to use jsCreateTextNode on server side!"
 #endif
 

@@ -5,11 +5,10 @@ import Control.Monad.IO.Class
 import Haste.Foreign
 import Haste.Events.Core
 
+type Identifier = Int
+
 -- | Timer handle.
-data Timer = Timer {
-    timerIdentifier :: !Int,
-    timerInterval   :: !Interval
-  }
+data Timer = Timer !Identifier !Interval
 
 -- | Interval and repeat for timers.
 data Interval
@@ -28,11 +27,9 @@ setTimer i f = do
         Once n   -> timeout n (f' ())
         Repeat n -> interval n (f' ())
   where
-    {-# NOINLINE timeout #-}
     timeout :: Int -> IO () -> IO Int
     timeout = ffi "(function(t,f){window.setTimeout(f,t);})"
 
-    {-# NOINLINE interval #-}
     interval :: Int -> IO () -> IO Int
     interval = ffi "(function(t,f){window.setInterval(f,t);})"
 
@@ -40,11 +37,9 @@ setTimer i f = do
 stopTimer :: MonadIO m => Timer -> m ()
 stopTimer (Timer ident (Once _)) = liftIO $ go ident
   where
-    {-# NOINLINE go #-}
     go :: Int -> IO ()
     go = ffi "(function(id){window.clearTimeout(id);})"
 stopTimer (Timer ident (Repeat _)) = liftIO $ go ident
   where
-    {-# NOINLINE go #-}
     go :: Int -> IO ()
     go = ffi "(function(id){window.clearInterval(id);})"

@@ -1,6 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, BangPatterns, CPP #-}
 {-# LANGUAGE TypeFamilies, FlexibleInstances, OverlappingInstances,
              UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+-- | High level interface for interfacing with JavaScript.
 module Haste.Foreign (
     module Haste.Any,
     FFI, JSFunc,
@@ -8,16 +10,10 @@ module Haste.Foreign (
   ) where
 import Haste.Prim
 import Haste.Any
-import GHC.Prim
-import Unsafe.Coerce
 import System.IO.Unsafe
-import Data.String
 
 -- | A JS function.
 type JSFun = JSAny
-
--- | A JS array.
-type JSArr = JSAny
 
 #ifdef __HASTE__
 foreign import ccall "eval" __eval :: JSString -> JSFun
@@ -31,7 +27,6 @@ foreign import ccall __app4  :: JSFun
 foreign import ccall __app5  :: JSFun
                              -> JSAny -> JSAny -> JSAny -> JSAny -> JSAny
                              -> IO JSAny
-foreign import ccall "A" hasteApply :: JSAny -> JSArr -> JSAny
 #else
 __eval :: JSString -> JSFun
 __eval _ = undefined
@@ -49,8 +44,6 @@ __app4  :: JSFun -> JSAny -> JSAny -> JSAny -> JSAny -> IO JSAny
 __app4 _ _ _ _ _ = return undefined
 __app5  :: JSFun -> JSAny -> JSAny -> JSAny -> JSAny -> JSAny -> IO JSAny
 __app5 _ _ _ _ _ _ = return undefined
-hasteApply :: JSAny -> JSArr -> JSAny
-hasteApply _ _ = undefined
 #endif
 
 -- | Any type that can be imported from JavaScript. This means any type which

@@ -68,6 +68,7 @@ newtype BlobData = BlobData BS.ByteString
 newtype Blob = Blob BS.ByteString
 
 -- Never used except for type checking
+clientOnly :: a
 clientOnly = error "ToAny/FromAny only usable client-side!"
 instance ToAny BlobData where toAny = clientOnly
 instance FromAny BlobData where fromAny = clientOnly

@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE CPP, GeneralizedNewtypeDeriving, PatternGuards #-}
 -- | Haste.App startup monad and configuration.
 module Haste.App.Monad (
     Remotable,
@@ -11,7 +11,6 @@ import Control.Applicative
 import Control.Monad (ap)
 import Control.Monad.IO.Class
 import Haste.Binary
-import Haste.Binary.Types
 import qualified Data.Map as M
 import qualified Data.Set as S
 import Haste.App.Protocol
@@ -23,13 +22,12 @@ import System.IO.Unsafe
 #ifndef __HASTE__
 import Haste.Binary.Types
 import Control.Concurrent (forkIO)
-import Haste.Prim (toJSStr, fromJSStr)
 import Network.WebSockets as WS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.UTF8 as BU
 import Control.Exception
-import System.Random
+import System.Random hiding (next)
 import Data.List (foldl')
 import Data.String
 #endif
@@ -104,8 +102,6 @@ instance Applicative App where
 --   used server-side.
 liftServerIO :: IO a -> App (Server a)
 #ifdef __HASTE__
-{-# RULES "throw away liftServerIO"
-          forall x. liftServerIO x = return Server #-}
 liftServerIO _ = return Server
 #else
 liftServerIO m = App $ \cfg _ cid exports -> do
@@ -122,8 +118,6 @@ liftServerIO m = App $ \cfg _ cid exports -> do
 --   expected.
 forkServerIO :: Server () -> App (Server ThreadId)
 #ifdef __HASTE__
-{-# RULES "throw away forkServerIO"
-          forall x. forkServerIO x = return Server #-}
 forkServerIO _ = return Server
 #else
 forkServerIO (Server m) = App $ \cfg sessions cid exports -> do
@@ -149,7 +143,7 @@ instance (Binary a, Remotable b) => Remotable (a -> b) where
 #else
   serializify f (x:xs) = serializify (f $! fromEither $ decode (toBD x)) xs
     where
-      toBD (Blob x) = BlobData x
+      toBD (Blob x') = BlobData x'
       fromEither (Right val) = val
       fromEither (Left e)    = error $ "Unable to deserialize data: " ++ e
   serializify _ _      = error "The impossible happened in serializify!"
@@ -158,9 +152,6 @@ instance (Binary a, Remotable b) => Remotable (a -> b) where
 -- | Make a function available to the client as an API call.
 remote :: Remotable a => a -> App (Remote a)
 #ifdef __HASTE__
-{-# RULES "throw away remote's argument"
-          forall x. remote x =
-            App $ \c _ cid _ -> return (Remote cid [], cid+1, undefined, c) #-}
 remote _ = App $ \c _ cid _ ->
     return (Remote cid [], cid+1, undefined, c)
 #else
@@ -173,8 +164,6 @@ remote s = App $ \c _ cid exports ->
 --   the order they were registered.
 onSessionEnd :: (SessionID -> Server ()) -> App ()
 #ifdef __HASTE__
-{-# RULES "throw away onSessionEnd argument"
-          forall x. onSessionEnd x = return () #-}
 onSessionEnd _ = return ()
 #else
 onSessionEnd s = App $ \cfg _ cid exports -> return $
@@ -233,7 +222,7 @@ serverEventLoop cfg sessions exports = do
       where
         go = do
           msg <- receiveData c
-          forkIO $ do
+          _ <- forkIO $ do
             case decode (BlobData msg) of
               Right (ServerCall nonce method args)
                 | Just m <- M.lookup method exports -> do

@@ -9,17 +9,17 @@ module Haste.Binary.Put (
   ) where
 import Data.Int
 import Data.Word
-import Data.Char
 import Haste.Prim
-import Haste.Foreign
 import Haste.Binary.Types
 import Control.Applicative
+#ifdef __HASTE__
 import Control.Monad
+import Haste.Foreign
 import System.IO.Unsafe
-#ifndef __HASTE__
+#else
+import Data.Char (ord)
 import qualified Data.Binary as B
 import qualified Data.Binary.IEEE754 as BI
-import qualified Data.Binary.Put as BP
 import qualified Data.Binary.Put as BP
 #endif
 

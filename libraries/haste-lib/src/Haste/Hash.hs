@@ -7,8 +7,6 @@ import Haste.Foreign
 import Control.Monad.IO.Class
 import Haste.Prim
 
-newtype HashCallback = HashCallback (JSString -> JSString -> IO ())
-
 -- | Register a callback to be run whenever the URL hash changes.
 --   The two arguments of the callback are the new and old hash respectively.
 onHashChange :: MonadIO m

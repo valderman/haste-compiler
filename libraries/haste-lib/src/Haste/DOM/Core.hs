@@ -30,18 +30,30 @@ foreign import ccall jsGetChildBefore :: Elem -> IO (Ptr (Maybe Elem))
 foreign import ccall jsKillChild :: Elem -> Elem -> IO ()
 foreign import ccall jsClearChildren :: Elem -> IO ()
 #else
-jsAppendChild = error "Tried to use jsAppendChild on server side!"
-jsGetFirstChild = error "Tried to use jsGetFirstChild on server side!"
-jsGetLastChild = error "Tried to use jsGetLastChild on server side!"
-jsGetChildren = error "Tried to use jsGetChildren on server side!"
-jsSetChildren = error "Tried to use jsSetChildren on server side!"
-jsAddChildBefore = error "Tried to use jsAddChildBefore on server side!"
-jsGetChildBefore = error "Tried to use jsGetChildBefore on server side!"
-jsKillChild = error "Tried to use jsKillChild on server side!"
-jsClearChildren = error "Tried to use jsClearChildren on server side!"
+jsSet :: Elem -> JSString -> JSString -> IO ()
 jsSet = error "Tried to use jsSet on server side!"
+jsSetAttr :: Elem -> JSString -> JSString -> IO ()
 jsSetAttr = error "Tried to use jsSetAttr on server side!"
+jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 jsSetStyle = error "Tried to use jsSetStyle on server side!"
+jsAppendChild :: Elem -> Elem -> IO ()
+jsAppendChild = error "Tried to use jsAppendChild on server side!"
+jsGetFirstChild :: Elem -> IO (Ptr (Maybe Elem))
+jsGetFirstChild = error "Tried to use jsGetFirstChild on server side!"
+jsGetLastChild :: Elem -> IO (Ptr (Maybe Elem))
+jsGetLastChild = error "Tried to use jsGetLastChild on server side!"
+jsGetChildren :: Elem -> IO (Ptr [Elem])
+jsGetChildren = error "Tried to use jsGetChildren on server side!"
+jsSetChildren :: Elem -> Ptr [Elem] -> IO ()
+jsSetChildren = error "Tried to use jsSetChildren on server side!"
+jsAddChildBefore :: Elem -> Elem -> Elem -> IO ()
+jsAddChildBefore = error "Tried to use jsAddChildBefore on server side!"
+jsGetChildBefore :: Elem -> IO (Ptr (Maybe Elem))
+jsGetChildBefore = error "Tried to use jsGetChildBefore on server side!"
+jsKillChild :: Elem -> Elem -> IO ()
+jsKillChild = error "Tried to use jsKillChild on server side!"
+jsClearChildren :: Elem -> IO ()
+jsClearChildren = error "Tried to use jsClearChildren on server side!"
 #endif
 
 -- | A DOM node.

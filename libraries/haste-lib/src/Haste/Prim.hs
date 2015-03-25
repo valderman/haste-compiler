@@ -1,5 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
     TypeSynonymInstances, FlexibleInstances, OverlappingInstances, CPP #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Haste.Prim (JSString (..), URL, toJSStr, fromJSStr, catJSStr, JSAny,
                    Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
@@ -72,6 +73,7 @@ fromPtr ptr =
                                        JSString (toPtr (unsafeCoerce# s)) #-}
 
 -- | Convert a 'String' to a 'JSString'.
+{-# NOINLINE [1] toJSStr #-}
 toJSStr :: String -> JSString
 toJSStr = unsafeCoerce# HP.toJSStr
 
@@ -79,6 +81,7 @@ instance IsString JSString where
   fromString = toJSStr
 
 -- | Convert a 'JSString' to a 'String'.
+{-# NOINLINE [1] fromJSStr #-}
 fromJSStr :: JSString -> String
 fromJSStr = unsafeCoerce# HP.fromJSStr
 
