@@ -6,12 +6,8 @@ module Haste.Hash (
 import Haste.Foreign
 import Control.Monad.IO.Class
 import Haste.Prim
-import Unsafe.Coerce
 
 newtype HashCallback = HashCallback (JSString -> JSString -> IO ())
-
-instance ToAny HashCallback where
-  toAny = unsafeCoerce
 
 -- | Register a callback to be run whenever the URL hash changes.
 --   The two arguments of the callback are the new and old hash respectively.
@@ -20,7 +16,7 @@ onHashChange :: MonadIO m
              -> m ()
 onHashChange f = do
     firsthash <- getHash'
-    liftIO $ jsOnHashChange firsthash (HashCallback cb)
+    liftIO $ jsOnHashChange firsthash cb
   where
     cb = \old new -> f (fromJSStr old) (fromJSStr new)
 
@@ -30,10 +26,10 @@ onHashChange' :: MonadIO m
               -> m ()
 onHashChange' f = do
     firsthash <- getHash'
-    liftIO $ jsOnHashChange firsthash (HashCallback f)
+    liftIO $ jsOnHashChange firsthash f
 
 {-# NOINLINE jsOnHashChange #-}
-jsOnHashChange :: JSString -> HashCallback -> IO ()
+jsOnHashChange :: JSString -> (JSString -> JSString -> IO ()) -> IO ()
 jsOnHashChange =
   ffi "(function(firsthash,cb){\
           \window.__old_hash = firsthash;\
@@ -41,7 +37,7 @@ jsOnHashChange =
             \var oldhash = window.__old_hash;\
             \var newhash = window.location.hash.split('#')[1] || '';\
             \window.__old_hash = newhash;\
-            \B(A(cb, [[0,oldhash],[0,newhash],0]));\
+            \cb(oldhash,newhash);\
           \};\
        \})"
 

@@ -43,24 +43,24 @@ instance MonadBlob CIO where
 #ifdef __HASTE__
   getBlobData b = do
       res <- newEmptyMVar
-      liftIO $ convertBlob b (toOpaque $ mkBlobData res (blobSize b))
+      liftIO $ convertBlob b (mkBlobData res (blobSize b))
       takeMVar res
     where
       mkBlobData res len x = concurrent $ do
         putMVar res (BlobData 0 len x)
 
-      convertBlob :: Blob -> Opaque (JSAny -> IO ()) -> IO ()
+      convertBlob :: Blob -> (JSAny -> IO ()) -> IO ()
       convertBlob = ffi
-        "(function(b,cb){var r=new FileReader();r.onload=function(){B(A(cb,[new DataView(r.result),0]));};r.readAsArrayBuffer(b);})"
+        "(function(b,cb){var r=new FileReader();r.onload=function(){cb(new DataView(r.result));};r.readAsArrayBuffer(b);})"
 
   getBlobText' b = do
       res <- newEmptyMVar
-      liftIO $ convertBlob b (toOpaque $ concurrent . putMVar res)
+      liftIO $ convertBlob b (concurrent . putMVar res)
       takeMVar res
     where
-      convertBlob :: Blob -> Opaque (JSString -> IO ()) -> IO ()
+      convertBlob :: Blob -> (JSString -> IO ()) -> IO ()
       convertBlob = ffi
-        "(function(b,cb){var r=new FileReader();r.onload=function(){B(A(cb,[[0,r.result],0]));};r.readAsText(b);})"
+        "(function(b,cb){var r=new FileReader();r.onload=function(){cb(r.result);};r.readAsText(b);})"
 #else
   getBlobData (Blob b) = return (BlobData b)
   getBlobText' (Blob b) = return . toJSStr $ BS.unpack b

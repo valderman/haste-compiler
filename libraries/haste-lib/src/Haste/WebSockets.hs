@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, EmptyDataDecls, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving#-}
 -- | WebSockets API for Haste.
 module Haste.WebSockets (
     module Haste.Concurrent,
@@ -9,35 +9,8 @@ import Haste
 import Haste.Foreign
 import Haste.Concurrent
 import Haste.Binary (Blob)
-import Unsafe.Coerce
 
-newtype WSOnMsg = WSOnMsg (WebSocket -> JSString -> IO ())
-newtype WSOnBinMsg = WSOnBinMsg (WebSocket -> Blob -> IO ())
-newtype WSComputation = WSComputation (WebSocket -> IO ())
-newtype WSOnError = WSOnError (IO ())
-data WebSocket
-
-instance FromAny WebSocket where
-  fromAny = unsafeCoerce
-instance FromAny WSOnMsg where
-  fromAny = unsafeCoerce
-instance FromAny WSOnBinMsg where
-  fromAny = unsafeCoerce
-instance FromAny WSComputation where
-  fromAny = unsafeCoerce
-instance FromAny WSOnError where
-  fromAny = unsafeCoerce
-
-instance ToAny WebSocket where
-  toAny = unsafeCoerce
-instance ToAny WSOnMsg where
-  toAny = unsafeCoerce
-instance ToAny WSOnBinMsg where
-  toAny = unsafeCoerce
-instance ToAny WSComputation where
-  toAny = unsafeCoerce
-instance ToAny WSOnError where
-  toAny = unsafeCoerce
+newtype WebSocket = WebSocket JSAny deriving (ToAny, FromAny)
 
 -- | Run a computation with a web socket. The computation will not be executed
 --   until a connection to the server has been established.
@@ -52,11 +25,11 @@ withWebSocket :: URL
               -> CIO a
 withWebSocket url cb err f = do
     result <- newEmptyMVar
-    let f' = WSComputation $ \ws -> concurrent $ f ws >>= putMVar result
-    liftIO $ new url cb' f' $ WSOnError $ concurrent $ err >>= putMVar result
+    let f' = \ws -> concurrent $ f ws >>= putMVar result
+    liftIO $ new url cb' f' $ concurrent $ err >>= putMVar result
     takeMVar result
   where
-    cb' = WSOnMsg $ \ws msg -> concurrent $ cb ws msg
+    cb' = \ws msg -> concurrent $ cb ws msg
 
 -- | Run a computation with a web socket. The computation will not be executed
 --   until a connection to the server has been established.
@@ -71,36 +44,36 @@ withBinaryWebSocket :: URL
               -> CIO a
 withBinaryWebSocket url cb err f = do
     result <- newEmptyMVar
-    let f' = WSComputation $ \ws -> concurrent $ f ws >>= putMVar result
-    liftIO $ newBin url cb' f' $ WSOnError $ concurrent $ err >>= putMVar result
+    let f' = \ws -> concurrent $ f ws >>= putMVar result
+    liftIO $ newBin url cb' f' $ concurrent $ err >>= putMVar result
     takeMVar result
   where
-    cb' = WSOnBinMsg $ \ws msg -> concurrent $ cb ws msg
+    cb' = \ws msg -> concurrent $ cb ws msg
 
 new :: URL
-    -> WSOnMsg
-    -> WSComputation
-    -> WSOnError
+    -> (WebSocket -> JSString -> IO ())
+    -> (WebSocket -> IO ())
+    -> IO ()
     -> IO ()
 new = ffi "(function(url, cb, f, err) {\
              \var ws = new WebSocket(url);\
-             \ws.onmessage = function(e) {B(A(cb,[ws, [0,e.data],0]));};\
-             \ws.onopen = function(e) {B(A(f,[ws,0]));};\
-             \ws.onerror = function(e) {B(A(err,[0]));};\
+             \ws.onmessage = function(e) {cb(ws,e.data);};\
+             \ws.onopen = function(e) {f(ws);};\
+             \ws.onerror = function(e) {err());};\
              \return ws;\
            \})" 
 
 newBin :: URL
-    -> WSOnBinMsg
-    -> WSComputation
-    -> WSOnError
-    -> IO ()
+       -> (WebSocket -> Blob -> IO ())
+       -> (WebSocket -> IO ())
+       -> IO ()
+       -> IO ()
 newBin = ffi "(function(url, cb, f, err) {\
                 \var ws = new WebSocket(url);\
                 \ws.binaryType = 'blob';\
-                \ws.onmessage = function(e) {B(A(cb,[ws,e.data,0]));};\
-                \ws.onopen = function(e) {B(A(f,[ws,0]));};\
-                \ws.onerror = function(e) {B(A(err,[0]));};\
+                \ws.onmessage = function(e) {cb(ws,e.data);};\
+                \ws.onopen = function(e) {f(ws);};\
+                \ws.onerror = function(e) {err();};\
                 \return ws;\
               \})" 
 
