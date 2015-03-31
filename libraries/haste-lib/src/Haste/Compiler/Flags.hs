@@ -1,10 +1,14 @@
 module Haste.Compiler.Flags (
-    OptLevel (..), ProgStart (..), HasteTarget (..), CompileFlags,
+    OptLevel (..), ProgStart (..), HasteTarget (..), MinifyFlag (..),
+    ClosureOpt,
+    CompileFlags,
     cfOptimize, cfDebug, cfMinify, cfFullUnicode, cfOwnNamespace, cfStart,
-    cfJSFiles, cfTarget
+    cfJSFiles, cfTarget, cfUseStrict
   ) where
 import Data.Default
 
+type ClosureOpt = String
+data MinifyFlag = DontMinify | Minify (Maybe FilePath) [ClosureOpt]
 data OptLevel = None | Basic | WholeProgram
 data ProgStart = ASAP | OnLoad | Custom String
 data HasteTarget = TargetFile FilePath | TargetString
@@ -22,7 +26,7 @@ data CompileFlags = CompileFlags {
     -- | Should the program be minified? This will strip any debug information
     --   from the resulting program.
     --   Default: False
-    cfMinify       :: Bool,
+    cfMinify       :: MinifyFlag,
     -- | Use full Unicode compatibility for Data.Char and friends?
     --   Default: False
     cfFullUnicode  :: Bool,
@@ -37,17 +41,21 @@ data CompileFlags = CompileFlags {
     cfJSFiles      :: [FilePath],
     -- | Where to place the compilation output.
     --   Default: TargetString
-    cfTarget       :: HasteTarget
+    cfTarget       :: HasteTarget,
+    -- | @'use strict';@?
+    --   Default: True
+    cfUseStrict    :: Bool
   }
 
 instance Default CompileFlags where
   def = CompileFlags {
       cfOptimize = Basic,
       cfDebug = False,
-      cfMinify = False,
+      cfMinify = DontMinify,
       cfFullUnicode = False,
       cfOwnNamespace = False,
       cfStart = OnLoad,
       cfJSFiles = [],
-      cfTarget = TargetString
+      cfTarget = TargetString,
+      cfUseStrict = True
     }

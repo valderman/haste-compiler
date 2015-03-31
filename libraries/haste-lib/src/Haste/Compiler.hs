@@ -13,7 +13,6 @@ import Haste.Compiler.Flags
 #ifndef __HASTE__
 import Control.Shell
 import Haste.Environment
-import Data.Maybe
 import Data.List (intercalate)
 #endif
 
@@ -29,25 +28,25 @@ compile :: CompileFlags -> FilePath -> HasteInput -> IO CompileResult
 compile _ _ _ = return $ Failure "Haste can only compile programs server-side."
 #else
 compile cf dir inp = do
-  res <- shell $ do
+  eresult <- shell $ do
     curdir <- pwd
     inTempDirectory $ do
-      f <- case inp of
+      fil <- case inp of
         InFile f   -> return $ if isRelative f then incdir curdir </> f else f
         InString s -> file "Main.hs" s >>= \() -> return "Main.hs"
-      (f, o, e) <- genericRun hasteBinary (f : idir curdir : mkFlags cf) ""
+      (f,_,e) <- genericRun hasteBinary (fil : idir curdir : mkFlags cf) ""
       if not f
         then do
           return $ Failure e
         else do
           case cfTarget cf of
-            TargetFile f -> do
-              return $ Success $ OutFile f
+            TargetFile tgt -> do
+              return $ Success $ OutFile tgt
             TargetString -> do
               (Success . OutString) `fmap` file "haste.out"
-  case res of
-    Right res ->
-      return res
+  case eresult of
+    Right result ->
+      return result
     Left e ->
       return $ Failure $ "Run-time failure during compilation: " ++ e
   where
@@ -56,25 +55,30 @@ compile cf dir inp = do
 
 -- | Turn flags into command line argument.
 mkFlags :: CompileFlags -> [String]
-mkFlags cf = catMaybes [
+mkFlags cf = concat [
     case cfOptimize cf of
-      None         -> Just "-O0"
-      Basic        -> Nothing
-      WholeProgram -> Just "--opt-whole-program",
+      None         -> ["-O0", "--ddisable-js-opts"]
+      Basic        -> []
+      WholeProgram -> ["--opt-whole-program"],
     case cfStart cf of
-      ASAP     -> Just "--start=asap"
-      OnLoad   -> Nothing
-      Custom s -> Just $ "--start=" ++ s,
+      ASAP     -> ["--onexec"]
+      OnLoad   -> ["--onload"]
+      Custom s -> ["--start=" ++ s],
     case cfTarget cf of
-      TargetFile fp -> Just $ "--out=" ++ fp
-      TargetString  -> Just $ "--out=haste.out",
+      TargetFile fp -> ["--out=" ++ fp]
+      TargetString  -> ["--out=haste.out"],
+    case cfMinify cf of
+      DontMinify         -> []
+      Minify (Just p) fs -> ("--opt-minify="++p) : map appendMinifyFlag fs
+      Minify _ fs        -> "--opt-minify" : map appendMinifyFlag fs,
     when cfDebug        "--debug",
-    when cfMinify       "--opt-google-closure",
     when cfFullUnicode  "--full-unicode",
     when cfOwnNamespace "--separate-namespace",
-    when (not . null . cfJSFiles) ("--with-js=" ++ jsFileList)
+    when (not . null . cfJSFiles) ("--with-js=" ++ jsFileList),
+    when (not . cfUseStrict) "--no-use-strict"
   ]
   where
+    appendMinifyFlag f = "--opt-minify-flag=" ++ f
     jsFileList = intercalate "," $ cfJSFiles cf
-    when opt arg = if opt cf then Just arg else Nothing
+    when opt arg = if opt cf then [arg] else []
 #endif

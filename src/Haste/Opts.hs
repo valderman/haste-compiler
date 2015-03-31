@@ -103,6 +103,11 @@ hasteOpts unbooted = [
            (NoArg $ \cfg -> cfg {outputHTML = True}) $
            "Write the JS output to an HTML file together with a simple " ++
            "HTML skeleton.",
+    Option "" ["own-namespace"]
+           (NoArg $ \cfg -> cfg {wrapProg = True}) $
+           "Wrap the whole program in a closure to avoid polluting the " ++
+           "global namespace. Incurs a performance hit, and makes " ++
+           "minification slightly less effective.",
     Option "" ["start"]
            (ReqArg (\start cfg -> cfg {appStart = startCustom start})
                    "CODE") $
