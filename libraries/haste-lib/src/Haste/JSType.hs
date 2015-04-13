@@ -7,8 +7,9 @@ module Haste.JSType (
   ) where
 import GHC.Int
 import GHC.Word
-import Haste.Prim (JSAny (..), JSString (..), toJSStr, fromJSStr)
+import Haste.Prim (JSString (..), toJSStr, fromJSStr)
 #ifdef __HASTE__
+import Haste.Prim (JSAny (..))
 import GHC.Prim
 import GHC.Integer.GMP.Internals
 import GHC.Types (Int (..))
