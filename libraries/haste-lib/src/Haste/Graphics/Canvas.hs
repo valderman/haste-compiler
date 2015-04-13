@@ -37,7 +37,7 @@ import qualified Haste.DOM.JSString as J
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
 import Haste.Foreign (ToAny (..), FromAny (..))
 #ifdef __HASTE__
-import Haste.Prim (JSString (..))
+import Haste.Prim (JSString (..), JSAny (..))
 #endif
 
 #ifdef __HASTE__

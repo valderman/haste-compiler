@@ -68,9 +68,9 @@ fromPtr ptr =
 {-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
 {-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
 {-# RULES "toJSS/unCSTR" forall s. toJSStr (unpackCString# s) =
-                                     JSString (toPtr (unsafeCoerce# s)) #-}
+    JSString (JSAny (toPtr (unsafeCoerce# s))) #-}
 {-# RULES "toJSS/unCSTRU8" forall s. toJSStr (unpackCStringUtf8# s) =
-                                       JSString (toPtr (unsafeCoerce# s)) #-}
+    JSString (JSAny (toPtr (unsafeCoerce# s))) #-}
 
 -- | Convert a 'String' to a 'JSString'.
 {-# NOINLINE [1] toJSStr #-}
