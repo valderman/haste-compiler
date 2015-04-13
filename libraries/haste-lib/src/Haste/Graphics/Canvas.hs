@@ -26,7 +26,9 @@ module Haste.Graphics.Canvas (
   -- Extending the library
   withContext
   ) where
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Control.Monad.IO.Class
 import Data.Maybe (fromJust)
 import System.IO.Unsafe
@@ -215,16 +217,16 @@ newtype Picture a = Picture {unP :: Ctx -> IO a}
 newtype Shape a = Shape {unS :: Ctx -> IO a}
 
 instance Functor Picture where
-	fmap f p = Picture $ \ctx ->
-		unP p ctx >>= return . f
+  fmap f p = Picture $ \ctx ->
+    unP p ctx >>= return . f
 
 instance Applicative Picture where
-	pure a = Picture $ \_ -> return a
+  pure a = Picture $ \_ -> return a
 
-	pfab <*> pa = Picture $ \ctx -> do
-		fab <- unP pfab ctx
-		a   <- unP pa   ctx
-		return (fab a)
+  pfab <*> pa = Picture $ \ctx -> do
+    fab <- unP pfab ctx
+    a   <- unP pa   ctx
+    return (fab a)
 
 instance Monad Picture where
   return x = Picture $ \_ -> return x
@@ -233,16 +235,16 @@ instance Monad Picture where
     unP (f x) ctx
 
 instance Functor Shape where
-	fmap f s = Shape $ \ctx ->
-		unS s ctx >>= return . f
+  fmap f s = Shape $ \ctx ->
+    unS s ctx >>= return . f
 
 instance Applicative Shape where
-	pure a = Shape $ \_ -> return a
+  pure a = Shape $ \_ -> return a
 
-	sfab <*> sa = Shape $ \ctx -> do
-		fab <- unS sfab ctx
-		a   <- unS sa   ctx
-		return (fab a)
+  sfab <*> sa = Shape $ \ctx -> do
+    fab <- unS sfab ctx
+    a   <- unS sa   ctx
+    return (fab a)
 
 instance Monad Shape where
   return x = Shape $ \_ -> return x

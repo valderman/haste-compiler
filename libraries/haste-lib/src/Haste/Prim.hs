@@ -1,7 +1,7 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
-    TypeSynonymInstances, FlexibleInstances, OverlappingInstances, CPP #-}
+    TypeSynonymInstances, FlexibleInstances, CPP #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Haste.Prim (JSString (..), URL, toJSStr, fromJSStr, catJSStr, JSAny,
+module Haste.Prim (JSString (..), URL, toJSStr, fromJSStr, catJSStr, JSAny (..),
                    Ptr, toPtr, fromPtr) where
 import Foreign.Ptr
 import Data.String
@@ -17,7 +17,7 @@ import GHC.Prim
 type URL = String
 
 -- | Any JS value, with one layer of indirection.
-type JSAny = Ptr Any
+newtype JSAny = JSAny (Ptr Any)
 
 instance Eq JSAny where
   (==) = __eq

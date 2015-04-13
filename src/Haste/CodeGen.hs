@@ -44,13 +44,18 @@ import Haste.Errors
 import Haste.PrimOps
 import Haste.Builtins
 
+#if __GLASGOW_HASKELL__ < 710
+modulePackageKey :: Module.Module -> PackageId
+modulePackageKey = modulePackageId
+#endif
+
 generate :: Config
          -> String
          -> ModuleName
          -> [StgBinding]
          -> J.Module
 generate cfg pkgid modname binds =
-  Module {
+  J.Module {
       modPackageId   = pkgid,
       modName        = moduleNameString modname,
       modDeps        = foldl' insDep M.empty theMod,
@@ -161,10 +166,17 @@ genEx (StgLetNoEscape _ _ bind ex) = do
   genEx ex
 genEx (StgCase ex _ _ bndr _ t alts) = do
   genCase t ex bndr alts
+  
+#if __GLASGOW_HASKELL__ < 710
+-- StgSCC is gone in 7.10, and StgTick has an argument less.
 genEx (StgSCC _ _ _ ex) = do
   genEx ex
 genEx (StgTick _ _ ex) = do
+#else
+genEx (StgTick _ ex) = do
+#endif
   genEx ex
+
 genEx (StgLam _ _) = do
   error "StgLam caught during code generation - that's impossible!"
 -- | Trace the given expression, if tracing is on.
@@ -382,7 +394,7 @@ toJSVar c thisMod v =
     myMod =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe vname)
     myPkg =
-      maybe "main" (showOutputable c . modulePackageId) (nameModule_maybe vname)
+      maybe "main" (showOutputable c . modulePackageKey) (nameModule_maybe vname)
     extern = occNameString $ nameOccName vname
     unique = show $ nameUnique vname
 

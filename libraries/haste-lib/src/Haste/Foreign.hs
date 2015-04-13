@@ -1,7 +1,9 @@
 {-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, BangPatterns, CPP #-}
-{-# LANGUAGE TypeFamilies, FlexibleInstances, OverlappingInstances,
-             UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies, FlexibleInstances, UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+#if __GLASGOW_HASKELL__ < 710
+{-# LANGUAGE OverlappingInstances #-}
+#endif
 -- | High level interface for interfacing with JavaScript.
 module Haste.Foreign (
     module Haste.Any,
@@ -122,10 +124,18 @@ instance ToAny a => JSFunc (IO a) where
 instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
   mkJSFunc f = \x -> mkJSFunc (f $! fromAny x)
 
+#if __GLASGOW_HASKELL__ < 710
 instance JSFunc a => ToAny a where
+#else
+instance {-# OVERLAPPABLE #-} JSFunc a => ToAny a where
+#endif
   toAny = unsafePerformIO . createJSFunc . toAny . toOpaque . mkJSFunc
 
+#if __GLASGOW_HASKELL__ < 710
 instance FFI a => FromAny a where
+#else
+instance {-# OVERLAPPABLE #-} FFI a => FromAny a where
+#endif
   fromAny f = __ffi f []
 
 -- | Create a JS function that applies a Haskell function to its arguments.

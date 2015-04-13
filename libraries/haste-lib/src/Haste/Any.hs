@@ -3,12 +3,11 @@
 
 -- For generic default instances
 {-# LANGUAGE TypeOperators, ScopedTypeVariables, FlexibleInstances,
-             FlexibleContexts, OverloadedStrings, DefaultSignatures,
-             OverlappingInstances #-}
+             FlexibleContexts, OverloadedStrings, DefaultSignatures #-}
 
 -- | Converting to/from JS-native data.
 module Haste.Any (
-    ToAny (..), FromAny (..), Generic, JSAny,
+    ToAny (..), FromAny (..), Generic, JSAny (..),
     Opaque, toOpaque, fromOpaque,
     nullValue, mkObj
   ) where
@@ -111,6 +110,7 @@ toOpaque = Opaque
 
 
 -- ToAny instances
+instance ToAny JSAny where toAny = unsafeCoerce
 instance ToAny (Ptr a) where toAny = unsafeCoerce
 instance ToAny JSString where toAny = unsafeCoerce
 instance ToAny Int where toAny = unsafeCoerce
@@ -178,6 +178,8 @@ fromNum x =
     x' | isNaN x'  -> error "Tried to convert non-number into a Double!"
        | otherwise -> x'
 
+instance FromAny JSAny where
+  fromAny = unsafeCoerce
 instance FromAny (Ptr a) where
   fromAny = unsafeCoerce
 instance FromAny JSString where

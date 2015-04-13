@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, CPP #-}
 -- | High-ish level bindings to the HTML5 audio tag and JS API.
 module Haste.Audio (
     module Events,
@@ -18,7 +18,9 @@ import Haste.DOM.JSString
 import Haste.Foreign
 import Haste.JSType
 import Haste.Prim
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Default

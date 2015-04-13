@@ -1,7 +1,9 @@
-{-# LANGUAGE OverloadedStrings, DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings, DeriveDataTypeable, CPP #-}
 -- | Haste.App client-server protocol.
 module Haste.App.Protocol where
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Control.Exception
 import Data.Typeable
 import Haste.Binary

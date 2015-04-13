@@ -1,4 +1,7 @@
-{-# LANGUAGE FlexibleInstances, OverlappingInstances, TupleSections #-}
+{-# LANGUAGE FlexibleInstances, TupleSections, CPP #-}
+#if __GLASGOW_HASKELL__ < 710
+{-# LANGUAGE OverlappingInstances #-}
+#endif
 -- | User interface for the JSTarget AST.
 module Data.JSTarget.Constructors where
 import Data.JSTarget.AST
@@ -21,7 +24,11 @@ instance Literal Bool where
 instance Literal [Char] where
   lit = pure . Lit . LStr
 
+#if __GLASGOW_HASKELL__ < 710
 instance Literal a => Literal [a] where
+#else
+instance {-# OVERLAPPABLE #-} Literal a => Literal [a] where
+#endif
   lit xs = Arr <$> mapM lit xs
 
 instance Literal Exp where
@@ -90,9 +97,9 @@ foldApp ex =
 -- | Introduce n new vars.
 newVars :: String -> Int -> [Var]
 newVars prefix n =
-    map newVar [1..n]
+    map newvar [1..n]
   where
-    newVar i = Internal (Name (prefix ++ show i) Nothing) ""
+    newvar i = Internal (Name (prefix ++ show i) Nothing) ""
 
 -- | Create a thunk.
 thunk :: Bool -> AST Stm -> AST Exp
@@ -104,7 +111,7 @@ eval = fmap Eval
 
 -- | Create a tail call.
 tailcall :: AST Exp -> AST Stm
-tailcall call = Tailcall <$> call
+tailcall c = Tailcall <$> c
 
 -- | A binary operator.
 binOp :: BinOp -> AST Exp -> AST Exp -> AST Exp

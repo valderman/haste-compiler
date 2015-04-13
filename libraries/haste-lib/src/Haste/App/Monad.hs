@@ -7,7 +7,9 @@ module Haste.App.Monad (
     liftServerIO, forkServerIO, remote, getAppConfig,
     runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Control.Monad (ap)
 import Control.Monad.IO.Class
 import Haste.Binary

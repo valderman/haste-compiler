@@ -1,11 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, CPP #-}
 -- | Basic bindings to HTML5 WebStorage.
 module Haste.LocalStorage (setItem, getItem, removeItem) where
 import Haste
 import Haste.Foreign
 import Haste.Serialize
 import Haste.JSON
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 
 -- | Locally store a serializable value.
 setItem :: Serialize a => String -> a -> IO ()

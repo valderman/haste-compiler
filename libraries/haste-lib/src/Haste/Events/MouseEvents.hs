@@ -1,11 +1,15 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies, TupleSections #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies, TupleSections, CPP #-}
 -- | Events relating to mouse clicks and movement.
-module Haste.Events.MouseEvents (MouseEvent (..), MouseData (..), MouseButton (..)) where
+module Haste.Events.MouseEvents (
+    MouseEvent (..), MouseData (..), MouseButton (..)
+  ) where
 import Haste.Object
 import Haste.JSType
 import Haste.Events.Core
 import Haste.Foreign
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Data.Maybe
 
 data MouseButton = MouseLeft | MouseMiddle | MouseRight

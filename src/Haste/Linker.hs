@@ -1,4 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses,
+             FlexibleContexts #-}
 module Haste.Linker (link) where
 import Haste.Config
 import Haste.Module

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, OverloadedStrings #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, OverloadedStrings, CPP #-}
 -- | JSON serialization and de-serialization for Haste.
 module Haste.Serialize (
     Serialize (..), Parser, fromJSON, (.:), (.:?)
@@ -7,7 +7,9 @@ import GHC.Float
 import GHC.Int
 import Haste.JSON
 import Haste.Prim (JSString, toJSStr, fromJSStr)
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Control.Monad (ap)
 
 class Serialize a where

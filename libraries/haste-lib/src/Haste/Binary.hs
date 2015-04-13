@@ -1,6 +1,8 @@
 {-# LANGUAGE MagicHash, CPP, MultiParamTypeClasses, OverloadedStrings,
-             TypeSynonymInstances , FlexibleInstances, OverlappingInstances,
-             GeneralizedNewtypeDeriving, BangPatterns, TypeOperators, KindSignatures, DefaultSignatures, FlexibleInstances, TypeSynonymInstances, FlexibleContexts, ScopedTypeVariables #-}
+             TypeSynonymInstances , FlexibleInstances,
+             GeneralizedNewtypeDeriving, BangPatterns, TypeOperators,
+             KindSignatures, DefaultSignatures, FlexibleInstances,
+             TypeSynonymInstances, FlexibleContexts, ScopedTypeVariables #-}
 -- | Handling of Javascript-native binary blobs.
 --
 -- Generics borrowed from the binary package by Lennart Kolmodin (released under BSD3)
@@ -22,7 +24,9 @@ import Haste.Foreign
 import Haste.Binary.Types
 import Haste.Binary.Put
 import Haste.Binary.Get
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import GHC.Generics
 import Data.Bits
 #ifndef __HASTE__

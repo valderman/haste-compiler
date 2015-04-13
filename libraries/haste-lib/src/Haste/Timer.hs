@@ -1,6 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, CPP #-}
 module Haste.Timer (Timer, Interval (..), setTimer, stopTimer) where
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Control.Monad.IO.Class
 import Haste.Foreign
 import Haste.Events.Core

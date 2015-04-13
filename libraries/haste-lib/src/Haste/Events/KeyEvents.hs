@@ -1,10 +1,12 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies, CPP #-}
 -- | Events relating to mouse keyboard input.
 module Haste.Events.KeyEvents (KeyEvent (..), KeyData (..), mkKeyData) where
 import Haste.Object
 import Haste.JSType
 import Haste.Events.Core
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Data.Maybe
 
 -- | Event data for keyboard events.

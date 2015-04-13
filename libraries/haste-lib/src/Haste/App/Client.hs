@@ -10,7 +10,9 @@ import Haste.Events.Core
 import Haste.Binary hiding (get)
 import Haste.App.Monad
 import Haste.App.Protocol
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
+#endif
 import Control.Monad (ap, join)
 import Control.Monad.IO.Class
 import Control.Exception (throw)

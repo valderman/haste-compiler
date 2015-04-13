@@ -10,7 +10,7 @@ import CoreToStg
 import StgSyn (StgBinding)
 import HscTypes
 import GhcMonad
-import Module (packageIdString)
+import Module
 import System.Environment (getArgs)
 import Control.Monad (when)
 import Haste
@@ -23,6 +23,14 @@ import System.Exit (exitFailure)
 import Data.Version
 import Data.List
 import qualified Control.Shell as Sh
+
+#if __GLASGOW_HASKELL__ < 710
+modulePackageKey :: Module.Module -> PackageId
+modulePackageKey = modulePackageId
+
+packageKeyString :: PackageId -> String
+packageKeyString = packageIdString
+#endif
 
 logStr :: Config -> String -> IO ()
 logStr cfg = when (verbose cfg) . hPutStrLn stderr
@@ -183,12 +191,13 @@ prepare :: (GhcMonad m) => DynFlags -> ModSummary -> m ([StgBinding], ModuleName
 prepare dynflags theMod = do
   env <- getSession
   let name = moduleName $ ms_mod theMod
+      loc  = ms_location theMod
   pgm <- parseModule theMod
     >>= typecheckModule
     >>= desugarModule
     >>= liftIO . hscSimplify env . coreModule
     >>= liftIO . tidyProgram env
-    >>= prepPgm env . fst
+    >>= prepPgm env loc . fst
 #if __GLASGOW_HASKELL__ >= 707
     >>= liftIO . coreToStg dynflags (ms_mod theMod)
 #else
@@ -196,8 +205,12 @@ prepare dynflags theMod = do
 #endif
   return (pgm, name)
   where
-    prepPgm env tidy = liftIO $ do
+    prepPgm env loc tidy = liftIO $ do
+#if __GLASGOW_HASKELL__ < 710
       prepd <- corePrepPgm dynflags env (cg_binds tidy) (cg_tycons tidy)
+#else
+      prepd <- corePrepPgm env loc (cg_binds tidy) (cg_tycons tidy)
+#endif
       return prepd
 
 -- | Run Google Closure on a file.
@@ -225,7 +238,7 @@ compile cfg dynflags modSummary = do
                  HsBootFile -> True
                  _          -> False
     (pgm, name) <- prepare dynflags modSummary
-    let pkgid = showPpr dynflags $ modulePackageId $ ms_mod modSummary
+    let pkgid = showPpr dynflags $ modulePackageKey $ ms_mod modSummary
         cfg' = cfg {showOutputable = showPpr dynflags}
         theCode = generate cfg' pkgid name pgm
     liftIO $ logStr cfg $ "Compiling " ++ myName boot ++ " into " ++ targetpath
@@ -245,5 +258,5 @@ fillLinkerConfig df cfg =
       }
   where
     mainmod =
-      Just (packageIdString $ modulePackageId (mainModIs df),
+      Just (packageKeyString $ modulePackageKey (mainModIs df),
             moduleNameString $ moduleName (mainModIs df))
