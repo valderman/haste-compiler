@@ -78,6 +78,7 @@ main = do
                      "-no-user-package-db",
                      "-package-db " ++ pkgSysDir,
                      "-package-db " ++ pkgUserDir ]
+
 -- | Call vanilla GHC; used for boot files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
@@ -112,10 +113,10 @@ hasteMain args
 --   ship them off to vanilla GHC instead.
 allSupported :: [String] -> Bool
 allSupported args =
-  and args'
+    and args' && not ("-c" `elem` args)
   where
     args' = [not $ any (`isSuffixOf` a) someoneElsesProblems | a <- args]
-    someoneElsesProblems = [".c", ".cmm"]
+    someoneElsesProblems = [".c", ".cmm", ".cc"]
 
 -- | The main compiler driver.
 compiler :: Bool -> [String] -> IO ()
