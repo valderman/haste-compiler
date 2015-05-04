@@ -134,8 +134,8 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
       void $ run "ghc-pkg" ["unregister", "populate-setup-exe-cache"] ""
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
-    mapM_ clearDir [hasteInstUserDir, jsmodUserDir, pkgUserDir,
-                    hasteInstSysDir, jsmodSysDir, pkgSysDir]
+    mapM_ clearDir [hasteCabalUserDir, jsmodUserDir, pkgUserDir,
+                    hasteCabalSysDir, jsmodSysDir, pkgSysDir]
     buildLibs cfg
     when (portableHaste) $ do
       mapM_ relocate ["array", "bytestring", "containers", "data-default",
@@ -188,15 +188,15 @@ buildLibs cfg = do
     inDirectory "libraries" $ do
       -- Install ghc-prim
       inDirectory "ghc-prim" $ do
-        hasteInst ["configure", "--solver", "topdown"]
-        hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
+        hasteCabal ["configure", "--solver", "topdown"]
+        hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
         run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
         run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
       
       -- Install integer-gmp; double install shouldn't be needed anymore.
       run_ hasteCopyPkgBinary ["Cabal"] ""
       inDirectory "integer-gmp" $ do
-        hasteInst ("install" : "--solver" : "topdown" : ghcOpts)
+        hasteCabal ("install" : "--solver" : "topdown" : ghcOpts)
       
       -- Install base
       inDirectory baseDir $ do
@@ -206,8 +206,8 @@ buildLibs cfg = do
           . filter (not . null)
           . filter (and . zipWith (==) "version")
           . lines
-        hasteInst ["configure", "--solver", "topdown"]
-        hasteInst $ ["build", "--install-jsmods"] ++ ghcOpts
+        hasteCabal ["configure", "--solver", "topdown"]
+        hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
         let base = "base-" ++ basever
             pkgdb = "--package-db=dist" </> "package.conf.inplace"
         run_ hasteInstHisBinary [base, "dist" </> "build"] ""
@@ -216,7 +216,7 @@ buildLibs cfg = do
       
       -- Install array and haste-lib
       forM_ ["array", "haste-lib"] $ \pkg -> do
-        inDirectory pkg $ hasteInst ("install" : ghcOpts)
+        inDirectory pkg $ hasteCabal ("install" : ghcOpts)
 
       -- Export monads-tf; it seems to be hidden by default
       run_ hastePkgBinary ["expose", "monads-tf"] ""
@@ -225,8 +225,8 @@ buildLibs cfg = do
         if tracePrimops cfg then ["--ghc-option=-debug"] else [],
         ["--ghc-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
       ]
-    hasteInst args =
-      run_ hasteInstBinary ("--install-global" : "--unbooted" : args) ""
+    hasteCabal args =
+      run_ hasteCabalBinary ("--install-global" : "--unbooted" : args) ""
 
 relocate :: String -> Shell ()
 relocate pkg = run_ hastePkgBinary ["relocate", pkg] ""

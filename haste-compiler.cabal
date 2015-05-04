@@ -150,10 +150,10 @@ Executable hastec
         Data.JSTarget.Traversal
     default-language: Haskell98
 
-Executable haste-inst
+Executable haste-cabal
     if flag(only-library)
         buildable: False
-    Main-Is: haste-inst.hs
+    Main-Is: haste-cabal.hs
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE

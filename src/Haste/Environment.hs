@@ -1,11 +1,11 @@
 {-# LANGUAGE CPP #-}
 -- | Paths, host bitness and other environmental information about Haste.
 module Haste.Environment (
-    hasteSysDir, jsmodSysDir, hasteInstSysDir, pkgSysDir, pkgSysLibDir, jsDir,
-    hasteUserDir, jsmodUserDir, hasteInstUserDir, pkgUserDir, pkgUserLibDir,
+    hasteSysDir, jsmodSysDir, hasteCabalSysDir, pkgSysDir, pkgSysLibDir, jsDir,
+    hasteUserDir, jsmodUserDir, hasteCabalUserDir, pkgUserDir, pkgUserLibDir,
     hostWordSize, ghcLibDir,
     ghcBinary, ghcPkgBinary,
-    hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteInstBinary,
+    hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteCabalBinary,
     hasteCopyPkgBinary, closureCompiler, portableHaste,
     needsReboot, bootFile
   ) where
@@ -70,13 +70,13 @@ Right hasteUserDir =
 jsmodSysDir :: FilePath
 jsmodSysDir = hasteSysDir </> "jsmods"
 
--- | Base directory for haste-inst; system packages.
-hasteInstSysDir :: FilePath
-hasteInstSysDir = hasteSysDir </> "libraries"
+-- | Base directory for haste-cabal; system packages.
+hasteCabalSysDir :: FilePath
+hasteCabalSysDir = hasteSysDir </> "libraries"
 
 -- | Base directory for Haste's system libraries.
 pkgSysLibDir :: FilePath
-pkgSysLibDir = hasteInstSysDir </> "lib"
+pkgSysLibDir = hasteCabalSysDir </> "lib"
 
 -- | Directory housing package information.
 pkgSysDir :: FilePath
@@ -86,13 +86,13 @@ pkgSysDir = hasteSysDir </> "packages"
 jsmodUserDir :: FilePath
 jsmodUserDir = hasteUserDir </> "jsmods"
 
--- | Base directory for haste-inst.
-hasteInstUserDir :: FilePath
-hasteInstUserDir = hasteUserDir </> "libraries"
+-- | Base directory for haste-cabal.
+hasteCabalUserDir :: FilePath
+hasteCabalUserDir = hasteUserDir </> "libraries"
 
 -- | Directory containing library information.
 pkgUserLibDir :: FilePath
-pkgUserLibDir = hasteInstUserDir </> "lib"
+pkgUserLibDir = hasteCabalUserDir </> "lib"
 
 -- | Directory housing package information.
 pkgUserDir :: FilePath
@@ -119,8 +119,8 @@ hasteCopyPkgBinary :: FilePath
 hasteCopyPkgBinary = hasteBinDir </> "haste-copy-pkg"
 
 -- | Binary for haste-pkg.
-hasteInstBinary :: FilePath
-hasteInstBinary = hasteBinDir </> "haste-inst"
+hasteCabalBinary :: FilePath
+hasteCabalBinary = hasteBinDir </> "haste-cabal"
 
 -- | Binary for haste-install-his.
 hasteInstHisBinary :: FilePath

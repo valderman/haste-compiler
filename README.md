@@ -118,15 +118,15 @@ as an integer representation of the current Haste version. Its format is
 `MAJOR*10 000 + MINOR*100 + MICRO`. Version 1.2.3 would thus be represented as
 10203, and 0.4.3 as 403.
 
-Haste also comes with wrappers for cabal and ghc-pkg, named haste-inst and
+Haste also comes with wrappers for cabal and ghc-pkg, named haste-cabal and
 haste-pkg respectively. You can use them to install packages just as you would
 with vanilla GHC and cabal:
 
-    $ haste-inst install mtl
+    $ haste-cabal install mtl
 
 This will only work for libraries, however, as installing JavaScript
 "executables" on your system doesn't make much sense. You can still use
-`haste-inst build` to build your "executables" locally, however.
+`haste-cabal build` to build your "executables" locally, however.
 
 Finally, you can interact with JavaScript code using the FFI. See
 `doc/js-externals.txt` for more information about that.

@@ -1,4 +1,4 @@
--- | haste-inst - Haste wrapper for cabal.
+-- | haste-cabal - Haste wrapper for cabal.
 module Main where
 import System.Environment
 import System.Exit
@@ -23,11 +23,11 @@ cabal args = do
         ["--with-compiler=" ++ hasteBinary,
          "--with-hc-pkg=" ++ hastePkgBinary,
          "--with-hsc2hs=hsc2hs",
-         "-fhaste-inst"] ++
+         "-fhaste-cabal"] ++
         if "--install-global" `elem` args || "--global" `elem` args
-           then ["--prefix=" ++ hasteInstSysDir,
+           then ["--prefix=" ++ hasteCabalSysDir,
                  "--package-db=" ++ pkgSysDir]
-           else ["--prefix=" ++ hasteInstUserDir,
+           else ["--prefix=" ++ hasteCabalUserDir,
                  "--package-db=" ++ pkgSysDir,
                  "--package-db=" ++ pkgUserDir]
 
