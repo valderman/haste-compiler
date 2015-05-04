@@ -1,5 +1,5 @@
 -- For the FFI
-{-# LANGUAGE ForeignFunctionInterface, PatternGuards, CPP #-}
+{-# LANGUAGE ForeignFunctionInterface, PatternGuards, CPP, BangPatterns #-}
 
 -- For generic default instances
 {-# LANGUAGE TypeOperators, ScopedTypeVariables, FlexibleInstances,
@@ -171,13 +171,6 @@ instance (ToAny a, ToAny b, ToAny c, ToAny d, ToAny e,
 
 
 
--- FromAny instances
-fromNum :: JSAny -> Double
-fromNum x =
-  case jsNumber x of
-    x' | isNaN x'  -> error "Tried to convert non-number into a Double!"
-       | otherwise -> x'
-
 instance FromAny JSAny where
   fromAny = unsafeCoerce
 instance FromAny (Ptr a) where
@@ -185,27 +178,27 @@ instance FromAny (Ptr a) where
 instance FromAny JSString where
   fromAny = jsString
 instance FromAny Int where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Int8 where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Int16 where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Int32 where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Word where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Word8 where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Word16 where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Word32 where
-  fromAny = convert . fromNum
+  fromAny = convert . jsNumber
 instance FromAny Float where
-  fromAny = unsafeCoerce . fromNum
+  fromAny = unsafeCoerce . jsNumber
 instance FromAny Double where
-  fromAny = fromNum
+  fromAny = jsNumber
 instance FromAny Char where
-  fromAny = unsafeCoerce . fromNum
+  fromAny = unsafeCoerce . jsNumber
   listFromAny = fromJSStr . fromAny
 instance FromAny () where
   fromAny _ = ()

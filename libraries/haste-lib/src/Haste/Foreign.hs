@@ -29,6 +29,7 @@ foreign import ccall __app4  :: JSFun
 foreign import ccall __app5  :: JSFun
                              -> JSAny -> JSAny -> JSAny -> JSAny -> JSAny
                              -> IO JSAny
+
 #else
 __eval :: JSString -> JSFun
 __eval _ = undefined
@@ -61,13 +62,13 @@ instance FromAny a => FFI (IO a) where
 
 instance (ToAny a, FFI b) => FFI (a -> b) where
   {-# INLINE __ffi #-}
-  __ffi f !as a = __ffi f (a' : as)
+  __ffi f !as !a = __ffi f (a' : as)
     where !a' = toAny a
 
 {-# NOINLINE [0] ffiio #-}
 -- | Apply the result of an FFI call.
 ffiio :: FromAny a => JSFun -> [JSAny] -> IO a
-ffiio f !as = fromAny `fmap` __apply f (toPtr as)
+ffiio !f !as = fromAny `fmap` __apply f (toPtr as)
 
 {-# INLINE ffi #-}
 -- | Creates a Haskell function from the given string of JavaScript code. If
