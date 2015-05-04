@@ -180,7 +180,7 @@ remInteger ia@(S# a) (J# sb b)
 -}
 remInteger ia@(S# _) ib@(J# _) = remInteger (toBig ia) ib
 remInteger (J# a) (S# b)
-  = S# (integer2Int# (remInteger# a (int2Integer# b)))
+  = J# (remInteger# a (int2Integer# b))
 remInteger (J# a) (J# b)
   = J# (remInteger# a b)
 
@@ -206,7 +206,7 @@ modInteger a@(S# INT_MINBOUND) b = modInteger (toBig a) b
 modInteger (S# a) (S# b) = S# (modInt# a b)
 modInteger ia@(S# _) ib@(J# _) = modInteger (toBig ia) ib
 modInteger (J# a) (S# b)
-  = S# (integer2Int# (modInteger# a (int2Integer# b)))
+  = J# (modInteger# a (int2Integer# b))
 modInteger (J# a) (J# b)
   = J# (modInteger# a b)
 
@@ -216,7 +216,7 @@ divInteger a@(S# INT_MINBOUND) b = divInteger (toBig a) b
 divInteger (S# a) (S# b) = S# (divInt# a b)
 divInteger ia@(S# _) ib@(J# _) = divInteger (toBig ia) ib
 divInteger (J# a) (S# b)
-  = S# (integer2Int# (divInteger# a (int2Integer# b)))
+  = J# (divInteger# a (int2Integer# b))
 divInteger (J# a) (J# b)
   = J# (divInteger# a b)
 \end{code}
