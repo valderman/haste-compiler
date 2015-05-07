@@ -68,7 +68,7 @@ instance (ToAny a, FFI b) => FFI (a -> b) where
 {-# NOINLINE [0] ffiio #-}
 -- | Apply the result of an FFI call.
 ffiio :: FromAny a => JSFun -> [JSAny] -> IO a
-ffiio !f !as = fromAny `fmap` __apply f (toPtr as)
+ffiio !f !as = __apply f (toPtr as) >>= fromAny
 
 {-# INLINE ffi #-}
 -- | Creates a Haskell function from the given string of JavaScript code. If
@@ -89,17 +89,17 @@ ffi s = __ffi f []
 
 -- | Create a Haskell value from a constant JS expression.
 constant :: FromAny a => JSString -> a
-constant = fromAny . __eval
+constant = unsafePerformIO . fromAny . __eval
 
 -- Don't build intermediate list for functions of <= 5 arguments.
 {-# RULES
-"app0" [1] forall f. ffiio f [] = fromAny `fmap` __app0 f
-"app1" [1] forall f a. ffiio f [a] = fromAny `fmap` __app1 f a
-"app2" [1] forall f a b. ffiio f [b,a] = fromAny `fmap` __app2 f a b
-"app3" [1] forall f a b c. ffiio f [c,b,a] = fromAny `fmap` __app3 f a b c
-"app4" [1] forall f a b c d. ffiio f [d,c,b,a] = fromAny `fmap` __app4 f a b c d
+"app0" [1] forall f. ffiio f [] = __app0 f >>= fromAny
+"app1" [1] forall f a. ffiio f [a] = __app1 f a >>= fromAny
+"app2" [1] forall f a b. ffiio f [b,a] = __app2 f a b >>= fromAny
+"app3" [1] forall f a b c. ffiio f [c,b,a] = __app3 f a b c >>= fromAny
+"app4" [1] forall f a b c d. ffiio f [d,c,b,a] = __app4 f a b c d >>= fromAny
 "app5" [1] forall f a b c d e. ffiio f [e,d,c,b,a] =
-                                 fromAny `fmap` __app5 f a b c d e
+                                 __app5 f a b c d e >>= fromAny
   #-}
 
 -- | Export a symbol. That symbol may then be accessed from JavaScript through
@@ -123,7 +123,7 @@ instance ToAny a => JSFunc (IO a) where
   mkJSFunc = fmap toAny
 
 instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
-  mkJSFunc f = \x -> mkJSFunc (f $! fromAny x)
+  mkJSFunc f = mkJSFunc . f . unsafePerformIO . fromAny
 
 #if __GLASGOW_HASKELL__ < 710
 instance JSFunc a => ToAny a where
@@ -137,7 +137,7 @@ instance FFI a => FromAny a where
 #else
 instance {-# OVERLAPPABLE #-} FFI a => FromAny a where
 #endif
-  fromAny f = __ffi f []
+  fromAny f = return $ __ffi f []
 
 -- | Create a JS function that applies a Haskell function to its arguments.
 createJSFunc :: JSAny -> IO JSAny

@@ -16,7 +16,7 @@ data Type = TUndefined | TNumber | TBoolean | TString | TFunction | TObject
   deriving (Show, Eq, Enum)
 
 instance FromAny Type where
-  fromAny = toEnum . fromAny
+  fromAny = fmap toEnum . fromAny
 
 -- | Any type on which we can look up a JS property.
 class JSLookup a where

@@ -5,6 +5,9 @@
 {-# LANGUAGE TypeOperators, ScopedTypeVariables, FlexibleInstances,
              FlexibleContexts, OverloadedStrings, DefaultSignatures #-}
 
+-- For less annoying instances
+{-# LANGUAGE TupleSections #-}
+
 -- | Converting to/from JS-native data.
 module Haste.Any (
     ToAny (..), FromAny (..), Generic, JSAny (..),
@@ -17,6 +20,7 @@ import Haste.JSType
 import Data.Int
 import Data.Word
 import Unsafe.Coerce
+import Control.Applicative
 import System.IO.Unsafe -- for mkObj
 
 #ifdef __HASTE__
@@ -92,10 +96,10 @@ class FromAny a where
   --   is not possible. Examples of reasonable conversions would be truncating
   --   floating point numbers to integers, or turning signed integers into
   --   unsigned.
-  fromAny :: JSAny -> a
+  fromAny :: JSAny -> IO a
 
-  listFromAny :: JSAny -> [a]
-  listFromAny = map fromAny . fromPtr . __arr2lst 0
+  listFromAny :: JSAny -> IO [a]
+  listFromAny = mapM fromAny . fromPtr . __arr2lst 0
 
 -- | The Opaque type is inhabited by values that can be passed to JavaScript
 --   using their raw Haskell representation. Opaque values are completely
@@ -172,81 +176,86 @@ instance (ToAny a, ToAny b, ToAny c, ToAny d, ToAny e,
 
 
 instance FromAny JSAny where
-  fromAny = unsafeCoerce
+  fromAny x = return (unsafeCoerce x)
 instance FromAny (Ptr a) where
-  fromAny = unsafeCoerce
+  fromAny x = return (unsafeCoerce x)
 instance FromAny JSString where
-  fromAny = jsString
+  fromAny x = return (jsString x)
 instance FromAny Int where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Int8 where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Int16 where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Int32 where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Word where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Word8 where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Word16 where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Word32 where
-  fromAny = convert . jsNumber
+  fromAny x = return (convert (jsNumber x))
 instance FromAny Float where
-  fromAny = unsafeCoerce . jsNumber
+  fromAny x = return (unsafeCoerce (jsNumber x))
 instance FromAny Double where
-  fromAny = jsNumber
+  fromAny x = return (jsNumber x)
 instance FromAny Char where
-  fromAny = unsafeCoerce . jsNumber
-  listFromAny = fromJSStr . fromAny
+  fromAny x = return (unsafeCoerce (jsNumber x))
+  listFromAny x = fromJSStr <$> fromAny x
 instance FromAny () where
-  fromAny _ = ()
+  fromAny _ = return ()
 instance FromAny (Opaque a) where
-  fromAny x = Opaque $ fromPtr $ fromAny x
+  fromAny x = Opaque . fromPtr <$> fromAny x
 instance FromAny Bool where
-  fromAny x | x == jsTrue = True
-            | otherwise   = False
+  fromAny x | x == jsTrue = return True
+            | otherwise   = return False
 
 instance FromAny a => FromAny [a] where
   fromAny = listFromAny
 
 instance FromAny a => FromAny (Maybe a) where
-  fromAny x | x == jsNull = Nothing
-            | otherwise   = Just $ fromAny x
+  fromAny x | x == jsNull = return Nothing
+            | otherwise   = Just <$> fromAny x
 
 instance (FromAny a, FromAny b) => FromAny (a, b) where
-  fromAny x | [a,b] <- fromAny x = (fromAny a,fromAny b)
-            | otherwise = error "Tried to fromAny tuple with wrong size!"
+  fromAny x = do
+    [a,b] <- fromAny x
+    (,) <$> fromAny a <*> fromAny b
 
 instance (FromAny a, FromAny b, FromAny c) => FromAny (a, b, c) where
-  fromAny x | [a,b,c] <- fromAny x = (fromAny a,fromAny b,fromAny c)
-            | otherwise = error "Tried to fromAny tuple with wrong size!"
+  fromAny x = do
+    [a,b,c] <- fromAny x
+    (,,) <$> fromAny a <*> fromAny b <*> fromAny c
 
 instance (FromAny a, FromAny b, FromAny c, FromAny d) =>
           FromAny (a, b, c, d) where
-  fromAny x | [a,b,c,d] <- fromAny x = (fromAny a,fromAny b,fromAny c,fromAny d)
-            | otherwise = error "Tried to fromAny tuple with wrong size!"
+  fromAny x = do
+    [a,b,c,d] <- fromAny x
+    (,,,) <$> fromAny a <*> fromAny b <*> fromAny c <*> fromAny d
 
 instance (FromAny a, FromAny b, FromAny c, FromAny d, FromAny e) =>
           FromAny (a, b, c, d, e) where
-  fromAny x | [a,b,c,d,e] <- fromAny x =
-              (fromAny a,fromAny b,fromAny c,fromAny d,fromAny e)
-            | otherwise = error "Tried to fromAny tuple with wrong size!"
+  fromAny x = do
+    [a,b,c,d,e] <- fromAny x
+    (,,,,) <$> fromAny a <*> fromAny b <*> fromAny c
+           <*> fromAny d <*> fromAny e
 
 instance (FromAny a, FromAny b, FromAny c, FromAny d, FromAny e, FromAny f) =>
           FromAny (a, b, c, d, e, f) where
-  fromAny x | [a,b,c,d,e,f] <- fromAny x =
-              (fromAny a,fromAny b,fromAny c,fromAny d,fromAny e,fromAny f)
-            | otherwise = error "Tried to fromAny tuple with wrong size!"
+  fromAny x = do
+    [a,b,c,d,e,f] <- fromAny x
+    (,,,,,) <$> fromAny a <*> fromAny b <*> fromAny c
+            <*> fromAny d <*> fromAny e <*> fromAny f
 
 instance (FromAny a, FromAny b, FromAny c, FromAny d,
           FromAny e, FromAny f, FromAny g) =>
           FromAny (a, b, c, d, e, f, g) where
-  fromAny x | [a,b,c,d,e,f,g] <- fromAny x =
-              (fromAny a, fromAny b, fromAny c, fromAny d,
-               fromAny e, fromAny f, fromAny g)
-            | otherwise = error "Tried to fromAny tuple with wrong size!"
+  fromAny x = do
+    [a,b,c,d,e,f,g] <- fromAny x
+    (,,,,,,) <$> fromAny a <*> fromAny b <*> fromAny c <*> fromAny d
+             <*> fromAny e <*> fromAny f <*> fromAny g
 
 
 

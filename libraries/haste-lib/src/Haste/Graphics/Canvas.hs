@@ -31,7 +31,6 @@ import Control.Applicative
 #endif
 import Control.Monad.IO.Class
 import Data.Maybe (fromJust)
-import System.IO.Unsafe
 import Haste
 import qualified Haste.DOM.JSString as J
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
@@ -202,10 +201,11 @@ newtype Ctx = Ctx JSAny
 data Canvas = Canvas !Ctx !Elem
 
 instance FromAny Canvas where
-  fromAny c =
-    case unsafePerformIO . getCanvas $ fromAny c of
-      Just c' -> c'
-      _       -> error "Attempted to fromAny a non-canvas element into a Canvas!"
+  fromAny c = do
+    mcan <- fromAny c >>= getCanvas
+    case mcan of
+      Just can -> return can
+      _        -> error "Attempted to turn a non-canvas element into a Canvas!"
 
 instance ToAny Canvas where
   toAny (Canvas _ el) = toAny el
