@@ -28,6 +28,7 @@ optimizeFun f (AST ast js) =
     >>= optimizeThunks
     >>= optimizeArrays
     >>= tailLoopify f
+    >>= inlineShortJumpTailcall
     >>= trampoline
     >>= ifReturnToTernary
 
@@ -608,3 +609,43 @@ tailLoopify f fun@(Fun args body) = do
     contains (Thunk _ _) _        = False
 tailLoopify _ fun = do
   return fun
+
+-- | Inline a tailcalled function @f@ when:
+--
+--   * @f@ does not refer to itself; and
+--   * @f@ is defined immediately before its call site.
+--     (@let f = ... in tailcall f@)
+--
+--   Should be called *after* 'tailLoopify' but *before* trampoline for best
+--   effect.
+inlineShortJumpTailcall :: JSTrav ast => ast -> TravM ast
+inlineShortJumpTailcall ast = do
+    mapJS (const True) return inl ast
+  where
+    inl stm@(Assign (NewVar _ f) (Fun as b) tc)
+      | Just (f', as') <- getTailcallInfo tc, f == f' = do
+        occs <- occurrences (const True) (isEqualTo f) b
+        case (occs, zipAssign (map (NewVar True) as) as' b) of
+          (Never, Just b') -> return b'
+          _                -> return stm
+    inl stm =
+      return stm
+    isEqualTo v' (Exp (Var v) _) = v == v'
+    isEqualTo _ _                = False
+
+-- | Extract the function being called and its argument list from a
+--   @Tailcall (Call ...)@ or @Return (Call ...)@, provided that the call is
+--   completely saturated.
+getTailcallInfo :: Stm -> Maybe (Var, [Exp])
+getTailcallInfo (Tailcall (Call 0 _ (Var f) as)) = Just (f, as)
+getTailcallInfo (Return (Call 0 _ (Var f) as))   = Just (f, as)
+getTailcallInfo _                                = Nothing
+
+-- | Assign several variables, before executing a statement.
+zipAssign :: [LHS] -> [Exp] -> Stm -> Maybe Stm
+zipAssign l r final
+  | length l == length r = Just $ go l r
+  | otherwise            = Nothing
+  where
+    go (v:vs) (x:xs) = Assign v x (go vs xs)
+    go [] []         = final
