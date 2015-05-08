@@ -65,7 +65,7 @@ instance (ToAny a, FFI b) => FFI (a -> b) where
   __ffi f !as !a = __ffi f (a' : as)
     where !a' = toAny a
 
-{-# NOINLINE [0] ffiio #-}
+{-# INLINE [0] ffiio #-}
 -- | Apply the result of an FFI call.
 ffiio :: FromAny a => JSFun -> [JSAny] -> IO a
 ffiio !f !as = __apply f (toPtr as) >>= fromAny
