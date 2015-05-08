@@ -119,16 +119,8 @@ inlineAssigns ast = do
                 _    | Fun vs body <- ex -> do
                   return keep
                 -- Inline of any non-lambda value
-                Once -> do
-                  if computingThunk ex
-                    then do
-                      let notSharedOrLambda = (not <$> (isShared .|. isLambda))
-                      occs <- occurrences notSharedOrLambda (varOccurs lhs) next
-                      if occs == Once
-                        then replaceEx notSharedOrLambda (Var lhs) ex next
-                        else return keep
-                    else do
-                      replaceEx (not <$> isShared) (Var lhs) ex next
+                Once | Nothing <- fromThunk ex -> do
+                  replaceEx (not <$> isShared) (Var lhs) ex next
                 _ -> do
                   return keep
             _ ->
@@ -441,7 +433,7 @@ inlineAssignsLocal ast = do
         -- Don't inline lambdas at the moment.
         _     | Fun vs body <- ex -> do
           return keep
-        Once ->
+        Once | Nothing <- fromThunk ex ->
           -- can't be recursive - inline
           replaceEx (not <$> isShared) (Var lhs) ex next
         _ ->
