@@ -57,32 +57,34 @@ instance Binary Lit where
 instance Binary Exp where
   put (Var v)         = putWord8 0 >> put v
   put (Lit l)         = putWord8 1 >> put l
-  put (Not ex)        = putWord8 2 >> put ex
-  put (BinOp op a b)  = putWord8 3 >> put op >> put a >> put b
-  put (Fun as body)   = putWord8 4 >> put as >> put body
-  put (Call a c f xs) = putWord8 5 >> put a >> put c >> put f >> put xs
-  put (Index arr ix)  = putWord8 6 >> put arr >> put ix
-  put (Arr exs)       = putWord8 7 >> put exs
-  put (AssignEx l r)  = putWord8 8 >> put l >> put r
-  put (IfEx c th el)  = putWord8 9 >> put c >> put th >> put el
-  put (Eval x)        = putWord8 10 >> put x
-  put (Thunk upd x)   = putWord8 11 >> put upd >> put x
+  put (JSLit l)       = putWord8 2 >> put l
+  put (Not ex)        = putWord8 3 >> put ex
+  put (BinOp op a b)  = putWord8 4 >> put op >> put a >> put b
+  put (Fun as body)   = putWord8 5 >> put as >> put body
+  put (Call a c f xs) = putWord8 6 >> put a >> put c >> put f >> put xs
+  put (Index arr ix)  = putWord8 7 >> put arr >> put ix
+  put (Arr exs)       = putWord8 8 >> put exs
+  put (AssignEx l r)  = putWord8 9 >> put l >> put r
+  put (IfEx c th el)  = putWord8 10 >> put c >> put th >> put el
+  put (Eval x)        = putWord8 11 >> put x
+  put (Thunk upd x)   = putWord8 12 >> put upd >> put x
   
   get = do
     tag <- getWord8
     case tag of
       0  -> Var <$> get
       1  -> Lit <$> get
-      2  -> Not <$> get
-      3  -> BinOp <$> get <*> get <*> get
-      4  -> Fun <$> get <*> get
-      5  -> Call <$> get <*> get <*> get <*> get
-      6  -> Index <$> get <*> get
-      7  -> Arr <$> get
-      8  -> AssignEx <$> get <*> get
-      9  -> IfEx <$> get <*> get <*> get
-      10 -> Eval <$> get
-      11 -> Thunk <$> get <*> get
+      2  -> JSLit <$> get
+      3  -> Not <$> get
+      4  -> BinOp <$> get <*> get <*> get
+      5  -> Fun <$> get <*> get
+      6  -> Call <$> get <*> get <*> get <*> get
+      7  -> Index <$> get <*> get
+      8  -> Arr <$> get
+      9  -> AssignEx <$> get <*> get
+      10  -> IfEx <$> get <*> get <*> get
+      11 -> Eval <$> get
+      12 -> Thunk <$> get <*> get
       n  -> error $ "Bad tag in get :: Get Exp: " ++ show n
 
 instance Binary Stm where

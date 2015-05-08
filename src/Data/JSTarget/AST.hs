@@ -90,6 +90,7 @@ data Lit where
 data Exp where
   Var       :: !Var -> Exp
   Lit       :: !Lit -> Exp
+  JSLit     :: !String -> Exp -- A literal JS snipped
   Not       :: !Exp -> Exp
   BinOp     :: !BinOp -> Exp -> !Exp -> Exp
   Fun       :: ![Var] -> !Stm -> Exp

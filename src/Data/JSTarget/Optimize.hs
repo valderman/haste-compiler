@@ -31,6 +31,7 @@ optimizeFun f (AST ast js) =
     >>= inlineShortJumpTailcall
     >>= trampoline
     >>= ifReturnToTernary
+    >>= inlineEval
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
@@ -649,3 +650,13 @@ zipAssign l r final
   where
     go (v:vs) (x:xs) = Assign v x (go vs xs)
     go [] []         = final
+
+-- | Inline calls to JS @eval@ function.
+inlineEval :: JSTrav ast => ast -> TravM ast
+inlineEval ast = do
+    mapJS (const True) inl return ast
+  where
+    inl (Call _ (Fast _) (Var (Foreign "eval")) [Lit (LStr s)]) =
+      return (JSLit s)
+    inl exp =
+      return exp

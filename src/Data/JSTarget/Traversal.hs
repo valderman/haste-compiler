@@ -81,6 +81,8 @@ instance JSTrav Exp where
                            pure (acc, v)
                          l@(Lit _)      -> do
                            pure (acc, l)
+                         l@(JSLit _)    -> do
+                           pure (acc, l)
                          Not ex         -> do
                            fmap Not <$> mapEx acc ex
                          BinOp op a b   -> do
@@ -130,6 +132,8 @@ instance JSTrav Exp where
                   Var _         -> do
                     return acc
                   Lit _         -> do
+                    return acc
+                  JSLit _       -> do
                     return acc
                   Not ex        -> do
                     foldJS tr f acc ex

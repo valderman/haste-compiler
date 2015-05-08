@@ -78,6 +78,8 @@ instance Pretty Exp where
     pp v
   pp (Lit l) =
     pp l
+  pp (JSLit l) =
+    put l
   pp (Not ex) = do
     case neg ex of
       Just ex' -> pp ex'
