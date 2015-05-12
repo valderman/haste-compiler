@@ -3,7 +3,7 @@
 -- | Dealing with JavaScript objects on a low, low level.
 module Haste.Object (
     JSObj, Type (..),
-    (#), asString, asBool, asNumber, typeOf, lookupPath, mkObj
+    (#), asString, asBool, asNumber, typeOf, lookupPath, toObject
   ) where
 import Haste.Prim
 import Haste.Foreign

@@ -12,7 +12,7 @@
 module Haste.Any (
     ToAny (..), FromAny (..), Generic, JSAny (..),
     Opaque, toOpaque, fromOpaque,
-    nullValue, mkObj
+    nullValue, toObject, has, get
   ) where
 import GHC.Generics
 import Haste.Prim
@@ -21,7 +21,7 @@ import Data.Int
 import Data.Word
 import Unsafe.Coerce
 import Control.Applicative
-import System.IO.Unsafe -- for mkObj
+import System.IO.Unsafe -- for toObject
 
 #ifdef __HASTE__
 foreign import ccall __lst2arr :: Ptr [a] -> JSAny
@@ -33,11 +33,17 @@ foreign import ccall "__jsTrue" jsTrue :: JSAny
 foreign import ccall "__jsFalse" jsFalse :: JSAny
 foreign import ccall __new :: IO JSAny
 foreign import ccall __set :: JSAny -> JSString -> JSAny -> IO ()
+foreign import ccall __get :: JSAny -> JSString -> IO JSAny
+foreign import ccall __has :: JSAny -> JSString -> IO Bool
 #else
 __new :: IO JSAny
 __new = return undefined
+__get :: JSAny -> JSString -> IO JSAny
+__get _ _ = return undefined
 __set :: JSAny -> JSString -> JSAny -> IO ()
 __set _ _ _ = return ()
+__has :: JSAny -> JSString -> IO Bool
+__has _ _ = return False
 __lst2arr :: Ptr [a] -> JSAny
 __lst2arr _ = undefined
 __arr2lst :: Int -> JSAny -> Ptr [a]
@@ -63,11 +69,22 @@ nullValue :: JSAny
 nullValue = jsNull
 
 -- | Build a new JS object from a list of key:value pairs.
-mkObj :: [(JSString, JSAny)] -> JSAny
-mkObj ps = unsafePerformIO $ do
+toObject :: [(JSString, JSAny)] -> JSAny
+toObject ps = unsafePerformIO $ do
   o <- __new
   mapM_ (uncurry $ __set o) ps
   return o
+
+-- | Read a member from a JS object. Throws an error if the member can not be
+--   marshalled into a value of type @a@.
+{-# INLINE get #-}
+get :: FromAny a => JSAny -> JSString -> IO a
+get o k = __get o k >>= fromAny
+
+-- | Check if a JS object has a particular member.
+{-# INLINE has #-}
+has :: JSAny -> JSString -> IO Bool
+has = __has
 
 -- | Any type that can be converted into a JavaScript value.
 class ToAny a where
@@ -329,14 +346,14 @@ treeToAny inlineTags (Tree xs) =
     [(Tag, Leaf x)]
       | inlineTags      -> x
     xs'
-      | all hasName xs' -> mkObj $ map (toKVPair inlineTags) xs'
+      | all hasName xs' -> toObject $ map (toKVPair inlineTags) xs'
       | otherwise       -> mkArr inlineTags xs'
 
 mkArr :: Bool -> [(Ident, JSTree)] -> JSAny
 mkArr inlineTags xs =
   case xs of
-    ((Tag, t) : xs') -> mkObj [("$tag", treeToAny inlineTags t), contents xs']
-    _                -> mkObj [contents xs]
+    ((Tag, t) : xs') -> toObject [("$tag", treeToAny inlineTags t), contents xs']
+    _                -> toObject [contents xs]
   where
     contents xs' = ("$data", toAny $ map (treeToAny inlineTags . snd) xs')
 

@@ -17,7 +17,7 @@ import Control.Applicative
 import Control.Monad
 import System.IO.Unsafe
 #ifdef __HASTE__
-import Haste.Foreign
+import Haste.Foreign hiding (get)
 #else
 import qualified Control.Exception as Ex
 import Data.Char (chr)

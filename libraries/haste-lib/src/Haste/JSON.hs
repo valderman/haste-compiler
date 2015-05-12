@@ -20,7 +20,7 @@ import Control.Applicative
 import Haste.Parsing
 #else
 import System.IO.Unsafe
-import Haste.Foreign
+import Haste.Foreign hiding (toObject)
 #endif
 
 -- | Create a Javascript object from a JSON object. Only makes sense in a

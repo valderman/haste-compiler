@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, OverloadedStrings #-}
 module Tests.MarshalJSAny where
 import Haste
-import Haste.Foreign
+import Haste.Foreign hiding (toObject)
 import Haste.JSON
 
 extract :: JSAny -> IO (Int, String)

@@ -20,7 +20,7 @@ import Data.Char
 import qualified Haste.JSString as J (length)
 import Haste.Prim
 import Haste.Concurrent
-import Haste.Foreign
+import Haste.Foreign hiding (get)
 import Haste.Binary.Types
 import Haste.Binary.Put
 import Haste.Binary.Get

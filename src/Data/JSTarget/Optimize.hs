@@ -31,7 +31,7 @@ optimizeFun f (AST ast js) =
     >>= inlineShortJumpTailcall
     >>= trampoline
     >>= ifReturnToTernary
-    >>= inlineEval
+    >>= inlineJSPrimitives
 
 topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
@@ -643,12 +643,25 @@ zipAssign l r final
     go (v:vs) (x:xs) = Assign v x (go vs xs)
     go [] []         = final
 
--- | Inline calls to JS @eval@ function.
-inlineEval :: JSTrav ast => ast -> TravM ast
-inlineEval ast = do
+-- | Inline calls to JS @eval@, @__set@, @__get@ and @__has@ and apply
+--   functions for "Haste.Foreign".
+inlineJSPrimitives :: JSTrav ast => ast -> TravM ast
+inlineJSPrimitives ast = do
     mapJS (const True) inl return ast
   where
-    inl (Call _ (Fast _) (Var (Foreign "eval")) [Lit (LStr s)]) =
-      return (JSLit s)
+    inl ex@(Call _ (Fast _) (Var (Foreign f)) args) =
+      case (f, args) of
+        ("eval", [Lit (LStr s)])   -> return (JSLit s)
+        ("__app0", [Lit (LStr f)]) -> return (JSLit $ f ++ "()")
+        ("__app1", f:xs)           -> return (Call 0 (Fast False) f xs)
+        ("__app2", f:xs)           -> return (Call 0 (Fast False) f xs)
+        ("__app3", f:xs)           -> return (Call 0 (Fast False) f xs)
+        ("__app4", f:xs)           -> return (Call 0 (Fast False) f xs)
+        ("__app5", f:xs)           -> return (Call 0 (Fast False) f xs)
+        ("__get", [o, k])          -> return (Index o k)
+        ("__set", [o, k, v])       -> return (AssignEx (Index o k) v)
+        ("__has", [o, k])          -> return (BinOp Neq (Index o k)
+                                                       (JSLit "undefined"))
+        _                         -> return ex
     inl exp =
       return exp
