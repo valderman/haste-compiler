@@ -115,9 +115,13 @@ export = ffi "(function(s,f){Haste[s] = f;})"
 type family JS a where
   JS (a -> b) = JSAny -> JS b
   JS (IO a)   = IO JSAny
+  JS a        = JSAny
 
 class JSFunc a where
   mkJSFunc :: a -> JS a
+
+instance (ToAny a, JS a ~ JSAny) => JSFunc a where
+  mkJSFunc = toAny
 
 instance ToAny a => JSFunc (IO a) where
   mkJSFunc = fmap toAny
