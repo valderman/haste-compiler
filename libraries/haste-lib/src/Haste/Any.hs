@@ -3,7 +3,8 @@
 
 -- For generic default instances
 {-# LANGUAGE TypeOperators, ScopedTypeVariables, FlexibleInstances,
-             FlexibleContexts, OverloadedStrings, DefaultSignatures #-}
+             FlexibleContexts, OverloadedStrings, DefaultSignatures,
+             OverlappingInstances #-}
 
 -- For less annoying instances
 {-# LANGUAGE TupleSections #-}
@@ -100,9 +101,11 @@ class ToAny a where
   --     object.
   toAny :: a -> JSAny
   default toAny :: (GToAny (Rep a), Generic a) => a -> JSAny
-  toAny x = treeToAny (isEnum g) $! gToAny 1 g
+  toAny x =
+    case gToAny False g of
+      Right x' -> toObject x'
+      Left x'  -> toAny x'
     where g = from x
-
 
   listToAny :: [a] -> JSAny
   listToAny = __lst2arr . toPtr . map toAny
@@ -277,23 +280,8 @@ instance (FromAny a, FromAny b, FromAny c, FromAny d,
 
 
 -- Generic instances
-
--- | A field identifier: either a record selector, a constructor tag, or
---   nothing.
-data Ident = None | Tag | Name !JSString
-
--- | JS object tree structure.
-data JSTree = Leaf !JSAny | Tree ![(Ident, JSTree)]
-
--- | Merge two trees.
-plus :: JSTree -> JSTree -> JSTree
-plus (Tree a) (Tree b) = Tree (a ++ b)
-plus (Tree a) b        = Tree (a ++ [(None, b)])
-plus a (Tree b)        = Tree ((None, a) : b)
-plus a b               = Tree [(None, a), (None, b)]
-
 class GToAny f where
-  gToAny :: Int -> f a -> JSTree
+  gToAny :: Bool -> f a -> Either [JSAny] [(JSString, JSAny)]
   isEnum :: f a -> Bool
 
 instance GToAny U1 where
@@ -301,27 +289,38 @@ instance GToAny U1 where
   isEnum _    = True
 
 instance ToAny a => GToAny (K1 i a) where
-  gToAny _ (K1 x) = Leaf $ toAny x
+  gToAny _ (K1 x) = Left [toAny x]
   isEnum _ = False
 
 instance (Selector c, GToAny a) => GToAny (M1 S c a) where
-  gToAny cs (M1 x) =
-    case selName (undefined :: M1 S c a ()) of
-      "" -> Tree [(None, gToAny cs x)]
-      n  -> Tree [(Name $ toJSStr n, gToAny cs x)]
+  gToAny mcs (M1 x) = do
+    case name of
+      "" -> Left [value]
+      _  -> Right [(name, value)]
+    where name  = toJSStr (selName (undefined :: M1 S c a ()))
+          value =
+            case gToAny mcs x of
+              Right x'  -> toObject x'
+              Left [x'] -> toAny x'
+              Left x'   -> toAny x'
   isEnum _ = isEnum (undefined :: a ())
 
 instance Constructor c => GToAny (M1 C c U1) where
-  gToAny _ _ = Leaf $ toAny $ conName (undefined :: M1 C c U1 ())
+  gToAny _ _ = Left [toAny $ conName (undefined :: M1 C c U1 ())]
   isEnum _ = True
 
 instance (Constructor c, GToAny a) => GToAny (M1 C c a) where
-  gToAny cs (M1 x)
-    | cs > 1 =
-      Tree [(Tag, Leaf $ toAny tag)] `plus` gToAny cs x
+  gToAny many_constrs (M1 x)
+    | many_constrs =
+      case args of
+        Right args' -> Right (("$tag", toAny tag) : args')
+        Left [arg]  -> Right [("$tag", toAny tag), ("$data", arg)]
+        Left args'  -> Right [("$tag", toAny tag), ("$data", toAny args')]
     | otherwise =
-      gToAny cs x
-    where tag = conName (undefined :: M1 C c a ())
+      args
+    where
+      tag  = conName (undefined :: M1 C c a ())
+      args = gToAny many_constrs x
   isEnum _ = isEnum (undefined :: a ())
 
 instance GToAny a => GToAny (M1 D c a) where
@@ -329,39 +328,14 @@ instance GToAny a => GToAny (M1 D c a) where
   isEnum _ = isEnum (undefined :: a ())
 
 instance (GToAny a, GToAny b) => GToAny (a :*: b) where
-  gToAny cs (a :*: b) = gToAny cs a `plus` gToAny cs b
+  gToAny cs (a :*: b) =
+    case (gToAny cs a, gToAny cs b) of
+      (Right a', Right b') -> Right (a' ++ b')
+      (Left a', Left b')   -> Left (a' ++ b')
+      _                    -> error "Unpossible!"
   isEnum _ = False
 
 instance (GToAny a, GToAny b) => GToAny (a :+: b) where
-  gToAny cs (L1 x) = gToAny (cs+1) x
-  gToAny cs (R1 x) = gToAny (cs+1) x
+  gToAny _ (L1 x) = gToAny True x
+  gToAny _ (R1 x) = gToAny True x
   isEnum _ = isEnum (undefined :: a ()) && isEnum (undefined :: b ())
-
--- | Build a JS object from a tree structure.
-{-# NOINLINE treeToAny #-}
-treeToAny :: Bool -> JSTree -> JSAny
-treeToAny _ (Leaf x) = x
-treeToAny inlineTags (Tree xs) =
-  case xs of
-    [(Tag, Leaf x)]
-      | inlineTags      -> x
-    xs'
-      | all hasName xs' -> toObject $ map (toKVPair inlineTags) xs'
-      | otherwise       -> mkArr inlineTags xs'
-
-mkArr :: Bool -> [(Ident, JSTree)] -> JSAny
-mkArr inlineTags xs =
-  case xs of
-    ((Tag, t) : xs') -> toObject [("$tag", treeToAny inlineTags t), contents xs']
-    _                -> toObject [contents xs]
-  where
-    contents xs' = ("$data", toAny $ map (treeToAny inlineTags . snd) xs')
-
-toKVPair :: Bool -> (Ident, JSTree) -> (JSString, JSAny)
-toKVPair inlineTags (Name n, x) = (n, treeToAny inlineTags x)
-toKVPair inlineTags (Tag, x)    = ("$tag", treeToAny inlineTags x)
-toKVPair _ _                    = error "Unpossible!"
-
-hasName :: (Ident, b) -> Bool
-hasName (None, _) = False
-hasName _         = True
