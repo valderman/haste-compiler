@@ -126,7 +126,7 @@ genEx (StgConApp con args) = do
       (tag, stricts) <- genDataCon con
       (args', stricts') <- genArgsPair $ zip args stricts
       -- Don't create unboxed tuples with a single element.
-      case (isUnboxedTupleCon con, args') of
+      case (isNewtypeLikeCon con || isUnboxedTupleCon con, args') of
         (True, [arg]) -> return $ evaluate arg (head stricts')
         _             -> mkCon tag args' stricts'
   where
@@ -276,14 +276,19 @@ genCase t ex scrut alts = do
   -- entirely (modulo evaluation), so just generate the expression in the
   -- sole alternative.
   withScrutinee $ do
-    case (isUnaryUnboxedTuple scrut, alts) of
-      (True, [(_, as, _, expr)]) | [arg] <- filter hasRepresentation as -> do
+    case (isNewtypeLike scrut, isUnaryUnboxedTuple scrut, alts) of
+      (_, True, [(_, as, _, expr)]) | [arg] <- filter hasRepresentation as -> do
         arg' <- genVar arg
         addLocal arg'
         continue $ newVar (reorderableType scrut) arg' (varExp scrut')
         genEx expr
-      (True, _) -> do
-          error "Case on unary unboxed tuple with more than one alt! WTF?!"
+      (True, _, [(_, [arg], _, expr)]) -> do
+        arg' <- genVar arg
+        addLocal arg'
+        continue $ newVar (reorderableType scrut) arg' (varExp scrut')
+        genEx expr
+      (_, True, _) -> do
+        error "Case on unary unboxed tuple with more than one alt! WTF?!"
       _ -> do
         -- Generate scrutinee and result vars
         res <- genResultVar scrut

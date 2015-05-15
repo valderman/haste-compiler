@@ -29,7 +29,7 @@ foreign import ccall __app4  :: JSFun
 foreign import ccall __app5  :: JSFun
                              -> JSAny -> JSAny -> JSAny -> JSAny -> JSAny
                              -> IO JSAny
-
+foreign import ccall __createJSFunc :: JSAny -> IO JSAny
 #else
 __eval :: JSString -> JSFun
 __eval _ = undefined
@@ -47,6 +47,8 @@ __app4  :: JSFun -> JSAny -> JSAny -> JSAny -> JSAny -> IO JSAny
 __app4 _ _ _ _ _ = return undefined
 __app5  :: JSFun -> JSAny -> JSAny -> JSAny -> JSAny -> JSAny -> IO JSAny
 __app5 _ _ _ _ _ _ = return undefined
+__createJSFunc :: JSAny -> IO JSAny
+__createJSFunc _ = return undefined
 #endif
 
 -- | Any type that can be imported from JavaScript. This means any type which
@@ -84,7 +86,7 @@ ffiio !f !as = __apply f (toPtr as) >>= fromAny
 ffi :: FFI a => JSString -> a
 ffi s = __ffi f []
   where
-    {-# NOINLINE f #-}
+    {-# INLINE f #-}
     f = __eval s
 
 -- | Create a Haskell value from a constant JS expression.
@@ -108,7 +110,6 @@ constant = unsafePerformIO . fromAny . __eval
 --   --opt-minify or any option that implies it, you will instead need
 --   to access your exports through Haste[\'name\'](), or Closure will mangle
 --   your function names.
-{-# NOINLINE export #-}
 export :: ToAny a => JSString -> a -> IO ()
 export = ffi "(function(s,f){Haste[s] = f;})"
 
@@ -138,7 +139,7 @@ instance (Function a, JSFunc a) => ToAny a where
 #else
 instance {-# OVERLAPPABLE #-} (Function a, JSFunc a) => ToAny a where
 #endif
-  toAny = unsafePerformIO . createJSFunc . toAny . toOpaque . mkJSFunc
+  toAny = unsafePerformIO . __createJSFunc . toAny . toOpaque . mkJSFunc
 
 #if __GLASGOW_HASKELL__ < 710
 instance FFI a => FromAny a where
@@ -146,13 +147,3 @@ instance FFI a => FromAny a where
 instance {-# OVERLAPPABLE #-} FFI a => FromAny a where
 #endif
   fromAny f = return $ __ffi f []
-
--- | Create a JS function that applies a Haskell function to its arguments.
-createJSFunc :: JSAny -> IO JSAny
-createJSFunc =
-  ffi "(function(f){return (function(){\
-var as = Array.prototype.slice.call(arguments);\
-for(var i in as) {as[i]=[0,as[i]];}\
-as.push(0);\
-return E(B(A(f,as)))[1];\
-});})"
