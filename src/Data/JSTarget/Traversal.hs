@@ -253,12 +253,12 @@ instance JSTrav (Exp, Stm) where
       else return acc'
 
 instance JSTrav LHS where
-  foldMapJS _ _ _ acc lhs@(NewVar _ _) = return (acc, lhs)
-  foldMapJS _ _ _ acc lhs@(OldVar _ _) = return (acc, lhs)
-  foldMapJS t fe fs a (LhsExp ex)      = fmap LhsExp <$> foldMapJS t fe fs a ex
-  foldJS _ _ acc (NewVar _ _)  = return acc
-  foldJS _ _ acc (OldVar _ _)  = return acc
-  foldJS tr f acc (LhsExp ex)  = foldJS tr f acc ex
+  foldMapJS _ _ _ acc lhs@(NewVar _ _) =
+    return (acc, lhs)
+  foldMapJS t fe fs a (LhsExp r ex) =
+    fmap (LhsExp r) <$> foldMapJS t fe fs a ex
+  foldJS _ _ acc (NewVar _ _)    = return acc
+  foldJS tr f acc (LhsExp _ ex)  = foldJS tr f acc ex
 
 instance JSTrav a => JSTrav (Shared a) where
   foldMapJS tr fe fs acc sh@(Shared lbl) = do

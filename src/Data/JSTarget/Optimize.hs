@@ -27,11 +27,11 @@ optimizeFun f (AST ast js) =
     >>= zapJSStringConversions
     >>= optimizeThunks
     >>= optimizeArrays
+    >>= assignToSubst
     >>= tailLoopify f
     >>= inlineShortJumpTailcall
     >>= trampoline
     >>= ifReturnToTernary
-    >>= assignToSubst
     >>= inlineJSPrimitives
 
 topLevelInline :: AST Stm -> AST Stm
@@ -131,9 +131,9 @@ inlineAssigns ast = do
     inl _ stm = return stm
 
 inlinableAssignLHS :: LHS -> Maybe Var
-inlinableAssignLHS (NewVar True v) = Just v
-inlinableAssignLHS (OldVar True v) = Just v
-inlinableAssignLHS _               = Nothing
+inlinableAssignLHS (NewVar True v)       = Just v
+inlinableAssignLHS (LhsExp True (Var v)) = Just v
+inlinableAssignLHS _                     = Nothing
 
 -- | Turn if(foo) {return bar;} else {return baz;} into return foo ? bar : baz.
 ifReturnToTernary :: JSTrav ast => ast -> TravM ast
@@ -237,7 +237,6 @@ computingEx ex =
 
 -- | Gather a map of all inlinable symbols; that is, the ones that are used
 --   exactly once.
---   TODO: always inline assigns that are just aliases!
 gatherInlinable :: JSTrav ast => ast -> TravM (M.Map Var Occs)
 gatherInlinable ast = do
     m <- foldJS (\_ _->True) countOccs (M.empty) ast
@@ -251,7 +250,7 @@ gatherInlinable ast = do
       pure (M.alter updVar v m)
     countOccs m (Stm (Assign (NewVar _ v) _ _) _) =
       pure (M.alter updVarAss v m)
-    countOccs m (Stm (Assign (OldVar _ v) ex _) _) =
+    countOccs m (Stm (Assign (LhsExp True (Var v)) ex _) _) =
       pure (M.alter updVarAss v m)
     countOccs m _ =
       pure m
@@ -285,7 +284,7 @@ gatherNonTailcalling stm = do
     countTCs s (Stm (Assign (NewVar _ v) (Fun _ body) _) _) = do
       tc <- mayTailcall body
       return $ if not tc then S.insert v s else s      
-    countTCs s (Stm (Assign (OldVar _ v) (Fun _ body) _) _) = do
+    countTCs s (Stm (Assign (LhsExp True (Var v)) (Fun _ body) _) _) = do
       tc <- mayTailcall body
       return $ if not tc then S.insert v s else s
     countTCs s _ = do
@@ -345,7 +344,7 @@ inlineOldVars :: JSTrav ast => ast -> TravM ast
 inlineOldVars ast = do
     mapJS (const True) return inl ast
   where
-    inl (Assign (OldVar True v) rhs next) =
+    inl (Assign (LhsExp True (Var v)) rhs next) =
       replaceFirst enter (Var v) (AssignEx (Var v) rhs) next
     inl stm =
       return stm
@@ -358,7 +357,7 @@ zapDoubleAssigns ast = do
   where
     inl (Assign (NewVar True v) (AssignEx (Var v') rhs) next) = do
       next' <- replaceEx (const True) (Var v) (Var v') next
-      return $ Assign (OldVar True v') rhs next'
+      return $ Assign (LhsExp True (Var v')) rhs next'
     inl stm =
       return stm
 
@@ -455,11 +454,11 @@ inlineReturns ast = do
     pure2 s x = pure (s,x)
     foldRet s (Assign l rhs next)
       | Just (Var v, ret) <- returnLike next,
-        Just (lhs,_) <- notLhsExp l,
+        Just (lhs,_) <- lhsVar l,
         v == lhs = do
         return (s, ret rhs)
     foldRet s keep@(Assign l rhs (Jump (Shared lbl)))
-      | Just (lhs, _) <- notLhsExp l = do
+      | Just (lhs, _) <- lhsVar l = do
         next <- getRef lbl
         case returnLike next of
           Just (Var v, ret) | v == lhs ->
@@ -476,10 +475,10 @@ returnLike (Return e)   = Just (e, Return)
 returnLike (ThunkRet e) = Just (e, ThunkRet)
 returnLike _            = Nothing
 
-notLhsExp :: LHS -> Maybe (Var, Reorderable)
-notLhsExp (NewVar r v) = Just (v, r)
-notLhsExp (OldVar r v) = Just (v, r)
-notLhsExp _            = Nothing
+lhsVar :: LHS -> Maybe (Var, Reorderable)
+lhsVar (NewVar r v)       = Just (v, r)
+lhsVar (LhsExp r (Var v)) = Just (v, r)
+lhsVar _                  = Nothing
 
 -- | Inline all occurrences of the given shared code path.
 --   Use with caution - preferrably not at all!
@@ -576,13 +575,15 @@ tailLoopify f fun@(Fun args body) = do
 
     -- Assign an expression to a variable, unless that expression happens to
     -- be the variable itself.
-    assignUnlessEqual (v, (Var v')) (next, final) | v == v' =
-      (next, final)
-    assignUnlessEqual (v, x) (next, final) | any (x `contains`) args =
-      (Assign (NewVar False (newName v)) x . next,
-       Assign (LhsExp (Var v)) (Var $ newName v) final)
-                                  | otherwise =
-      (Assign (LhsExp (Var v)) x . next, final)
+    assignUnlessEqual (v, (Var v')) (next, final)
+      | v == v' =
+        (next, final)
+    assignUnlessEqual (v, x) (next, final)
+      | any (x `contains`) args =
+        (Assign (NewVar False (newName v)) x . next,
+         Assign (LhsExp False (Var v)) (Var $ newName v) final)
+      | otherwise =
+        (Assign (LhsExp False (Var v)) x . next, final)
     
     newName (Internal (Name n mmod) _ _) =
       Internal (Name (' ':n) mmod) "" True
@@ -591,6 +592,7 @@ tailLoopify f fun@(Fun args body) = do
     
     contains (Var v) var          = v == var
     contains (Lit _) _            = False
+    contains (JSLit _) _          = False
     contains (Not x) var          = x `contains` var
     contains (BinOp _ a b) var    = a `contains` var || b `contains` var
     contains (Fun _ _) _          = False
@@ -671,15 +673,24 @@ inlineJSPrimitives =
 -- | Turn all assignments of the form @var v1 = e ; exp@ into @exp[v1/e]@,
 --   provided that @v1@ is not used as a known location and @e@ is either a
 --   variable or a non-string literal.
+--   Also does not inline vars into lambdas.
+--   Should go before 'tailLoopify'.
 assignToSubst :: JSTrav ast => ast -> TravM ast
 assignToSubst ast = do
     mapJS (const True) return inl ast
   where
     inl stm@(Assign (NewVar _ v) x next) | not (isKnownLoc v) = do
       case x of
-        (Var _)        -> replaceEx (pure True) (Var v) x next
+        (Var _)        -> do
+          (c, stm') <- replaceExWithCount (not <$> unsafePlace) (Var v) x next
+          (c', _) <- replaceExWithCount (pure True) (Var v) x next
+          if c == c'
+            then return stm' -- No occurrences inside lambda
+            else return stm
         (Lit (LStr _)) -> return stm
         (Lit _)        -> replaceEx (pure True) (Var v) x next
         _              -> return stm
     inl stm = do
       return stm
+
+    unsafePlace = isLambda .|. isShared .|. isLoop

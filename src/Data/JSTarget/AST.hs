@@ -71,10 +71,8 @@ instance Ord Var where
 data LHS where
   -- | Introduce a new variable. May be reorderable.
   NewVar :: !Reorderable -> !Var -> LHS
-  -- | Assign a value to an old variable. May be reorderable.
-  OldVar :: !Reorderable -> !Var -> LHS
-  -- | Assign a value to an arbitrary LHS expression. Never reorderable.
-  LhsExp :: !Exp -> LHS
+  -- | Assign a value to an arbitrary LHS expression. May be reorderable.
+  LhsExp :: !Reorderable -> !Exp -> LHS
   deriving (Eq, Show)
 
 -- | Distinguish between normal, optimized and method calls.
@@ -164,8 +162,7 @@ foreignModule = Module {
 -- | An LHS that's guaranteed to not ever be read, enabling the pretty
 --   printer to ignore assignments to it.
 blackHole :: LHS
-blackHole =
-  LhsExp $ Var blackHoleVar
+blackHole = LhsExp False $ Var blackHoleVar
 
 -- | The variable of the blackHole LHS.
 blackHoleVar :: Var

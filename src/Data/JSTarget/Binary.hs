@@ -31,12 +31,10 @@ instance Binary Var where
 
 instance Binary LHS where
   put (NewVar r v) = putWord8 0 >> put r >> put v
-  put (OldVar r v) = putWord8 1 >> put r >> put v
-  put (LhsExp e)   = putWord8 2 >> put e
+  put (LhsExp r e) = putWord8 1 >> put r >> put e
   
   get = getWord8 >>= ([NewVar <$> get <*> get,
-                       OldVar <$> get <*> get,
-                       LhsExp <$> get] !!) . fromIntegral
+                       LhsExp <$> get <*> get] !!) . fromIntegral
 
 instance Binary Call where
   put (Normal tr) = putWord8 0 >> put tr

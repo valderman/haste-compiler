@@ -169,12 +169,12 @@ newVar r lhs = liftA2 $ \rhs -> Assign (NewVar r lhs) rhs
 
 -- | Reuse an old variable.
 assignVar :: Reorderable -> Var -> AST Exp -> AST Stm -> AST Stm
-assignVar r lhs = liftA2 $ \rhs -> Assign (OldVar r lhs) rhs
+assignVar r lhs = liftA2 $ \rhs -> Assign (LhsExp r (Var lhs)) rhs
 
 -- | Assignment without var. Performed for the side effect, so never
 --   reorderable.
 sideEffectingAssign :: AST Exp -> AST Exp -> AST Stm -> AST Stm
-sideEffectingAssign = liftA3 $ \lhs rhs -> Assign (LhsExp lhs) rhs
+sideEffectingAssign = liftA3 $ \lhs rhs -> Assign (LhsExp False lhs) rhs
 
 -- | Assignment expression.
 assignEx :: AST Exp -> AST Exp -> AST Exp

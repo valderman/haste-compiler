@@ -31,9 +31,8 @@ instance Pretty Name where
   pp name = finalNameFor name >>= put . buildFinalName
 
 instance Pretty LHS where
-  pp (NewVar _ v) = "var " .+. pp v
-  pp (OldVar _ v) = pp v
-  pp (LhsExp ex)  = pp ex
+  pp (NewVar _ v)  = "var " .+. pp v
+  pp (LhsExp _ ex) = pp ex
 
 instance Pretty Lit where
   pp (LNum d)  = put d
@@ -45,9 +44,9 @@ instance Pretty Lit where
       fixQuotes ('\r':xs) = '\\':'r'  : fixQuotes xs
       fixQuotes ('\n':xs) = '\\':'n' : fixQuotes xs
       fixQuotes (x:xs)
-        | ord x <= 127 = x : fixQuotes xs
-        | otherwise    = toHex x ++ fixQuotes xs
-      fixQuotes _             = []
+        | ord x <= 127    = x : fixQuotes xs
+        | otherwise       = toHex x ++ fixQuotes xs
+      fixQuotes _         = []
   pp (LBool b) = put b
   pp (LInt n)  = put n
   pp (LNull)   = "null"
@@ -167,9 +166,7 @@ instance Pretty Stm where
         line (pp ex .+. ";") >> pp next
       NewVar _ _ ->
         ppAssigns s
-      OldVar _ _ ->
-        line (pp lhs .+. sp .+. "=" .+. sp .+. pp ex .+. ";") >> pp next
-      LhsExp _ ->
+      LhsExp _ _ ->
         line (pp lhs .+. sp .+. "=" .+. sp .+. pp ex .+. ";") >> pp next
   pp (Return ex) = do
     line $ "return " .+. pp ex .+. ";"
