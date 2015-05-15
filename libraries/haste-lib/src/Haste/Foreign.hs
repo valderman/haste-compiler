@@ -86,7 +86,7 @@ ffiio !f !as = __apply f (toPtr as) >>= fromAny
 ffi :: FFI a => JSString -> a
 ffi s = __ffi f []
   where
-    {-# INLINE f #-}
+    {-# NOINLINE f #-}
     f = __eval s
 
 -- | Create a Haskell value from a constant JS expression.
