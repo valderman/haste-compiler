@@ -32,6 +32,7 @@ optimizeFun f (AST ast js) =
     >>= inlineShortJumpTailcall
     >>= trampoline
     >>= ifReturnToTernary
+    >>= smallStepInline
     >>= inlineJSPrimitives
 
 topLevelInline :: AST Stm -> AST Stm
@@ -41,6 +42,7 @@ topLevelInline (AST ast js) =
     >>= inlineAssigns
     >>= optimizeArrays
     >>= optimizeThunks
+    >>= smallStepInline
     >>= optimizeArrays
     >>= zapJSStringConversions
 
@@ -182,11 +184,6 @@ zapJSStringConversions ast =
 --     => x
 --   E(\x ... -> ...)
 --     => \x ... -> ...
---   thunk(x) where x is non-computing and non-recursive
---     => x
---
---   TODO: figure out efficient way to only perform the 4th optimization when x
---         is not recursive.
 optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
@@ -196,8 +193,6 @@ optimizeThunks ast =
       | Fun _ _ <- x             = return x
     optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
       return $ Call arity calltype f' args
---    optEx ex | Just ex' <- fromThunkEx ex, not (computingEx ex') =
---      return ex'
     optEx ex =
       return ex
 
@@ -210,30 +205,9 @@ fromThunk _              = Nothing
 fromThunkEx :: Exp -> Maybe Exp
 fromThunkEx ex =
   case fromThunk ex of
-    Just (Return ex') -> Just ex'
-    _                 -> Nothing
-
--- | Is the given expression a thunk which when evaluated performs some kind of
---   computation?
-computingThunk :: Exp -> Bool
-computingThunk e =
-  case fromThunkEx e of
-    Just e' -> computingEx e'
-    _       -> False
-
--- | Does the given expression compute something? An expression is
---   non-computing if it is a variable, a literal, a lambda abstraction,
---   a thunk or an array which only has non-computing elements.
-computingEx :: Exp -> Bool
-computingEx ex =
-  case ex of
-    Var _      -> False
-    Lit _      -> False
-    Fun _ _    -> False
-    Thunk _ _  -> False
-    Arr arr    -> any computingEx arr
-    _          -> True
-
+    Just (Return ex')   -> Just ex'
+    Just (ThunkRet ex') -> Just ex'
+    _                   -> Nothing
 
 -- | Gather a map of all inlinable symbols; that is, the ones that are used
 --   exactly once.
@@ -694,3 +668,40 @@ assignToSubst ast = do
       return stm
 
     unsafePlace = isLambda .|. isShared .|. isLoop
+
+-- | Perform various trivially correct local inlinings:
+--   var x = e; return [0, e] (boxing at the end of a thunk/function)
+--    => [0, e]
+--   thunk(x) where x is non-computing and non-recursive
+--     => x
+smallStepInline :: JSTrav ast => ast -> TravM ast
+smallStepInline ast = do
+    mapJS (const True) return inl ast
+  where
+    inl (Assign (NewVar _ v) ex (Return (Arr [l@(Lit _), Var v'])))
+      | v == v' =
+        return (Return (Arr [l, ex]))
+    inl (Assign (NewVar _ v) ex (ThunkRet (Arr [l@(Lit _), Var v'])))
+      | v == v' =
+        return (ThunkRet (Arr [l, ex]))
+    inl (Assign lhs@(NewVar _ v) t@(Thunk _ _) next)
+      | Just ex <- fromThunkEx t, safeToUnThunk ex = do
+        return (Assign lhs ex next)
+    inl stm =
+      return stm
+
+    varAppears v (Exp (Var v') _) = v == v'
+    varAppears _ _                = False
+
+-- | Is the given expression safe to extract from a thunk?
+--   An expression is safe to unthunk iff evaluating it will not cause
+--   computation to take place or a variable do be dereferenced.
+safeToUnThunk :: Exp -> Bool
+safeToUnThunk ex =
+  case ex of
+    Lit _      -> True
+    JSLit _    -> True
+    Fun _ _    -> True
+    Thunk _ _  -> True
+    Arr arr    -> all safeToUnThunk arr
+    _          -> False

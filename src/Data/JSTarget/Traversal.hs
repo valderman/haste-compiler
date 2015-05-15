@@ -323,6 +323,10 @@ isJump :: ASTNode -> Bool
 isJump (Stm (Jump _) _) = True
 isJump _                = False
 
+isLoop :: ASTNode -> Bool
+isLoop (Stm (Forever _) _) = True
+isLoop _                   = False
+
 isConditional :: ASTNode -> Bool
 isConditional (Exp _ cond) = cond
 isConditional (Stm _ cond) = cond
