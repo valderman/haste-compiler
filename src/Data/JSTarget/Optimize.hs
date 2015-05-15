@@ -684,9 +684,13 @@ smallStepInline ast = do
     inl (Assign (NewVar _ v) ex (ThunkRet (Arr [l@(Lit _), Var v'])))
       | v == v' =
         return (ThunkRet (Arr [l, ex]))
+    -- Unpack thunks which don't provide actual laziness.
     inl (Assign lhs@(NewVar _ v) t@(Thunk _ _) next)
       | Just ex <- fromThunkEx t, safeToUnThunk ex = do
-        return (Assign lhs ex next)
+        case ex of
+          Thunk _ _ -> return $ Assign lhs ex next
+          _         -> Assign lhs ex <$> eliminateEvalOf v next
+    -- Merge @a = eval(a) ; a = eval(a)@ into a single eval.
     inl stm@(Assign (LhsExp _ (Var v1)) (Eval (Var v1')) next)
       | v1 == v1' = do
         case next of
@@ -700,6 +704,17 @@ smallStepInline ast = do
 
     varAppears v (Exp (Var v') _) = v == v'
     varAppears _ _                = False
+
+-- | Eliminate elimination of a variable. Only use when  *absolutely certain*
+--   that the variable can never be a thunk.
+eliminateEvalOf :: JSTrav ast => Var -> ast -> TravM ast
+eliminateEvalOf v ast = mapJS (const True) return elim ast
+  where
+    elim (Assign (LhsExp _ (Var v')) (Eval (Var v'')) next)
+      | v' == v'' && v == v' =
+        return next
+    elim stm =
+        return stm
 
 -- | Is the given expression safe to extract from a thunk?
 --   An expression is safe to unthunk iff evaluating it will not cause
