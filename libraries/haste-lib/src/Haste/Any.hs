@@ -103,8 +103,9 @@ class ToAny a where
   default toAny :: (GToAny (Rep a), Generic a) => a -> JSAny
   toAny x =
     case gToAny False g of
-      Right x' -> toObject x'
-      Left x'  -> toAny x'
+      Tree x' -> toObject x'
+      One  x' -> if isEnum g then x' else toAny [x']
+      List x' -> toAny x'
     where g = from x
 
   listToAny :: [a] -> JSAny
@@ -277,11 +278,11 @@ instance (FromAny a, FromAny b, FromAny c, FromAny d,
     (,,,,,,) <$> fromAny a <*> fromAny b <*> fromAny c <*> fromAny d
              <*> fromAny e <*> fromAny f <*> fromAny g
 
-
+data Value = One !JSAny | List ![JSAny] | Tree ![(JSString, JSAny)]
 
 -- Generic instances
 class GToAny f where
-  gToAny :: Bool -> f a -> Either [JSAny] [(JSString, JSAny)]
+  gToAny :: Bool -> f a -> Value
   isEnum :: f a -> Bool
 
 instance GToAny U1 where
@@ -289,33 +290,33 @@ instance GToAny U1 where
   isEnum _    = True
 
 instance ToAny a => GToAny (K1 i a) where
-  gToAny _ (K1 x) = Left [toAny x]
+  gToAny _ (K1 x) = One (toAny x)
   isEnum _ = False
 
 instance (Selector c, GToAny a) => GToAny (M1 S c a) where
   gToAny mcs (M1 x) = do
     case name of
-      "" -> Left [value]
-      _  -> Right [(name, value)]
+      "" -> One  value
+      _  -> Tree [(name, value)]
     where name  = toJSStr (selName (undefined :: M1 S c a ()))
           value =
             case gToAny mcs x of
-              Right x'  -> toObject x'
-              Left [x'] -> toAny x'
-              Left x'   -> toAny x'
+              Tree x' -> toObject x'
+              One  x' -> toAny x'
+              List x' -> toAny x'
   isEnum _ = isEnum (undefined :: a ())
 
 instance Constructor c => GToAny (M1 C c U1) where
-  gToAny _ _ = Left [toAny $ conName (undefined :: M1 C c U1 ())]
+  gToAny _ _ = One (toAny $ conName (undefined :: M1 C c U1 ()))
   isEnum _ = True
 
 instance (Constructor c, GToAny a) => GToAny (M1 C c a) where
   gToAny many_constrs (M1 x)
     | many_constrs =
       case args of
-        Right args' -> Right (("$tag", toAny tag) : args')
-        Left [arg]  -> Right [("$tag", toAny tag), ("$data", arg)]
-        Left args'  -> Right [("$tag", toAny tag), ("$data", toAny args')]
+        Tree args' -> Tree (("$tag", toAny tag) : args')
+        One  arg   -> Tree [("$tag", toAny tag), ("$data", arg)]
+        List args' -> Tree [("$tag", toAny tag), ("$data", toAny args')]
     | otherwise =
       args
     where
@@ -330,9 +331,12 @@ instance GToAny a => GToAny (M1 D c a) where
 instance (GToAny a, GToAny b) => GToAny (a :*: b) where
   gToAny cs (a :*: b) =
     case (gToAny cs a, gToAny cs b) of
-      (Right a', Right b') -> Right (a' ++ b')
-      (Left a', Left b')   -> Left (a' ++ b')
-      _                    -> error "Unpossible!"
+      (One l,   One r)   -> List [l, r]
+      (One x,   List xs) -> List (x:xs)
+      (List xs, One x)   -> List (xs ++ [x])
+      (List l,  List r)  -> List (l ++ r)
+      (Tree l,  Tree r)  -> Tree (l ++ r)
+      (_,       _)       -> error "Tree :*: non-tree!"
   isEnum _ = False
 
 instance (GToAny a, GToAny b) => GToAny (a :+: b) where

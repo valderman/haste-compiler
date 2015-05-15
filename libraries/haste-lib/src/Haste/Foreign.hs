@@ -129,10 +129,14 @@ instance ToAny a => JSFunc (IO a) where
 instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
   mkJSFunc f = mkJSFunc . f . unsafePerformIO . fromAny
 
+class Function a
+instance Function (IO a)
+instance Function (a -> b)
+
 #if __GLASGOW_HASKELL__ < 710
-instance JSFunc a => ToAny a where
+instance (Function a, JSFunc a) => ToAny a where
 #else
-instance {-# OVERLAPPABLE #-} JSFunc a => ToAny a where
+instance {-# OVERLAPPABLE #-} (Function a, JSFunc a) => ToAny a where
 #endif
   toAny = unsafePerformIO . createJSFunc . toAny . toOpaque . mkJSFunc
 
