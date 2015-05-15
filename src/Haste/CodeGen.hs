@@ -524,6 +524,23 @@ genApp f xs = do
 isEnumerationDataCon :: DataCon -> Bool
 isEnumerationDataCon = isEnumerationTyCon . dataConTyCon
 
+-- | Does this data constructor create a newtype-like value? That is, a value
+--   of a type with a single data constructor having a single argument?
+isNewtypeLikeCon :: DataCon -> Bool
+isNewtypeLikeCon c =
+    case tyConDataCons (dataConTyCon c) of
+      [_] -> dataConRepArity c == 1
+      _   -> False
+
+-- | Does this data constructor create a newtype-like value? That is, a value
+--   of a type with a single data constructor having a single argument?
+isNewtypeLike :: Var.Var -> Bool
+isNewtypeLike v = maybe False id $ do
+  (tycon, _) <- splitTyConApp_maybe (varType v)
+  case tyConDataCons tycon of
+    [c] -> return $ dataConRepArity c == 1
+    _   -> return False
+
 -- | Returns True if the given Var is an unboxed tuple with a single element
 --   after any represenationless elements are discarded.
 isUnaryUnboxedTuple :: Var.Var -> Bool
