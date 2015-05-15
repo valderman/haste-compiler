@@ -687,6 +687,14 @@ smallStepInline ast = do
     inl (Assign lhs@(NewVar _ v) t@(Thunk _ _) next)
       | Just ex <- fromThunkEx t, safeToUnThunk ex = do
         return (Assign lhs ex next)
+    inl stm@(Assign (LhsExp _ (Var v1)) (Eval (Var v1')) next)
+      | v1 == v1' = do
+        case next of
+          stm'@(Assign (LhsExp _ (Var v2)) (Eval (Var v2')) next')
+            | v1 == v2 && v1' == v2' -> do
+              return stm'
+          _ -> do
+            return stm
     inl stm =
       return stm
 
