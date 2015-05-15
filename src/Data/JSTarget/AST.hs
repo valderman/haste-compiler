@@ -33,27 +33,38 @@ instance HasModule Name where
   pkgOf (Name _ mmod)    = fmap fst mmod
 
 instance HasModule Var where
-  moduleOf (Foreign _)    = Nothing
-  moduleOf (Internal n _) = moduleOf n
-  pkgOf (Foreign _)       = Nothing
-  pkgOf (Internal n _)    = pkgOf n
+  moduleOf (Foreign _)      = Nothing
+  moduleOf (Internal n _ _) = moduleOf n
+  pkgOf (Foreign _)         = Nothing
+  pkgOf (Internal n _ _)    = pkgOf n
+
+type KnownLoc = Bool
 
 -- | Representation of variables.
 data Var where
   Foreign  :: !String -> Var
-  Internal :: !Name -> !Comment -> Var
+  -- | Being a "known location" means that we can never substitute this
+  --   variable for another one, as it is used to hold "return values" from
+  --   case statements, tail loopification and similar.
+  --   If a variable is *not* a known location, then we may always perform the
+  --   substitution @a=b ; exp => exp [a/b]@.
+  Internal :: !Name -> !Comment -> !KnownLoc -> Var
   deriving (Show)
 
+isKnownLoc :: Var -> Bool
+isKnownLoc (Internal _ _ knownloc) = knownloc
+isKnownLoc _                       = False
+
 instance Eq Var where
-  (Foreign f1)  == (Foreign f2)      = f1 == f2
-  (Internal i1 _) == (Internal i2 _) = i1 == i2
-  _ == _                             = False
+  (Foreign f1)  == (Foreign f2)          = f1 == f2
+  (Internal i1 _ _) == (Internal i2 _ _) = i1 == i2
+  _ == _                                 = False
 
 instance Ord Var where
-  compare (Foreign f1) (Foreign f2)       = compare f1 f2
-  compare (Internal i1 _) (Internal i2 _) = compare i1 i2
-  compare (Foreign _) (Internal _ _)      = Prelude.LT
-  compare (Internal _ _) (Foreign _)      = Prelude.GT
+  compare (Foreign f1) (Foreign f2)           = compare f1 f2
+  compare (Internal i1 _ _) (Internal i2 _ _) = compare i1 i2
+  compare (Foreign _) (Internal _ _ _)        = Prelude.LT
+  compare (Internal _ _ _) (Foreign _)        = Prelude.GT
 
 -- | Left hand side of an assignment. Normally we only assign internal vars,
 --   but for some primops we need to assign array elements as well.
@@ -90,7 +101,7 @@ data Lit where
 data Exp where
   Var       :: !Var -> Exp
   Lit       :: !Lit -> Exp
-  JSLit     :: !String -> Exp -- A literal JS snipped
+  JSLit     :: !String -> Exp -- A literal JS snippet
   Not       :: !Exp -> Exp
   BinOp     :: !BinOp -> Exp -> !Exp -> Exp
   Fun       :: ![Var] -> !Stm -> Exp
@@ -158,7 +169,7 @@ blackHole =
 
 -- | The variable of the blackHole LHS.
 blackHoleVar :: Var
-blackHoleVar = Internal (Name "" (Just ("$blackhole", "$blackhole"))) ""
+blackHoleVar = Internal (Name "" (Just ("$blackhole", "$blackhole"))) "" False
 
 -- | An AST with local jumps.
 data AST a = AST {

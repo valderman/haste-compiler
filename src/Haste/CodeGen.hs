@@ -64,13 +64,13 @@ generate cfg pkgid modname binds =
   where
     theMod = genAST cfg modname binds
 
-    insFun m (_, AST (Assign (NewVar _ (Internal v _)) body _) jumps) =
+    insFun m (_, AST (Assign (NewVar _ (Internal v _ _)) body _) jumps) =
       M.insert v (AST body jumps) m
     insFun m _ =
       m
 
     -- TODO: perhaps do dependency-based linking for externals as well?
-    insDep m (ds, AST (Assign (NewVar _ (Internal v _)) _ _) _) =
+    insDep m (ds, AST (Assign (NewVar _ (Internal v _ _)) _ _) _) =
       M.insert v (S.delete v ds) m
     insDep m _ =
       m
@@ -348,9 +348,9 @@ genResultVar v = do
   v' <- genVar v >>= getActualName
   case v' of
     Foreign n ->
-      return $ Internal (Name (n ++ "#result") Nothing) ""
-    Internal (Name n mp) _ ->
-      return $ Internal (Name (n ++ "#result") mp) ""
+      return $ Internal (Name (n ++ "#result") Nothing) "" True
+    Internal (Name n mp) _ _ ->
+      return $ Internal (Name (n ++ "#result") mp) "" True
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.

@@ -4,7 +4,7 @@ module Data.JSTarget.Traversal where
 import Control.Applicative
 import Control.Monad
 import Data.JSTarget.AST
-import Data.Map as M ((!), insert, empty)
+import Data.Map as M ((!), insert)
 
 -- | AST nodes we'd like to fold and map over.
 data ASTNode = Exp !Exp !Bool | Stm !Stm !Bool | Label !Lbl

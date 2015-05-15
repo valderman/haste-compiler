@@ -47,7 +47,12 @@ foreignVar = Foreign
 
 -- | A regular, internal variable. Subject to name mangling.
 internalVar :: Name -> String -> Var
-internalVar = Internal
+internalVar n c = Internal n c False
+
+-- | A variable serving as a known location, to store return values from
+--   expressions that get compiled into statements.
+knownLocation :: Name -> String -> Var
+knownLocation n c = Internal n c True
 
 -- | Create a name, qualified or not.
 name :: String -> Maybe (String, String) -> Name
@@ -99,7 +104,7 @@ newVars :: String -> Int -> [Var]
 newVars prefix n =
     map newvar [1..n]
   where
-    newvar i = Internal (Name (prefix ++ show i) Nothing) ""
+    newvar i = Internal (Name (prefix ++ show i) Nothing) "" False
 
 -- | Create a thunk.
 thunk :: Bool -> AST Stm -> AST Exp

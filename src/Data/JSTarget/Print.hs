@@ -18,7 +18,7 @@ import Numeric (showHex)
 instance Pretty Var where
   pp (Foreign name) =
     put $ stringUtf8 name
-  pp (Internal name@(Name n _) comment) = do
+  pp (Internal name@(Name n _) comment _) = do
     pp name
     doComment <- getOpt nameComments
     when doComment $ do

@@ -31,6 +31,7 @@ optimizeFun f (AST ast js) =
     >>= inlineShortJumpTailcall
     >>= trampoline
     >>= ifReturnToTernary
+    >>= assignToSubst
     >>= inlineJSPrimitives
 
 topLevelInline :: AST Stm -> AST Stm
@@ -118,7 +119,7 @@ inlineAssigns ast = do
                 -- Don't inline lambdas currently.
                 _    | Fun vs body <- ex -> do
                   return keep
-                -- Inline of any non-lambda value
+                -- Inline of any non-lambda, non-thunk value
                 Once | Nothing <- fromThunk ex -> do
                   replaceEx (not <$> isShared) (Var lhs) ex next
                 _ -> do
@@ -246,7 +247,7 @@ gatherInlinable ast = do
     updVar _           = Just Once
     updVarAss (Just o) = Just o
     updVarAss _        = Just Never
-    countOccs m (Exp (Var v@(Internal _ _)) _) =
+    countOccs m (Exp (Var v@(Internal _ _ _)) _) =
       pure (M.alter updVar v m)
     countOccs m (Stm (Assign (NewVar _ v) _ _) _) =
       pure (M.alter updVarAss v m)
@@ -583,8 +584,8 @@ tailLoopify f fun@(Fun args body) = do
                                   | otherwise =
       (Assign (LhsExp (Var v)) x . next, final)
     
-    newName (Internal (Name n mmod) _) =
-      Internal (Name (' ':n) mmod) ""
+    newName (Internal (Name n mmod) _ _) =
+      Internal (Name (' ':n) mmod) "" True
     newName n =
       n
     
@@ -646,9 +647,10 @@ zipAssign l r final
 -- | Inline calls to JS @eval@, @__set@, @__get@ and @__has@ and apply
 --   functions for "Haste.Foreign".
 inlineJSPrimitives :: JSTrav ast => ast -> TravM ast
-inlineJSPrimitives ast = do
-    mapJS (const True) inl return ast
+inlineJSPrimitives =
+    inlineFuns >=> inlineReturns
   where
+    inlineFuns = mapJS (const True) inl return
     inl ex@(Call _ (Fast _) (Var (Foreign f)) args) =
       case (f, args) of
         ("eval", [Lit (LStr s)])   -> return (JSLit s)
@@ -665,3 +667,19 @@ inlineJSPrimitives ast = do
         _                         -> return ex
     inl exp =
       return exp
+
+-- | Turn all assignments of the form @var v1 = e ; exp@ into @exp[v1/e]@,
+--   provided that @v1@ is not used as a known location and @e@ is either a
+--   variable or a non-string literal.
+assignToSubst :: JSTrav ast => ast -> TravM ast
+assignToSubst ast = do
+    mapJS (const True) return inl ast
+  where
+    inl stm@(Assign (NewVar _ v) x next) | not (isKnownLoc v) = do
+      case x of
+        (Var _)        -> replaceEx (pure True) (Var v) x next
+        (Lit (LStr _)) -> return stm
+        (Lit _)        -> replaceEx (pure True) (Var v) x next
+        _              -> return stm
+    inl stm = do
+      return stm

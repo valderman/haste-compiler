@@ -64,10 +64,10 @@ instance Dependency J.Name where
     put st {locals = S.insert v (locals st)}
 
 instance Dependency J.Var where
-  dependOn (Foreign _)    = return ()
-  dependOn (Internal n _) = dependOn n
-  addLocal (Foreign _)    = return ()
-  addLocal (Internal n _) = addLocal n
+  dependOn (Foreign _)      = return ()
+  dependOn (Internal n _ _) = dependOn n
+  addLocal (Foreign _)      = return ()
+  addLocal (Internal n _ _) = addLocal n
 
 instance Dependency a => Dependency [a] where
   dependOn = mapM_ dependOn

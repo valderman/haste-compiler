@@ -18,11 +18,16 @@ instance Binary Module where
   get = Module <$> get <*> get <*> get <*> get
 
 instance Binary Var where
-  put (Foreign str)           = putWord8 0 >> put str
-  put (Internal name comment) = putWord8 1 >> put name >> put comment
+  put (Foreign str) =
+    putWord8 0 >> put str
+  put (Internal name comment knownloc) =
+    putWord8 1 >> put name >> put comment >> put knownloc
 
   get = do
-    getWord8 >>= ([Foreign <$> get,Internal <$> get <*> get] !!) . fromIntegral
+    which <- getWord8
+    case which of
+      0 -> Foreign <$> get
+      1 -> Internal <$> get <*> get <*> get
 
 instance Binary LHS where
   put (NewVar r v) = putWord8 0 >> put r >> put v
