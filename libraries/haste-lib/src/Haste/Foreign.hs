@@ -110,6 +110,7 @@ constant = unsafePerformIO . fromAny . __eval
 --   --opt-minify or any option that implies it, you will instead need
 --   to access your exports through Haste[\'name\'](), or Closure will mangle
 --   your function names.
+{-# INLINE export #-}
 export :: ToAny a => JSString -> a -> IO ()
 export = ffi "(function(s,f){Haste[s] = f;})"
 
