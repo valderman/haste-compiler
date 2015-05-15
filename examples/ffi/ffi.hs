@@ -1,31 +1,30 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- | This example implements a really simple JQuery wrapper, to demonstrate
 --   how foreign imports work.
---
---   For more information, see doc/js-externals.txt.
 module Main where
 import Haste hiding (click)
-import Haste.Prim
+import Haste.Foreign
 import Control.Monad (when)
+import Control.Applicative
 
 newtype JQuery = JQuery JSAny
+type Selector = String
 
-foreign import ccall js_jquery :: JSString -> IO (JQuery)
-foreign import ccall js_click :: JQuery -> Ptr (Int -> IO ()) -> IO ()
-foreign import ccall js_hide :: JQuery -> IO ()
+data MouseEvent = MouseEvent Int
 
--- | Since we can't name it '$', let's just call it 'j'.
-j :: String -> (JQuery -> IO ()) -> IO ()
-j s action = js_jquery (toJSString s) >>= action
+instance FromAny MouseEvent where
+  fromAny x = MouseEvent <$> get x "button"
 
--- | Register an onclick callback.
-click :: (Int -> IO ()) -> JQuery -> IO ()
-click f jq = js_click jq (toPtr f)
+-- | The @ffi@ function allows you to import arbitrary JS code as a Haskell
+--   function, provided that its arguments are all marshallable.
+clicked :: Selector -> (MouseEvent -> IO ()) -> IO ()
+clicked = ffi "(function(sel, f){$(sel).click(f);})"
 
--- | Hide an element.
-hide :: JQuery -> IO ()
-hide jq = js_hide jq
+hide :: Selector -> IO ()
+hide = ffi "(function(sel){$(sel).hide();})"
 
 main = do
-  j "#closeBlack" $ click (\button -> when (button == 0) (j "#blackBox" $ hide))
-  j "#closeRed" $ click (\button -> when (button == 0) (j "#redBox" $ hide))
+  "#closeBlack" `clicked` \(MouseEvent button) -> do
+    when (button == 0) (hide "#blackBox")
+  "#closeRed" `clicked` \(MouseEvent button) -> do
+    when (button == 0) (hide "#redBox")
