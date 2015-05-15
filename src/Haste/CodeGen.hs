@@ -533,17 +533,22 @@ isEnumerationDataCon = isEnumerationTyCon . dataConTyCon
 --   of a type with a single data constructor having a single argument?
 isNewtypeLikeCon :: DataCon -> Bool
 isNewtypeLikeCon c =
-    case tyConDataCons (dataConTyCon c) of
-      [_] -> dataConRepArity c == 1
+  case tyConDataCons (dataConTyCon c) of
+    [_] -> case dataConRepArgTys c of
+      [t] -> isUnLiftedType t
       _   -> False
+    _   -> False
 
 -- | Does this data constructor create a newtype-like value? That is, a value
---   of a type with a single data constructor having a single argument?
+--   of a type with a single data constructor having a single unlifted
+--   argument?
 isNewtypeLike :: Var.Var -> Bool
 isNewtypeLike v = maybe False id $ do
   (tycon, _) <- splitTyConApp_maybe (varType v)
   case tyConDataCons tycon of
-    [c] -> return $ dataConRepArity c == 1
+    [c] -> case dataConRepArgTys c of
+      [t] -> return (isUnLiftedType t)
+      _   -> return False
     _   -> return False
 
 -- | Returns True if the given Var is an unboxed tuple with a single element

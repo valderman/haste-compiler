@@ -38,9 +38,6 @@ __eq _ _ = undefined
 foreign import ccall strEq :: JSString -> JSString -> Bool
 foreign import ccall strOrd :: JSString -> JSString -> Ptr Ordering
 
--- | "Pointers" need to be wrapped in a data constructor.
-data FakePtr a = FakePtr a
-
 -- | Native JavaScript strings.
 newtype JSString = JSString JSAny
 
@@ -57,13 +54,11 @@ instance Show JSString where
 --   we compile to JS, however, anything can be "pointed" to and nothing needs
 --   to be stored.
 toPtr :: a -> Ptr a
-toPtr = unsafeCoerce . FakePtr
+toPtr = unsafeCoerce
 
 -- | Unwrap a "pointer" to something.
 fromPtr :: Ptr a -> a
-fromPtr ptr =
-  case unsafeCoerce ptr of
-    FakePtr val -> val
+fromPtr = unsafeCoerce
 
 {-# RULES "toJSS/fromJSS" forall s. toJSStr (fromJSStr s) = s #-}
 {-# RULES "fromJSS/toJSS" forall s. fromJSStr (toJSStr s) = s #-}
