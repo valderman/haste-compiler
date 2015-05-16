@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# LANGUAGE OverloadedStrings, ForeignFunctionInterface, CPP, MagicHash #-}
 -- | JSString standard functions, to make them a more viable alternative to
 --   the horribly inefficient standard Strings.
@@ -9,8 +10,22 @@
 --   of 'match', 'matches', 'regex' and 'replace', which are wrappers on top of
 --   JavaScript's native regular expressions and thus only supported on the
 --   client.
-module Haste.JSString where
-import Data.List
+module Haste.JSString (
+    -- | Building JSStrings
+    empty, singleton, pack, cons, snoc, append, replicate,
+    -- | Deconstructing JSStrings
+    unpack, head, last, tail, drop, take, init, splitAt,
+    -- | Examining JSStrings
+    null, length, any, all,
+    -- | Modifying JSStrings
+    map, reverse, intercalate, foldl', foldr, concat, concatMap,
+    -- | Regular expressions (client-side only)
+    RegEx, match, matches, regex, replace
+  ) where
+import qualified Data.List
+import Prelude hiding (foldr, concat, concatMap, reverse, map, all, any,
+                       length, null, splitAt, init, take, drop, tail, head,
+                       last, replicate)
 import Data.String
 import Haste.Prim
 import Haste.Foreign
@@ -37,9 +52,11 @@ foreign import ccall _jss_re_compile :: JSString -> JSString -> RegEx
 foreign import ccall _jss_re_replace :: JSString -> RegEx -> JSString -> JSString
 foreign import ccall _jss_re_find :: RegEx -> JSString -> Ptr [JSString]
 
+{-# INLINE _jss_map #-}
 _jss_map :: (Char -> Char) -> JSString -> JSString
 _jss_map f = _jss_cmap (_jss_singleton . f)
 
+{-# INLINE _jss_cmap #-}
 _jss_cmap :: (Char -> JSString) -> JSString -> JSString
 _jss_cmap f s = unsafePerformIO $ go (return . f) s
   where
@@ -47,13 +64,14 @@ _jss_cmap f s = unsafePerformIO $ go (return . f) s
     go = ffi "(function(f,s){\
 var s2 = '';\
 for(var i in s) {\
-   s2 += String.fromCharCode(f(s.charCodeAt(i)));\
+   s2 += f(s.charCodeAt(i));\
 }\
 return s2;})"
 
 _ret :: a -> IO a
 _ret = return
 
+{-# INLINE _jss_foldl #-}
 _jss_foldl :: (ToAny a, FromAny a) => (a -> Char -> a) -> a -> JSString -> a
 _jss_foldl f x s = unsafePerformIO $ go (\a c -> a `seq` _ret (f a c)) x s
   where
@@ -63,6 +81,7 @@ for(var i in s) {\
 }\
 return x;})"
 
+{-# INLINE _jss_foldr #-}
 _jss_foldr :: (ToAny a, FromAny a) => (Char -> a -> a) -> a -> JSString -> a
 _jss_foldr f x s = unsafePerformIO $ go (\c a -> _ret $ f c a) x s
   where
@@ -97,9 +116,7 @@ _jss_index :: JSString -> Int -> Char
 _jss_index s n = fromJSStr s !! n
 
 _jss_substr :: JSString -> Int -> JSString
-_jss_substr s n
-  | n >= 0    = toJSStr $ Data.List.drop n $ fromJSStr s
-  | otherwise = toJSStr $ Data.List.take (_jss_len s + n) $ fromJSStr s
+_jss_substr s n = toJSStr $ Data.List.drop n $ fromJSStr s
 
 _jss_take :: Int -> JSString -> JSString
 _jss_take n = toJSStr . Data.List.take n . fromJSStr
@@ -199,7 +216,7 @@ tail s = _jss_substr s 1
 
 -- | O(n) Drop 'n' elements from the given JSString.
 drop :: Int -> JSString -> JSString
-drop n s = _jss_substr s (-n)
+drop n s = _jss_substr s (max 0 n)
 
 -- | O(n) Take 'n' elements from the given JSString.
 take :: Int -> JSString -> JSString
@@ -208,7 +225,7 @@ take n s = _jss_take n s
 -- | O(n) All elements but the last of a JSString. Returns an empty JSString
 --   if the given JSString is empty.
 init :: JSString -> JSString
-init s = _jss_substr s (-1)
+init s = _jss_take (_jss_len s-1) s
 
 -- | O(1) Test whether a JSString is empty.
 null :: JSString -> Bool
