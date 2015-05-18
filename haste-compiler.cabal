@@ -267,6 +267,7 @@ Library
         Haste.DOM.JSString
         Haste.Events
         Haste.Foreign
+        Haste.Graphics.AnimationFrame
         Haste.Graphics.Canvas
         Haste.JSON
         Haste.JSString
