@@ -19,10 +19,10 @@ import Control.Monad.IO.Class (liftIO)
 import Haste.Args
 import System.Console.GetOpt
 
-#if __GLASGOW_HASKELL__ >= 708
-baseDir = "base-ghc-7.8"
+#if __GLASGOW_HASKELL__ >= 710
+libDir = "ghc-7.10"
 #else
-baseDir = "base-ghc-7.6"
+libDir = "ghc-7.8"
 #endif
 
 downloadFile :: String -> Shell BS.ByteString
@@ -184,39 +184,42 @@ buildLibs cfg = do
     mkdir True $ pkgSysLibDir
     cpDir "include" hasteSysDir
     run_ hastePkgBinary ["update", "--global", "libraries" </> "rts.pkg"] ""
-    
+
     inDirectory "libraries" $ do
-      -- Install ghc-prim
-      inDirectory "ghc-prim" $ do
-        hasteCabal ["configure", "--solver", "topdown"]
-        hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
-        run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
-        run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
-      
-      -- Install integer-gmp; double install shouldn't be needed anymore.
-      run_ hasteCopyPkgBinary ["Cabal"] ""
-      inDirectory "integer-gmp" $ do
-        hasteCabal ("install" : "--solver" : "topdown" : ghcOpts)
-      
-      -- Install base
-      inDirectory baseDir $ do
-        basever <- file "base.cabal" >>= return
-          . dropWhile (not . isDigit)
-          . head
-          . filter (not . null)
-          . filter (and . zipWith (==) "version")
-          . lines
-        hasteCabal ["configure", "--solver", "topdown"]
-        hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
-        let base = "base-" ++ basever
-            pkgdb = "--package-db=dist" </> "package.conf.inplace"
-        run_ hasteInstHisBinary [base, "dist" </> "build"] ""
-        run_ hasteCopyPkgBinary [base, pkgdb] ""
-        forEachFile "include" $ \f -> cp f (hasteSysDir </> "include")
-      
-      -- Install array and haste-lib
-      forM_ ["array", "haste-lib"] $ \pkg -> do
-        inDirectory pkg $ hasteCabal ("install" : ghcOpts)
+      inDirectory libDir $ do
+        -- Install ghc-prim
+        inDirectory "ghc-prim" $ do
+          hasteCabal ["configure", "--solver", "topdown"]
+          hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
+          run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
+          run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
+
+        -- Install integer-gmp; double install shouldn't be needed anymore.
+        run_ hasteCopyPkgBinary ["Cabal"] ""
+        inDirectory "integer-gmp" $ do
+          hasteCabal ("install" : "--solver" : "topdown" : ghcOpts)
+
+        -- Install base
+        inDirectory "base" $ do
+          basever <- file "base.cabal" >>= return
+            . dropWhile (not . isDigit)
+            . head
+            . filter (not . null)
+            . filter (and . zipWith (==) "version")
+            . lines
+          hasteCabal ["configure", "--solver", "topdown"]
+          hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
+          let base = "base-" ++ basever
+              pkgdb = "--package-db=dist" </> "package.conf.inplace"
+          run_ hasteInstHisBinary [base, "dist" </> "build"] ""
+          run_ hasteCopyPkgBinary [base, pkgdb] ""
+          forEachFile "include" $ \f -> cp f (hasteSysDir </> "include")
+
+        -- Install array
+        inDirectory "array" $ hasteCabal ("install" : ghcOpts)
+
+      -- Install haste-lib
+      inDirectory "haste-lib" $ hasteCabal ("install" : ghcOpts)
 
       -- Export monads-tf; it seems to be hidden by default
       run_ hastePkgBinary ["expose", "monads-tf"] ""

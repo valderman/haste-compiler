@@ -5,5 +5,5 @@ module GHC.Constants where
 
 import Prelude
 
-#include "../../../include/HaskellConstants.hs"
+#include "../../../../include/HaskellConstants.hs"
 
