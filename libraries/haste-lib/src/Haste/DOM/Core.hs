@@ -113,7 +113,7 @@ children = Children
 --   Gives more convenient syntax when creating elements:
 --
 --     newElem "div" `with` [
---         style "border" := "1px solid black",
+--         style "border" =: "1px solid black",
 --         ...
 --       ]
 --
