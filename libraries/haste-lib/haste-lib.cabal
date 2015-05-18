@@ -39,6 +39,7 @@ Library
         Haste.LocalStorage
         Haste.Object
         Haste.Parsing
+        Haste.Performance
         Haste.Prim
         Haste.Serialize
         Haste.WebSockets
