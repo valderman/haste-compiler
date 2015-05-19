@@ -132,7 +132,11 @@ class JSFunc a where
   mkJSFunc :: a -> JS a
   arity    :: a -> Int
 
+#if __GLASGOW_HASKELL__ < 710
 instance (ToAny a, JS a ~ JSAny) => JSFunc a where
+#else
+instance {-# OVERLAPPABLE #-} (ToAny a, JS a ~ JSAny) => JSFunc a where
+#endif
   mkJSFunc = toAny
   arity _  = 0
 

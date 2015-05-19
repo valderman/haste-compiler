@@ -109,7 +109,7 @@ Executable hastec
     Build-Depends:
         base < 5,
         ghc-prim,
-        ghc >= 7.8 && < 7.10,
+        ghc >= 7.8 && < 7.11,
         mtl,
         binary,
         containers,
@@ -156,7 +156,10 @@ Executable hastec
 
 Executable haste-pkg
     Default-Language: Haskell2010
-    Main-Is: haste-pkg.hs
+    if impl(ghc >= 7.10)
+      Main-Is: haste-pkg-710.hs
+    else
+      Main-Is: haste-pkg.hs
     Other-Modules:
     Other-Extensions: CPP
     Hs-Source-Dirs:
