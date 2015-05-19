@@ -25,8 +25,10 @@ import System.FilePath (takeDirectory)
 
 #if __GLASGOW_HASKELL__ >= 710
 libDir = "ghc-7.10"
+primVersion = "0.4.0.0"
 #else
 libDir = "ghc-7.8"
+primVersion = "0.3.0.0"
 #endif
 
 downloadFile :: String -> Shell BS.ByteString
@@ -291,10 +293,10 @@ buildLibs cfg = do
         inDirectory "ghc-prim" $ do
           hasteCabal Configure ["--solver", "topdown"]
           hasteCabal Build []
-          let primlibfile = "libHSghc-prim-0.3.0.0.jslib"
-              primlibdir  = pkgSysLibDir </> "ghc-prim-0.3.0.0"
+          let primlibfile = "libHSghc-prim-" ++ primVersion ++ ".jslib"
+              primlibdir  = pkgSysLibDir </> "ghc-prim-" ++ primVersion
           mkdir True primlibdir
-          run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
+          run_ hasteInstHisBinary ["ghc-prim-" ++ primVersion, "dist" </> "build"] ""
           cp ("dist" </> "build" </> primlibfile) (primlibdir </> primlibfile)
           run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
 
