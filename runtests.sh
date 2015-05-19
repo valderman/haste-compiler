@@ -11,8 +11,6 @@ if [[ $JS == "" ]] ; then
 fi
 
 if [[ -f 'cabal.sandbox.config' ]]; then
-    CABAL_SANDBOX_PKG_CONF=$(ls -d .cabal-sandbox/*-packages.conf.d | tail -1)
-    CABAL_SANDBOX_ARGS="-no-user-package-db -package-db=$CABAL_SANDBOX_PKG_CONF"
     SANDBOX_DIR=$(cat cabal.sandbox.config  | grep 'prefix:' | cut -d ':' -f 2)
     echo "Notice: running with a sandbox located at:$SANDBOX_DIR" >&2
 fi
@@ -25,7 +23,7 @@ runTest() {
     ghc_stderr_file=`mktemp`
     echo "Running test $module..."
 
-    ghc_output=`runghc $CABAL_SANDBOX_ARGS -w -DTEST_MODULE=$module TestDriver.hs 2> $ghc_stderr_file`
+    ghc_output=`cabal exec runghc -- -w -DTEST_MODULE=$module TestDriver.hs 2> $ghc_stderr_file`
 
     if [[ $quiet == 1 ]] ; then
         $hastec -fforce-recomp --onexec -O0 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
