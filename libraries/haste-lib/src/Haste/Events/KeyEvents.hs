@@ -1,13 +1,11 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, CPP #-}
 -- | Events relating to mouse keyboard input.
 module Haste.Events.KeyEvents (KeyEvent (..), KeyData (..), mkKeyData) where
-import Haste.Object
-import Haste.JSType
+import Haste.Any
 import Haste.Events.Core
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
 #endif
-import Data.Maybe
 
 -- | Event data for keyboard events.
 data KeyData = KeyData {
@@ -51,8 +49,8 @@ instance Event KeyEvent where
   eventName KeyUp    = "keyup"
   eventName KeyDown  = "keydown"
   eventData _ e =
-    KeyData <$> (e # "keyCode"  >>= fmap (convert . fromJust) . asNumber)
-            <*> (e # "ctrlKey"  >>= fmap fromJust . asBool)
-            <*> (e # "altKey"   >>= fmap fromJust . asBool)
-            <*> (e # "shiftKey" >>= fmap fromJust . asBool)
-            <*> (e # "metaKey"  >>= fmap fromJust . asBool)
+    KeyData <$> get e "keyCode"
+            <*> get e "ctrlKey"
+            <*> get e "altKey"
+            <*> get e "shiftKey"
+            <*> get e "metaKey"

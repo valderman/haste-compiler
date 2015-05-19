@@ -8,7 +8,6 @@ module Haste.Events.Core (
 import Haste.Prim
 import Haste.DOM.Core
 import Haste.Foreign
-import Haste.Object
 import Control.Monad.IO.Class
 import Data.IORef
 import System.IO.Unsafe
@@ -29,7 +28,7 @@ class Event evt where
   eventName :: evt -> JSString
 
   -- | Construct event data from the event identifier and the JS event object.
-  eventData :: evt -> JSObj -> IO (EventData evt)
+  eventData :: evt -> JSAny -> IO (EventData evt)
 
 -- | Information about an event handler.
 data HandlerInfo = HandlerInfo {
@@ -46,19 +45,20 @@ unregisterHandler :: HandlerInfo -> IO ()
 unregisterHandler (HandlerInfo ev el f) = unregEvt el ev f
 
 -- | Reference to the event currently being handled.
-evtRef :: IORef JSObj
+{-# NOINLINE evtRef #-}
+evtRef :: IORef (Maybe JSAny)
 evtRef = unsafePerformIO $ newIORef Nothing
 
 {-# INLINE setEvtRef #-}
-setEvtRef :: JSObj -> IO ()
-setEvtRef = writeIORef evtRef
+setEvtRef :: JSAny -> IO ()
+setEvtRef = writeIORef evtRef . Just
 
 -- | Prevent the event being handled from resolving normally.
 --   Does nothing if called outside an event handler.
 preventDefault :: IO ()
 preventDefault = readIORef evtRef >>= go
   where
-    go :: JSObj -> IO ()
+    go :: Maybe JSAny -> IO ()
     go = ffi "(function(e){if(e){e.preventDefault();}})"
 
 -- | Set an event handler on a DOM element.
@@ -79,9 +79,8 @@ onEvent el evt f = do
     name = eventName evt
     e    = elemOf el
     prepareEvent o = liftIO $ do
-      let o' = Just o
-      setEvtRef o'
-      eventData evt o'
+      setEvtRef o
+      eventData evt o
 
 -- | Set an event handler on an element, returning a reference to the handler
 --   exactly as seen by @addEventListener@. We can't reuse the reference to

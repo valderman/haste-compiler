@@ -3,17 +3,17 @@
 module Haste.Events.MouseEvents (
     MouseEvent (..), MouseData (..), MouseButton (..)
   ) where
-import Haste.Object
-import Haste.JSType
 import Haste.Events.Core
 import Haste.Foreign
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
 #endif
-import Data.Maybe
 
 data MouseButton = MouseLeft | MouseMiddle | MouseRight
   deriving (Show, Eq, Enum)
+
+instance FromAny MouseButton where
+  fromAny = fmap toEnum . fromAny
 
 -- | Event data for mouse events.
 data MouseData = MouseData {
@@ -48,15 +48,14 @@ instance Event MouseEvent where
   eventData Wheel e =
     MouseData <$> jsGetMouseCoords e
               <*> pure Nothing
-              <*> ((,,) <$> (e # "deltaX" >>= fmap fromJust . asNumber)
-                        <*> (e # "deltaY" >>= fmap fromJust . asNumber)
-                        <*> (e # "deltaZ" >>= fmap fromJust . asNumber))
+              <*> ((,,) <$> (get e "deltaX")
+                        <*> (get e "deltaY")
+                        <*> (get e "deltaZ"))
 
   eventData _ e =
     MouseData <$> jsGetMouseCoords e
-              <*> (e # "button" >>= fmap (fmap (toEnum . convert)) . asNumber)
+              <*> get e "button"
               <*> pure (0,0,0)
 
-{-# NOINLINE jsGetMouseCoords #-}
-jsGetMouseCoords :: JSObj -> IO (Int, Int)
+jsGetMouseCoords :: JSAny -> IO (Int, Int)
 jsGetMouseCoords = ffi "jsGetMouseCoords"
