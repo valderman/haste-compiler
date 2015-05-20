@@ -97,6 +97,7 @@ Executable hastec
     if flag(only-library)
         buildable: False
     Hs-Source-Dirs: src
+    Include-Dirs: include
     GHC-Options: -Wall -O2
     if flag(portable)
         CPP-Options: -DPORTABLE
