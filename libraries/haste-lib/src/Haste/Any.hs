@@ -3,8 +3,7 @@
 
 -- For generic default instances
 {-# LANGUAGE TypeOperators, ScopedTypeVariables, FlexibleInstances,
-             FlexibleContexts, OverloadedStrings, DefaultSignatures,
-             OverlappingInstances #-}
+             FlexibleContexts, OverloadedStrings, DefaultSignatures #-}
 
 -- For less annoying instances
 {-# LANGUAGE TupleSections #-}
@@ -21,8 +20,10 @@ import Haste.JSType
 import Data.Int
 import Data.Word
 import Unsafe.Coerce
-import Control.Applicative
 import System.IO.Unsafe -- for toObject
+#if __GLASGOW_HASKELL__ < 710
+import Control.Applicative((<*>))
+#endif
 
 #ifdef __HASTE__
 foreign import ccall __lst2arr :: Ptr [a] -> JSAny

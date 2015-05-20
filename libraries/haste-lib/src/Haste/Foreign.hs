@@ -122,19 +122,39 @@ type family JS a where
 class JSFunc a where
   mkJSFunc :: a -> JS a
 
+#if __GLASGOW_HASKELL__ < 710
 instance (ToAny a, JS a ~ JSAny) => JSFunc a where
+#else
+instance {-# OVERLAPPABLE #-} (ToAny a, JS a ~ JSAny) => JSFunc a where
+#endif
   mkJSFunc = toAny
 
+#if __GLASGOW_HASKELL__ < 710
 instance ToAny a => JSFunc (IO a) where
+#else
+instance {-# OVERLAPPING #-} ToAny a => JSFunc (IO a) where
+#endif
   mkJSFunc = fmap toAny
 
+#if __GLASGOW_HASKELL__ < 710
 instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
+#else
+instance {-# OVERLAPPING #-} (FromAny a, JSFunc b) => JSFunc (a -> b) where
+#endif
   mkJSFunc f = mkJSFunc . f . unsafePerformIO . fromAny
 
+#if __GLASGOW_HASKELL__ < 710
 instance (FromAny a, JSFunc b) => ToAny (a -> b) where
+#else
+instance {-# OVERLAPPING #-} (FromAny a, JSFunc b) => ToAny (a -> b) where
+#endif
   toAny = unsafePerformIO . __createJSFunc . toAny . toOpaque . mkJSFunc
 
+#if __GLASGOW_HASKELL__ < 710
 instance ToAny a => ToAny (IO a) where
+#else
+instance {-# OVERLAPPING #-} ToAny a => ToAny (IO a) where
+#endif
   toAny = unsafePerformIO . __createJSFunc . toAny . toOpaque . mkJSFunc
 
 #if __GLASGOW_HASKELL__ < 710
