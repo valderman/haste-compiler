@@ -303,11 +303,7 @@ buildLibs cfg = do
                                    "dist" </> "build"] ""
           cp ("dist" </> "build" </> primlibfile) (primlibdir </> primlibfile)
           run_ hastePkgBinary ["update",
-                               "--global",
-                               "dist" </> "package.conf.inplace"
-                                      </> "ghc-prim-"
-                                      ++ primVersion
-                                      ++ "-inplace.conf"] ""
+                               "--global","ghc-prim-"++primVersion++".conf"] ""
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do
