@@ -291,14 +291,23 @@ buildLibs cfg = do
       inDirectory libDir $ do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
+          cp "../../../include/ghcplatform.h" "../ghc_boot_platform.h"
+          run_ "cpp" ["-P", "-I../../../include",
+                      "../primops.txt.pp", "-o", "primops.txt"] ""
           hasteCabal Configure ["--solver", "topdown"]
           hasteCabal Build []
           let primlibfile = "libHSghc-prim-" ++ primVersion ++ ".jslib"
               primlibdir  = pkgSysLibDir </> "ghc-prim-" ++ primVersion
           mkdir True primlibdir
-          run_ hasteInstHisBinary ["ghc-prim-" ++ primVersion, "dist" </> "build"] ""
+          run_ hasteInstHisBinary ["ghc-prim-" ++ primVersion,
+                                   "dist" </> "build"] ""
           cp ("dist" </> "build" </> primlibfile) (primlibdir </> primlibfile)
-          run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
+          run_ hastePkgBinary ["update",
+                               "--global",
+                               "dist" </> "package.conf.inplace"
+                                      </> "ghc-prim-"
+                                      ++ primVersion
+                                      ++ "-inplace.conf"] ""
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do

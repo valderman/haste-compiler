@@ -243,4 +243,4 @@ chooseCompilerFor args
   | all hasteOK args  = Haste
   | otherwise         = GHC
   where
-    hasteOK f = not $ any (`isSuffixOf` f) [".c",".cmm",".cc"]
+    hasteOK f = not $ any (`isSuffixOf` f) [".c",".cmm",".cc",".dyn_o"]
