@@ -115,6 +115,13 @@ integerToInt (J# n) = integer2Int# n
 toBig :: Integer -> Integer
 toBig (S# i)   = J# (int2Integer# i)
 toBig i@(J# _) = i
+
+testBitInteger :: Integer -> Int# -> Bool
+testBitInteger (S# i) b = isTrue# (i `andI#` (1# `uncheckedIShiftL#` b))
+testBitInteger (J# i) b =
+    isTrue# (cmpIntegerInt# ((i `shiftRInteger#` b) `andInteger#` one) 0#)
+  where
+    one = int2Integer# 1#
 \end{code}
 
 
@@ -495,12 +502,6 @@ shiftRInteger (J# d) i   = J# (shiftRInteger# d i)
 integerToJSString :: Integer -> ByteArray#
 integerToJSString i@(S# _) = integerToJSString (toBig i)
 integerToJSString (J# i)   = integerToJSString# i
-
--- Convert a/b into a Double
-fromRat :: Integer -> Integer -> Double
-fromRat i@(S# _) j    = fromRat (toBig i) j
-fromRat i j@(S# _)    = fromRat i (toBig j)
-fromRat (J# i) (J# j) = D# (fromRat# i j)
 
 \end{code}
 

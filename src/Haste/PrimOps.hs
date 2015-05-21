@@ -23,6 +23,7 @@ genOp cfg op xs =
     DoubleNegOp    -> Right $ binOp Sub (litN 0) (head xs)
     FloatNegOp     -> Right $ binOp Sub (litN 0) (head xs)
     NotOp          -> Right $ not_ (head xs) -- bitwise
+    NotIOp         -> Right $ not_ (head xs) -- bitwise
 
     -- Conversions
     ChrOp          -> Right $ head xs
@@ -72,6 +73,9 @@ genOp cfg op xs =
     IntLeOp ->   bOp LTE
     IntEqOp ->   bOp Eq
     IntNeOp ->   bOp Neq
+    AndIOp ->    bOp BitAnd
+    OrIOp ->     bOp BitOr
+    XorIOp ->    bOp BitXor
 
     -- Word ops
     WordAddOp ->  wordMath $ bOp Add

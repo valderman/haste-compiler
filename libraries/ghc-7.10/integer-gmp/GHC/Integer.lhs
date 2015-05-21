@@ -30,7 +30,8 @@ module GHC.Integer (
     -- gcdInteger, lcmInteger,
     andInteger, orInteger, xorInteger, complementInteger,
     shiftLInteger, shiftRInteger,
-    hashInteger, integerToJSString, fromRat
+    hashInteger, integerToJSString,
+    testBitInteger
  ) where
 
 import GHC.Integer.Type
