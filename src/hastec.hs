@@ -91,7 +91,8 @@ main = do
             ghcLink = NoLink,
             ghcMode = if "-c" `elem` args
                         then OneShot
-                        else CompManager
+                        else CompManager,
+            hscTarget = HscNothing
           }
 
       }
