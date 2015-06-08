@@ -11,11 +11,7 @@ main :: IO ()
 main = do
   args <- getArgs
   let (dbs, pkgs) = partition ("--package-db=" `isPrefixOf`) args
-#if __GLASGOW_HASKELL__ < 706
-      pkgdbs = map (("--package-conf" ++) . drop 12) dbs
-#else
       pkgdbs = dbs
-#endif
   if null args
     then do
       putStrLn "Usage: haste-copy-pkg [--package-db=foo.conf] <packages>"
