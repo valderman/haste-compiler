@@ -9,45 +9,24 @@ import Data.Word
 import Data.Char
 import Data.List (partition, foldl')
 import Data.Maybe (isJust)
-#if __GLASGOW_HASKELL__ >= 707
 import qualified Data.ByteString.UTF8 as B
-#endif
 import qualified Data.Set as S
 import qualified Data.Map as M
+
 -- STG/GHC stuff
-import StgSyn
-import CoreSyn (AltCon (..))
-import Var (Var, varType, varName)
-import IdInfo (arityInfo, IdDetails (..))
-import Id (Id, idInfo, idDetails, isLocalId, isGlobalId)
-import Literal as L
+import Language.Haskell.GHC.Simple as GHC
 import FastString (unpackFS)
-import ForeignCall (CCallTarget (..), ForeignCall (..), CCallSpec (..))
-import PrimOp (PrimCall (..))
-import OccName
-import DataCon
-import Module
-import Name
-import Type
-import TysPrim
-import TyCon
-#if __GLASGOW_HASKELL__ <= 706
-import BasicTypes
-#endif
+
 -- AST stuff
 import Data.JSTarget as J hiding ((.&.))
-import Data.JSTarget.AST (Exp (..), Stm (..), LHS (..))
+import Data.JSTarget.AST as J (Exp (..), Stm (..), LHS (..))
+
 -- General Haste stuff
 import Haste.Config
 import Haste.Monad
 import Haste.Errors
 import Haste.PrimOps
 import Haste.Builtins
-
-#if __GLASGOW_HASKELL__ < 710
-modulePackageKey :: Module.Module -> PackageId
-modulePackageKey = modulePackageId
-#endif
 
 generate :: Config
          -> String
@@ -88,7 +67,7 @@ genAST cfg modname binds =
 
 -- | Check for builtins that should generate inlined code. At this point only
 --   w2i and i2w.
-genInlinedBuiltin :: Var.Var -> [StgArg] -> JSGen Config (Maybe (AST Exp))
+genInlinedBuiltin :: GHC.Var -> [StgArg] -> JSGen Config (Maybe (AST Exp))
 genInlinedBuiltin f [x] = do
     x' <- genArg x
     return $ case (modname, varname) of
@@ -99,8 +78,8 @@ genInlinedBuiltin f [x] = do
       _ ->
         Nothing
   where
-    modname = moduleNameString . moduleName <$> nameModule_maybe (Var.varName f)
-    varname = occNameString $ nameOccName $ Var.varName f
+    modname = moduleNameString . moduleName <$> nameModule_maybe (GHC.varName f)
+    varname = occNameString $ nameOccName $ GHC.varName f
 genInlinedBuiltin _ _ =
   return Nothing
 
@@ -231,10 +210,10 @@ genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
                then thunk' upd (body' $ thunkRet retExp)
                else fun args' (body' $ ret retExp)
   where
-    thunk' _ (AST (Return l@(Lit _)) js) = AST l js
-    thunk' Updatable stm                 = thunk True stm
-    thunk' ReEntrant stm                 = thunk True stm
-    thunk' SingleEntry stm               = thunk False stm
+    thunk' _ (AST (Return l@(J.Lit _)) js) = AST l js
+    thunk' Updatable stm                   = thunk True stm
+    thunk' ReEntrant stm                   = thunk True stm
+    thunk' SingleEntry stm                 = thunk False stm
 
 -- | Turn a recursive binding into a list of non-recursive ones, together with
 --   information about whether they came from a recursive group or not.
@@ -249,7 +228,7 @@ unRec b           = [(Nothing, b)]
 --   Lists of vars are often accompanied by lists of strictness or usage
 --   annotations, which need to be filtered for types without representation
 --   as well.
-genArgVarsPair :: [(Var.Var, a)] -> JSGen Config ([J.Var], [a])
+genArgVarsPair :: [(GHC.Var, a)] -> JSGen Config ([J.Var], [a])
 genArgVarsPair vps = do
     vs' <- mapM genVar vs
     return (vs', xs)
@@ -262,7 +241,7 @@ genCase t ex scrut alts = do
   -- Return a scrutinee variable and a function to replace all occurrences of
   -- the STG scrutinee with our JS one, if needed.
   (scrut', withScrutinee) <- case ex' of
-    AST (Eval (Var v)) _ -> do
+    AST (Eval (J.Var v)) _ -> do
       continue $ assignVar (reorderableType scrut) v ex'
       oldscrut <- genVar scrut
       return (v, rename oldscrut v)
@@ -347,7 +326,7 @@ genAlt scrut res (con, args, used, body) = do
     bindVar v ix = newVar True v (index (varExp scrut) (litN ix))
 
 -- | Generate a result variable for the given scrutinee variable.
-genResultVar :: Var.Var -> JSGen Config J.Var
+genResultVar :: GHC.Var -> JSGen Config J.Var
 genResultVar v = do
   v' <- genVar v >>= getActualName
   case v' of
@@ -358,14 +337,13 @@ genResultVar v = do
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
-genVar :: Var.Var -> JSGen Config J.Var
+genVar :: GHC.Var -> JSGen Config J.Var
 genVar v | hasRepresentation v = do
   case toBuiltin v of
     Just v' -> return v'
     _       -> do
       mymod <- getModName
-      cfg <- getCfg
-      v' <- getActualName $ toJSVar cfg mymod v
+      v' <- getActualName $ toJSVar mymod v
       dependOn v'
       return v'
 genVar _ = do
@@ -378,8 +356,11 @@ foreignName (CCall (CCallSpec (StaticTarget str _ _) _ _)) =
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 
-toJSVar :: Config -> String -> Var.Var -> J.Var
-toJSVar c thisMod v =
+-- | Turn a 'GHC.Var' into a 'J.Var'. Falls back to a default module name,
+--   typically the name of the current module under compilation, if the given
+--   Var isn't qualified.
+toJSVar :: String -> GHC.Var -> J.Var
+toJSVar thisMod v =
   case idDetails v of
     FCallId fc -> foreignVar (foreignName fc)
     _
@@ -391,14 +372,14 @@ toJSVar c thisMod v =
       error $ "Var is not local, global or external!"
   where
     comment = myMod ++ "." ++ extern
-    vname  = Var.varName v
+    vname  = GHC.varName v
     hasMod = case nameModule_maybe vname of
                Nothing -> False
                _       -> True
     myMod =
       maybe thisMod (moduleNameString . moduleName) (nameModule_maybe vname)
     myPkg =
-      maybe "main" (showOutputable c . modulePackageKey) (nameModule_maybe vname)
+      maybe "main" (pkgKeyString . modulePkgKey) (nameModule_maybe vname)
     extern = occNameString $ nameOccName vname
     unique = show $ nameUnique vname
 
@@ -423,7 +404,7 @@ genArgsPair aps = do
 
 -- | Returns True if the given var actually has a representation.
 --   Currently, only values of type State# a are considered representationless.
-hasRepresentation :: Var.Var -> Bool
+hasRepresentation :: GHC.Var -> Bool
 hasRepresentation = typeHasRep . varType
 
 typeHasRep :: Type -> Bool
@@ -435,11 +416,6 @@ typeHasRep t =
 genArg :: StgArg -> JSGen Config (AST Exp)
 genArg (StgVarArg v)  = varExp <$> genVar v
 genArg (StgLitArg l)  = genLit l
-#if __GLASGOW_HASKELL__ < 706
-genArg (StgTypeArg t) = do
-  warn Normal "Generated StgTypeArg as 0!"
-  return (litN 0)
-#endif
 
 -- | Generate code for data constructor creation. Returns a pair of
 --   (constructor, field strictness annotations).
@@ -474,14 +450,10 @@ dataConNameModule d =
 
 
 -- | Generate literals.
-genLit :: L.Literal -> JSGen Config (AST Exp)
+genLit :: GHC.Literal -> JSGen Config (AST Exp)
 genLit l = do
   case l of
-#if __GLASGOW_HASKELL__ >= 707
     MachStr s           -> return . lit $ B.toString s
-#else
-    MachStr s           -> return . lit $ unpackFS s
-#endif
     MachInt n
       | n > 2147483647 ||
         n < -2147483648 -> do warn Verbose (constFail "Int" n)
@@ -514,7 +486,7 @@ genLit l = do
         hi = n `shiftR` 32
 
 -- | Generate a function application.
-genApp :: Var.Var -> [StgArg] -> JSGen Config (AST Exp)
+genApp :: GHC.Var -> [StgArg] -> JSGen Config (AST Exp)
 genApp f xs = do
     f' <- varExp <$> genVar f
     xs' <- mapM genArg xs
@@ -541,7 +513,7 @@ isNewtypeLikeCon c =
 -- | Does this data constructor create a newtype-like value? That is, a value
 --   of a type with a single data constructor having a single unlifted
 --   argument?
-isNewtypeLike :: Var.Var -> Bool
+isNewtypeLike :: GHC.Var -> Bool
 isNewtypeLike v = maybe False id $ do
   (tycon, _) <- splitTyConApp_maybe (varType v)
   case tyConDataCons tycon of
@@ -552,7 +524,7 @@ isNewtypeLike v = maybe False id $ do
 
 -- | Returns True if the given Var is an unboxed tuple with a single element
 --   after any represenationless elements are discarded.
-isUnaryUnboxedTuple :: Var.Var -> Bool
+isUnaryUnboxedTuple :: GHC.Var -> Bool
 isUnaryUnboxedTuple v = maybe False id $ do
     (_, args) <- splitTyConApp_maybe t
     case filter typeHasRep args of
@@ -562,7 +534,7 @@ isUnaryUnboxedTuple v = maybe False id $ do
     t = varType v
 
 -- | Is it safe to reorder values of the given type?
-reorderableType :: Var.Var -> Bool
+reorderableType :: GHC.Var -> Bool
 reorderableType v =
     case splitTyConApp_maybe t of
       Just (_, args) -> length (filter typeHasRep args) == length args
