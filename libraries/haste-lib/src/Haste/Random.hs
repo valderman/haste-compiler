@@ -18,7 +18,7 @@ newtype Seed = Seed JSAny deriving (ToAny, FromAny)
 
 {-# NOINLINE nxt #-}
 nxt :: Seed -> IO Seed
-nxt = ffi "(function(s){return md51(s.join(','));})"
+nxt = ffi "(function(s){return window['md51'](s.join(','));})"
 
 {-# NOINLINE getN #-}
 getN :: Seed -> IO Int
@@ -26,11 +26,11 @@ getN = ffi "(function(s){return s[0];})"
 
 {-# NOINLINE toSeed #-}
 toSeed :: Int -> IO Seed
-toSeed = ffi "(function(n){return md51(n.toString());})"
+toSeed = ffi "(function(n){return window['md51'](n.toString());})"
 
 {-# NOINLINE createSeed #-}
 createSeed :: IO Seed
-createSeed = ffi "(function(){return md51(jsRand().toString());})"
+createSeed = ffi "(function(){return window['md51'](jsRand().toString());})"
 #else
 newtype Seed = Seed (Int, SR.StdGen)
 
