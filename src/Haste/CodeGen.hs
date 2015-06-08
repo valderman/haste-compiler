@@ -51,13 +51,13 @@ modulePackageKey = modulePackageId
 
 generate :: Config
          -> String
-         -> ModuleName
+         -> String
          -> [StgBinding]
          -> J.Module
 generate cfg pkgid modname binds =
   J.Module {
       modPackageId   = pkgid,
-      modName        = moduleNameString modname,
+      modName        = modname,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
     }
@@ -76,15 +76,14 @@ generate cfg pkgid modname binds =
       m
 
 -- | Generate JS AST for bindings.
-genAST :: Config -> ModuleName -> [StgBinding] -> [(S.Set J.Name, AST Stm)]
+genAST :: Config -> String -> [StgBinding] -> [(S.Set J.Name, AST Stm)]
 genAST cfg modname binds =
     binds'
   where
     binds' =
-      map (depsAndCode . genJS cfg myModName . uncurry (genBind True))
+      map (depsAndCode . genJS cfg modname . uncurry (genBind True))
       $ concatMap unRec
       $ binds
-    myModName = moduleNameString modname
     depsAndCode (_, ds, locs, stm) = (ds S.\\ locs, stm nullRet)
 
 -- | Check for builtins that should generate inlined code. At this point only

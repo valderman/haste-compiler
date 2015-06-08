@@ -2,7 +2,8 @@
 module Haste.Version (
     BootVer (..),
     hasteVersion, intVersion, ghcVersion, bootVersion,
-    showBootVersion, parseBootVersion
+    showBootVersion, parseBootVersion,
+    showVersion
   ) where
 import System.IO.Unsafe
 import Control.Shell (shell, run)
