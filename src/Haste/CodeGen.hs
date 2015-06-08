@@ -28,20 +28,17 @@ import Haste.Errors
 import Haste.PrimOps
 import Haste.Builtins
 
-generate :: Config
-         -> String
-         -> String
-         -> [StgBinding]
-         -> J.Module
-generate cfg pkgid modname binds =
+-- | Generate an abstract JS module from a codegen config and an STG module.
+generate :: Config -> StgModule -> J.Module
+generate cfg stg =
   J.Module {
-      modPackageId   = pkgid,
-      modName        = modname,
+      modPackageId   = stgModPackageKey stg,
+      modName        = stgModName stg,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
     }
   where
-    theMod = genAST cfg modname binds
+    theMod = genAST cfg (stgModName stg) (stgModBindings stg)
 
     insFun m (_, AST (Assign (NewVar _ (Internal v _ _)) body _) jumps) =
       M.insert v (AST body jumps) m

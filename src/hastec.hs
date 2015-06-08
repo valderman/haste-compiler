@@ -71,14 +71,11 @@ main = do
 compJSMod :: Config -> StgModule -> IO ()
 compJSMod cfg stg = do
     logStr cfg $ "Compiling " ++ myName ++ " into " ++ targetpath
-    writeModule targetpath js boot
+    writeModule targetpath (generate cfg stg) boot
   where
+    boot = stgModSourceIsHsBoot stg
     myName = stgModName stg ++ if boot then " [boot]" else ""
     targetpath = targetLibPath cfg
-    boot = stgModSourceIsHsBoot stg
-    js = generate cfg (stgModPackageKey stg)
-                      (stgModName stg)
-                      (stgModBindings stg)
 
 -- | Link a program starting from the 'mainMod' symbol of the given 'Config'.
 --   Minify the result if indicated by the config.
