@@ -5,9 +5,11 @@ module Language.Haskell.GHC.Simple (
     module Simple.Types,
 
     -- GHC re-exports needed to meaningfully process STG
-    module StgSyn, module Id, module IdInfo, module Var, module Literal,
-    module OccName, module DataCon, module Module, module Name, module Type,
-    module TysPrim, module TyCon, module ForeignCall, module PrimOp,
+    module CoreSyn, module StgSyn, module Module,
+    module Id, module IdInfo, module Var, module Literal, module DataCon,
+    module OccName, module Name,
+    module Type, module TysPrim, module TyCon,
+    module ForeignCall, module PrimOp,
     module DynFlags, module SrcLoc,
     ModSummary (..),
     pkgKeyString, modulePkgKey,
@@ -60,17 +62,17 @@ import GHC.Paths (libdir)
 import Data.IORef
 import Language.Haskell.GHC.Simple.Types as Simple.Types
 
-#if __GLASGOW_HASKELL__ < 710
+-- | Package ID/key of a module.
 modulePkgKey :: Module -> PackageId
-modulePkgKey = M.modulePackageId
 
+-- | String representation of a package ID/key.
 pkgKeyString :: PackageId -> String
+
+#if __GLASGOW_HASKELL__ < 710
+modulePkgKey = M.modulePackageId
 pkgKeyString = M.packageIdString
 #else
-modulePkgKey :: Module -> PackageId
 modulePkgKey = M.modulePackageKey
-
-pkgKeyString :: PackageId -> String
 pkgKeyString = M.packageKeyString
 #endif
 
