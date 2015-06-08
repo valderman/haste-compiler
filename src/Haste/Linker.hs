@@ -39,9 +39,9 @@ link cfg pkgid target = do
     $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp
   where
     assembleProg True extlibs rtslibs progText callMain launchApp =
-      (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
-      <> stringUtf8 (unlines extlibs)
+      stringUtf8 (unlines extlibs)
       <> stringUtf8 "var hasteMain = function() {"
+      <> (if useStrict cfg then stringUtf8 "\n\"use strict\";\n" else mempty)
       <> stringUtf8 (unlines rtslibs)
       <> progText
       <> callMain
