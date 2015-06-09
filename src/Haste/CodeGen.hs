@@ -32,13 +32,13 @@ import Haste.Builtins
 generate :: Config -> StgModule -> J.Module
 generate cfg stg =
   J.Module {
-      modPackageId   = stgModPackageKey stg,
-      modName        = stgModName stg,
+      modPackageId   = GHC.modPackageKey stg,
+      J.modName      = GHC.modName stg,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
     }
   where
-    theMod = genAST cfg (stgModName stg) (stgModBindings stg)
+    theMod = genAST cfg (GHC.modName stg) (modCompiledModule stg)
 
     insFun m (_, AST (Assign (NewVar _ (Internal v _ _)) body _) jumps) =
       M.insert v (AST body jumps) m

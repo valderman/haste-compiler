@@ -149,6 +149,7 @@ Executable hastec
         Data.JSTarget.Print
         Data.JSTarget.Traversal
         Language.Haskell.GHC.Simple
+        Language.Haskell.GHC.Simple.Impl
         Language.Haskell.GHC.Simple.Types
     default-language: Haskell98
 

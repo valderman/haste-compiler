@@ -3,19 +3,21 @@
 module Language.Haskell.GHC.Simple (
     -- Configuration, input and output types
     module Simple.Types,
+    Compile,
+    StgModule,
 
-    -- GHC re-exports needed to meaningfully process STG
+    -- GHC re-exports needed to meaningfully process STG and Core.
     module CoreSyn, module StgSyn, module Module,
     module Id, module IdInfo, module Var, module Literal, module DataCon,
     module OccName, module Name,
     module Type, module TysPrim, module TyCon,
     module ForeignCall, module PrimOp,
     module DynFlags, module SrcLoc,
-    ModSummary (..),
+    ModSummary (..), ModGuts (..),
     pkgKeyString, modulePkgKey,
     
     -- Entry points
-    compStg, compStg'
+    compile, compileWith, genericCompile
   ) where
 
 -- GHC scaffolding
@@ -30,16 +32,10 @@ import StgSyn
 import CoreSyn
 import CoreToStg
 import SimplStg
-#if __GLASGOW_HASKELL__ < 710
-import Module hiding (modulePackageId, packageIdString)
-import qualified Module as M (modulePackageId, packageIdString)
-#else
-import Module hiding (modulePackageKey, packageKeyString)
-import qualified Module as M (modulePackageKey, packageKeyString)
-#endif
 import ErrUtils
 import Bag
 import SrcLoc
+import Outputable
 
 -- Convenience re-exports for fiddling with STG
 import Name hiding (varName)
@@ -54,45 +50,50 @@ import OccName hiding (varName)
 import DataCon
 import ForeignCall
 import PrimOp
-import Outputable
+import Module
 
 -- Misc. stuff
 import Control.Monad
 import GHC.Paths (libdir)
 import Data.IORef
 import Language.Haskell.GHC.Simple.Types as Simple.Types
+import Language.Haskell.GHC.Simple.Impl
 
--- | Package ID/key of a module.
-modulePkgKey :: Module -> PackageId
-
--- | String representation of a package ID/key.
-pkgKeyString :: PackageId -> String
-
-#if __GLASGOW_HASKELL__ < 710
-modulePkgKey = M.modulePackageId
-pkgKeyString = M.packageIdString
-#else
-modulePkgKey = M.modulePackageKey
-pkgKeyString = M.packageKeyString
-#endif
-
--- | Compile a list of targets and their dependencies into simplified STG.
---   Uses settings from the the default 'StgConfig'.
-compStg :: [String]
-        -- ^ A list of compilation targets. A target can be either a module
+-- | Compile a list of targets and their dependencies into intermediate code.
+--   Uses settings from the the default 'CompConfig'.
+compile :: Compile a
+        => [String]
+        -- ^ List of compilation targets. A target can be either a module
         --   or a file name.
-        -> IO (CompResult [StgModule])
-compStg = compStg' def
+        -> IO (CompResult a)
+compile = compileWith def
 
--- | Compile a list of targets and their dependencies into simplified STG.
-compStg' :: StgConfig
-         -- ^ Haskell to STG pipeline configuration.
-         -> [String]
-         -- ^ A list of compilation targets. A target can be either a module
-         --   or a file name. Targets may also be read from the specified
-         --   'StgConfig', if 'cfgUseTargetsFromFlags' is set.
-         -> IO (CompResult [StgModule])
-compStg' cfg files = do
+-- | Compile a list of targets and their dependencies using a custom
+--   configuration.
+compileWith :: Compile a
+            => CompConfig
+            -- ^ GHC pipeline configuration.
+            -> [String]
+            -- ^ List of compilation targets. A target can be either a module
+            --   or a file name. Targets may also be read from the specified
+            --   'CompConfig', if 'cfgUseTargetsFromFlags' is set.
+            -> IO (CompResult a)
+compileWith = genericCompile toCode
+
+-- | Compile a list of targets and their dependencies using a custom
+--   configuration and compilation function in the 'Ghc' monad. See
+--   "Language.Haskell.GHC.Simple.Impl" for more information about building
+--   custom compilation functions.
+genericCompile :: (DynFlags -> ModSummary -> Ghc a)
+               -- ^ Compilation function.
+               -> CompConfig
+               -- ^ GHC pipeline configuration.
+               -> [String]
+               -- ^ List of compilation targets. A target can be either a module
+               --   or a file name. Targets may also be read from the specified
+               --   'CompConfig', if 'cfgUseTargetsFromFlags' is set.
+               -> IO (CompResult a)
+genericCompile comp cfg files = do
     (flags, _staticwarns) <- parseStaticFlags $ map noLoc (cfgGhcFlags cfg)
     warns <- newIORef []
     runGhc (maybe (Just libdir) Just (cfgGhcLibDir cfg)) $ do
@@ -102,12 +103,12 @@ compStg' cfg files = do
                       log_action = logger (log_action dfs') warns
                     }
       _ <- setSessionDynFlags dfs''
-      estgs <- mapStg return (files ++ map unLoc files2)
+      ecode <- genCode (toCompiledModule comp) (files ++ map unLoc files2)
       ws <- liftIO $ readIORef warns
-      case estgs of
-        Right (finaldfs, stgs) ->
+      case ecode of
+        Right (finaldfs, code) ->
           return Success {
-              compResult = stgs,
+              compResult = code,
               compWarnings = ws,
               compDynFlags = finaldfs
             }
@@ -139,13 +140,13 @@ compStg' cfg files = do
     logger' output _ dfs sev srcspan style msg = do
       output dfs sev srcspan style msg
 
--- | Map a compilation function over each 'StgModule' in the dependency graph
+-- | Map a compilation function over each 'ModSummary' in the dependency graph
 --   of a list of targets.
-mapStg :: GhcMonad m
-       => (StgModule -> IO a)
-       -> [String]
-       -> m (Either [Error] (DynFlags, [a]))
-mapStg generate files = do
+genCode :: GhcMonad m
+         => (DynFlags -> ModSummary -> m a)
+         -> [String]
+         -> m (Either [Error] (DynFlags, [a]))
+genCode comp files = do
     dfs <- getSessionDynFlags
     merrs <- handleSourceError (maybeErrors dfs) $ do
       ts <- mapM (flip guessTarget Nothing) files
@@ -156,8 +157,8 @@ mapStg generate files = do
       Just errs -> return $ Left errs
       _         -> do
         mss <- depanal [] False
-        stgs <- mapM (liftIO . generate <=< toStgModule dfs . noLog) mss
-        return $ Right (dfs, stgs)
+        code <- mapM (comp dfs . noLog) mss
+        return $ Right (dfs, code)
   where
     -- We logged everything when we did @load@, we don't want to do it twice.
     noLog m =
@@ -173,62 +174,3 @@ fromErrMsg dfs e = Error {
   }
   where
     ctx = errMsgContext e
-
--- | Compile a 'ModSummary' into an 'StgModule'.
-toStgModule :: GhcMonad m => DynFlags -> ModSummary -> m StgModule
-toStgModule dfs ms = do
-  stg <- toSimplifiedStg dfs ms
-  ts <- getTargets
-  return $ StgModule {
-      stgModSummary        = ms,
-      stgModName           = moduleNameString $ ms_mod_name ms,
-      stgModPackageKey     = pkgKeyString . modulePkgKey $ ms_mod ms,
-      stgModIsTarget       = any (`isTargetOf` ms) ts,
-      stgModSourceIsHsBoot = ms_hsc_src ms == HsBootFile,
-      stgModSourceFile     = ml_hs_file $ ms_location ms,
-      stgModInterfaceFile  = ml_hi_file $ ms_location ms,
-      stgModBindings       = stg
-    }
-
--- | Is @t@ the target that corresponds to @ms@?
-isTargetOf :: Target -> ModSummary -> Bool
-isTargetOf t ms =
-  case targetId t of
-    TargetModule mn                                -> ms_mod_name ms == mn
-    TargetFile fn _
-      | ModLocation (Just f) _ _ <- ms_location ms -> f == fn
-    _                                              -> False
-    
--- | Compile a 'ModSummary' into a list of simplified 'StgBinding's.
---   Optimization, etc. decided by 'DynFlags'.
-toSimplifiedStg :: GhcMonad m => DynFlags -> ModSummary -> m [StgBinding]
-toSimplifiedStg dfs ms =
-  toModGuts ms >>= simplify >>= prepare dfs >>= toStgBindings dfs ms
-
--- | Parse, typecheck and desugar a module.
-toModGuts :: GhcMonad m => ModSummary -> m ModGuts
-toModGuts =
-  parseModule >=> typecheckModule >=> desugarModule >=> return . coreModule
-
--- | Simplify a core module for code generation.
-simplify :: GhcMonad m => ModGuts -> m CgGuts
-simplify mg = do
-  env <- getSession
-  liftIO $ hscSimplify env mg >>= tidyProgram env >>= return . fst
-
--- | Prepare a core module for code generation.
-prepare :: GhcMonad m => DynFlags -> CgGuts -> m CoreProgram
-prepare dfs p = do
-  env <- getSession
-#if __GLASGOW_HASKELL__ < 710
-  liftIO $ corePrepPgm dfs env (cg_binds p) (cg_tycons p)
-#else
-  liftIO $ corePrepPgm env (ms_location ms) (cg_binds p) (cg_tycons p)
-#endif
-
--- | Turn a core module into a list of simplified STG bindings.
-toStgBindings :: GhcMonad m
-              => DynFlags -> ModSummary -> CoreProgram -> m [StgBinding]
-toStgBindings dfs ms p = liftIO $ do
-  stg <- coreToStg dfs (ms_mod ms) p
-  fst `fmap` stg2stg dfs (ms_mod ms) stg

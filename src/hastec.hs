@@ -33,14 +33,14 @@ main = do
     case parseHasteFlags args of
       Left act             -> act
       Right (fs, mkConfig) -> do
-        res <- compStg' (mkGhcCfg fs args)  []
+        res <- compileWith (mkGhcCfg fs args)  []
         case res of
           Failure _ _        -> exitFailure
           Success mods _ dfs -> do
             let cfg = mkLinkerCfg dfs . setShowOutputable dfs $ mkConfig def
             mapM_ (compJSMod cfg) mods
             when (performLink cfg) $ do
-              mapM_ (linkAndMinify cfg) (filter stgModIsTarget mods)
+              mapM_ (linkAndMinify cfg) (filter modIsTarget mods)
   where
     mkGhcCfg fs args = def {
         cfgGhcFlags = fs,
@@ -73,8 +73,8 @@ compJSMod cfg stg = do
     logStr cfg $ "Compiling " ++ myName ++ " into " ++ targetpath
     writeModule targetpath (generate cfg stg) boot
   where
-    boot = stgModSourceIsHsBoot stg
-    myName = stgModName stg ++ if boot then " [boot]" else ""
+    boot = modSourceIsHsBoot stg
+    myName = modName stg ++ if boot then " [boot]" else ""
     targetpath = targetLibPath cfg
 
 -- | Link a program starting from the 'mainMod' symbol of the given 'Config'.
@@ -82,7 +82,7 @@ compJSMod cfg stg = do
 linkAndMinify :: Config -> StgModule -> IO ()
 linkAndMinify cfg stg = do
     logStr cfg $ "Linking target " ++ outfile
-    link cfg (stgModPackageKey stg) infile
+    link cfg (modPackageKey stg) infile
     case useGoogleClosure cfg of
       Just clopath -> closurize cfg clopath outfile
       _            -> return ()
@@ -96,7 +96,7 @@ linkAndMinify cfg stg = do
         Right () -> return ()
         Left err -> error $ "Couldn't output HTML file: " ++ err
   where
-    infile  = maybe (stgModInterfaceFile stg) id (stgModSourceFile stg)
+    infile  = maybe (modInterfaceFile stg) id (modSourceFile stg)
     outfile = outFile cfg cfg infile
 
 -- | Produce an HTML skeleton with an embedded JS program.
