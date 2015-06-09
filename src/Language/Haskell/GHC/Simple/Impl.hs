@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, CPP #-}
+{-# LANGUAGE FlexibleInstances, CPP, PatternGuards #-}
 -- | Lower level building blocks for custom code generation.
 module Language.Haskell.GHC.Simple.Impl (
     Compile (..), StgModule,
@@ -14,7 +14,6 @@ module Language.Haskell.GHC.Simple.Impl (
 -- GHC scaffolding
 import GHC hiding (Warning)
 import GhcMonad (liftIO)
-import DynFlags
 import HscMain
 import HscTypes
 import TidyPgm
@@ -23,15 +22,9 @@ import StgSyn
 import CoreSyn
 import CoreToStg
 import SimplStg
-import ErrUtils
-import Bag
-import SrcLoc
-import Outputable
 #if __GLASGOW_HASKELL__ < 710
-import Module hiding (modulePackageId, packageIdString)
 import qualified Module as M (modulePackageId, packageIdString)
 #else
-import Module hiding (modulePackageKey, packageKeyString)
 import qualified Module as M (modulePackageKey, packageKeyString)
 #endif
 

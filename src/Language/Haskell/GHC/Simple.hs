@@ -24,20 +24,15 @@ module Language.Haskell.GHC.Simple (
 import GHC hiding (Warning)
 import GhcMonad (liftIO)
 import DynFlags
-import HscMain
 import HscTypes
-import TidyPgm
-import CorePrep
-import StgSyn
-import CoreSyn
-import CoreToStg
-import SimplStg
 import ErrUtils
 import Bag
 import SrcLoc
 import Outputable
 
 -- Convenience re-exports for fiddling with STG
+import StgSyn
+import CoreSyn
 import Name hiding (varName)
 import Type
 import TysPrim
@@ -53,7 +48,6 @@ import PrimOp
 import Module
 
 -- Misc. stuff
-import Control.Monad
 import GHC.Paths (libdir)
 import Data.IORef
 import Language.Haskell.GHC.Simple.Types as Simple.Types
