@@ -121,7 +121,8 @@ Executable hastec
         system-fileio,
         shellmate >= 0.1.5,
         either,
-        directory
+        directory,
+        ghc-simple
     Main-Is:
         hastec.hs
     Other-Modules:
@@ -148,9 +149,6 @@ Executable hastec
         Data.JSTarget.PP
         Data.JSTarget.Print
         Data.JSTarget.Traversal
-        Language.Haskell.GHC.Simple
-        Language.Haskell.GHC.Simple.Impl
-        Language.Haskell.GHC.Simple.Types
     default-language: Haskell98
 
 Executable haste-cabal
