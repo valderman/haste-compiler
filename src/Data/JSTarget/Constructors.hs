@@ -112,7 +112,11 @@ thunk updatable = fmap (Thunk updatable)
 
 -- | Evaluate an expression that may or may not be a thunk.
 eval :: AST Exp -> AST Exp
-eval = fmap Eval
+eval ex = do
+  e <- ex
+  if definitelyNotThunk e
+    then return e
+    else return (Eval e)
 
 -- | Create a tail call.
 tailcall :: AST Exp -> AST Stm

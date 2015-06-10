@@ -114,6 +114,18 @@ data Exp where
   Thunk     :: !Bool -> !Stm -> Exp -- Thunk may be updatable or not
   deriving (Eq, Show)
 
+-- | Is the given expression guaranteed to not be a thunk?
+--   @definitelyNotThunk e <=> safe to skip evaluation of e@
+definitelyNotThunk :: Exp -> Bool
+definitelyNotThunk (Lit {})   = True
+definitelyNotThunk (JSLit {}) = True
+definitelyNotThunk (Not {})   = True
+definitelyNotThunk (BinOp {}) = True
+definitelyNotThunk (Fun {})   = True
+definitelyNotThunk (Arr {})   = True
+definitelyNotThunk (Eval {})  = True
+definitelyNotThunk _          = False
+
 -- | Statements. The only mildly interesting thing here are the Case and Jump
 --   constructors, which allow explicit sharing of continuations.
 data Stm where

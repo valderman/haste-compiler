@@ -182,15 +182,15 @@ zapJSStringConversions ast =
 --     => A(f, xs)
 --   E(thunk(return x))
 --     => x
---   E(\x ... -> ...)
---     => \x ... -> ...
+--   E(x) | x is guaranteed to not be a thunk
+--     => x
 optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
   where
     optEx (Eval x)
       | Just x' <- fromThunkEx x = return x'
-      | Fun _ _ <- x             = return x
+      | definitelyNotThunk x     = return x
     optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
       return $ Call arity calltype f' args
     optEx ex =
