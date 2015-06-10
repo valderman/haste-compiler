@@ -110,27 +110,64 @@ inlineAssigns ast = do
   where
     varOccurs lhs (Exp (Var lhs') _) = lhs == lhs'
     varOccurs _ _                    = False
-    inl m keep@(Assign l ex next) | Just lhs <- inlinableAssignLHS l = do
-      occursRec <- occurrences (const True) (varOccurs lhs) ex
-      if occursRec == Never
-        then do
-          occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
-          case M.lookup lhs m of
-            Just occ | occ == occursLocal ->
-              case occ of
-                -- Don't inline lambdas currently.
-                _    | Fun vs body <- ex -> do
-                  return keep
-                -- Inline of any non-lambda, non-thunk value
-                Once | Nothing <- fromThunk ex -> do
-                  replaceEx (not <$> isShared) (Var lhs) ex next
-                _ -> do
-                  return keep
-            _ ->
-              return keep
-        else do
-          return keep
+
+    appearsLHS ex =
+      foldJS (\x _ -> not x) (\x s -> return $ x || ex `isLHSOf` s) False
+
+    -- Make an exception for expressions of the form @x = E(x)@: since we know
+    -- that @x@ is a literal and thus pointless to evaluate, we simply remove
+    -- any such statements.
+    isLHSOf v (Stm stm _) | isEvalUpd v stm            = False
+    isLHSOf v (Stm (Assign (LhsExp _ (Var v')) _ _) _) = v == v'
+    isLHSOf v (Exp (AssignEx (Var v') _) _)            = v == v'
+    isLHSOf _ _                                        = False
+
+    isEvalUpd v (Assign (LhsExp _ (Var v')) (Eval (Var v'')) _) =
+      v == v' && v' == v''
+    isEvalUpd _  _ =
+      False
+
+    removeUpd ex stm@(Assign _ _ next) | isEvalUpd ex stm = pure next
+    removeUpd _ stm                                       = pure stm
+
+    inl m keep@(Assign l ex next)
+      -- Inline all non-string literals l which do not appear at the LHS of an
+      -- assignment. Thunk updates of the form @x = E(x)@ where @x == l@
+      -- don't count as a proper LHS occurrence, and are removed outright
+      -- instead since a literal is guaranteed to never be a thunk.
+      | Just lhs <- inlinableAssignLHS l, Lit l <- ex, not (stringLit l) = do
+        isLHS <- appearsLHS lhs next
+        if isLHS
+          then do
+            return keep
+          else do
+            next' <- mapJS (const True) pure (removeUpd lhs) next
+            replaceEx (const True) (Var lhs) ex next'
+      | Just lhs <- inlinableAssignLHS l = do
+        occursRec <- occurrences (const True) (varOccurs lhs) ex
+        if occursRec == Never
+          then do
+            occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
+            case M.lookup lhs m of
+              Just occ | occ == occursLocal ->
+                case occ of
+                  -- Don't inline lambdas currently.
+                  _    | Fun vs body <- ex -> do
+                    return keep
+                  -- Inline of any non-lambda, non-thunk value
+                  Once | Nothing <- fromThunk ex -> do
+                    replaceEx (not <$> isShared) (Var lhs) ex next
+                  _ -> do
+                    return keep
+              _ ->
+                return keep
+          else do
+            return keep
     inl _ stm = return stm
+
+stringLit :: Lit -> Bool
+stringLit (LStr _) = True
+stringLit _        = False
 
 inlinableAssignLHS :: LHS -> Maybe Var
 inlinableAssignLHS (NewVar True v)       = Just v
@@ -694,16 +731,13 @@ smallStepInline ast = do
     inl stm@(Assign (LhsExp _ (Var v1)) (Eval (Var v1')) next)
       | v1 == v1' = do
         case next of
-          stm'@(Assign (LhsExp _ (Var v2)) (Eval (Var v2')) next')
+          stm'@(Assign (LhsExp _ (Var v2)) (Eval (Var v2')) _)
             | v1 == v2 && v1' == v2' -> do
               return stm'
           _ -> do
             return stm
     inl stm =
       return stm
-
-    varAppears v (Exp (Var v') _) = v == v'
-    varAppears _ _                = False
 
 -- | Eliminate elimination of a variable. Only use when  *absolutely certain*
 --   that the variable can never be a thunk.

@@ -70,6 +70,8 @@ instance Ord Var where
 --   but for some primops we need to assign array elements as well.
 data LHS where
   -- | Introduce a new variable. May be reorderable.
+  --   Invariant: a NewVar must be the first occurrence of a 'Var' in its
+  --   scope.
   NewVar :: !Reorderable -> !Var -> LHS
   -- | Assign a value to an arbitrary LHS expression. May be reorderable.
   LhsExp :: !Reorderable -> !Exp -> LHS
