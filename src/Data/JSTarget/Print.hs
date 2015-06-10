@@ -6,11 +6,6 @@ import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Data.JSTarget.PP as PP
 import Data.ByteString.Builder
-#if __GLASGOW_HASKELL__ < 710
-import Data.Monoid
-#else
-import Data.Monoid hiding (Alt)
-#endif
 import Control.Monad
 import Data.Char
 import Numeric (showHex)
