@@ -215,21 +215,28 @@ zapJSStringConversions ast =
       return x
 
 -- | Optimize thunks in the following ways:
---   A(thunk(return f), xs)
---     => A(f, xs)
---   E(thunk(return x))
---     => x
---   E(x) | x is guaranteed to not be a thunk
---     => x
+--   1. A(thunk(return f), xs)
+--        => A(f, xs)
+--   2. thunk(x@(JSLit _))
+--        => x
+--   3. E(thunk(return x))
+--        => x
+--   4. E(x) | x is guaranteed to not be a thunk
+--        => x
+--
+--   Note that #2 depends on the invariant of 'JSLit': a JS literal must not
+--   perform side effects or significant computation.
 optimizeThunks :: JSTrav ast => ast -> TravM ast
 optimizeThunks ast =
     mapJS (const True) optEx return ast
   where
     optEx (Eval x)
-      | Just x' <- fromThunkEx x = return x'
-      | definitelyNotThunk x     = return x
-    optEx (Call arity calltype f args) | Just f' <- fromThunkEx f =
-      return $ Call arity calltype f' args
+      | Just x' <- fromThunkEx x           = return x'
+      | definitelyNotThunk x               = return x
+    optEx ex@(Thunk _ _)
+      | Just l@(JSLit _) <- fromThunkEx ex = return l
+    optEx (Call arity calltype f as)
+      | Just f' <- fromThunkEx f           = return $ Call arity calltype f' as
     optEx ex =
       return ex
 
@@ -661,7 +668,7 @@ zipAssign l r final
 --   functions for "Haste.Foreign".
 inlineJSPrimitives :: JSTrav ast => ast -> TravM ast
 inlineJSPrimitives =
-    inlineFuns >=> inlineReturns
+    inlineFuns >=> inlineReturns >=> optimizeThunks
   where
     inlineFuns = mapJS (const True) inl return
     inl ex@(Call _ (Fast _) (Var (Foreign f)) args) =
