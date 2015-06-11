@@ -48,8 +48,10 @@ strToBlob :: JSString -> Blob
 strToBlob = newBlob . toAny
 
 sliceBlob :: Blob -> Int -> Int -> Blob
-sliceBlob b off len = unsafePerformIO $ do
-  ffi "(function(b,off,len){return b.slice(off,len);})" b off len
+sliceBlob b off len = unsafePerformIO $ jsSlice b off len
+
+jsSlice :: Blob -> Int -> Int -> IO Blob
+jsSlice = ffi "(function(b,off,len){return b.slice(off,len);})"
 
 newBlob :: JSAny -> Blob
 newBlob = unsafePerformIO . jsNewBlob

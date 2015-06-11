@@ -32,7 +32,7 @@ type JSArr = JSAny
 newArr :: IO JSArr
 newArr = ffi "(function(){return [];})"
 
-push :: ToAny a => JSArr -> a -> IO ()
+push :: JSArr -> JSAny -> IO ()
 push = ffi "(function(a,x) {a.push(x);})"
 
 data PutM a = PutM {unP :: JSArr -> IO a}
@@ -71,14 +71,12 @@ putInt32le i = PutM $ \a -> push a (toAB "Int32Array" 4 i)
 putFloat32le :: Float -> Put
 putFloat32le f = PutM $ \a -> push a (unsafePerformIO $ f2ab f)
 
-{-# NOINLINE f2ab #-}
 f2ab :: Float -> IO JSAny
 f2ab = ffi "(function(f) {var a=new ArrayBuffer(4);new DataView(a).setFloat32(0,f,true);return a;})"
 
 putFloat64le :: Double -> Put
 putFloat64le f = PutM $ \a -> push a (unsafePerformIO $ d2ab f)
 
-{-# NOINLINE d2ab #-}
 d2ab :: Double -> IO JSAny
 d2ab = ffi "(function(f) {var a=new ArrayBuffer(8);new DataView(a).setFloat64(0,f,true);return a;})"
 
@@ -89,9 +87,11 @@ putBlob b = PutM $ \a -> push a (toAny b)
 toAB :: ToAny a => JSString -> Int -> a -> JSAny
 toAB view size el = unsafePerformIO $ toABle view size (toAny el)
 
-{-# NOINLINE toABle #-}
 toABle :: ToAny a => JSString -> Int -> a -> IO JSAny
-toABle = ffi "window['toABle']"
+toABle s n x = jsToABle s n (toAny x)
+
+jsToABle :: JSString -> Int -> JSAny -> IO JSAny
+jsToABle = ffi "window['toABle']"
 
 -- | Serialize a 'JSString' as UTF-16 (somewhat) efficiently.
 putJSString :: JSString -> Put
@@ -111,10 +111,10 @@ runPut :: Put -> Blob
 runPut (PutM putEverything) = unsafePerformIO $ do
     a <- newArr
     putEverything a
-    go a
-  where
-    go :: JSArr -> IO Blob
-    go = ffi "(function(parts){return new Blob(parts);})"
+    jsGetBlob a
+
+jsGetBlob :: JSArr -> IO Blob
+jsGetBlob = ffi "(function(parts){return new Blob(parts);})"
 
 #else
 

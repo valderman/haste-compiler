@@ -26,7 +26,6 @@ onHashChange' f = do
     firsthash <- getHash'
     liftIO $ jsOnHashChange firsthash f
 
-{-# NOINLINE jsOnHashChange #-}
 jsOnHashChange :: JSString -> (JSString -> JSString -> IO ()) -> IO ()
 jsOnHashChange =
   ffi "(function(firsthash,cb){\
@@ -47,7 +46,6 @@ setHash = liftIO . jsSetHash . toJSStr
 setHash' :: MonadIO m => JSString -> m ()
 setHash' = liftIO . jsSetHash
 
-{-# NOINLINE jsSetHash #-}
 jsSetHash :: JSString -> IO ()
 jsSetHash = ffi "(function(h) {location.hash = '#'+h;})"
 
@@ -59,6 +57,5 @@ getHash = liftIO $ fromJSStr `fmap` jsGetHash
 getHash' :: MonadIO m => m JSString
 getHash' = liftIO jsGetHash
 
-{-# NOINLINE jsGetHash #-}
 jsGetHash :: IO JSString
 jsGetHash = ffi "(function() {return location.hash.substring(1);})"

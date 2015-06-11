@@ -172,13 +172,12 @@ getFileData e ix = liftIO $ do
     if ix < num
       then Just `fmap` getFile (elemOf e) ix
       else return Nothing
-  where
-    {-# NOINLINE getFiles #-}
-    getFiles :: Elem -> IO Int
-    getFiles = ffi "(function(e){return e.files.length;})"
-    {-# NOINLINE getFile #-}
-    getFile :: Elem -> Int -> IO Blob
-    getFile = ffi "(function(e,ix){return e.files[ix];})"
+
+getFiles :: Elem -> IO Int
+getFiles = ffi "(function(e){return e.files.length;})"
+
+getFile :: Elem -> Int -> IO Blob
+getFile = ffi "(function(e,ix){return e.files[ix];})"
 
 -- | Get the name of the currently selected file from a file input element.
 --   Any directory information is stripped, and only the actual file name is
@@ -195,23 +194,20 @@ getFileName e = liftIO $ do
 -- | Add or remove a class from an element's class list.
 setClass :: (IsElem e, MonadIO m) => e -> JSString -> Bool -> m ()
 setClass e c x = liftIO $ setc (elemOf e) c x
-  where
-    {-# NOINLINE setc #-}
-    setc :: Elem -> JSString -> Bool -> IO ()
-    setc = ffi "(function(e,c,x){x?e.classList.add(c):e.classList.remove(c);})"
+
+setc :: Elem -> JSString -> Bool -> IO ()
+setc = ffi "(function(e,c,x){x?e.classList.add(c):e.classList.remove(c);})"
 
 -- | Toggle the existence of a class within an elements class list.
 toggleClass :: (IsElem e, MonadIO m) => e -> JSString -> m ()
 toggleClass e c = liftIO $ toggc (elemOf e) c
-  where
-    {-# NOINLINE toggc #-}
-    toggc :: Elem -> JSString -> IO ()
-    toggc = ffi "(function(e,c) {e.classList.toggle(c);})"
+
+toggc :: Elem -> JSString -> IO ()
+toggc = ffi "(function(e,c) {e.classList.toggle(c);})"
 
 -- | Does the given element have a particular class?
 hasClass :: (IsElem e, MonadIO m) => e -> JSString -> m Bool
 hasClass e c = liftIO $ getc (elemOf e) c
-  where
-    {-# NOINLINE getc #-}
-    getc :: Elem -> JSString -> IO Bool
-    getc = ffi "(function(e,c) {return e.classList.contains(c);})"
+
+getc :: Elem -> JSString -> IO Bool
+getc = ffi "(function(e,c) {return e.classList.contains(c);})"

@@ -28,20 +28,20 @@ setTimer i f = do
       flip Timer i <$> case i of
         Once n   -> timeout n (f' ())
         Repeat n -> interval n (f' ())
-  where
-    timeout :: Int -> IO () -> IO Int
-    timeout = ffi "(function(t,f){window.setTimeout(f,t);})"
 
-    interval :: Int -> IO () -> IO Int
-    interval = ffi "(function(t,f){window.setInterval(f,t);})"
+timeout :: Int -> IO () -> IO Int
+timeout = ffi "(function(t,f){window.setTimeout(f,t);})"
+
+interval :: Int -> IO () -> IO Int
+interval = ffi "(function(t,f){window.setInterval(f,t);})"
 
 -- | Stop a timer.
 stopTimer :: MonadIO m => Timer -> m ()
-stopTimer (Timer ident (Once _)) = liftIO $ go ident
-  where
-    go :: Int -> IO ()
-    go = ffi "(function(id){window.clearTimeout(id);})"
-stopTimer (Timer ident (Repeat _)) = liftIO $ go ident
-  where
-    go :: Int -> IO ()
-    go = ffi "(function(id){window.clearInterval(id);})"
+stopTimer (Timer ident (Once _)) = liftIO $ clearTimeout ident
+stopTimer (Timer ident (Repeat _)) = liftIO $ clearInterval ident
+
+clearTimeout :: Int -> IO ()
+clearTimeout = ffi "(function(id){window.clearTimeout(id);})"
+
+clearInterval :: Int -> IO ()
+clearInterval = ffi "(function(id){window.clearInterval(id);})"

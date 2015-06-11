@@ -178,11 +178,10 @@ getState (Audio e) = liftIO $ do
 
 -- | Pause the given audio element.
 pause :: MonadIO m => Audio -> m ()
-pause (Audio e) =
-    liftIO $ pause' e
-  where
-    pause' :: Elem -> IO ()
-    pause' = ffi "(function(x){x.pause();})"
+pause (Audio e) = liftIO $ pause' e
+
+pause' :: Elem -> IO ()
+pause' = ffi "(function(x){x.pause();})"
 
 -- | If playing, stop. Otherwise, start playing.
 togglePlaying :: MonadIO m => Audio -> m ()

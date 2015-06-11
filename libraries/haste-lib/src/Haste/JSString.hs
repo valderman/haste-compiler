@@ -58,24 +58,26 @@ _jss_map f = _jss_cmap (_jss_singleton . f)
 
 {-# INLINE _jss_cmap #-}
 _jss_cmap :: (Char -> JSString) -> JSString -> JSString
-_jss_cmap f s = unsafePerformIO $ go (return . f) s
-  where
-    go :: (Char -> IO JSString) -> JSString -> IO JSString
-    go = ffi "(function(f,s){\
+_jss_cmap f s = unsafePerformIO $ cmap_js (return . f) s
+
+cmap_js :: (Char -> IO JSString) -> JSString -> IO JSString
+cmap_js = ffi "(function(f,s){\
 var s2 = '';\
 for(var i in s) {\
    s2 += f(s.charCodeAt(i));\
 }\
 return s2;})"
 
-_ret :: a -> IO a
-_ret = return
-
 {-# INLINE _jss_foldl #-}
 _jss_foldl :: (ToAny a, FromAny a) => (a -> Char -> a) -> a -> JSString -> a
-_jss_foldl f x s = unsafePerformIO $ go (\a c -> a `seq` _ret (f a c)) x s
-  where
-    go = ffi "(function(f,x,s){\
+_jss_foldl f x s = fromOpaque . unsafePerformIO $ do
+  foldl_js (\a c ->  toOpaque $ f (fromOpaque a) c) (toOpaque x) s
+
+foldl_js :: (Opaque a -> Char -> Opaque a)
+         -> Opaque a
+         -> JSString
+         -> IO (Opaque a)
+foldl_js = ffi "(function(f,x,s){\
 for(var i in s) {\
   x = f(x,s.charCodeAt(i));\
 }\
@@ -83,9 +85,14 @@ return x;})"
 
 {-# INLINE _jss_foldr #-}
 _jss_foldr :: (ToAny a, FromAny a) => (Char -> a -> a) -> a -> JSString -> a
-_jss_foldr f x s = unsafePerformIO $ go (\c a -> _ret $ f c a) x s
-  where
-    go = ffi "(function(f,x,s){\
+_jss_foldr f x s = fromOpaque . unsafePerformIO $ do
+  foldr_js (\c -> toOpaque . f c . fromOpaque) (toOpaque x) s
+
+foldr_js :: (Char -> Opaque a -> Opaque a)
+         -> Opaque a
+         -> JSString
+         -> IO (Opaque a)
+foldr_js = ffi "(function(f,x,s){\
 for(var i = s.length-1; i >= 0; --i) {\
   x = f(s.charCodeAt(i),x);\
 }\
