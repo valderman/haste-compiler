@@ -149,17 +149,10 @@ inlineAssigns ast = do
           then do
             occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
             case M.lookup lhs m of
-              Just occ | occ == occursLocal ->
-                case occ of
-                  -- Don't inline lambdas currently.
-                  _    | Fun vs body <- ex -> do
-                    return keep
-                  -- Inline of any non-lambda, non-thunk value
-                  Once | Nothing <- fromThunk ex -> do
-                    replaceEx (not <$> isShared) (Var lhs) ex next
-                  _ -> do
-                    return keep
-              _ ->
+              -- Inline any non-lambda, non-thunk, non JSLit value
+              Just Once | okToInline ex && occursLocal == Once -> do
+                replaceEx (not <$> isShared) (Var lhs) ex next
+              _ -> do
                 return keep
           else do
             return keep
@@ -168,6 +161,14 @@ inlineAssigns ast = do
 stringLit :: Lit -> Bool
 stringLit (LStr _) = True
 stringLit _        = False
+
+-- | Certain expressions are never OK to inline: lambdas, thunks and
+--   JS literals (which are almost exclusively lambdas).
+okToInline :: Exp -> Bool
+okToInline (Fun {})   = False
+okToInline (Thunk {}) = False
+okToInline (JSLit {}) = False
+okToInline _          = True
 
 inlinableAssignLHS :: LHS -> Maybe Var
 inlinableAssignLHS (NewVar True v)       = Just v
