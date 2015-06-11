@@ -666,18 +666,18 @@ inlineJSPrimitives =
     inlineFuns = mapJS (const True) inl return
     inl ex@(Call _ (Fast _) (Var (Foreign f)) args) =
       case (f, args) of
-        ("eval", [Lit (LStr s)])   -> return (JSLit s)
-        ("__app0", [Lit (LStr f)]) -> return (JSLit $ f ++ "()")
-        ("__app1", f:xs)           -> return (Call 0 (Fast False) f xs)
-        ("__app2", f:xs)           -> return (Call 0 (Fast False) f xs)
-        ("__app3", f:xs)           -> return (Call 0 (Fast False) f xs)
-        ("__app4", f:xs)           -> return (Call 0 (Fast False) f xs)
-        ("__app5", f:xs)           -> return (Call 0 (Fast False) f xs)
-        ("__get", [o, k])          -> return (Index o k)
-        ("__set", [o, k, v])       -> return (AssignEx (Index o k) v)
-        ("__has", [o, k])          -> return (BinOp Neq (Index o k)
-                                                       (JSLit "undefined"))
-        _                         -> return ex
+        ("eval", [Lit (LStr s)]) -> return (JSLit s)
+        ("__app0", [f])          -> return (Call 0 (Fast False) f [])
+        ("__app1", f:xs)         -> return (Call 0 (Fast False) f xs)
+        ("__app2", f:xs)         -> return (Call 0 (Fast False) f xs)
+        ("__app3", f:xs)         -> return (Call 0 (Fast False) f xs)
+        ("__app4", f:xs)         -> return (Call 0 (Fast False) f xs)
+        ("__app5", f:xs)         -> return (Call 0 (Fast False) f xs)
+        ("__get", [o, k])        -> return (Index o k)
+        ("__set", [o, k, v])     -> return (AssignEx (Index o k) v)
+        ("__has", [o, k])        -> return (BinOp Neq (Index o k)
+                                                      (JSLit "undefined"))
+        _                        -> return ex
     inl exp =
       return exp
 

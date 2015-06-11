@@ -101,8 +101,9 @@ data Lit where
 data Exp where
   Var       :: !Var -> Exp
   Lit       :: !Lit -> Exp
-  -- | A literal JS snippet. Considered by the optimizer to be non-computing.
-  --   Any use beyond inlining FFI imports is considered horrible, evil abuse.
+  -- | A literal JS snippet.
+  --   Invariant: JSLits must not perform side effects or significant
+  --   computation.
   JSLit     :: !String -> Exp
   Not       :: !Exp -> Exp
   BinOp     :: !BinOp -> Exp -> !Exp -> Exp
