@@ -202,6 +202,9 @@
 /* The value of ENOTSOCK. */
 #define CONST_ENOTSOCK 88
 
+/* The value of ENOTSUP. */
+#define CONST_ENOTSUP 95
+
 /* The value of ENOTTY. */
 #define CONST_ENOTTY 25
 
@@ -310,14 +313,26 @@
 /* Define to 1 if you have the <ctype.h> header file. */
 #define HAVE_CTYPE_H 1
 
+/* Define if you have epoll support. */
+#define HAVE_EPOLL 1
+
+/* Define to 1 if you have the `epoll_ctl' function. */
+#define HAVE_EPOLL_CTL 1
+
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
+
+/* Define to 1 if you have the `eventfd' function. */
+#define HAVE_EVENTFD 1
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
 
 /* Define to 1 if you have the `ftruncate' function. */
 #define HAVE_FTRUNCATE 1
+
+/* Define to 1 if you have the `getclock' function. */
+/* #undef HAVE_GETCLOCK */
 
 /* Define to 1 if you have the `getrusage' function. */
 #define HAVE_GETRUSAGE 1
@@ -328,8 +343,23 @@
 /* Define to 1 if you have the `iswspace' function. */
 #define HAVE_ISWSPACE 1
 
+/* Define to 1 if you have the `kevent' function. */
+/* #undef HAVE_KEVENT */
+
+/* Define to 1 if you have the `kevent64' function. */
+/* #undef HAVE_KEVENT64 */
+
+/* Define if you have kqueue support. */
+/* #undef HAVE_KQUEUE */
+
 /* Define to 1 if you have the <langinfo.h> header file. */
 #define HAVE_LANGINFO_H 1
+
+/* Define to 1 if you have libcharset. */
+/* #undef HAVE_LIBCHARSET */
+
+/* Define to 1 if you have the `rt' library (-lrt). */
+#define HAVE_LIBRT 1
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
@@ -342,6 +372,12 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
+
+/* Define if you have poll support. */
+#define HAVE_POLL 1
+
+/* Define to 1 if you have the <poll.h> header file. */
+#define HAVE_POLL_H 1
 
 /* Define to 1 if you have the <signal.h> header file. */
 #define HAVE_SIGNAL_H 1
@@ -358,6 +394,15 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
+/* Define to 1 if you have the <sys/epoll.h> header file. */
+#define HAVE_SYS_EPOLL_H 1
+
+/* Define to 1 if you have the <sys/eventfd.h> header file. */
+#define HAVE_SYS_EVENTFD_H 1
+
+/* Define to 1 if you have the <sys/event.h> header file. */
+/* #undef HAVE_SYS_EVENT_H */
+
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #define HAVE_SYS_RESOURCE_H 1
 
@@ -373,6 +418,12 @@
 /* Define to 1 if you have the <sys/timeb.h> header file. */
 #define HAVE_SYS_TIMEB_H 1
 
+/* Define to 1 if you have the <sys/timers.h> header file. */
+/* #undef HAVE_SYS_TIMERS_H */
+
+/* Define to 1 if you have the <sys/times.h> header file. */
+#define HAVE_SYS_TIMES_H 1
+
 /* Define to 1 if you have the <sys/time.h> header file. */
 #define HAVE_SYS_TIME_H 1
 
@@ -385,6 +436,9 @@
 /* Define to 1 if you have the <sys/wait.h> header file. */
 #define HAVE_SYS_WAIT_H 1
 
+/* Define to 1 if you have the <termios.h> header file. */
+#define HAVE_TERMIOS_H 1
+
 /* Define to 1 if you have the `times' function. */
 #define HAVE_TIMES 1
 
@@ -394,11 +448,23 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
+/* Define to 1 if you have the `unsetenv' function. */
+#define HAVE_UNSETENV 1
+
 /* Define to 1 if you have the <utime.h> header file. */
 #define HAVE_UTIME_H 1
 
 /* Define to 1 if you have the <wctype.h> header file. */
 #define HAVE_WCTYPE_H 1
+
+/* Define to 1 if you have the <windows.h> header file. */
+/* #undef HAVE_WINDOWS_H */
+
+/* Define to 1 if you have the <winsock.h> header file. */
+/* #undef HAVE_WINSOCK_H */
+
+/* Define to 1 if you have the `_chsize' function. */
+/* #undef HAVE__CHSIZE */
 
 /* Define to Haskell type for cc_t */
 #define HTYPE_CC_T Word8
@@ -428,7 +494,7 @@
 #define HTYPE_INT Int32
 
 /* Define to Haskell type for intmax_t */
-#define HTYPE_INTMAX_T Int64
+#define HTYPE_INTMAX_T Int32
 
 /* Define to Haskell type for intptr_t */
 #define HTYPE_INTPTR_T Int32
@@ -488,7 +554,7 @@
 #define HTYPE_UID_T Word32
 
 /* Define to Haskell type for uintmax_t */
-#define HTYPE_UINTMAX_T Word64
+#define HTYPE_UINTMAX_T Word32
 
 /* Define to Haskell type for uintptr_t */
 #define HTYPE_UINTPTR_T Word32
@@ -515,32 +581,45 @@
 #define HTYPE_WCHAR_T Int32
 
 /* Define to the address where bug reports for this package should be sent. */
-#define PACKAGE_BUGREPORT "http://github.com/valderman/haste-compiler"
+#define PACKAGE_BUGREPORT "libraries@haskell.org"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "Haste base package"
+#define PACKAGE_NAME "Haskell base package"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Haste base package 1.0"
+#define PACKAGE_STRING "Haskell base package 1.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "base"
 
 /* Define to the home page for this package. */
-#define PACKAGE_URL "http://github.com/valderman/haste-compiler"
+#define PACKAGE_URL ""
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "1.0"
 
+/* The size of `kev.filter', as computed by sizeof. */
+/* #undef SIZEOF_KEV_FILTER */
+
+/* The size of `kev.flags', as computed by sizeof. */
+/* #undef SIZEOF_KEV_FLAGS */
+
 /* The size of `struct MD5Context', as computed by sizeof. */
-#define SIZEOF_STRUCT_MD5CONTEXT 0
+#define SIZEOF_STRUCT_MD5CONTEXT 88
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
+
+/* Define if stdlib.h declares unsetenv to return void. */
+/* #undef UNSETENV_RETURNS_VOID */
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
 
 /* Define for large files, on AIX-style hosts. */
 /* #undef _LARGE_FILES */
-
