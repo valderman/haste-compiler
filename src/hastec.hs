@@ -2,6 +2,7 @@
 -- | Haste's main compiler driver.
 module Main where
 import Language.Haskell.GHC.Simple
+import Language.Haskell.GHC.Simple.PrimIface
 import GHC
 import Outputable (showPpr)
 
@@ -93,7 +94,8 @@ main = do
                         then OneShot
                         else CompManager,
             hscTarget = HscNothing
-          }
+          },
+        cfgCustomPrimIface = Just (primOpInfo, primOpStrictness)
 
       }
     mkLinkerCfg dfs cfg = cfg {
@@ -101,6 +103,14 @@ main = do
                         moduleNameString $ moduleName (mainModIs dfs))
       }
     setShowOutputable dfs cfg = cfg {showOutputable = showPpr dfs}
+
+-- | Primop info for custom GHC.Prim interface.
+primOpInfo :: PrimOp -> PrimOpInfo
+#include "primop-info-710.hs"
+
+-- | Strictness info for custom GHC.Prim interface.
+primOpStrictness :: PrimOp -> Arity -> StrictSig
+#include "primop-stricts-710.hs"
 
 -- | Compile an STG module into a JS module and write it to its appropriate
 --   location according to the given config.
