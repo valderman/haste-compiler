@@ -317,7 +317,9 @@ buildLibs cfg = do
             . filter (not . null)
             . filter (and . zipWith (==) "version")
             . lines
-          hasteCabal Configure ["--solver", "topdown"]
+          run_ "./configure" [] ""
+          hasteCabal Configure ["--solver", "topdown", "-finteger-gmp"]
+          forEachFile "../include" $ \f -> cp f "include"
           hasteCabal Build []
           let base = "base-" ++ basever
               pkgdb = "--package-db=dist" </> "package.conf.inplace"
