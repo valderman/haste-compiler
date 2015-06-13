@@ -3,34 +3,23 @@
 module Data.JSTarget.Traversal where
 import Control.Applicative
 import Control.Monad
+import Control.Monad.State
 import Data.JSTarget.AST
 import Data.Map as M ((!), insert)
 
 -- | AST nodes we'd like to fold and map over.
 data ASTNode = Exp !Exp !Bool | Stm !Stm !Bool | Label !Lbl
 
-newtype TravM a = T (JumpTable -> (JumpTable, a))
-instance Monad TravM where
-  return x  = T $ \js -> (js, x)
-  T m >>= f = T $ \js ->
-    case m js of
-      (js', x) | T f' <- f x -> f' js'
-
-instance Applicative TravM where
-  pure  = return
-  (<*>) = ap
-
-instance Functor TravM where
-  fmap f (T m) = T $ \js -> fmap f (m js)
+type TravM a = State JumpTable a
 
 runTravM :: TravM a -> JumpTable -> AST a
-runTravM (T f) js = case f js of (js', x) -> AST x js'
+runTravM m js = uncurry AST $ runState m js
 
 getRef :: Lbl -> TravM Stm
-getRef lbl = T $ \js -> (js, js M.! lbl)
+getRef lbl = (M.! lbl) <$> get
 
 putRef :: Lbl -> Stm -> TravM ()
-putRef lbl stm = T $ \js -> (M.insert lbl stm js, ())
+putRef lbl stm = modify (M.insert lbl stm)
 
 class Show ast => JSTrav ast where
   -- | Bottom up transform over an AST.
@@ -190,11 +179,11 @@ instance JSTrav Stm where
                          Return ex -> do
                            fmap Return <$> foldMapJS tr fe fs acc ex
                          Cont -> do
-                           return (acc, Cont)
+                           return (acc, ast)
                          Jump stm -> do
                            fmap Jump <$> foldMapJS tr fe fs acc stm
                          NullRet -> do
-                           return (acc, NullRet)
+                           return (acc, ast)
                          Tailcall ex -> do
                            fmap Tailcall <$> foldMapJS tr fe fs acc ex
                          ThunkRet ex -> do

@@ -249,6 +249,7 @@ Executable haste-cat
         array,
         random,
         data-default,
+        mtl,
         directory
     default-language: Haskell98
 
