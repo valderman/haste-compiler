@@ -42,7 +42,7 @@ main = do
             when (performLink cfg) $ do
               mapM_ (linkAndMinify cfg) (filter modIsTarget mods)
   where
-    mkGhcCfg fs args = def {
+    mkGhcCfg fs args = defaultConfig {
         cfgGhcFlags = fs,
         cfgGhcLibDir = Just ghcLibDir,
         cfgUseTargetsFromFlags = True,
