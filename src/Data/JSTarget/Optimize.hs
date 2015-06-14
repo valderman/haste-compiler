@@ -46,6 +46,7 @@ topLevelInline :: AST Stm -> AST Stm
 topLevelInline (AST ast js) =
   flip runTravM js $ do
     unTrampoline ast
+    >>= unevalLits
     >>= inlineAssigns
     >>= optimizeArrays
     >>= optimizeThunks
@@ -124,18 +125,10 @@ inlineAssigns ast = do
     -- Make an exception for expressions of the form @x = E(x)@: since we know
     -- that @x@ is a literal and thus pointless to evaluate, we simply remove
     -- any such statements.
-    isLHSOf v (Stm stm _) | isEvalUpd v stm            = False
+    isLHSOf v (Stm stm _) | isEvalUpd (==v) stm        = False
     isLHSOf v (Stm (Assign (LhsExp _ (Var v')) _ _) _) = v == v'
     isLHSOf v (Exp (AssignEx (Var v') _) _)            = v == v'
     isLHSOf _ _                                        = False
-
-    isEvalUpd v (Assign (LhsExp _ (Var v')) (Eval (Var v'')) _) =
-      v == v' && v' == v''
-    isEvalUpd _  _ =
-      False
-
-    removeUpd ex stm@(Assign _ _ next) | isEvalUpd ex stm = pure next
-    removeUpd _ stm                                       = pure stm
 
     inl m keep@(Assign l ex next)
       -- Inline all non-string literals l which do not appear at the LHS of an
@@ -148,7 +141,7 @@ inlineAssigns ast = do
           then do
             return keep
           else do
-            next' <- mapJS (const True) pure (removeUpd lhs) next
+            next' <- mapJS (const True) pure (pure . removeUpdate (==lhs)) next
             replaceEx (const True) (Var lhs) ex next'
       | Just lhs <- inlinableAssignLHS l = do
         occursRec <- occurrences (const True) (varOccurs lhs) ex
@@ -171,6 +164,16 @@ inlineAssigns ast = do
           else do
             return keep
     inl _ stm = return stm
+
+-- | Remove an occurrence of @ex = E(ex)@. Only call this for @ex@ which are
+--   guaranteed to never be thunks.
+removeUpdate :: (Var -> Bool) -> Stm -> Stm
+removeUpdate p stm@(Assign _ _ next) | isEvalUpd p stm = next
+removeUpdate _ stm                                     = stm
+
+isEvalUpd :: (Var -> Bool) -> Stm -> Bool
+isEvalUpd p (Assign (LhsExp _ (Var v)) (Eval (Var v')) _) = p v && v == v'
+isEvalUpd _ _                                             = False
 
 stringLit :: Lit -> Bool
 stringLit (LStr _) = True
@@ -609,29 +612,40 @@ zipAssign l r final
     go (v:vs) (x:xs) = Assign v x (go vs xs)
     go [] []         = final
 
+-- | Eliminate evaluation of vars that are guaranteed not to be thunks.
+--   Mainly useful in 'topLevelInline'.
+unevalLits :: JSTrav ast => ast -> TravM ast
+unevalLits ast = do
+    lits <- foldJS (\_ _ -> True) gatherLits S.empty ast
+    mapJS (const True) pure (pure . removeUpdate (`S.member` lits)) ast
+  where
+    gatherLits s (Stm (Assign (NewVar _ v) rhs _) _)
+      | definitelyNotThunk rhs         = pure $ S.insert v s
+      | Var v' <- rhs, v' `S.member` s = pure $ S.insert v s
+    gatherLits s _                     = pure s
+
 -- | Inline calls to JS @eval@, @__set@, @__get@ and @__has@ and apply
 --   functions for "Haste.Foreign".
 inlineJSPrimitives :: JSTrav ast => ast -> TravM ast
 inlineJSPrimitives =
-    inlineFuns
+    inlineFuns >=> optimizeThunks
   where
-    inlineFuns = mapJS (const True) inl return
+    inlineFuns = mapJS (const True) (return . inl) return
     inl ex@(Call _ (Fast _) (Var (Foreign f)) args) =
       case (f, args) of
-        ("eval", [Lit (LStr s)]) -> return (JSLit s)
-        ("__app0", [f])          -> return (Call 0 (Fast False) f [])
-        ("__app1", f:xs)         -> return (Call 0 (Fast False) f xs)
-        ("__app2", f:xs)         -> return (Call 0 (Fast False) f xs)
-        ("__app3", f:xs)         -> return (Call 0 (Fast False) f xs)
-        ("__app4", f:xs)         -> return (Call 0 (Fast False) f xs)
-        ("__app5", f:xs)         -> return (Call 0 (Fast False) f xs)
-        ("__get", [o, k])        -> return (Index o k)
-        ("__set", [o, k, v])     -> return (AssignEx (Index o k) v)
-        ("__has", [o, k])        -> return (BinOp Neq (Index o k)
-                                                      (JSLit "undefined"))
-        _                        -> return ex
+        ("eval", [Lit (LStr s)]) -> JSLit s
+        ("__app0", [f])          -> Call 0 (Fast False) f []
+        ("__app1", f:xs)         -> Call 0 (Fast False) f xs
+        ("__app2", f:xs)         -> Call 0 (Fast False) f xs
+        ("__app3", f:xs)         -> Call 0 (Fast False) f xs
+        ("__app4", f:xs)         -> Call 0 (Fast False) f xs
+        ("__app5", f:xs)         -> Call 0 (Fast False) f xs
+        ("__get", [o, k])        -> Index o k
+        ("__set", [o, k, v])     -> AssignEx (Index o k) v
+        ("__has", [o, k])        -> BinOp Neq (Index o k) (JSLit "undefined")
+        _                        -> ex
     inl exp =
-      return exp
+      exp
 
 -- | Turn all assignments of the form @var v1 = e ; exp@ into @exp[v1/e]@,
 --   provided that @v1@ is not used as a known location and @e@ is either a
