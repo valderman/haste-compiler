@@ -6,6 +6,7 @@ import Control.Shell
 import Control.Applicative
 import Data.JSTarget
 import Data.Binary
+import qualified Data.ByteString.UTF8 as BS
 
 -- | The file extension to use for modules.
 jsmodExt :: Bool -> String
@@ -27,7 +28,8 @@ writeModule basepath m@(Module pkgid modname _ _) boot =
     mkdir True (takeDirectory path)
     liftIO $ B.writeFile path (encode m)
   where
-    path = moduleFilePath basepath pkgid modname boot
+    path =
+      moduleFilePath basepath (BS.toString pkgid) (BS.toString modname) boot
 
 -- | Read a module from file. If the module is not found at the specified path,
 --   libpath/path is tried instead. Returns Nothing is the module is not found

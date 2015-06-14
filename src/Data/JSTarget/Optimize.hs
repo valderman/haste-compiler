@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, TupleSections, DoAndIfThenElse #-}
+{-# LANGUAGE PatternGuards, TupleSections, DoAndIfThenElse, OverloadedStrings #-}
 -- | Optimizations over the JSTarget AST.
 module Data.JSTarget.Optimize (
     optimizeFun, tryTernary, topLevelInline
@@ -10,6 +10,7 @@ import Control.Applicative
 import Control.Monad
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.ByteString.Char8 as BS (cons)
 
 -- | Turn tail recursion into loops.
 fixTailCalls :: Var -> Exp -> TravM Exp
@@ -548,7 +549,7 @@ tailLoopify f fun@(Fun args body) = do
         (Assign (LhsExp False (Var v)) x . next, final)
     
     newName (Internal (Name n mmod) _ _) =
-      Internal (Name (' ':n) mmod) "" True
+      Internal (Name (BS.cons ' ' n) mmod) "" True
     newName n =
       n
     

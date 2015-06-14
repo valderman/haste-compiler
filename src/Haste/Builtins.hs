@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | Various functions generated as builtins
 module Haste.Builtins (toBuiltin) where
 import GhcPlugins as P

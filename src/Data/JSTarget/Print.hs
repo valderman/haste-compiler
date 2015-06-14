@@ -9,18 +9,20 @@ import Data.ByteString.Builder
 import Control.Monad
 import Data.Char
 import Numeric (showHex)
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.UTF8 as BS
 
 instance Pretty Var where
   pp (Foreign name) =
-    put $ stringUtf8 name
-  pp (Internal name@(Name n _) comment _) = do
+    put name
+  pp (Internal name@(Name _ _) comment _) = do
     pp name
     doComment <- getOpt nameComments
     when doComment $ do
-      when (not $ null comment) $ do
-        put $ stringUtf8 "/* "
-        put $ stringUtf8 comment
-        put $ stringUtf8 " */"
+      when (not $ BS.null comment) $ do
+        put $ byteString "/* "
+        put comment
+        put $ byteString " */"
 
 instance Pretty Name where
   pp name = finalNameFor name >>= put . buildFinalName
@@ -31,7 +33,7 @@ instance Pretty LHS where
 
 instance Pretty Lit where
   pp (LNum d)  = put d
-  pp (LStr s)  = "\"" .+. put (fixQuotes s) .+. "\""
+  pp (LStr s)  = "\"" .+. put (fixQuotes $ BS.toString s) .+. "\""
     where
       fixQuotes ('\\':xs) = "\\\\" ++ fixQuotes xs
       fixQuotes ('"':xs)  = '\\':'"'  : fixQuotes xs
@@ -94,7 +96,8 @@ instance Pretty Exp where
         Normal False -> normalCall
         Fast True    -> "B(" .+. fastCall .+. ")"
         Fast False   -> fastCall
-        Method m  -> pp f .+. put ('.':m) .+. "(" .+. ppList sep args .+. ")"
+        Method m     ->
+          pp f .+. put (BS.cons '.' m) .+. "(" .+. ppList sep args .+. ")"
     where
       normalCall = "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
       fastCall = ppCallFun f .+. "(" .+. ppList sep args .+. ")"

@@ -1,3 +1,5 @@
+
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 import System.Environment
 import Haste.Module
@@ -6,7 +8,8 @@ import Data.JSTarget
 import Data.JSTarget.PP
 import Data.Maybe
 import qualified Data.Map as M
-import qualified Data.ByteString.Lazy.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as BSL
+import qualified Data.ByteString.Char8 as BS
 
 main = do
   as <- getArgs
@@ -23,11 +26,11 @@ printDefs mod = do
   mapM_ printDef $ M.toList $ modDefs mod
 
 printDef (name, def) = do
-  putStrLn $ niceName name
-  BS.putStrLn $ pretty debugPPOpts def
+  BS.putStrLn $ niceName name
+  BSL.putStrLn $ pretty debugPPOpts def
   putStrLn ""
 
 niceName (Name n (Just (pkg, m))) =
-  pkg ++ ":" ++ m ++ "." ++ n
+  BS.concat [pkg, ":", m, ".", n]
 niceName (Name n _) =
   n

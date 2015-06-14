@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, MultiParamTypeClasses,
-             FlexibleContexts #-}
+             FlexibleContexts, OverloadedStrings #-}
 module Haste.Linker (link) where
 import Haste.Config
 import Haste.Module
@@ -10,6 +10,8 @@ import Control.Monad.Trans.Either
 import Control.Applicative
 import Data.JSTarget
 import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString as BS
+import Data.ByteString.UTF8 (toString, fromString)
 import Data.ByteString.Builder
 import Data.Monoid
 import System.IO (hPutStrLn, stderr)
@@ -21,11 +23,12 @@ mainSym :: Name
 mainSym = name "main" (Just ("main", ":Main"))
 
 -- | Link a program using the given config and input file name.
-link :: Config -> String -> FilePath -> IO ()
+link :: Config -> BS.ByteString -> FilePath -> IO ()
 link cfg pkgid target = do
-  let mainmod = case mainMod cfg of
-                 Just mm -> mm
-                 _       -> error "Haste.Linker.link called without main sym!"
+  let mainmod =
+        case mainMod cfg of
+         Just (m, p) -> (fromString m, fromString p)
+         _           -> error "Haste.Linker.link called without main sym!"
   ds <- getAllDefs cfg (targetLibPath cfg : libPaths cfg) mainmod pkgid mainSym
   let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
       (progText, myMain') = prettyProg (ppOpts cfg) mainSym myDefs
@@ -63,24 +66,24 @@ info' cfg = when (verbose cfg) . hPutStrLn stderr
 -- | Generate a sequence of all assignments needed to run Main.main.
 getAllDefs :: Config
            -> [FilePath]
-           -> (String, String)
-           -> String
+           -> (BS.ByteString, BS.ByteString)
+           -> BS.ByteString
            -> Name
            -> IO (AST Stm)
 getAllDefs cfg libpaths mainmod pkgid mainsym =
   runDep cfg mainmod $ addDef libpaths pkgid mainsym
 
 data DepState = DepState {
-    mainmod     :: !(String, String),
+    mainmod     :: !(BS.ByteString, BS.ByteString),
     defs        :: !(AST Stm -> AST Stm),
     alreadySeen :: !(S.Set Name),
-    modules     :: !(M.Map String Module),
+    modules     :: !(M.Map BS.ByteString Module),
     infoLogger  :: String -> IO ()
   }
 
 type DepM a = EitherT Name (StateT DepState IO) a
 
-initState :: Config -> (String, String) -> DepState
+initState :: Config -> (BS.ByteString, BS.ByteString) -> DepState
 initState cfg m = DepState {
     mainmod     = m,
     defs        = id,
@@ -96,14 +99,14 @@ info s = do
   liftIO $ infoLogger st s
 
 -- | Run a dependency resolution computation.
-runDep :: Config -> (String, String) -> DepM a -> IO (AST Stm)
+runDep :: Config -> (BS.ByteString, BS.ByteString) -> DepM a -> IO (AST Stm)
 runDep cfg mainmod m = do
     res <- runStateT (runEitherT m) (initState cfg mainmod)
     case res of
       (Right _, st) ->
         return $ defs st nullRet
       (Left (Name f (Just (p, m))), _) -> do
-        error $ msg m f
+        error $ msg (toString m) (toString f)
   where
     msg "Main" "main" =
       "Unable to locate a main function.\n" ++
@@ -133,18 +136,18 @@ getModuleOf libpaths v@(Name n _) =
 
 -- | Return the module at the given path, loading it into cache if it's not
 --   already there.
-getModule :: [FilePath] -> String -> String -> DepM (Maybe Module)
+getModule :: [FilePath] -> BS.ByteString -> BS.ByteString -> DepM (Maybe Module)
 getModule libpaths pkgid modname = do
     st <- get
     case M.lookup modname (modules st) of
       Just m -> do
         return $ Just m
       _ -> do
-        info $ "Linking " ++ modname
+        info $ "Linking " ++ toString modname
         go libpaths
   where
     go (libpath:lps) = do
-      mm <- liftIO $ readModule libpath pkgid modname
+      mm <- liftIO $ readModule libpath (toString pkgid) (toString modname)
       case mm of
         Just m -> do
           st <- get
@@ -157,7 +160,7 @@ getModule libpaths pkgid modname = do
 
 -- | Add a new definition and its dependencies. If the given identifier has
 --   already been added, it's just ignored.
-addDef :: [FilePath] -> String -> Name -> DepM ()
+addDef :: [FilePath] -> BS.ByteString -> Name -> DepM ()
 addDef libpaths pkgid v = do
   st <- get
   when (not $ v `S.member` alreadySeen st) $ do

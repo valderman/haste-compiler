@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, PatternGuards, CPP #-}
+{-# LANGUAGE TupleSections, PatternGuards, CPP, OverloadedStrings #-}
 module Haste.CodeGen (generate) where
 -- Misc. stuff
 import Control.Applicative
@@ -9,7 +9,8 @@ import Data.Word
 import Data.Char
 import Data.List (partition, foldl')
 import Data.Maybe (isJust)
-import qualified Data.ByteString.UTF8 as B
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.UTF8 as BS
 import qualified Data.Set as S
 import qualified Data.Map as M
 
@@ -32,8 +33,8 @@ import Haste.Builtins
 generate :: Config -> StgModule -> J.Module
 generate cfg stg =
   J.Module {
-      modPackageId   = GHC.modPackageKey stg,
-      J.modName      = GHC.modName stg,
+      modPackageId   = BS.fromString $ GHC.modPackageKey stg,
+      J.modName      = BS.fromString $ GHC.modName stg,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
     }
@@ -122,13 +123,14 @@ genEx (StgOpApp op args _) = do
   cfg <- getCfg
   let theOp = case op of
         StgPrimOp op' ->
-          maybeTrace cfg (showOutputable cfg op') args' <$> genOp cfg op' args'
+          maybeTrace cfg opstr args' <$> genOp cfg op' args'
+          where opstr = BS.fromString $ showOutputable cfg op'
         StgPrimCallOp (PrimCall f _) ->
           Right $ maybeTrace cfg fs args' $ callForeign fs args'
-          where fs = unpackFS f
+          where fs = BS.fromString $ unpackFS f
         StgFCallOp (CCall (CCallSpec (StaticTarget f _ _) _ _)) _t ->
           Right $ maybeTrace cfg fs args' $ callForeign fs args'
-          where fs = unpackFS f
+          where fs = BS.fromString $ unpackFS f
         _ ->
           error $ "Tried to generate unsupported dynamic foreign call!"
   case theOp of
@@ -156,7 +158,7 @@ genEx (StgTick _ ex) = do
 genEx (StgLam _ _) = do
   error "StgLam caught during code generation - that's impossible!"
 -- | Trace the given expression, if tracing is on.
-maybeTrace :: Config -> String -> [AST Exp] -> AST Exp -> AST Exp
+maybeTrace :: Config -> BS.ByteString -> [AST Exp] -> AST Exp -> AST Exp
 maybeTrace cfg msg args ex =
   if tracePrimops cfg
     then callForeign "__h_trace" [lit msg, array args, ex]
@@ -327,9 +329,9 @@ genResultVar v = do
   v' <- genVar v >>= getActualName
   case v' of
     Foreign n ->
-      return $ Internal (Name (n ++ "#result") Nothing) "" True
+      return $ Internal (Name (BS.append n "#result") Nothing) "" True
     Internal (Name n mp) _ _ ->
-      return $ Internal (Name (n ++ "#result") mp) "" True
+      return $ Internal (Name (BS.append n "#result") mp) "" True
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
@@ -346,9 +348,9 @@ genVar _ = do
   return $ foreignVar "_"
 
 -- | Extracts the name of a foreign var.
-foreignName :: ForeignCall -> String
+foreignName :: ForeignCall -> BS.ByteString
 foreignName (CCall (CCallSpec (StaticTarget str _ _) _ _)) =
-  unpackFS str
+  BS.fromString $ unpackFS str
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 
@@ -361,23 +363,23 @@ toJSVar thisMod v =
     FCallId fc -> foreignVar (foreignName fc)
     _
       | isLocalId v && not hasMod ->
-        internalVar (name (unique) (Just (myPkg, myMod))) ""
+        internalVar (name unique (Just (myPkg, myMod))) ""
       | isGlobalId v || hasMod ->
-        internalVar (name (extern) (Just (myPkg, myMod))) comment
+        internalVar (name extern (Just (myPkg, myMod))) comment
     _ ->
       error $ "Var is not local, global or external!"
   where
-    comment = myMod ++ "." ++ extern
+    comment = BS.concat [myMod, ".", extern]
     vname  = GHC.varName v
     hasMod = case nameModule_maybe vname of
                Nothing -> False
                _       -> True
-    myMod =
-      maybe thisMod (moduleNameString . moduleName) (nameModule_maybe vname)
-    myPkg =
-      maybe "main" (pkgKeyString . modulePkgKey) (nameModule_maybe vname)
-    extern = occNameString $ nameOccName vname
-    unique = show $ nameUnique vname
+    myMod = BS.fromString $ maybe thisMod (moduleNameString . moduleName)
+                                          (nameModule_maybe vname)
+    myPkg = BS.fromString $ maybe "main" (pkgKeyString . modulePkgKey)
+                                         (nameModule_maybe vname)
+    extern = BS.fromString $ occNameString $ nameOccName vname
+    unique = BS.fromString $ show $ nameUnique vname
 
 -- | Generate an argument list. Any arguments of type State# a are filtered out.
 genArgs :: [StgArg] -> JSGen Config [AST Exp]
@@ -449,7 +451,7 @@ dataConNameModule d =
 genLit :: GHC.Literal -> JSGen Config (AST Exp)
 genLit l = do
   case l of
-    MachStr s           -> return . lit $ B.toString s
+    MachStr s           -> return $ lit s
     MachInt n
       | n > 2147483647 ||
         n < -2147483648 -> do warn Verbose (constFail "Int" n)
@@ -466,7 +468,8 @@ genLit l = do
     MachNullAddr        -> return $ litN 0
     MachInt64 n         -> return $ int64 n
     LitInteger n _      -> return $ lit n
-    MachLabel _ _ _     -> return $ lit ":(" -- Labels point to machine code - ignore!
+    -- Labels point to machine code - ignore!
+    MachLabel _ _ _     -> return $ litS ":("
   where
     constFail t n = t ++ " literal " ++ show n ++ " doesn't fit in 32 bits;"
                     ++ " truncating!"

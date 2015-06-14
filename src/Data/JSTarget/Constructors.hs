@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TupleSections, CPP #-}
+{-# LANGUAGE FlexibleInstances, TupleSections, CPP, OverloadedStrings #-}
 #if __GLASGOW_HASKELL__ < 710
 {-# LANGUAGE OverlappingInstances #-}
 #endif
@@ -7,6 +7,8 @@ module Data.JSTarget.Constructors where
 import Data.JSTarget.AST
 import Data.JSTarget.Op
 import Control.Applicative
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.UTF8 as BS
 
 -- | Literal types.
 class Literal a where
@@ -22,6 +24,9 @@ instance Literal Bool where
   lit = pure . Lit . LBool
 
 instance Literal [Char] where
+  lit = pure . Lit . LStr . BS.fromString
+
+instance Literal BS.ByteString where
   lit = pure . Lit . LStr
 
 #if __GLASGOW_HASKELL__ < 710
@@ -40,26 +45,29 @@ instance Literal Var where
 litN :: Double -> AST Exp
 litN = lit
 
+litS :: BS.ByteString -> AST Exp
+litS = lit
+
 -- | Create a foreign variable. Foreign vars will not be subject to any name
 --   mangling.
-foreignVar :: String -> Var
+foreignVar :: BS.ByteString -> Var
 foreignVar = Foreign
 
 -- | A regular, internal variable. Subject to name mangling.
-internalVar :: Name -> String -> Var
+internalVar :: Name -> BS.ByteString -> Var
 internalVar n c = Internal n c False
 
 -- | A variable serving as a known location, to store return values from
 --   expressions that get compiled into statements.
-knownLocation :: Name -> String -> Var
+knownLocation :: Name -> BS.ByteString -> Var
 knownLocation n c = Internal n c True
 
 -- | Create a name, qualified or not.
-name :: String -> Maybe (String, String) -> Name
+name :: BS.ByteString -> Maybe (BS.ByteString, BS.ByteString) -> Name
 name = Name
 
 -- | A variable expression, for convenience.
-var :: Name -> String -> AST Exp
+var :: Name -> BS.ByteString -> AST Exp
 var n comment = pure $ Var $ internalVar n comment
 
 -- | Turn a Var into an expression.
@@ -67,12 +75,12 @@ varExp :: Var -> AST Exp
 varExp = pure . Var
 
 -- | Call to a native method on an object. Always saturated.
-callMethod :: AST Exp -> String -> [AST Exp] -> AST Exp
+callMethod :: AST Exp -> BS.ByteString -> [AST Exp] -> AST Exp
 callMethod obj meth args =
   Call 0 (Method meth) <$> obj <*> sequence args
 
 -- | Foreign function call. Always saturated, never trampolines.
-callForeign :: String -> [AST Exp] -> AST Exp
+callForeign :: BS.ByteString -> [AST Exp] -> AST Exp
 callForeign f = fmap (Call 0 (Fast False) (Var $ foreignVar f)) . sequence
 
 -- | A normal function call. May be unsaturated. A saturated call is always
@@ -102,9 +110,9 @@ foldApp ex =
 -- | Introduce n new vars.
 newVars :: String -> Int -> [Var]
 newVars prefix n =
-    map newvar [1..n]
+    map nv [1..n]
   where
-    newvar i = Internal (Name (prefix ++ show i) Nothing) "" False
+    nv i = Internal (Name (BS.fromString $ prefix++show i) Nothing) "" False
 
 -- | Create a thunk.
 thunk :: Bool -> AST Stm -> AST Exp

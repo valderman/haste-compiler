@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, FlexibleInstances, CPP #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, FlexibleInstances, CPP,
+             OverloadedStrings #-}
 module Data.JSTarget.AST where
 import qualified Data.Set as S
 #if __GLASGOW_HASKELL__ >= 708
@@ -12,9 +13,10 @@ import Data.IORef
 import Data.Word
 import Control.Applicative
 import Data.JSTarget.Op
+import qualified Data.ByteString as BS
 
 type Arity = Int
-type Comment = String
+type Comment = BS.ByteString
 type Reorderable = Bool
 
 -- | Shared statements.
@@ -22,11 +24,14 @@ newtype Shared a = Shared Lbl deriving (Eq, Show)
 
 -- | A Name consists of a variable name and optional (package, module)
 --   information.
-data Name = Name !String !(Maybe (String, String)) deriving (Eq, Ord, Show)
+data Name = Name {
+    nameIdent :: !BS.ByteString,
+    nameQualifier :: !(Maybe (BS.ByteString, BS.ByteString))
+  } deriving (Eq, Ord, Show)
 
 class HasModule a where
-  moduleOf :: a -> Maybe String
-  pkgOf    :: a -> Maybe String
+  moduleOf :: a -> Maybe BS.ByteString
+  pkgOf    :: a -> Maybe BS.ByteString
 
 instance HasModule Name where
   moduleOf (Name _ mmod) = fmap snd mmod
@@ -42,7 +47,7 @@ type KnownLoc = Bool
 
 -- | Representation of variables.
 data Var where
-  Foreign  :: !String -> Var
+  Foreign  :: !BS.ByteString -> Var
   -- | Being a "known location" means that we can never substitute this
   --   variable for another one, as it is used to hold "return values" from
   --   case statements, tail loopification and similar.
@@ -83,17 +88,17 @@ data LHS where
 --   only be set to False when there is absolutely no possibility whatsoever
 --   that the called function will tailcall.
 data Call where
-  Normal   :: !Bool -> Call
-  Fast     :: !Bool -> Call
-  Method   :: !String -> Call
+  Normal   :: !Bool          -> Call
+  Fast     :: !Bool          -> Call
+  Method   :: !BS.ByteString -> Call
   deriving (Eq, Show)
 
 -- | Literals; nothing fancy to see here.
 data Lit where
-  LNum  :: !Double  -> Lit
-  LStr  :: !String  -> Lit
-  LBool :: !Bool    -> Lit
-  LInt  :: !Integer -> Lit
+  LNum  :: !Double        -> Lit
+  LStr  :: !BS.ByteString -> Lit
+  LBool :: !Bool          -> Lit
+  LInt  :: !Integer       -> Lit
   LNull :: Lit
   deriving (Eq, Show)
 
@@ -104,7 +109,7 @@ data Exp where
   -- | A literal JS snippet.
   --   Invariant: JSLits must not perform side effects or significant
   --   computation.
-  JSLit     :: !String -> Exp
+  JSLit     :: !BS.ByteString -> Exp
   Not       :: !Exp -> Exp
   BinOp     :: !BinOp -> Exp -> !Exp -> Exp
   Fun       :: ![Var] -> !Stm -> Exp
@@ -150,8 +155,8 @@ type Alt = (Exp, Stm)
 --   package, a dependency map of all its definitions, and a bunch of
 --   definitions.
 data Module = Module {
-    modPackageId   :: !String,
-    modName        :: !String,
+    modPackageId   :: !BS.ByteString,
+    modName        :: !BS.ByteString,
     modDeps        :: !(M.Map Name (S.Set Name)),
     modDefs        :: !(M.Map Name (AST Exp))
   }

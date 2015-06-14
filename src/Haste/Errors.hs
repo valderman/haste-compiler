@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- | Functions for warning about and causing runtime errors.
 module Haste.Errors (runtimeError, warn, WarnLevel(..)) where
 import System.IO.Unsafe

@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, OverloadedStrings #-}
 module Haste.PrimOps (genOp) where
 import Prelude hiding (LT, GT)
 import PrimOp
@@ -150,8 +150,8 @@ genOp cfg op xs =
     ReadArrayOp -> Right $ index arr ix
     WriteArrayOp -> Right $ assignEx (index arr ix) rhs
       where (_arr:_ix:rhs:_) = xs
-    SizeofArrayOp -> Right $ index (head xs) (lit "length")
-    SizeofMutableArrayOp -> Right $ index (head xs) (lit "length")
+    SizeofArrayOp -> Right $ index (head xs) (litS "length")
+    SizeofMutableArrayOp -> Right $ index (head xs) (litS "length")
     IndexArrayOp -> Right $ index arr ix
     UnsafeFreezeArrayOp -> Right $ head xs
     UnsafeThawArrayOp -> Right $ head xs
@@ -200,8 +200,8 @@ genOp cfg op xs =
     WriteByteArrayOp_Float   -> writeArr xs "f32"
     WriteByteArrayOp_Double  -> writeArr xs "f64"
     
-    SizeofByteArrayOp        -> Right $ index (head xs) (lit "byteLength")
-    SizeofMutableByteArrayOp -> Right $ index (head xs) (lit "byteLength")
+    SizeofByteArrayOp        -> Right $ index (head xs) (litS "byteLength")
+    SizeofMutableByteArrayOp -> Right $ index (head xs) (litS "byteLength")
     NewAlignedPinnedByteArrayOp_Char -> Right $ callForeign "newByteArr" [xs!!0]
     UnsafeFreezeByteArrayOp  -> Right $ head xs
     ByteArrayContents_Char   -> Right $ head xs
@@ -263,7 +263,7 @@ genOp cfg op xs =
         Right $ binOp Sub (litN 0) $ callForeign "addrLT" [a, b]
       where (a:b:_) = xs
     Addr2IntOp             ->
-        Right $ index x (lit "off")
+        Right $ index x (litS "off")
       where
         (x:_) = xs
 
@@ -320,23 +320,23 @@ genOp cfg op xs =
   where
     (arr:ix:_) = xs
     
-    writeArr (a:i:rhs:_) elemtype =
-      Right $ assignEx (index (index (index a (lit "v")) (lit elemtype)) i) rhs
+    writeArr (a:i:rhs:_) etype =
+      Right $ assignEx (index (index (index a (litS "v")) (litS etype)) i) rhs
     writeArr _ _ =
       error "writeArray primop with too few arguments!"
 
     readArr (a:i:_) elemtype =
-      Right $ index (index (index a (lit "v")) (lit elemtype)) i
+      Right $ index (index (index a (litS "v")) (litS elemtype)) i
     readArr _ _ =
       error "writeArray primop with too few arguments!"
 
     writeOffAddr (addr:off:rhs:_) etype esize =
-      Right $ callForeign "writeOffAddr" [lit etype, litN esize, addr, off, rhs]
+      Right $ callForeign "writeOffAddr" [litS etype,litN esize,addr,off,rhs]
     writeOffAddr _ _ _ =
       error "writeOffAddr primop with too few arguments!"
     
     readOffAddr (addr:off:_) etype esize =
-      Right $ callForeign "readOffAddr" [lit etype, litN esize, addr, off]
+      Right $ callForeign "readOffAddr" [litS etype,litN esize,addr,off]
     readOffAddr _ _ _ =
       error "readOffAddr primop with too few arguments!"
 

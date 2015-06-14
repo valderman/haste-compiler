@@ -250,7 +250,8 @@ Executable haste-cat
         random,
         data-default,
         mtl,
-        directory
+        directory,
+        utf8-string
     default-language: Haskell98
 
 Library

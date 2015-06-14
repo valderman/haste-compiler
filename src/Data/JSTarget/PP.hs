@@ -13,6 +13,7 @@ import Control.Monad
 import Control.Applicative
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
+import Data.ByteString (ByteString)
 import Data.JSTarget.AST (AST (..), Name (..), JumpTable, Lbl, Stm)
 import Data.JSTarget.Traversal (JSTrav)
 import Data.ByteString.Builder
@@ -142,6 +143,8 @@ class Buildable a where
 
 instance Buildable Builder where
   put x = PP $ \_ _ ns _ b -> (ns, b <> x, ())
+instance Buildable ByteString where
+  put = put . byteString
 instance Buildable String where
   put = put . stringUtf8
 instance Buildable Char where

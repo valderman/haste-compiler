@@ -12,6 +12,7 @@ import System.IO.Unsafe
 import System.IO
 import Control.Monad
 import qualified Control.Shell as Sh
+import qualified Data.ByteString.UTF8 as BS
 
 import Haste.Opts
 import Haste.Args
@@ -90,7 +91,7 @@ compJSMod cfg stg = do
 linkAndMinify :: Config -> String -> FilePath -> IO ()
 linkAndMinify cfg pkgkey infile = do
     logStr cfg $ "Linking target " ++ outfile
-    link cfg pkgkey infile
+    link cfg (BS.fromString pkgkey) infile
     case useGoogleClosure cfg of
       Just clopath -> closurize cfg clopath outfile
       _            -> return ()
