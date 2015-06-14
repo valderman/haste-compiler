@@ -33,15 +33,23 @@ main = do
     case parseHasteFlags args of
       Left act             -> act
       Right (fs, mkConfig) -> do
-        res <- compileWith (mkGhcCfg fs args)  []
+        let ghcconfig = mkGhcCfg fs args
+        (dfs, _) <- getDynFlagsForConfig ghcconfig
+        let cfg = mkLinkerCfg dfs . setShowOutputable dfs $ mkConfig def
+        res <- compileFold ghcconfig (compJS cfg) [] []
         case res of
-          Failure _ _        -> exitFailure
-          Success mods _ dfs -> do
-            let cfg = mkLinkerCfg dfs . setShowOutputable dfs $ mkConfig def
-            mapM_ (compJSMod cfg) mods
+          Failure _ _      -> exitFailure
+          Success targets _ _ -> do
             when (performLink cfg) $ do
-              mapM_ (linkAndMinify cfg) (filter modIsTarget mods)
+              mapM_ (uncurry $ linkAndMinify cfg) targets
   where
+    compJS cfg targets m = do
+      compJSMod cfg m
+      let infile = maybe (modInterfaceFile m) id (modSourceFile m)
+      if modIsTarget m
+        then return $ (modPackageKey m, infile) : targets
+        else return targets
+
     mkGhcCfg fs args = defaultConfig {
         cfgGhcFlags = fs,
         cfgGhcLibDir = Just ghcLibDir,
@@ -79,10 +87,10 @@ compJSMod cfg stg = do
 
 -- | Link a program starting from the 'mainMod' symbol of the given 'Config'.
 --   Minify the result if indicated by the config.
-linkAndMinify :: Config -> StgModule -> IO ()
-linkAndMinify cfg stg = do
+linkAndMinify :: Config -> String -> FilePath -> IO ()
+linkAndMinify cfg pkgkey infile = do
     logStr cfg $ "Linking target " ++ outfile
-    link cfg (modPackageKey stg) infile
+    link cfg pkgkey infile
     case useGoogleClosure cfg of
       Just clopath -> closurize cfg clopath outfile
       _            -> return ()
@@ -96,7 +104,6 @@ linkAndMinify cfg stg = do
         Right () -> return ()
         Left err -> error $ "Couldn't output HTML file: " ++ err
   where
-    infile  = maybe (modInterfaceFile stg) id (modSourceFile stg)
     outfile = outFile cfg cfg infile
 
 -- | Produce an HTML skeleton with an embedded JS program.
