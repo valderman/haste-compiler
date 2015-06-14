@@ -321,6 +321,9 @@ isConditional (Exp _ cond) = cond
 isConditional (Stm _ cond) = cond
 isConditional _            = False
 
+isSafeForInlining :: ASTNode -> Bool
+isSafeForInlining = not <$> isLambda .|. isLoop .|. isShared
+
 -- | Counts occurrences. Use ints or something for a more exact count.
 data Occs = Never | Once | Lots deriving (Eq, Show)
 

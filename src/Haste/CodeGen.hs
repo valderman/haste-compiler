@@ -38,10 +38,11 @@ generate cfg stg =
       modDefs        = foldl' insFun M.empty theMod
     }
   where
+    opt = if optimize cfg then optimizeFun else const id
     theMod = genAST cfg (GHC.modName stg) (modCompiledModule stg)
 
-    insFun m (_, AST (Assign (NewVar _ (Internal v _ _)) body _) jumps) =
-      M.insert v (AST body jumps) m
+    insFun m (_, AST (Assign (NewVar _ v@(Internal n _ _)) body _) jumps) =
+      M.insert n (opt v (AST body jumps)) m
     insFun m _ =
       m
 
@@ -184,9 +185,7 @@ genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
     addLocal v'
   expr <- genRhs (isJust funsInRecGroup) rhs
   popBind
-  opt <- optimize `fmap` getCfg
-  let expr' = if opt then optimizeFun v' expr else expr
-  continue $ newVar True v' expr'
+  continue $ newVar True v' expr
 genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 

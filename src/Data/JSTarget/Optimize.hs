@@ -11,24 +11,30 @@ import Control.Monad
 import qualified Data.Map as M
 import qualified Data.Set as S
 
+-- | Turn tail recursion into loops.
+fixTailCalls :: Var -> Exp -> TravM Exp
+fixTailCalls fun ast = do
+    ast' <- assignToSubst ast >>= tailLoopify fun
+    mapJS (const True) pure loopify ast'
+  where
+    loopify (Assign lhs@(NewVar _ f) body next) =
+      Assign lhs <$> (assignToSubst body >>= tailLoopify f) <*> pure next
+    loopify stm =
+      return stm
+
 -- TODO: tryTernary may inline calls that would otherwise be in tail position
 --       which is something we'd really like to avoid.
-
 optimizeFun :: Var -> AST Exp -> AST Exp
 optimizeFun f (AST ast js) =
   flip runTravM js $ do
     shrinkCase ast
---    >>= inlineOldVars
---    >>= zapDoubleAssigns
---    >>= zapUselessAssigns - Not quite correct yet; disable for now.
     >>= inlineAssigns
     >>= optimizeArrays
     >>= inlineReturns
     >>= zapJSStringConversions
     >>= optimizeThunks
     >>= optimizeArrays
-    >>= assignToSubst
-    >>= tailLoopify f
+    >>= fixTailCalls f
     >>= inlineShortJumpTailcall
     >>= trampoline
     >>= ifReturnToTernary
@@ -147,11 +153,18 @@ inlineAssigns ast = do
         occursRec <- occurrences (const True) (varOccurs lhs) ex
         if occursRec == Never
           then do
-            occursLocal <- occurrences (not <$> isShared) (varOccurs lhs) next
+            occursLocal <- occurrences isSafeForInlining (varOccurs lhs) next
             case M.lookup lhs m of
-              -- Inline any non-lambda, non-thunk, non JSLit value
               Just Once | okToInline ex && occursLocal == Once -> do
-                replaceEx (not <$> isShared) (Var lhs) ex next
+                -- Inline any non-lambda, non-thunk, non JSLit value
+                replaceEx isSafeForInlining (Var lhs) ex next
+              _ | Lit _ <- ex -> do
+                -- Inline any string literals provided that they don't appear
+                -- more than once.
+                occurs <- occurrences (const True) (varOccurs lhs) next
+                if occurs == Once
+                  then replaceEx (const True) (Var lhs) ex next
+                  else return keep
               _ -> do
                 return keep
           else do
@@ -220,9 +233,11 @@ zapJSStringConversions ast =
 --        => A(f, xs)
 --   2. thunk(x@(JSLit _))
 --        => x
---   3. E(thunk(return x))
+--   3. thunk(x@(Lit _))
 --        => x
---   4. E(x) | x is guaranteed to not be a thunk
+--   4. E(thunk(return x))
+--        => x
+--   5. E(x) | x is guaranteed to not be a thunk
 --        => x
 --
 --   Note that #2 depends on the invariant of 'JSLit': a JS literal must not
@@ -236,6 +251,8 @@ optimizeThunks ast =
       | definitelyNotThunk x               = return x
     optEx ex@(Thunk _ _)
       | Just l@(JSLit _) <- fromThunkEx ex = return l
+    optEx ex@(Thunk _ _)
+      | Just l@(Lit _) <- fromThunkEx ex   = return l
     optEx (Call arity calltype f as)
       | Just f' <- fromThunkEx f           = return $ Call arity calltype f' as
     optEx ex =
@@ -357,106 +374,32 @@ unTrampoline = go >=> go >=> go
     unTC _ x =
         return x
 
--- | Inline all reorderable x = ... into the next occurrence of x outside of a
---   lambda, keeping the assignment.
-inlineOldVars :: JSTrav ast => ast -> TravM ast
-inlineOldVars ast = do
-    mapJS (const True) return inl ast
-  where
-    inl (Assign (LhsExp True (Var v)) rhs next) =
-      replaceFirst enter (Var v) (AssignEx (Var v) rhs) next
-    inl stm =
-      return stm
-    enter = not . (isLambda .|. isConditional)
-
--- | Turn all @var x = y = z@ into @y = z@.
-zapDoubleAssigns :: JSTrav ast => ast -> TravM ast
-zapDoubleAssigns ast = do
-    mapJS (const True) return inl ast
-  where
-    inl (Assign (NewVar True v) (AssignEx (Var v') rhs) next) = do
-      next' <- replaceEx (const True) (Var v) (Var v') next
-      return $ Assign (LhsExp True (Var v')) rhs next'
-    inl stm =
-      return stm
-
--- | Turn all @x = y@ where @x@ is never used into @y@.
---   TODO: use this as basis for smarter inlining?
---   TODO: not quite correct yet, so disabled. Fix ASAP!
-zapUselessAssigns :: JSTrav ast => ast -> TravM ast
-zapUselessAssigns ast = do
-    mapJS (const True) doLam return ast
-  where
-    inl occs keep@(AssignEx (Var v) rhs) = do
-      case M.lookup v occs of
-        Just n
-          | n < 1     -> return rhs
-          | otherwise -> return keep
-    inl _ stm =
-      return stm
-
-    withLam (Fun as body) f    = Fun as <$> f body
-    withLam (Thunk upd body) f = Thunk upd <$> f body
-    withLam ex _               = return ex
-    doLam ex = withLam ex $ \body -> do
-      occs <- foldJS (\_ _ -> True) countOccs M.empty body
-      mapJS (const True) (inl occs) return body
-
-    -- Subtract non-lambda recursive occurrences and the assignment occurrence.
-    countOccs m (Exp (AssignEx (Var v) rhs) _) = do
-      rhsOccs <- nonLamOccs (equals $ Var v) rhs
-      return $ M.alter (subtr (rhsOccs+1)) v m
-    countOccs m (Exp (Var v) _) = do
-      return $ M.alter oneMore v m
-    countOccs m _ = do
-      return m
-
-    equals ex (Exp ex' _) = ex == ex'
-    equals _ _            = False
-
-    subtr s Nothing  = Just $ 0-s
-    subtr s (Just n) = Just $ n-s
-
-    oneMore Nothing  = Just 1
-    oneMore (Just n) = Just (n+1)
-
-    nonLamOccs pred = foldJS (const $ not . isLambda) (count pred) 0
-    count p n node
-      | p node    = pure $ n + 1
-      | otherwise = pure n
-
--- | Replace the first occurrence of an expression with another expression.
-replaceFirst :: JSTrav ast => (ASTNode -> Bool) -> Exp -> Exp -> ast -> TravM ast
-replaceFirst enter from to ast = do
-    snd <$> foldMapJS enter' step (\found n -> return (found, n)) False ast
-  where
-    enter' True _   = False
-    enter' _      n = enter n
-    step found e
-      | e == from = return (True, to)
-      | otherwise = return (found, e)
-
 -- | Like 'inlineAssigns', but doesn't care what happens beyond a jump.
 inlineAssignsLocal :: JSTrav ast => ast -> TravM ast
 inlineAssignsLocal ast = do
-    mapJS (\n -> not (isLambda n || isShared n)) return inl ast
+    mapJS isSafeForInlining return inl ast
   where
     varOccurs lhs (Exp (Var lhs') _) = lhs == lhs'
     varOccurs _ _                    = False
     inl keep@(Assign l ex next) | Just lhs <- inlinableAssignLHS l = do
-      occurs <- occurrences (const True) (varOccurs lhs) next
       occursRec <- occurrences (const True) (varOccurs lhs) ex
-      case occurs + occursRec of
-        Never ->
-          return (Assign blackHole ex next)
-        -- Don't inline lambdas at the moment.
-        _     | Fun vs body <- ex -> do
-          return keep
-        Once | Nothing <- fromThunk ex ->
-          -- can't be recursive - inline
-          replaceEx (not <$> isShared) (Var lhs) ex next
+      case occursRec of
+        Never -> do
+          occurs <- occurrences (const True) (varOccurs lhs) next
+          occursSafe <- occurrences isSafeForInlining (varOccurs lhs) next
+          case (occurs, occursSafe) of
+            (Never, Never) ->
+              return (Assign blackHole ex next)
+            _    | Fun vs body <- ex -> do
+              -- Don't inline lambdas at the moment.
+              return keep
+            (Once, Once) | Nothing <- fromThunk ex ->
+              -- can't be recursive - inline
+              replaceEx (not <$> isShared) (Var lhs) ex next
+            _ ->
+              -- Really nothing to be done here.
+              return keep
         _ ->
-          -- Really nothing to be done here.
           return keep
     inl stm = return stm
 
