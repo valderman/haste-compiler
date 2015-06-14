@@ -613,7 +613,7 @@ zipAssign l r final
 --   functions for "Haste.Foreign".
 inlineJSPrimitives :: JSTrav ast => ast -> TravM ast
 inlineJSPrimitives =
-    inlineFuns >=> inlineReturns >=> optimizeThunks
+    inlineFuns
   where
     inlineFuns = mapJS (const True) inl return
     inl ex@(Call _ (Fast _) (Var (Foreign f)) args) =
