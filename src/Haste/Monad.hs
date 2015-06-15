@@ -2,8 +2,7 @@
              MultiParamTypeClasses #-}
 module Haste.Monad (
     JSGen, genJS, dependOn, getModName, addLocal, getCfg, continue, isolate,
-    pushBind, popBind, getCurrentBinding, whenCfg, rename, getActualName,
-    withNoEscape, lookupNoEscape
+    pushBind, popBind, getCurrentBinding, whenCfg, rename, getActualName
   ) where
 import Control.Monad.State.Strict
 import Data.JSTarget as J hiding (modName)
@@ -26,10 +25,7 @@ data GenState cfg = GenState {
     -- | Current compiler configuration.
     config       :: !cfg,
     -- | Mapping of variable renamings.
-    renames      :: !(M.Map Var Var),
-    -- | Mapping of LetNoEscape bindings to the vars in which said binding
-    --   expects its argument.
-    noEscapes    :: !(M.Map Var [Var])
+    renames      :: !(M.Map Var Var)
   }
 
 initialState :: cfg -> GenState cfg
@@ -40,8 +36,7 @@ initialState cfg = GenState {
     bindStack    = [],
     modName      = "",
     config       = cfg,
-    renames      = M.empty,
-    noEscapes    = M.empty
+    renames      = M.empty
   }
 
 newtype JSGen cfg a =
@@ -83,7 +78,7 @@ genJS :: cfg         -- ^ Config to use for code generation.
       -> (a, S.Set J.Name, S.Set J.Name, Stm -> Stm)
 genJS cfg myModName (JSGen gen) =
   case runState gen (initialState cfg) {modName = myModName} of
-    (a, GenState dependencies loc cont _ _ _ _ _) ->
+    (a, GenState dependencies loc cont _ _ _ _) ->
       (a, dependencies, loc, cont)
 
 getModName :: JSGen cfg String
@@ -152,20 +147,3 @@ getActualName :: Var -> JSGen cfg Var
 getActualName v = do
   rns <- renames <$> JSGen get
   maybe (return v) getActualName $ M.lookup v rns
-
--- | Perform a computation within a LetNoEscape.
-withNoEscape :: Var -> [Var] -> JSGen cfg a -> JSGen cfg a
-withNoEscape f as m = do
-  cfg <- JSGen $ do
-    cfg <- get
-    put cfg {noEscapes = M.insert f as $ noEscapes cfg}
-    return cfg
-  x <- m
-  JSGen $ do
-    cfg' <- get
-    put cfg' {noEscapes = noEscapes cfg}
-    return x
-
--- | Look up a LetNoEscape function in the current context.
-lookupNoEscape :: Var -> JSGen cfg (Maybe [Var])
-lookupNoEscape f = JSGen $ M.lookup f . noEscapes <$> get
