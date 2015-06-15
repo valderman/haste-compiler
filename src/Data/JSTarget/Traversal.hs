@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TupleSections, PatternGuards #-}
+{-# LANGUAGE FlexibleInstances, TupleSections, PatternGuards, BangPatterns #-}
 -- | Generic traversal of JSTarget AST types.
 module Data.JSTarget.Traversal where
 import Control.Applicative
@@ -55,167 +55,132 @@ instance JSTrav a => JSTrav [a] where
   foldJS tr f acc ast = foldM (foldJS tr f) acc ast
 
 instance JSTrav Exp where
-  foldMapJS tr fe fs acc ast = do
-      (acc', x) <- if tr acc (Exp ast False)
-                     then do
-                       case ast of
-                         v@(Var _)      -> do
-                           pure (acc, v)
-                         l@(Lit _)      -> do
-                           pure (acc, l)
-                         l@(JSLit _)    -> do
-                           pure (acc, l)
-                         Not ex         -> do
-                           fmap Not <$> mapEx acc ex
-                         BinOp op a b   -> do
-                           (acc', a') <- mapEx acc a
-                           (acc'', b') <- mapEx acc' b
-                           return (acc'', BinOp op a' b')
-                         Fun vs stm     -> do
-                           fmap (Fun vs) <$> foldMapJS tr fe fs acc stm
-                         Call ar c f xs -> do
-                           (acc', f') <- mapEx acc f
-                           (acc'', xs') <- foldMapJS tr fe fs acc' xs
-                           return (acc'', Call ar c f' xs')
-                         Index arr ix   -> do
-                           (acc', arr') <- mapEx acc arr
-                           (acc'', ix') <- mapEx acc' ix
-                           return (acc'', Index arr' ix')
-                         Arr exs        -> do
-                           fmap Arr <$> foldMapJS tr fe fs acc exs
-                         AssignEx l r   -> do
-                           (acc', l') <- mapEx acc l
-                           (acc'', r') <- mapEx acc' r
-                           return (acc'', AssignEx l' r')
-                         IfEx c th el   -> do
-                           (acc', c') <- mapEx acc c
-                           (acc'', th') <- if tr acc (Exp th True)
-                                             then mapEx acc' th
-                                             else return (acc', th)
-                           (acc''', el') <- if tr acc (Exp el True)
-                                              then mapEx acc'' el
-                                              else return (acc'', el)
-                           return (acc''', IfEx c' th' el')
-                         Eval x         -> do
-                           fmap Eval <$> mapEx acc x
-                         Thunk upd x    -> do
-                           fmap (Thunk upd) <$> foldMapJS tr fe fs acc x
-                     else do
-                       return (acc, ast)
-      fe acc' x
+  foldMapJS tr fe fs = go
     where
-      mapEx = foldMapJS tr fe fs
+      go acc ast
+        | tr acc $! Exp ast False = do
+          (acc', x) <- do
+            case ast of
+              v@(Var _)      -> pure (acc, v)
+              l@(Lit _)      -> pure (acc, l)
+              l@(JSLit _)    -> pure (acc, l)
+              Not ex         -> fmap Not <$> go acc ex
+              BinOp op a b   -> do
+                (acc', a') <- go acc a
+                (acc'', b') <- go acc' b
+                return (acc'', BinOp op a' b')
+              Fun vs stm     -> fmap (Fun vs) <$> foldMapJS tr fe fs acc stm
+              Call ar c f xs -> do
+                (acc', f') <- go acc f
+                (acc'', xs') <- foldMapJS tr fe fs acc' xs
+                return (acc'', Call ar c f' xs')
+              Index arr ix   -> do
+                (acc', arr') <- go acc arr
+                (acc'', ix') <- go acc' ix
+                return (acc'', Index arr' ix')
+              Arr exs        -> fmap Arr <$> foldMapJS tr fe fs acc exs
+              AssignEx l r   -> do
+                (acc', l') <- go acc l
+                (acc'', r') <- go acc' r
+                return (acc'', AssignEx l' r')
+              IfEx c th el   -> do
+                (acc', c') <- go acc c
+                (acc'', th') <- if tr acc (Exp th True)
+                                  then go acc' th
+                                  else return (acc', th)
+                (acc''', el') <- if tr acc (Exp el True)
+                                   then go acc'' el
+                                   else return (acc'', el)
+                return (acc''', IfEx c' th' el')
+              Eval x         -> fmap Eval <$> go acc x
+              Thunk upd x    -> fmap (Thunk upd) <$> foldMapJS tr fe fs acc x
+          fe acc' x
+        | otherwise = do
+          fe acc ast
   
-  foldJS tr f acc ast = do
-    let expast = Exp ast False
-    acc' <- if tr acc expast
-              then do
-                case ast of
-                  Var _         -> do
-                    return acc
-                  Lit _         -> do
-                    return acc
-                  JSLit _       -> do
-                    return acc
-                  Not ex        -> do
-                    foldJS tr f acc ex
-                  BinOp _ a b  -> do
-                    acc' <- foldJS tr f acc a
-                    foldJS tr f acc' b
-                  Fun _ stm      -> do
-                    foldJS tr f acc stm
-                  Call _ _ fun xs -> do
-                    acc' <- foldJS tr f acc fun
-                    foldJS tr f acc' xs
-                  Index arr ix  -> do
-                    acc' <- foldJS tr f acc arr
-                    foldJS tr f acc' ix
-                  Arr exs       -> do
-                    foldJS tr f acc exs
-                  AssignEx l r  -> do
-                    acc' <- foldJS tr f acc l
-                    foldJS tr f acc' r
-                  IfEx c th el  -> do
-                    acc' <- foldJS tr f acc c
-                    acc'' <- if tr acc (Exp th True)
-                               then foldJS tr f acc' th
-                               else return acc'
-                    if tr acc (Exp th True)
-                      then foldJS tr f acc'' el
-                      else return acc''
-                  Eval ex       -> do
-                    foldJS tr f acc ex
-                  Thunk _upd stm -> do
-                    foldJS tr f acc stm
-              else do
-                return acc
-    f acc' expast
+  foldJS tr f = go
+    where
+      go acc ast
+        | tr acc $! expast = do
+          flip f expast =<< do
+            case ast of
+              Var _           -> return acc
+              Lit _           -> return acc
+              JSLit _         -> return acc
+              Not ex          -> go acc ex
+              BinOp _ a b     -> go acc a >>= flip go b
+              Fun _ stm       -> foldJS tr f acc stm
+              Call _ _ fun xs -> go acc fun >>= flip (foldJS tr f) xs
+              Index arr ix    -> go acc arr >>= flip go ix
+              Arr exs         -> foldJS tr f acc exs
+              AssignEx l r    -> go acc l >>= flip go r
+              IfEx c th el    -> do
+                acc' <- go acc c
+                acc'' <- if tr acc $! Exp th True
+                           then go acc' th
+                           else return acc'
+                if tr acc $! Exp th True
+                  then go acc'' el
+                  else return acc''
+              Eval ex         -> go acc ex
+              Thunk _upd stm  -> foldJS tr f acc stm
+        | otherwise =
+          f acc expast
+        where !expast = Exp ast False
 
 instance JSTrav Stm where
-  foldMapJS tr fe fs acc ast = do
-      (acc', x) <- if tr acc (Stm ast False)
-                     then do
-                       case ast of
-                         Case ex def alts nxt -> do
-                           (acc1, ex') <- foldMapJS tr fe fs acc ex
-                           (acc2, def') <- foldMapJS tr fe fs acc1 def
-                           (acc3, alts') <- foldMapJS tr fe fs acc2 alts
-                           (acc4, nxt') <- if tr acc (Shared nxt)
-                                             then foldMapJS tr fe fs acc3 nxt
-                                             else return (acc3, nxt)
-                           return (acc4, Case ex' def' alts' nxt')
-                         Forever stm -> do
-                           fmap Forever <$> foldMapJS tr fe fs acc stm
-                         Assign lhs ex next -> do
-                           (acc', lhs') <- foldMapJS tr fe fs acc lhs
-                           (acc'', ex') <- foldMapJS tr fe fs acc' ex
-                           (acc''', next') <- foldMapJS tr fe fs acc'' next
-                           return (acc''', Assign lhs' ex' next')
-                         Return ex -> do
-                           fmap Return <$> foldMapJS tr fe fs acc ex
-                         Cont -> do
-                           return (acc, ast)
-                         Stop -> do
-                           return (acc, ast)
-                         Tailcall ex -> do
-                           fmap Tailcall <$> foldMapJS tr fe fs acc ex
-                         ThunkRet ex -> do
-                           fmap ThunkRet <$> foldMapJS tr fe fs acc ex
-                     else do
-                       return (acc, ast)
-      fs acc' x
+  foldMapJS tr fe fs = go
+    where
+      go acc ast
+        | tr acc $! Stm ast False = do
+          (acc', x) <- do
+            case ast of
+              Case ex def as nxt -> do
+                (acc1, ex') <- foldMapJS tr fe fs acc ex
+                (acc2, def') <- go acc1 def
+                (acc3, as') <- foldMapJS tr fe fs acc2 as
+                (acc4, nxt') <- if tr acc $! Shared nxt
+                                  then go acc3 nxt
+                                  else return (acc3, nxt)
+                return (acc4, Case ex' def' as' nxt')
+              Assign lhs ex next -> do
+                (acc', lhs') <- foldMapJS tr fe fs acc lhs
+                (acc'', ex') <- foldMapJS tr fe fs acc' ex
+                (acc''', next') <- go acc'' next
+                return (acc''', Assign lhs' ex' next')
+              Forever stm        -> fmap Forever <$> go acc stm
+              Return ex          -> fmap Return <$> foldMapJS tr fe fs acc ex
+              Cont               -> return (acc, ast)
+              Stop               -> return (acc, ast)
+              Tailcall ex        -> fmap Tailcall <$> foldMapJS tr fe fs acc ex
+              ThunkRet ex        -> fmap ThunkRet <$> foldMapJS tr fe fs acc ex
+          fs acc' x
+        | otherwise = do
+          fs acc ast
 
-  foldJS tr f acc ast = do
-    let stmast = Stm ast False
-    acc' <- if tr acc stmast
-              then do
-                case ast of
-                  Case ex def alts next -> do
-                    acc' <- foldJS tr f acc ex
-                    acc'' <- foldJS tr f acc' def
-                    acc''' <- foldJS tr f acc'' alts
-                    if tr acc (Shared next)
-                      then foldJS tr f acc''' next
-                      else return acc'''
-                  Forever stm -> do
-                    foldJS tr f acc stm
-                  Assign lhs ex next -> do
-                    acc' <- foldJS tr f acc lhs
-                    acc'' <- foldJS tr f acc' ex
-                    foldJS tr f acc'' next
-                  Return ex -> do
-                    foldJS tr f acc ex
-                  Cont -> do
-                    return acc
-                  Stop -> do
-                    return acc
-                  Tailcall ex -> do
-                    foldJS tr f acc ex
-                  ThunkRet ex -> do
-                    foldJS tr f acc ex
-              else do
-                return acc
-    f acc' stmast
+  foldJS tr f = go
+    where
+      go acc ast
+        | tr acc stmast = do
+          flip f stmast =<< do
+            case ast of
+              Case ex def as nxt -> do
+                acc' <- foldJS tr f acc ex >>= flip go def
+                acc'' <- foldJS tr f acc' as
+                if tr acc $! Shared nxt
+                  then go acc'' nxt
+                  else return acc''
+              Assign lhs ex next -> do
+                foldJS tr f acc lhs >>= flip (foldJS tr f) ex >>= flip go next
+              Forever stm        -> foldJS tr f acc stm
+              Return ex          -> foldJS tr f acc ex
+              Cont               -> return acc
+              Stop               -> return acc
+              Tailcall ex        -> foldJS tr f acc ex
+              ThunkRet ex        -> foldJS tr f acc ex
+        | otherwise =
+          f acc stmast
+        where !stmast = Stm ast False
 
 instance JSTrav (Exp, Stm) where
   foldMapJS tr fe fs acc (ex, stm) = do
