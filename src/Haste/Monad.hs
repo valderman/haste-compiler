@@ -5,7 +5,7 @@ module Haste.Monad (
     pushBind, popBind, getCurrentBinding, whenCfg, rename, getActualName,
     withNoEscape, lookupNoEscape
   ) where
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Data.JSTarget as J hiding (modName)
 import qualified Data.Set as S
 import Control.Applicative
