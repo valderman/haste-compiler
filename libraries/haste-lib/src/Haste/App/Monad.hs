@@ -3,7 +3,7 @@
 module Haste.App.Monad (
     Remotable,
     App, Server, Sessions, SessionID, Remote (..), Done (..),
-    AppCfg, def, mkConfig, cfgHost, cfgPort,
+    AppCfg, defaultConfig, mkConfig, cfgHost, cfgPort,
     liftServerIO, forkServerIO, remote, getAppConfig,
     runApp, (<.>), getSessionID, getActiveSessions, onSessionEnd
   ) where
@@ -19,7 +19,6 @@ import Haste.App.Protocol
 import Data.Word
 import Control.Concurrent (ThreadId)
 import Data.IORef
-import Data.Default
 import System.IO.Unsafe
 #ifndef __HASTE__
 import Haste.Binary.Types
@@ -40,8 +39,8 @@ data AppCfg = AppCfg {
     cfgSessionEndHandlers :: [SessionID -> Server ()]
   }
 
-instance Default AppCfg where
-  def = mkConfig "localhost" 24601
+defaultConfig :: AppCfg
+defaultConfig = mkConfig "localhost" 24601
 
 -- | Create a default configuration from a host name and a port number.
 mkConfig :: String -> Int -> AppCfg

@@ -2,11 +2,10 @@ module Haste.Compiler.Flags (
     OptLevel (..), ProgStart (..), HasteTarget (..), MinifyFlag (..),
     ClosureOpt,
     CompileFlags,
+    defaultFlags,
     cfOptimize, cfDebug, cfMinify, cfFullUnicode, cfOwnNamespace, cfStart,
     cfJSFiles, cfTarget, cfUseStrict
   ) where
-import Data.Default
-
 type ClosureOpt = String
 data MinifyFlag = DontMinify | Minify (Maybe FilePath) [ClosureOpt]
 data OptLevel = None | Basic | WholeProgram
@@ -47,15 +46,16 @@ data CompileFlags = CompileFlags {
     cfUseStrict    :: Bool
   }
 
-instance Default CompileFlags where
-  def = CompileFlags {
-      cfOptimize = Basic,
-      cfDebug = False,
-      cfMinify = DontMinify,
-      cfFullUnicode = False,
-      cfOwnNamespace = False,
-      cfStart = OnLoad,
-      cfJSFiles = [],
-      cfTarget = TargetString,
-      cfUseStrict = True
-    }
+-- | Default compiler flags.
+defaultFlags :: CompileFlags
+defaultFlags = CompileFlags {
+    cfOptimize = Basic,
+    cfDebug = False,
+    cfMinify = DontMinify,
+    cfFullUnicode = False,
+    cfOwnNamespace = False,
+    cfStart = OnLoad,
+    cfJSFiles = [],
+    cfTarget = TargetString,
+    cfUseStrict = True
+  }

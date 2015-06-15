@@ -17,8 +17,7 @@ module Haste.App (
     module Haste.Random,
     module Haste.JSType,
     module Haste.Hash,
-    module Haste.Binary,
-    module Data.Default
+    module Haste.Binary
   ) where
 import Haste.App.Client
 import Haste.App.Monad
@@ -29,4 +28,3 @@ import Haste.JSType
 import Haste.Hash
 import Haste
 import Control.Monad.IO.Class
-import Data.Default

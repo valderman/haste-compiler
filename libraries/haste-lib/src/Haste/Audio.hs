@@ -4,7 +4,7 @@ module Haste.Audio (
     module Events,
     Audio, AudioSettings (..), AudioType (..), AudioSource (..),
     AudioPreload (..), AudioState (..), Seek (..),
-    def,
+    defaultAudioSettings,
     mkSource, newAudio, setSource,
     getState,
     setMute, isMute, toggleMute,
@@ -23,7 +23,6 @@ import Control.Applicative
 #endif
 import Control.Monad
 import Control.Monad.IO.Class
-import Data.Default
 import Data.String
 
 -- | Represents an audio player.
@@ -78,15 +77,15 @@ data AudioSettings = AudioSettings {
     audioVolume   :: !Double
   }
 
-instance Default AudioSettings where
-  def = AudioSettings {
-      audioControls = False,
-      audioAutoplay = False,
-      audioLooping = False,
-      audioPreload = Auto,
-      audioMuted = False,
-      audioVolume = 0
-    }
+defaultAudioSettings :: AudioSettings
+defaultAudioSettings = AudioSettings {
+    audioControls = False,
+    audioAutoplay = False,
+    audioLooping = False,
+    audioPreload = Auto,
+    audioMuted = False,
+    audioVolume = 0
+  }
 
 -- | Create an audio source with automatically detected media type, based on
 --   the given URL's file extension.
