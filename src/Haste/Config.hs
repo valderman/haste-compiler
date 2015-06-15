@@ -53,15 +53,15 @@ startOnLoadComplete mainSym =
   "window.onload = " <> mainSym <> ";"
 
 -- | Int op wrapper for strictly 32 bit (|0).
-strictly32Bits :: AST Exp -> AST Exp
+strictly32Bits :: Exp -> Exp
 strictly32Bits = flip (binOp BitOr) (litN 0)
 
 -- | Safe Int multiplication.
-safeMultiply :: AST Exp -> AST Exp -> AST Exp
+safeMultiply :: Exp -> Exp -> Exp
 safeMultiply a b = callForeign "imul" [a, b]
 
 -- | Fast but unsafe Int multiplication.
-fastMultiply :: AST Exp -> AST Exp -> AST Exp
+fastMultiply :: Exp -> Exp -> Exp
 fastMultiply = binOp Mul
 
 -- | Compiler configuration.
@@ -93,10 +93,10 @@ data Config = Config {
     performLink :: Bool,
 
     -- | A function to call on each Int arithmetic primop.
-    wrapIntMath :: AST Exp -> AST Exp,
+    wrapIntMath :: Exp -> Exp,
 
     -- | Operation to use for Int multiplication.
-    multiplyIntOp :: AST Exp -> AST Exp -> AST Exp,
+    multiplyIntOp :: Exp -> Exp -> Exp,
 
     -- | Be verbose about warnings, etc.?
     verbose :: Bool,

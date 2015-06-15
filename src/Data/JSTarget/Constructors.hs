@@ -6,46 +6,48 @@
 module Data.JSTarget.Constructors where
 import Data.JSTarget.AST
 import Data.JSTarget.Op
-import Control.Applicative
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BS
 
 -- | Literal types.
 class Literal a where
-  lit :: a -> AST Exp
+  lit :: a -> Exp
+
+instance Literal Lit where
+  lit = Lit
 
 instance Literal Double where
-  lit = pure . Lit . LNum
+  lit = lit . LNum
 
 instance Literal Integer where
-  lit = pure . Lit . LInt
+  lit = lit . LInt
 
 instance Literal Bool where
-  lit = pure . Lit . LBool
-
-instance Literal [Char] where
-  lit = pure . Lit . LStr . BS.fromString
+  lit = lit . LBool
 
 instance Literal BS.ByteString where
-  lit = pure . Lit . LStr
+  lit = lit . LStr
+
+instance Literal [Char] where
+  lit = lit . BS.fromString
 
 #if __GLASGOW_HASKELL__ < 710
 instance Literal a => Literal [a] where
 #else
 instance {-# OVERLAPPABLE #-} Literal a => Literal [a] where
 #endif
-  lit xs = Arr <$> mapM lit xs
+  lit = Arr . map lit
 
 instance Literal Exp where
-  lit = pure
+  lit = id
 
 instance Literal Var where
-  lit = pure . Var
+  lit = Var
 
-litN :: Double -> AST Exp
+litN :: Double -> Exp
 litN = lit
 
-litS :: BS.ByteString -> AST Exp
+litS :: BS.ByteString -> Exp
 litS = lit
 
 -- | Create a foreign variable. Foreign vars will not be subject to any name
@@ -67,30 +69,28 @@ name :: BS.ByteString -> Maybe (BS.ByteString, BS.ByteString) -> Name
 name = Name
 
 -- | A variable expression, for convenience.
-var :: Name -> BS.ByteString -> AST Exp
-var n comment = pure $ Var $ internalVar n comment
+var :: Name -> BS.ByteString -> Exp
+var n comment = Var $ internalVar n comment
 
 -- | Turn a Var into an expression.
-varExp :: Var -> AST Exp
-varExp = pure . Var
+varExp :: Var -> Exp
+varExp = Var
 
 -- | Call to a native method on an object. Always saturated.
-callMethod :: AST Exp -> BS.ByteString -> [AST Exp] -> AST Exp
-callMethod obj meth args =
-  Call 0 (Method meth) <$> obj <*> sequence args
+callMethod :: Exp -> BS.ByteString -> [Exp] -> Exp
+callMethod obj meth args = Call 0 (Method meth) obj args
 
 -- | Foreign function call. Always saturated, never trampolines.
-callForeign :: BS.ByteString -> [AST Exp] -> AST Exp
-callForeign f = fmap (Call 0 (Fast False) (Var $ foreignVar f)) . sequence
+callForeign :: BS.ByteString -> [Exp] -> Exp
+callForeign f = Call 0 (Fast False) (Var $ foreignVar f)
 
 -- | A normal function call. May be unsaturated. A saturated call is always
 --   turned into a fast call.
-call :: Arity -> AST Exp -> [AST Exp] -> AST Exp
-call arity f xs = do
-  foldApp <$> (Call (arity - length xs) (Normal True) <$> f <*> sequence xs)
+call :: Arity -> Exp -> [Exp] -> Exp
+call arity f xs = foldApp $ Call (arity - length xs) (Normal True) f xs
 
-callSaturated :: AST Exp -> [AST Exp] -> AST Exp
-callSaturated f xs = Call 0 (Fast True) <$> f <*> sequence xs
+callSaturated :: Exp -> [Exp] -> Exp
+callSaturated f xs = Call 0 (Fast True) f xs
 
 -- | "Fold" nested function applications into one, turning them into fast calls
 --   if they turn out to be saturated.
@@ -115,82 +115,71 @@ newVars prefix n =
     nv i = Internal (Name (BS.fromString $ prefix++show i) Nothing) "" False
 
 -- | Create a thunk.
-thunk :: Bool -> AST Stm -> AST Exp
-thunk updatable = fmap (Thunk updatable)
+thunk :: Bool -> Stm -> Exp
+thunk = Thunk
 
 -- | Evaluate an expression that may or may not be a thunk.
-eval :: AST Exp -> AST Exp
-eval ex = do
-  e <- ex
-  if definitelyNotThunk e
-    then return e
-    else return (Eval e)
+eval :: Exp -> Exp
+eval ex
+  | definitelyNotThunk ex = ex
+  | otherwise             = Eval ex
 
 -- | Create a tail call.
-tailcall :: AST Exp -> AST Stm
-tailcall c = Tailcall <$> c
+tailcall :: Exp -> Stm
+tailcall = Tailcall
 
 -- | A binary operator.
-binOp :: BinOp -> AST Exp -> AST Exp -> AST Exp
-binOp op a b = BinOp op <$> a <*> b
+binOp :: BinOp -> Exp -> Exp -> Exp
+binOp = BinOp
 
 -- | Negate an expression.
-not_ :: AST Exp -> AST Exp
-not_ = fmap Not
+not_ :: Exp -> Exp
+not_ = Not
 
 -- | Index into an array.
-index :: AST Exp -> AST Exp -> AST Exp
-index arr ix = Index <$> arr <*> ix
+index :: Exp -> Exp -> Exp
+index = Index
 
 -- | Create a function.
-fun :: [Var] -> AST Stm -> AST Exp
-fun args = fmap (Fun args)
+fun :: [Var] -> Stm -> Exp
+fun = Fun
 
 -- | Create an array of expressions.
-array :: [AST Exp] -> AST Exp
-array = fmap Arr . sequence
+array :: [Exp] -> Exp
+array = Arr
 
 -- | Case statement.
 --   Takes a scrutinee expression, a default alternative, a list of more
 --   specific alternatives, and a continuation statement. The continuation
 --   will be explicitly shared among all the alternatives.
-case_ :: AST Exp
-      -> (AST Stm -> AST Stm)
-      -> [(AST Exp, AST Stm -> AST Stm)]
-      -> AST Stm
-      -> AST Stm
-case_ ex def alts cont = do
-  ex' <- ex
-  shared <- cont
-  def' <- def stop
-  alts' <- sequence [(,) <$> x <*> s stop | (x, s) <- alts]
-  pure $ Case ex' def' alts' shared
+case_ :: Exp -> (Stm -> Stm) -> [(Exp, Stm -> Stm)] -> Stm -> Stm
+case_ ex def alts = Case ex (def stop) (map (\(e, s) -> (e, s stop)) alts)
 
 -- | Return from a function.
-ret :: AST Exp -> AST Stm
-ret = fmap Return
+ret :: Exp -> Stm
+ret = Return
 
 -- | Return from a thunk.
-thunkRet :: AST Exp -> AST Stm
-thunkRet = fmap ThunkRet
+thunkRet :: Exp -> Stm
+thunkRet = ThunkRet
 
 -- | Create a new var with a new value.
-newVar :: Reorderable -> Var -> AST Exp -> AST Stm -> AST Stm
-newVar r lhs = liftA2 $ \rhs -> Assign (NewVar r lhs) rhs
+newVar :: Reorderable -> Var -> Exp -> Stm -> Stm
+newVar r lhs = Assign (NewVar r lhs)
 
 -- | Reuse an old variable.
-assignVar :: Reorderable -> Var -> AST Exp -> AST Stm -> AST Stm
-assignVar r lhs = liftA2 $ \rhs -> Assign (LhsExp r (Var lhs)) rhs
+assignVar :: Reorderable -> Var -> Exp -> Stm -> Stm
+assignVar r lhs = Assign (LhsExp r (Var lhs))
 
 -- | Assignment without var. Performed for the side effect, so never
 --   reorderable.
-sideEffectingAssign :: AST Exp -> AST Exp -> AST Stm -> AST Stm
-sideEffectingAssign = liftA3 $ \lhs rhs -> Assign (LhsExp False lhs) rhs
+sideEffectingAssign :: Exp -> Exp -> Stm -> Stm
+sideEffectingAssign lhs = Assign (LhsExp False lhs)
 
 -- | Assignment expression.
-assignEx :: AST Exp -> AST Exp -> AST Exp
-assignEx = liftA2 AssignEx
+assignEx :: Exp -> Exp -> Exp
+assignEx = AssignEx
 
 -- | Terminate a statement without doing anything at all.
-stop :: AST Stm
-stop = pure Stop
+stop :: Stm
+stop = Stop

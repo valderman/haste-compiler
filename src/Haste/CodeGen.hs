@@ -42,19 +42,19 @@ generate cfg stg =
     opt = if optimize cfg then optimizeFun else const id
     theMod = genAST cfg (GHC.modName stg) (modCompiledModule stg)
 
-    insFun m (_, AST (Assign (NewVar _ v@(Internal n _ _)) body _)) =
-      M.insert n (opt v (AST body)) m
+    insFun m (_, Assign (NewVar _ v@(Internal n _ _)) body _) =
+      M.insert n (opt v body) m
     insFun m _ =
       m
 
     -- TODO: perhaps do dependency-based linking for externals as well?
-    insDep m (ds, AST (Assign (NewVar _ (Internal v _ _)) _ _)) =
+    insDep m (ds, Assign (NewVar _ (Internal v _ _)) _ _) =
       M.insert v (S.delete v ds) m
     insDep m _ =
       m
 
 -- | Generate JS AST for bindings.
-genAST :: Config -> String -> [StgBinding] -> [(S.Set J.Name, AST Stm)]
+genAST :: Config -> String -> [StgBinding] -> [(S.Set J.Name, Stm)]
 genAST cfg modname binds =
     binds'
   where
@@ -66,7 +66,7 @@ genAST cfg modname binds =
 
 -- | Check for builtins that should generate inlined code. At this point only
 --   w2i and i2w.
-genInlinedBuiltin :: GHC.Var -> [StgArg] -> JSGen Config (Maybe (AST Exp))
+genInlinedBuiltin :: GHC.Var -> [StgArg] -> JSGen Config (Maybe Exp)
 genInlinedBuiltin f [x] = do
     x' <- genArg x
     return $ case (modname, varname) of
@@ -84,7 +84,7 @@ genInlinedBuiltin _ _ =
 
 
 -- | Generate code for an STG expression.
-genEx :: StgExpr -> JSGen Config (AST Exp)
+genEx :: StgExpr -> JSGen Config Exp
 genEx (StgApp f xs) = do
   mex <- genInlinedBuiltin f xs
   case mex of
@@ -158,7 +158,7 @@ genEx (StgTick _ ex) = do
 genEx (StgLam _ _) = do
   error "StgLam caught during code generation - that's impossible!"
 -- | Trace the given expression, if tracing is on.
-maybeTrace :: Config -> BS.ByteString -> [AST Exp] -> AST Exp -> AST Exp
+maybeTrace :: Config -> BS.ByteString -> [Exp] -> Exp -> Exp
 maybeTrace cfg msg args ex =
   if tracePrimops cfg
     then callForeign "__h_trace" [lit msg, array args, ex]
@@ -192,7 +192,7 @@ genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 
 -- | Generate the RHS of a binding.
-genRhs :: Bool -> StgRhs -> JSGen Config (AST Exp)
+genRhs :: Bool -> StgRhs -> JSGen Config Exp
 genRhs recursive (StgRhsCon _ con args) = do
   -- Constructors are never partially applied, and we have arguments, so this
   -- is obviously a full application.
@@ -208,10 +208,10 @@ genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
                then thunk' upd (body' $ thunkRet retExp)
                else fun args' (body' $ ret retExp)
   where
-    thunk' _ (AST (Return l@(J.Lit _))) = AST l
-    thunk' Updatable stm                = thunk True stm
-    thunk' ReEntrant stm                = thunk True stm
-    thunk' SingleEntry stm              = thunk False stm
+    thunk' _ (Return l@(J.Lit _)) = l
+    thunk' Updatable stm          = thunk True stm
+    thunk' ReEntrant stm          = thunk True stm
+    thunk' SingleEntry stm        = thunk False stm
 
 -- | Turn a recursive binding into a list of non-recursive ones, together with
 --   information about whether they came from a recursive group or not.
@@ -233,13 +233,13 @@ genArgVarsPair vps = do
   where
     (vs, xs) = unzip $ filter (hasRepresentation . fst) vps
 
-genCase :: AltType -> StgExpr -> Id -> [StgAlt] -> JSGen Config (AST Exp)
+genCase :: AltType -> StgExpr -> Id -> [StgAlt] -> JSGen Config Exp
 genCase t ex scrut alts = do
   ex' <- genEx ex
   -- Return a scrutinee variable and a function to replace all occurrences of
   -- the STG scrutinee with our JS one, if needed.
   (scrut', withScrutinee) <- case ex' of
-    AST (Eval (J.Var v)) -> do
+    Eval (J.Var v) -> do
       continue $ assignVar (reorderableType scrut) v ex'
       oldscrut <- genVar scrut
       return (v, rename oldscrut v)
@@ -305,7 +305,7 @@ splitAlts alts =
     isDefault (DEFAULT, _, _, _) = True
     isDefault _                  = False
 
-genAlt :: J.Var -> J.Var -> StgAlt -> JSGen Config (AST Exp,AST Stm -> AST Stm)
+genAlt :: J.Var -> J.Var -> StgAlt -> JSGen Config (Exp, Stm -> Stm)
 genAlt scrut res (con, args, used, body) = do
   construct <- case con of
     -- undefined is intentional here - the first element is never touched.
@@ -382,7 +382,7 @@ toJSVar thisMod v =
     unique = BS.fromString $ show $ nameUnique vname
 
 -- | Generate an argument list. Any arguments of type State# a are filtered out.
-genArgs :: [StgArg] -> JSGen Config [AST Exp]
+genArgs :: [StgArg] -> JSGen Config [Exp]
 genArgs = mapM genArg . filter hasRep
   where
     hasRep (StgVarArg v) = hasRepresentation v
@@ -391,7 +391,7 @@ genArgs = mapM genArg . filter hasRep
 -- | Filter out args without representation, along with their accompanying
 --   pair element, then generate code for the args.
 --   Se `genArgVarsPair` for more information.
-genArgsPair :: [(StgArg, a)] -> JSGen Config ([AST Exp], [a])
+genArgsPair :: [(StgArg, a)] -> JSGen Config ([Exp], [a])
 genArgsPair aps = do
     args' <- mapM genArg args
     return (args', xs)
@@ -411,13 +411,13 @@ typeHasRep t =
     Just (tc, _) -> tc /= statePrimTyCon
     _            -> True
 
-genArg :: StgArg -> JSGen Config (AST Exp)
+genArg :: StgArg -> JSGen Config Exp
 genArg (StgVarArg v)  = varExp <$> genVar v
 genArg (StgLitArg l)  = genLit l
 
 -- | Generate code for data constructor creation. Returns a pair of
 --   (constructor, field strictness annotations).
-genDataCon :: DataCon -> JSGen Config (AST Exp, [Bool])
+genDataCon :: DataCon -> JSGen Config (Exp, [Bool])
 genDataCon dc = do
   if isEnumerationDataCon dc
     then return (tagexp, [])
@@ -432,7 +432,7 @@ genDataCon dc = do
 --
 --   IMPORTANT: remember to update the RTS if any changes are made to the
 --              constructor tag values!
-genDataConTag :: DataCon -> AST Exp
+genDataConTag :: DataCon -> Exp
 genDataConTag d =
   case dataConNameModule d of
     ("True", "GHC.Types")  -> lit True
@@ -448,7 +448,7 @@ dataConNameModule d =
 
 
 -- | Generate literals.
-genLit :: GHC.Literal -> JSGen Config (AST Exp)
+genLit :: GHC.Literal -> JSGen Config Exp
 genLit l = do
   case l of
     MachStr s           -> return $ lit s
@@ -485,7 +485,7 @@ genLit l = do
         hi = n `shiftR` 32
 
 -- | Generate a function application.
-genApp :: GHC.Var -> [StgArg] -> JSGen Config (AST Exp)
+genApp :: GHC.Var -> [StgArg] -> JSGen Config Exp
 genApp f xs = do
     f' <- varExp <$> genVar f
     xs' <- mapM genArg xs

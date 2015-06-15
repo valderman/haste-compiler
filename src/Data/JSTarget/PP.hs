@@ -14,8 +14,7 @@ import Control.Applicative
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
 import Data.ByteString (ByteString)
-import Data.JSTarget.AST (AST (..), Name (..))
-import Data.JSTarget.Traversal (JSTrav)
+import Data.JSTarget.AST (Name (..))
 import Data.ByteString.Builder
 
 -- | Pretty-printing options
@@ -95,8 +94,8 @@ whenOpt :: (PPOpts -> Bool) -> PP () -> PP ()
 whenOpt f p = getOpt f >>= \x -> when x p
 
 -- | Pretty print an AST.
-pretty :: (JSTrav a, Pretty a) => PPOpts -> AST a -> BS.ByteString
-pretty opts (AST ast) =
+pretty :: Pretty a => PPOpts -> a -> BS.ByteString
+pretty opts ast =
   case runPP opts (pp ast) of
     (b, _) -> toLazyByteString b
 
@@ -107,8 +106,8 @@ runPP opts p =
     (_, b, x) -> (b, x)
 
 -- | Pretty-print a program and return the final name for its entry point.
-prettyProg :: Pretty a => PPOpts -> Name -> AST a -> (Builder, Builder)
-prettyProg opts mainSym (AST ast) = runPP opts $ do
+prettyProg :: Pretty a => PPOpts -> Name -> a -> (Builder, Builder)
+prettyProg opts mainSym ast = runPP opts $ do
   pp ast
   buildFinalName <$> finalNameFor mainSym
 

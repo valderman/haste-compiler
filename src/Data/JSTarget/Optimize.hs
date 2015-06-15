@@ -16,7 +16,6 @@ import qualified Data.ByteString.Char8 as BS (cons)
 fixTailCalls :: Var -> Exp -> TravM Exp
 fixTailCalls fun ast = do
     ast' <- assignToSubst ast >>= tailLoopify fun
-    ast' <- tailLoopify fun ast
     mapJS (const True) pure loopify ast'
   where
     loopify (Assign lhs@(NewVar _ f) body next) =
@@ -26,8 +25,8 @@ fixTailCalls fun ast = do
 
 -- TODO: tryTernary may inline calls that would otherwise be in tail position
 --       which is something we'd really like to avoid.
-optimizeFun :: Var -> AST Exp -> AST Exp
-optimizeFun f (AST ast) =
+optimizeFun :: Var -> Exp -> Exp
+optimizeFun f ast =
   runTravM $ do
     shrinkCase ast
     >>= inlineAssigns
@@ -43,8 +42,8 @@ optimizeFun f (AST ast) =
     >>= smallStepInline
     >>= inlineJSPrimitives
 
-topLevelInline :: AST Stm -> AST Stm
-topLevelInline (AST ast) =
+topLevelInline :: Stm -> Stm
+topLevelInline ast =
   runTravM $ do
     unTrampoline ast
     >>= unevalLits
@@ -58,33 +57,31 @@ topLevelInline (AST ast) =
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
-           -> AST Exp
-           -> AST Exp
-           -> (AST Stm -> AST Stm)
-           -> [(AST Exp, AST Stm -> AST Stm)]
-           -> Maybe (AST Exp)
+           -> Exp
+           -> Exp
+           -> (Stm -> Stm)
+           -> [(Exp, Stm -> Stm)]
+           -> Maybe Exp
 tryTernary self scrut retEx def [(m, alt)] =
-    case runTravM opt of
-      AST (Just ex) -> Just (AST ex)
-      _             -> Nothing
+    runTravM opt
   where
     selfOccurs (Exp (Var v) _) = v == self
     selfOccurs _               = False
-    def' = def $ Return <$> retEx
-    alt' = alt $ Return <$> retEx
+    def' = def $ Return retEx
+    alt' = alt $ Return retEx
     opt = do
       -- Make sure the return expression is used somewhere, then cut away all
       -- useless assignments. If what's left is a single Return statement,
       -- we have a pure expression suitable for use with ?:.
-      def'' <- inlineAssignsLocal $ astCode def'
-      alt'' <- inlineAssignsLocal $ astCode alt'
+      def'' <- inlineAssignsLocal def'
+      alt'' <- inlineAssignsLocal alt'
       -- If self occurs in either branch, we can't inline or we risk ruining
       -- tail call elimination.
       selfInDef <- occurrences (const True) selfOccurs def''
       selfInAlt <- occurrences (const True) selfOccurs alt''
       case (selfInDef + selfInAlt, def'', alt'') of
         (Never, Return el, Return th) ->
-          return $ Just $ IfEx (BinOp Eq (astCode scrut) (astCode m)) th el
+          return $ Just $ IfEx (BinOp Eq scrut m) th el
         _ ->
           return Nothing
 tryTernary _ _ _ _ _ =
@@ -136,7 +133,7 @@ inlineAssigns ast = do
       -- assignment. Thunk updates of the form @x = E(x)@ where @x == l@
       -- don't count as a proper LHS occurrence, and are removed outright
       -- instead since a literal is guaranteed to never be a thunk.
-      | Just lhs <- inlinableAssignLHS l, Lit l <- ex, not (stringLit l) = do
+      | Just lhs <- inlinableAssignLHS l, Lit x <- ex, not (stringLit x) = do
         isLHS <- appearsLHS lhs next
         if isLHS
           then do
@@ -301,7 +298,7 @@ gatherInlinable ast = do
       pure (M.alter updVar v m)
     countOccs m (Stm (Assign (NewVar _ v) _ _) _) =
       pure (M.alter updVarAss v m)
-    countOccs m (Stm (Assign (LhsExp True (Var v)) ex _) _) =
+    countOccs m (Stm (Assign (LhsExp True (Var v)) _ _) _) =
       pure (M.alter updVarAss v m)
     countOccs m _ =
       pure m
@@ -405,7 +402,7 @@ inlineAssignsLocal ast = do
           case (occurs, occursSafe) of
             (Never, Never) ->
               return (Assign blackHole ex next)
-            _    | Fun vs body <- ex -> do
+            _    | Fun _ _ <- ex -> do
               -- Don't inline lambdas at the moment.
               return keep
             (Once, Once) | Nothing <- fromThunk ex ->
@@ -444,11 +441,11 @@ inlineReturns ast = do
     go outside (Assign l@(NewVar _ lhs) r next) = do
       next' <- go outside next
       case (next', outside) of
-        (Stop, Just (Var v, ret))  | v == lhs -> return $ ret r
-        (Return (Var v), _)        | v == lhs -> return $ Return r
-        (ThunkRet (Var v), _)      | v == lhs -> return $ ThunkRet r
-        (Assign l (Var v) Stop, _) | v == lhs -> return $ Assign l r Stop
-        _                                     -> return $ Assign l r next'
+        (Stop, Just (Var v, ret))   | v == lhs -> return $ ret r
+        (Return (Var v), _)         | v == lhs -> return $ Return r
+        (ThunkRet (Var v), _)       | v == lhs -> return $ ThunkRet r
+        (Assign ll (Var v) Stop, _) | v == lhs -> return $ Assign ll r Stop
+        _                                      -> return $ Assign l r next'
     go outside (Assign l r next) = do
       Assign l r <$> go outside next
     go _ stm = do
@@ -460,11 +457,6 @@ returnLike :: Stm -> Maybe (Exp, Exp -> Stm)
 returnLike (Return e)   = Just (e, Return)
 returnLike (ThunkRet e) = Just (e, ThunkRet)
 returnLike _            = Nothing
-
-lhsVar :: LHS -> Maybe (Var, Reorderable)
-lhsVar (NewVar r v)       = Just (v, r)
-lhsVar (LhsExp r (Var v)) = Just (v, r)
-lhsVar _                  = Nothing
 
 -- | Shrink case statements as much as possible.
 shrinkCase :: JSTrav ast => ast -> TravM ast
@@ -620,6 +612,7 @@ zipAssign l r final
   where
     go (v:vs) (x:xs) = Assign v x (go vs xs)
     go [] []         = final
+    go _ _           = error "zipAssign: different number of lhs and rhs!"
 
 -- | Eliminate evaluation of vars that are guaranteed not to be thunks.
 --   Mainly useful in 'topLevelInline'.
@@ -640,8 +633,8 @@ inlineJSPrimitives =
     inlineFuns >=> optimizeThunks
   where
     inlineFuns = mapJS (const True) (return . inl) return
-    inl ex@(Call _ (Fast _) (Var (Foreign f)) args) =
-      case (f, args) of
+    inl ex@(Call _ (Fast _) (Var (Foreign fn)) args) =
+      case (fn, args) of
         ("eval", [Lit (LStr s)]) -> JSLit s
         ("__app0", [f])          -> Call 0 (Fast False) f []
         ("__app1", f:xs)         -> Call 0 (Fast False) f xs
@@ -653,8 +646,8 @@ inlineJSPrimitives =
         ("__set", [o, k, v])     -> AssignEx (Index o k) v
         ("__has", [o, k])        -> BinOp Neq (Index o k) (JSLit "undefined")
         _                        -> ex
-    inl exp =
-      exp
+    inl ex =
+      ex
 
 -- | Turn all assignments of the form @var v1 = e ; exp@ into @exp[v1/e]@,
 --   provided that @v1@ is not used as a known location and @e@ is either a

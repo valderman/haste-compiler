@@ -8,10 +8,6 @@ import Control.Applicative
 import Data.JSTarget.AST
 import Data.JSTarget.Op
 
-instance Binary a => Binary (AST a) where
-  put (AST x) = put x
-  get = AST <$> get
-
 instance Binary Module where
   put (Module pkgid name deps defs) =
     put pkgid >> put name >> put deps >> put defs

@@ -10,7 +10,7 @@ import Haste.Config
 data WarnLevel = Normal | Verbose deriving Eq
 
 -- | Produce a runtime error whenever this expression gets evaluated.
-runtimeError :: String -> AST Exp
+runtimeError :: String -> Exp
 runtimeError s = callForeign "die" [lit s]
 
 -- | Produce a warning message. This function is horrible and should be

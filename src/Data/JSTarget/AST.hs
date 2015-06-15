@@ -7,7 +7,6 @@ import qualified Data.Map.Strict as M
 #else
 import qualified Data.Map as M
 #endif
-import Control.Applicative
 import Data.JSTarget.Op
 import qualified Data.ByteString as BS
 
@@ -150,7 +149,7 @@ data Module = Module {
     modPackageId   :: !BS.ByteString,
     modName        :: !BS.ByteString,
     modDeps        :: !(M.Map Name (S.Set Name)),
-    modDefs        :: !(M.Map Name (AST Exp))
+    modDefs        :: !(M.Map Name Exp)
   }
 
 -- | Merge two modules. The module and package IDs of the second argument are
@@ -181,19 +180,6 @@ blackHole = LhsExp False $ Var blackHoleVar
 -- | The variable of the blackHole LHS.
 blackHoleVar :: Var
 blackHoleVar = Internal (Name "" (Just ("$blackhole", "$blackhole"))) "" False
-
-data AST a = AST {astCode :: !a} deriving (Show, Eq)
-
-instance Functor AST where
-  fmap f (AST ast) = AST (f ast)
-
-instance Applicative AST where
-  pure = return
-  (AST f) <*> (AST x) = AST (f x)
-
-instance Monad AST where
-  return x = AST x
-  (AST ast) >>= f = f ast
 
 -- | Returns the precedence of the top level operator of the given expression.
 --   Everything that's not an operator has equal precedence, higher than any

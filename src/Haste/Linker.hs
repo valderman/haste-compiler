@@ -7,7 +7,6 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Monad.State.Strict
 import Control.Monad.Trans.Either
-import Control.Applicative
 import Data.JSTarget
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString as BS
@@ -69,13 +68,13 @@ getAllDefs :: Config
            -> (BS.ByteString, BS.ByteString)
            -> BS.ByteString
            -> Name
-           -> IO (AST Stm)
+           -> IO Stm
 getAllDefs cfg libpaths mainmod pkgid mainsym =
   runDep cfg mainmod $ addDef libpaths pkgid mainsym
 
 data DepState = DepState {
-    mainmod     :: !(BS.ByteString, BS.ByteString),
-    defs        :: !(AST Stm -> AST Stm),
+    mainModule  :: !(BS.ByteString, BS.ByteString),
+    defs        :: !(Stm -> Stm),
     alreadySeen :: !(S.Set Name),
     modules     :: !(M.Map BS.ByteString Module),
     infoLogger  :: String -> IO ()
@@ -85,7 +84,7 @@ type DepM a = EitherT Name (StateT DepState IO) a
 
 initState :: Config -> (BS.ByteString, BS.ByteString) -> DepState
 initState cfg m = DepState {
-    mainmod     = m,
+    mainModule  = m,
     defs        = id,
     alreadySeen = S.empty,
     modules     = M.empty,
@@ -99,14 +98,16 @@ info s = do
   liftIO $ infoLogger st s
 
 -- | Run a dependency resolution computation.
-runDep :: Config -> (BS.ByteString, BS.ByteString) -> DepM a -> IO (AST Stm)
+runDep :: Show a => Config -> (BS.ByteString,BS.ByteString) -> DepM a -> IO Stm
 runDep cfg mainmod m = do
     res <- runStateT (runEitherT m) (initState cfg mainmod)
     case res of
       (Right _, st) ->
         return $ defs st stop
-      (Left (Name f (Just (p, m))), _) -> do
-        error $ msg (toString m) (toString f)
+      (Left (Name f (Just (_, modul))), _) -> do
+        error $ msg (toString modul) (toString f)
+      (r, _) -> do
+        error $ "Impossible result in runDep: " ++ show r
   where
     msg "Main" "main" =
       "Unable to locate a main function.\n" ++
@@ -115,8 +116,8 @@ runDep cfg mainmod m = do
       "for instance, `-main-is MyModule.myMain'.\n" ++
       "If your progam intentionally has no main function," ++
       " please use `--dont-link' to avoid this error."
-    msg m f =
-      "Unable to locate function `" ++ f ++ "' in module `" ++ m ++ "'!"
+    msg s f =
+      "Unable to locate function `" ++ f ++ "' in module `" ++ s ++ "'!"
 
 -- | Return the module the given variable resides in.
 getModuleOf :: [FilePath] -> Name -> DepM Module
@@ -126,7 +127,7 @@ getModuleOf libpaths v@(Name n _) =
     Just ""         -> return foreignModule
     Nothing         -> return foreignModule
     Just ":Main"    -> do
-      (p, m) <- mainmod `fmap` get
+      (p, m) <- mainModule `fmap` get
       getModuleOf libpaths (Name n (Just (p, m)))
     Just m          -> do
       mm <- getModule libpaths (maybe "main" id $ pkgOf v) m

@@ -6,7 +6,7 @@ import Data.JSTarget
 import Haste.Config
 
 -- | Dummy State# RealWorld value for where one is needed.
-defState :: AST Exp
+defState :: Exp
 defState = litN 0
 
 -- | Generate primops.
@@ -15,7 +15,7 @@ defState = litN 0
 --   on the evaluation operation in the RTS being able to handle plain values
 --   as though they were thunks. If this were to change, all those ops MUST
 --   be changed to return thunks!
-genOp :: Config -> PrimOp -> [AST Exp] -> Either String (AST Exp)
+genOp :: Config -> PrimOp -> [Exp] -> Either String (Exp)
 genOp cfg op xs =
   case op of
     -- negations

@@ -11,8 +11,8 @@ data ASTNode = Exp !Exp !Bool | Stm !Stm !Bool | Shared !Stm
 
 type TravM a = Identity a
 
-runTravM :: TravM a -> AST a
-runTravM m = AST $ runIdentity m
+runTravM :: TravM a -> a
+runTravM = runIdentity
 
 class Show ast => JSTrav ast where
   -- | Bottom up transform over an AST.
