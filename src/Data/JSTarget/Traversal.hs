@@ -41,6 +41,7 @@ mapJS :: JSTrav ast
 mapJS tr fe fs ast =
     snd <$> foldMapJS (const tr) (const' fe) (const' fs) () ast
   where
+    {-# INLINE const' #-}
     const' f _ x = ((),) <$> f x
 
 instance JSTrav a => JSTrav [a] where
@@ -214,11 +215,7 @@ finalStm = go
     go (Case _ _ _ next) = go next
     go (Forever s)       = go s
     go (Assign _ _ next) = go next
-    go s@(Return _)      = return s
-    go s@Cont            = return s
-    go s@Stop            = return s
-    go s@(Tailcall _)    = return s
-    go s@(ThunkRet _)    = return s
+    go s                 = return s
 
 -- | Replace the final statement of the given AST with a new one, but only
 --   if matches the given predicate.
@@ -228,11 +225,7 @@ replaceFinalStm new p = go
     go (Case c d as next) = Case c d as <$> go next
     go (Forever s)        = Forever <$> go s
     go (Assign l r next)  = Assign l r <$> go next
-    go s@(Return _)       = return $ if p s then new else s
-    go s@Cont             = return $ if p s then new else s
-    go s@Stop             = return $ if p s then new else s
-    go s@(Tailcall _)     = return $ if p s then new else s
-    go s@(ThunkRet _)     = return $ if p s then new else s
+    go s                  = return $ if p s then new else s
 
 -- | Returns statement's returned expression, if any.
 finalExp :: Stm -> TravM (Maybe Exp)
@@ -247,32 +240,41 @@ class Pred a where
   (.&.) :: a -> a -> a
 
 instance Pred (a -> b -> Bool) where
+  {-# INLINE (.|.) #-}
+  {-# INLINE (.&.) #-}
   p .|. q = \a b -> p a b || q a b
   p .&. q = \a b -> p a b && q a b
 
 instance Pred (a -> Bool) where
+  {-# INLINE (.|.) #-}
+  {-# INLINE (.&.) #-}
   p .|. q = \a -> p a || q a
   p .&. q = \a -> p a && q a
 
 -- | Thunks and explicit lambdas count as lambda abstractions.
+{-# INLINE isLambda #-}
 isLambda :: ASTNode -> Bool
 isLambda (Exp (Fun _ _) _)   = True
 isLambda (Exp (Thunk _ _) _) = True
 isLambda _                   = False
 
+{-# INLINE isLoop #-}
 isLoop :: ASTNode -> Bool
 isLoop (Stm (Forever _) _) = True
 isLoop _                   = False
 
+{-# INLINE isConditional #-}
 isConditional :: ASTNode -> Bool
 isConditional (Exp _ cond) = cond
 isConditional (Stm _ cond) = cond
 isConditional _            = False
 
+{-# INLINE isShared #-}
 isShared :: ASTNode -> Bool
 isShared (Shared _) = True
 isShared _          = False
 
+{-# INLINE isSafeForInlining #-}
 isSafeForInlining :: ASTNode -> Bool
 isSafeForInlining = not <$> isLambda .|. isLoop .|. isShared
 
@@ -280,6 +282,7 @@ isSafeForInlining = not <$> isLambda .|. isLoop .|. isShared
 data Occs = Never | Once | Lots deriving (Eq, Show)
 
 instance Ord Occs where
+  {-# INLINE compare #-}
   compare Never Once = Prelude.LT
   compare Never Lots = Prelude.LT
   compare Once  Lots = Prelude.LT

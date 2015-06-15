@@ -53,11 +53,13 @@ isKnownLoc (Internal _ _ knownloc) = knownloc
 isKnownLoc _                       = False
 
 instance Eq Var where
+  {-# INLINE (==) #-}
   (Foreign f1)  == (Foreign f2)          = f1 == f2
   (Internal i1 _ _) == (Internal i2 _ _) = i1 == i2
   _ == _                                 = False
 
 instance Ord Var where
+  {-# INLINE compare #-}
   compare (Foreign f1) (Foreign f2)           = compare f1 f2
   compare (Internal i1 _ _) (Internal i2 _ _) = compare i1 i2
   compare (Foreign _) (Internal _ _ _)        = Prelude.LT

@@ -294,6 +294,8 @@ gatherInlinable ast = do
     updVar _           = Just Once
     updVarAss (Just o) = Just o
     updVarAss _        = Just Never
+
+    {-# INLINE countOccs #-}
     countOccs m (Exp (Var v@(Internal _ _ _)) _) =
       pure (M.alter updVar v m)
     countOccs m (Stm (Assign (NewVar _ v) _ _) _) =
