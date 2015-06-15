@@ -42,13 +42,13 @@ generate cfg stg =
     opt = if optimize cfg then optimizeFun else const id
     theMod = genAST cfg (GHC.modName stg) (modCompiledModule stg)
 
-    insFun m (_, AST (Assign (NewVar _ v@(Internal n _ _)) body _) jumps) =
-      M.insert n (opt v (AST body jumps)) m
+    insFun m (_, AST (Assign (NewVar _ v@(Internal n _ _)) body _)) =
+      M.insert n (opt v (AST body)) m
     insFun m _ =
       m
 
     -- TODO: perhaps do dependency-based linking for externals as well?
-    insDep m (ds, AST (Assign (NewVar _ (Internal v _ _)) _ _) _) =
+    insDep m (ds, AST (Assign (NewVar _ (Internal v _ _)) _ _)) =
       M.insert v (S.delete v ds) m
     insDep m _ =
       m
@@ -62,7 +62,7 @@ genAST cfg modname binds =
       map (depsAndCode . genJS cfg modname . uncurry (genBind True))
       $ concatMap unRec
       $ binds
-    depsAndCode (_, ds, locs, stm) = (ds S.\\ locs, stm nullRet)
+    depsAndCode (_, ds, locs, stm) = (ds S.\\ locs, stm stop)
 
 -- | Check for builtins that should generate inlined code. At this point only
 --   w2i and i2w.
@@ -208,10 +208,10 @@ genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
                then thunk' upd (body' $ thunkRet retExp)
                else fun args' (body' $ ret retExp)
   where
-    thunk' _ (AST (Return l@(J.Lit _)) js) = AST l js
-    thunk' Updatable stm                   = thunk True stm
-    thunk' ReEntrant stm                   = thunk True stm
-    thunk' SingleEntry stm                 = thunk False stm
+    thunk' _ (AST (Return l@(J.Lit _))) = AST l
+    thunk' Updatable stm                = thunk True stm
+    thunk' ReEntrant stm                = thunk True stm
+    thunk' SingleEntry stm              = thunk False stm
 
 -- | Turn a recursive binding into a list of non-recursive ones, together with
 --   information about whether they came from a recursive group or not.
@@ -239,7 +239,7 @@ genCase t ex scrut alts = do
   -- Return a scrutinee variable and a function to replace all occurrences of
   -- the STG scrutinee with our JS one, if needed.
   (scrut', withScrutinee) <- case ex' of
-    AST (Eval (J.Var v)) _ -> do
+    AST (Eval (J.Var v)) -> do
       continue $ assignVar (reorderableType scrut) v ex'
       oldscrut <- genVar scrut
       return (v, rename oldscrut v)

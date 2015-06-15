@@ -145,15 +145,15 @@ ppAssigns stm = do
 finalStm :: Stm -> PP Stm
 finalStm s =
   case s of
-    Assign _ _ s'         -> finalStm s'
-    Case _ _ _ (Shared l) -> lookupLabel l >>= finalStm
-    Forever s'            -> finalStm s'
-    _                     -> return s
+    Assign _ _ s'   -> finalStm s'
+    Case _ _ _ next -> finalStm next
+    Forever s'      -> finalStm s'
+    _               -> return s
 
 instance Pretty Stm where
-  pp (Case cond def alts (Shared nextRef)) = do
+  pp (Case cond def alts next) = do
     prettyCase cond def alts
-    lookupLabel nextRef >>= pp
+    pp next
   pp (Forever stm) = do
     line "while(1){"
     indent $ pp stm
@@ -170,11 +170,7 @@ instance Pretty Stm where
     line $ "return " .+. pp ex .+. ";"
   pp (Cont) = do
     line "continue;"
-  pp (Jump _) = do
-    -- Jumps are essentially fallthroughs which keep track of their
-    -- continuation to make analysis and optimization easier.
-    return ()
-  pp (NullRet) = do
+  pp (Stop) = do
     return ()
   pp (Tailcall call) = do
     line $ "return new F(function(){return " .+. pp call .+. ";});"
@@ -194,11 +190,11 @@ neg _               = Nothing
 prettyCase :: Exp -> Stm -> [Alt] -> PP ()
 prettyCase cond def [(con, branch)] = do
   case (def, branch) of
-    (_, NullRet) -> do
+    (_, Stop) -> do
       line $ "if(" .+. pp (neg' (test con)) .+. "){"
       indent $ pp def
       line "}"
-    (NullRet, _) -> do
+    (Stop, _) -> do
       line $ "if(" .+. pp (test con) .+. "){"
       indent $ pp branch
       line "}"

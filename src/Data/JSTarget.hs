@@ -2,7 +2,7 @@
 module Data.JSTarget (
     module Constr, module Op, module Optimize, module Trav,
     PPOpts (..), pretty, runPP, prettyProg, def,
-    Arity, Comment, Shared, Name (..), Var (..), LHS, Call,
+    Arity, Comment, Name (..), Var (..), LHS, Call,
     Lit, Exp, Stm, Alt, AST (..), Module (..),
     foreignModule, moduleOf, pkgOf, blackHole, blackHoleVar, merge
   ) where

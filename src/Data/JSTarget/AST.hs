@@ -7,10 +7,6 @@ import qualified Data.Map.Strict as M
 #else
 import qualified Data.Map as M
 #endif
-import System.IO.Unsafe
-import System.Random (randomIO)
-import Data.IORef
-import Data.Word
 import Control.Applicative
 import Data.JSTarget.Op
 import qualified Data.ByteString as BS
@@ -18,9 +14,6 @@ import qualified Data.ByteString as BS
 type Arity = Int
 type Comment = BS.ByteString
 type Reorderable = Bool
-
--- | Shared statements.
-newtype Shared a = Shared Lbl deriving (Eq, Show)
 
 -- | A Name consists of a variable name and optional (package, module)
 --   information.
@@ -137,13 +130,12 @@ definitelyNotThunk _          = False
 -- | Statements. The only mildly interesting thing here are the Case and Jump
 --   constructors, which allow explicit sharing of continuations.
 data Stm where
-  Case     :: !Exp -> !Stm -> ![Alt] -> !(Shared Stm) -> Stm
+  Case     :: !Exp -> !Stm -> ![Alt] -> !Stm -> Stm
   Forever  :: !Stm -> Stm
   Assign   :: !LHS -> !Exp -> !Stm -> Stm
   Return   :: !Exp -> Stm
   Cont     :: Stm
-  Jump     :: !(Shared Stm) -> Stm
-  NullRet  :: Stm
+  Stop     :: Stm -- Do nothing at all past this point
   Tailcall :: !Exp -> Stm
   ThunkRet :: !Exp -> Stm -- Return from a Thunk
   deriving (Eq, Show)
@@ -190,24 +182,18 @@ blackHole = LhsExp False $ Var blackHoleVar
 blackHoleVar :: Var
 blackHoleVar = Internal (Name "" (Just ("$blackhole", "$blackhole"))) "" False
 
--- | An AST with local jumps.
-data AST a = AST {
-    astCode  :: !a,
-    astJumps :: !JumpTable
-  } deriving (Show, Eq)
+data AST a = AST {astCode :: !a} deriving (Show, Eq)
 
 instance Functor AST where
-  fmap f (AST ast js) = AST (f ast) js
+  fmap f (AST ast) = AST (f ast)
 
 instance Applicative AST where
   pure = return
-  (AST f js) <*> (AST x js') = AST (f x) (M.union js' js)
+  (AST f) <*> (AST x) = AST (f x)
 
 instance Monad AST where
-  return x = AST x M.empty
-  (AST ast js) >>= f =
-    case f ast of
-      AST ast' js' -> AST ast' (M.union js' js)
+  return x = AST x
+  (AST ast) >>= f = f ast
 
 -- | Returns the precedence of the top level operator of the given expression.
 --   Everything that's not an operator has equal precedence, higher than any
@@ -218,32 +204,3 @@ expPrec (BinOp op _ _)               = opPrec op
 expPrec (AssignEx _ _)               = 0
 expPrec (Not _)                      = 500
 expPrec _                            = 1000
-
-type JumpTable = M.Map Lbl Stm
-
-data Lbl = Lbl !Word64 !Word64 deriving (Eq, Ord, Show)
-
-{-# NOINLINE nextLbl #-}
-nextLbl :: IORef Word64
-nextLbl = unsafePerformIO $ newIORef 0
-
-{-# NOINLINE lblNamespace #-}
--- | Namespace for labels, to avoid collisions when combining modules.
---   We really ought to make this f(package, module) or something, but a random
---   64 bit unsigned int should suffice.
-lblNamespace :: Word64
-lblNamespace = unsafePerformIO $ randomIO
-
-{-# NOINLINE lblFor #-}
--- | Produce a local reference to the given statement.
-lblFor :: Stm -> AST Lbl
-lblFor s = do
-    (r, s') <- freshRef
-    AST r (M.singleton r s')
-  where
-    freshRef = return $! unsafePerformIO $! do
-      r <- atomicModifyIORef nextLbl $ \lbl ->
-        lbl `seq` (lbl+1, Lbl lblNamespace lbl)
-      -- We need to depend on s, or GHC will hoist us out of lblFor, possibly
-      -- causing circular dependencies between expressions.
-      return (r, s)

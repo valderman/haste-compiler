@@ -9,8 +9,8 @@ import Data.JSTarget.AST
 import Data.JSTarget.Op
 
 instance Binary a => Binary (AST a) where
-  put (AST x jumps) = put x >> put jumps
-  get = AST <$> get <*> get
+  put (AST x) = put x
+  get = AST <$> get
 
 instance Binary Module where
   put (Module pkgid name deps defs) =
@@ -101,14 +101,12 @@ instance Binary Stm where
     putWord8 3 >> put ex
   put (Cont) =
     putWord8 4
-  put (Jump j) =
-    putWord8 5 >> put j
-  put (NullRet) =
-    putWord8 6
+  put (Stop) =
+    putWord8 5
   put (Tailcall ex) =
-    putWord8 7 >> put ex
+    putWord8 6 >> put ex
   put (ThunkRet ex) =
-    putWord8 8 >> put ex
+    putWord8 7 >> put ex
   
   get = do
     tag <- getWord8
@@ -118,10 +116,9 @@ instance Binary Stm where
       2 -> Assign <$> get <*> get <*> get
       3 -> Return <$> get
       4 -> pure Cont
-      5 -> Jump <$> get
-      6 -> pure NullRet
-      7 -> Tailcall <$> get
-      8 -> ThunkRet <$> get
+      5 -> pure Stop
+      6 -> Tailcall <$> get
+      7 -> ThunkRet <$> get
       n -> error $ "Bad tag in get :: Get Stm: " ++ show n
 
 instance Binary BinOp where
@@ -135,7 +132,7 @@ instance Binary BinOp where
   put Eq     = putWord8 7
   put Neq    = putWord8 8
   put LT     = putWord8 9
-  put GT      = putWord8 10
+  put GT     = putWord8 10
   put LTE    = putWord8 11
   put GTE    = putWord8 12
   put Shl    = putWord8 13
@@ -150,14 +147,6 @@ instance Binary BinOp where
 instance Binary Name where
   put (Name name owner) = put name >> put owner
   get = Name <$> get <*> get
-
-instance Binary a => Binary (Shared a) where
-  put (Shared lbl) = put lbl
-  get = Shared <$> get
-
-instance Binary Lbl where
-  put (Lbl namespace lbl) = put namespace >> put lbl
-  get = Lbl <$> get <*> get
 
 opTbl :: Array Word8 BinOp
 opTbl =

@@ -16,6 +16,7 @@ import qualified Data.ByteString.Char8 as BS (cons)
 fixTailCalls :: Var -> Exp -> TravM Exp
 fixTailCalls fun ast = do
     ast' <- assignToSubst ast >>= tailLoopify fun
+    ast' <- tailLoopify fun ast
     mapJS (const True) pure loopify ast'
   where
     loopify (Assign lhs@(NewVar _ f) body next) =
@@ -26,8 +27,8 @@ fixTailCalls fun ast = do
 -- TODO: tryTernary may inline calls that would otherwise be in tail position
 --       which is something we'd really like to avoid.
 optimizeFun :: Var -> AST Exp -> AST Exp
-optimizeFun f (AST ast js) =
-  flip runTravM js $ do
+optimizeFun f (AST ast) =
+  runTravM $ do
     shrinkCase ast
     >>= inlineAssigns
     >>= optimizeArrays
@@ -43,8 +44,8 @@ optimizeFun f (AST ast js) =
     >>= inlineJSPrimitives
 
 topLevelInline :: AST Stm -> AST Stm
-topLevelInline (AST ast js) =
-  flip runTravM js $ do
+topLevelInline (AST ast) =
+  runTravM $ do
     unTrampoline ast
     >>= unevalLits
     >>= inlineAssigns
@@ -62,15 +63,14 @@ tryTernary :: Var
            -> [(AST Exp, AST Stm -> AST Stm)]
            -> Maybe (AST Exp)
 tryTernary self scrut retEx def [(m, alt)] =
-    case runTravM opt allJumps of
-      AST (Just ex) js -> Just (AST ex js)
-      _                -> Nothing
+    case runTravM opt of
+      AST (Just ex) -> Just (AST ex)
+      _             -> Nothing
   where
     selfOccurs (Exp (Var v) _) = v == self
     selfOccurs _               = False
     def' = def $ Return <$> retEx
     alt' = alt $ Return <$> retEx
-    AST _ allJumps = scrut >> m >> def' >> alt'
     opt = do
       -- Make sure the return expression is used somewhere, then cut away all
       -- useless assignments. If what's left is a single Return statement,
@@ -413,26 +413,35 @@ inlineAssignsLocal ast = do
 --   care about the assignment side effect.
 inlineReturns :: JSTrav ast => ast -> TravM ast
 inlineReturns ast = do
-    (s, ast') <- foldMapJS (\_ _ -> True) pure2 foldRet S.empty ast
-    mapM_ (flip putRef NullRet) $ S.toList s
-    return ast'
+    mapJS (const True) inl pure ast
   where
-    pure2 s x = pure (s,x)
-    foldRet s (Assign l rhs next)
-      | Just (Var v, ret) <- returnLike next,
-        Just (lhs,_) <- lhsVar l,
-        v == lhs = do
-        return (s, ret rhs)
-    foldRet s keep@(Assign l rhs (Jump (Shared lbl)))
-      | Just (lhs, _) <- lhsVar l = do
-        next <- getRef lbl
-        case returnLike next of
-          Just (Var v, ret) | v == lhs ->
-            return (S.insert lbl s, ret rhs)
-          _ ->
-            return (s, keep)
-    foldRet s keep = do
-      return (s, keep)
+    inl (Fun as body)    = Fun as <$> go Nothing body
+    inl (Thunk upd body) = Thunk upd <$> go Nothing body
+    inl ex               = pure ex
+ 
+    goAlt outside (ex, stm) = (ex,) <$> go outside stm
+
+    go outside (Case c d as next) = do
+      next' <- go outside next
+      case returnLike next' of
+        outside'@(Just _) ->
+          Case c <$> go outside' d <*> mapM (goAlt outside') as <*> pure Stop
+        _ ->
+          Case c <$> go Nothing d <*> mapM (goAlt Nothing) as <*> pure next'
+    go _ (Forever s) = do
+      Forever <$> go Nothing s
+    go outside (Assign l@(NewVar _ lhs) r next) = do
+      next' <- go outside next
+      case (next', outside) of
+        (Stop, Just (Var v, ret))  | v == lhs -> return $ ret r
+        (Return (Var v), _)        | v == lhs -> return $ Return r
+        (ThunkRet (Var v), _)      | v == lhs -> return $ ThunkRet r
+        (Assign l (Var v) Stop, _) | v == lhs -> return $ Assign l r Stop
+        _                                     -> return $ Assign l r next'
+    go outside (Assign l r next) = do
+      Assign l r <$> go outside next
+    go _ stm = do
+      return stm
 
 -- | Extract the expression returned from a Return of ThunkRet, as well as
 --   a function to recreate that type of return.
@@ -446,24 +455,15 @@ lhsVar (NewVar r v)       = Just (v, r)
 lhsVar (LhsExp r (Var v)) = Just (v, r)
 lhsVar _                  = Nothing
 
--- | Inline all occurrences of the given shared code path.
---   Use with caution - preferrably not at all!
-inlineShared :: JSTrav ast => Lbl -> ast -> TravM ast
-inlineShared lbl =
-    mapJS (const True) pure inl
-  where
-    inl (Jump (Shared lbl')) | lbl == lbl' = getRef lbl
-    inl s                                  = pure s
-
 -- | Shrink case statements as much as possible.
 shrinkCase :: JSTrav ast => ast -> TravM ast
 shrinkCase =
     mapJS (const True) pure shrink
   where
-    shrink (Case _ def [] next@(Shared lbl))
-      | def == Jump next = getRef lbl
-      | otherwise        = inlineShared lbl def
-    shrink stm           = return stm
+    shrink (Case _ def [] next)
+      | def == Stop = return next
+      | otherwise   = replaceFinalStm next (== Stop) def
+    shrink stm      = return stm
 
 -- | Turn any calls in tail position into tailcalls.
 --   Must run after @tailLoopify@ or we won't get loops for simple tail
@@ -505,16 +505,14 @@ tailLoopify f fun@(Fun args body) = do
             let args' = map newName args
                 ret = Return (Lit $ LNull)
             b <- mapJS (not <$> isLambda) pure (replaceByAssign ret args') body
-            let (AST nullRetLbl _) = lblFor NullRet
-                nn = newName f
+            let nn = newName f
                 nv = NewVar False nn
                 body' =
                   Forever $
                   Assign nv (Call 0 (Fast False) (Fun args b)
                                                  (map Var args')) $
-                  Case (Var nn) (Return (Var nn)) [(Lit $ LNull, NullRet)] $
-                  (Shared nullRetLbl)
-            putRef nullRetLbl NullRet
+                  Case (Var nn) (Return (Var nn)) [(Lit $ LNull, Stop)] $
+                  Stop
             return $ Fun args' body'
           False -> do
             let c = Cont
@@ -659,7 +657,9 @@ assignToSubst ast = do
     inl stm@(Assign (NewVar _ v) x next) | not (isKnownLoc v) = do
       case x of
         (Var _)        -> do
-          (c, stm') <- replaceExWithCount (not <$> unsafePlace) (Var v) x next
+          -- TODO: this can be replaced by a map (to replace) and a count of
+          --       remaining occurrences of v (fold)
+          (c, stm') <- replaceExWithCount (isSafeForInlining) (Var v) x next
           (c', _) <- replaceExWithCount (pure True) (Var v) x next
           if c == c'
             then return stm' -- No occurrences inside lambda
@@ -669,8 +669,6 @@ assignToSubst ast = do
         _              -> return stm
     inl stm = do
       return stm
-
-    unsafePlace = isLambda .|. isShared .|. isLoop
 
 -- | Perform various trivially correct local inlinings:
 --   var x = e; return [0, e] (boxing at the end of a thunk/function)

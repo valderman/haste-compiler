@@ -161,11 +161,10 @@ case_ :: AST Exp
       -> AST Stm
 case_ ex def alts cont = do
   ex' <- ex
-  shared <- cont >>= lblFor
-  let jmp = pure $ Jump (Shared shared)
-  def' <- def jmp
-  alts' <- sequence [(,) <$> x <*> s jmp | (x, s) <- alts]
-  pure $ Case ex' def' alts' (Shared shared)
+  shared <- cont
+  def' <- def stop
+  alts' <- sequence [(,) <$> x <*> s stop | (x, s) <- alts]
+  pure $ Case ex' def' alts' shared
 
 -- | Return from a function.
 ret :: AST Exp -> AST Stm
@@ -193,5 +192,5 @@ assignEx :: AST Exp -> AST Exp -> AST Exp
 assignEx = liftA2 AssignEx
 
 -- | Terminate a statement without doing anything at all.
-nullRet :: AST Stm
-nullRet = pure NullRet
+stop :: AST Stm
+stop = pure Stop

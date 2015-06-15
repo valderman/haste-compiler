@@ -104,7 +104,7 @@ runDep cfg mainmod m = do
     res <- runStateT (runEitherT m) (initState cfg mainmod)
     case res of
       (Right _, st) ->
-        return $ defs st nullRet
+        return $ defs st stop
       (Left (Name f (Just (p, m))), _) -> do
         error $ msg (toString m) (toString f)
   where

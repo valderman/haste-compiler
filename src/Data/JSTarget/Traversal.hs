@@ -3,23 +3,16 @@
 module Data.JSTarget.Traversal where
 import Control.Applicative
 import Control.Monad
-import Control.Monad.State
+import Control.Monad.Identity
 import Data.JSTarget.AST
-import Data.Map as M ((!), insert)
 
 -- | AST nodes we'd like to fold and map over.
-data ASTNode = Exp !Exp !Bool | Stm !Stm !Bool | Label !Lbl
+data ASTNode = Exp !Exp !Bool | Stm !Stm !Bool | Shared !Stm
 
-type TravM a = State JumpTable a
+type TravM a = Identity a
 
-runTravM :: TravM a -> JumpTable -> AST a
-runTravM m js = uncurry AST $ runState m js
-
-getRef :: Lbl -> TravM Stm
-getRef lbl = (M.! lbl) <$> get
-
-putRef :: Lbl -> Stm -> TravM ()
-putRef lbl stm = modify (M.insert lbl stm)
+runTravM :: TravM a -> AST a
+runTravM m = AST $ runIdentity m
 
 class Show ast => JSTrav ast where
   -- | Bottom up transform over an AST.
@@ -163,12 +156,14 @@ instance JSTrav Stm where
       (acc', x) <- if tr acc (Stm ast False)
                      then do
                        case ast of
-                         Case ex def alts next -> do
-                           (acc', ex') <- foldMapJS tr fe fs acc ex
-                           (acc'', def') <- foldMapJS tr fe fs acc' def
-                           (acc''', alts') <- foldMapJS tr fe fs acc'' alts
-                           (acc'''', next') <- foldMapJS tr fe fs acc''' next
-                           return (acc'''', Case ex' def' alts' next')
+                         Case ex def alts nxt -> do
+                           (acc1, ex') <- foldMapJS tr fe fs acc ex
+                           (acc2, def') <- foldMapJS tr fe fs acc1 def
+                           (acc3, alts') <- foldMapJS tr fe fs acc2 alts
+                           (acc4, nxt') <- if tr acc (Shared nxt)
+                                             then foldMapJS tr fe fs acc3 nxt
+                                             else return (acc3, nxt)
+                           return (acc4, Case ex' def' alts' nxt')
                          Forever stm -> do
                            fmap Forever <$> foldMapJS tr fe fs acc stm
                          Assign lhs ex next -> do
@@ -180,9 +175,7 @@ instance JSTrav Stm where
                            fmap Return <$> foldMapJS tr fe fs acc ex
                          Cont -> do
                            return (acc, ast)
-                         Jump stm -> do
-                           fmap Jump <$> foldMapJS tr fe fs acc stm
-                         NullRet -> do
+                         Stop -> do
                            return (acc, ast)
                          Tailcall ex -> do
                            fmap Tailcall <$> foldMapJS tr fe fs acc ex
@@ -201,7 +194,9 @@ instance JSTrav Stm where
                     acc' <- foldJS tr f acc ex
                     acc'' <- foldJS tr f acc' def
                     acc''' <- foldJS tr f acc'' alts
-                    foldJS tr f acc''' next
+                    if tr acc (Shared next)
+                      then foldJS tr f acc''' next
+                      else return acc'''
                   Forever stm -> do
                     foldJS tr f acc stm
                   Assign lhs ex next -> do
@@ -212,9 +207,7 @@ instance JSTrav Stm where
                     foldJS tr f acc ex
                   Cont -> do
                     return acc
-                  Jump j -> do
-                    foldJS tr f acc j
-                  NullRet -> do
+                  Stop -> do
                     return acc
                   Tailcall ex -> do
                     foldJS tr f acc ex
@@ -249,34 +242,32 @@ instance JSTrav LHS where
   foldJS _ _ acc (NewVar _ _)    = return acc
   foldJS tr f acc (LhsExp _ ex)  = foldJS tr f acc ex
 
-instance JSTrav a => JSTrav (Shared a) where
-  foldMapJS tr fe fs acc sh@(Shared lbl) = do
-    if (tr acc (Label lbl)) 
-      then do
-        stm <- getRef lbl
-        (acc', stm') <- foldMapJS tr fe fs acc stm
-        putRef lbl stm'
-        return (acc', sh)
-      else do
-        return (acc, sh)
-  foldJS tr f acc (Shared lbl) = do
-    if (tr acc (Label lbl))
-      then getRef lbl >>= foldJS tr f acc >>= \acc' -> f acc' (Label lbl)
-      else f acc (Label lbl)
-
 -- | Returns the final statement of a line of statements.
 finalStm :: Stm -> TravM Stm
 finalStm = go
   where
-    go (Case _ _ _ (Shared next)) = getRef next >>= go
-    go (Forever s)                = go s
-    go (Assign _ _ next)          = go next
-    go (Jump (Shared next))       = getRef next >>= go
-    go s@(Return _)               = return s
-    go (Cont)                     = return Cont
-    go (NullRet)                  = return NullRet
-    go s@(Tailcall _)             = return s
-    go s@(ThunkRet _)             = return s
+    go (Case _ _ _ next) = go next
+    go (Forever s)       = go s
+    go (Assign _ _ next) = go next
+    go s@(Return _)      = return s
+    go s@Cont            = return s
+    go s@Stop            = return s
+    go s@(Tailcall _)    = return s
+    go s@(ThunkRet _)    = return s
+
+-- | Replace the final statement of the given AST with a new one, but only
+--   if matches the given predicate.
+replaceFinalStm :: Stm -> (Stm -> Bool) -> Stm -> TravM Stm
+replaceFinalStm new p = go
+  where
+    go (Case c d as next) = Case c d as <$> go next
+    go (Forever s)        = Forever <$> go s
+    go (Assign l r next)  = Assign l r <$> go next
+    go s@(Return _)       = return $ if p s then new else s
+    go s@Cont             = return $ if p s then new else s
+    go s@Stop             = return $ if p s then new else s
+    go s@(Tailcall _)     = return $ if p s then new else s
+    go s@(ThunkRet _)     = return $ if p s then new else s
 
 -- | Returns statement's returned expression, if any.
 finalExp :: Stm -> TravM (Maybe Exp)
@@ -298,19 +289,11 @@ instance Pred (a -> Bool) where
   p .|. q = \a -> p a || q a
   p .&. q = \a -> p a && q a
 
-isShared :: ASTNode -> Bool
-isShared (Label _) = True
-isShared _         = False
-
 -- | Thunks and explicit lambdas count as lambda abstractions.
 isLambda :: ASTNode -> Bool
 isLambda (Exp (Fun _ _) _)   = True
 isLambda (Exp (Thunk _ _) _) = True
 isLambda _                   = False
-
-isJump :: ASTNode -> Bool
-isJump (Stm (Jump _) _) = True
-isJump _                = False
 
 isLoop :: ASTNode -> Bool
 isLoop (Stm (Forever _) _) = True
@@ -320,6 +303,10 @@ isConditional :: ASTNode -> Bool
 isConditional (Exp _ cond) = cond
 isConditional (Stm _ cond) = cond
 isConditional _            = False
+
+isShared :: ASTNode -> Bool
+isShared (Shared _) = True
+isShared _          = False
 
 isSafeForInlining :: ASTNode -> Bool
 isSafeForInlining = not <$> isLambda .|. isLoop .|. isShared

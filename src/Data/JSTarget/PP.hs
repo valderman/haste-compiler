@@ -14,7 +14,7 @@ import Control.Applicative
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
 import Data.ByteString (ByteString)
-import Data.JSTarget.AST (AST (..), Name (..), JumpTable, Lbl, Stm)
+import Data.JSTarget.AST (AST (..), Name (..))
 import Data.JSTarget.Traversal (JSTrav)
 import Data.ByteString.Builder
 
@@ -40,15 +40,14 @@ emptyNS = (FinalName 0, M.empty)
 newtype PP a = PP {unPP :: PPOpts
                         -> IndentLvl
                         -> NameSupply
-                        -> JumpTable
                         -> Builder
                         -> (NameSupply, Builder, a)}
 
 instance Monad PP where
-  PP m >>= f = PP $ \opts indentlvl ns js b ->
-    case m opts indentlvl ns js b of
-      (ns', b', x) -> unPP (f x) opts indentlvl ns' js b'
-  return x = PP $ \_ _ ns _ b -> (ns, b, x)
+  PP m >>= f = PP $ \opts indentlvl ns b ->
+    case m opts indentlvl ns b of
+      (ns', b', x) -> unPP (f x) opts indentlvl ns' b'
+  return x = PP $ \_ _ ns b -> (ns, b, x)
 
 instance Applicative PP where
   pure  = return
@@ -82,18 +81,14 @@ debugPPOpts = def {
 
 -- | Generate the final name for a variable.
 finalNameFor :: Name -> PP FinalName
-finalNameFor n = PP $ \_ _ ns@(nextN, m) _ b ->
+finalNameFor n = PP $ \_ _ ns@(nextN, m) b ->
   case M.lookup n m of
     Just n' -> (ns, b, n')
     _       -> ((succ nextN, M.insert n nextN m), b, nextN)
 
--- | Look up a shared reference.
-lookupLabel :: Lbl -> PP Stm
-lookupLabel lbl = PP $ \_ _ ns js b -> (ns, b, js M.! lbl)
-
 -- | Returns the value of the given pretty-printer option.
 getOpt :: (PPOpts -> a) -> PP a
-getOpt f = PP $ \opts _ ns _ b -> (ns, b, f opts)
+getOpt f = PP $ \opts _ ns b -> (ns, b, f opts)
 
 -- | Runs the given printer iff the specifiet option is True.
 whenOpt :: (PPOpts -> Bool) -> PP () -> PP ()
@@ -101,19 +96,19 @@ whenOpt f p = getOpt f >>= \x -> when x p
 
 -- | Pretty print an AST.
 pretty :: (JSTrav a, Pretty a) => PPOpts -> AST a -> BS.ByteString
-pretty opts (AST ast js) =
-  case runPP opts js (pp ast) of
+pretty opts (AST ast) =
+  case runPP opts (pp ast) of
     (b, _) -> toLazyByteString b
 
 -- | Run a pretty printer.
-runPP :: PPOpts -> JumpTable -> PP a -> (Builder, a)
-runPP opts js p =
-  case unPP p opts 0 emptyNS js mempty of
+runPP :: PPOpts -> PP a -> (Builder, a)
+runPP opts p =
+  case unPP p opts 0 emptyNS mempty of
     (_, b, x) -> (b, x)
 
 -- | Pretty-print a program and return the final name for its entry point.
 prettyProg :: Pretty a => PPOpts -> Name -> AST a -> (Builder, Builder)
-prettyProg opts mainSym (AST ast js) = runPP opts js $ do
+prettyProg opts mainSym (AST ast) = runPP opts $ do
   pp ast
   buildFinalName <$> finalNameFor mainSym
 
@@ -142,7 +137,7 @@ class Buildable a where
   put :: a -> PP ()
 
 instance Buildable Builder where
-  put x = PP $ \_ _ ns _ b -> (ns, b <> x, ())
+  put x = PP $ \_ _ ns b -> (ns, b <> x, ())
 instance Buildable ByteString where
   put = put . byteString
 instance Buildable String where
@@ -164,7 +159,7 @@ instance Buildable Bool where
 
 -- | Emit indentation up to the current level.
 ind :: PP ()
-ind = PP $ \opts indentlvl ns _ b ->
+ind = PP $ \opts indentlvl ns b ->
   (ns, foldl' (<>) b (replicate indentlvl (indentStr opts)), ())
 
 -- | A space character.
