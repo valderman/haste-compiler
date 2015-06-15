@@ -48,6 +48,7 @@ topLevelInline (AST ast) =
   runTravM $ do
     unTrampoline ast
     >>= unevalLits
+    >>= inlineIntoEval
     >>= inlineAssigns
     >>= optimizeArrays
     >>= optimizeThunks
@@ -170,6 +171,16 @@ inlineAssigns ast = do
 removeUpdate :: (Var -> Bool) -> Stm -> Stm
 removeUpdate p stm@(Assign _ _ next) | isEvalUpd p stm = next
 removeUpdate _ stm                                     = stm
+
+-- | Turn the common pattern @var x = e ; x = E(x)@ into @var x = E(e)@.
+--   should run *after* 'unevalLits'.
+inlineIntoEval :: JSTrav ast => ast -> TravM ast
+inlineIntoEval ast = do
+    mapJS (const True) pure (pure . inline) ast
+  where
+    inline (Assign l@(NewVar _ v) r s@(Assign _ _ next))
+      | isEvalUpd (== v) s = Assign l (Eval r) next
+    inline stm             = stm
 
 isEvalUpd :: (Var -> Bool) -> Stm -> Bool
 isEvalUpd p (Assign (LhsExp _ (Var v)) (Eval (Var v')) _) = p v && v == v'
