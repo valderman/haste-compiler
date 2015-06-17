@@ -39,7 +39,8 @@ main = do
         let cfg = mkLinkerCfg dfs . setShowOutputable dfs $ mkConfig def
         res <- compileFold ghcconfig (compJS cfg) [] []
         case res of
-          Failure _ _      -> exitFailure
+          Failure _ _         -> do
+            exitFailure
           Success targets _ _ -> do
             when (performLink cfg) $ do
               mapM_ (uncurry $ linkAndMinify cfg) targets

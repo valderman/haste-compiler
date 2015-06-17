@@ -122,7 +122,7 @@ Executable hastec
         shellmate >= 0.1.5,
         either,
         directory,
-        ghc-simple >= 0.1.2.0
+        ghc-simple >= 0.1.2.1
     Main-Is:
         hastec.hs
     Other-Modules:
