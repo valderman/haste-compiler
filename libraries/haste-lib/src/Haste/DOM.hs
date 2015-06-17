@@ -39,61 +39,61 @@ attr = AttrName . toJSStr
 name =: val = attribute name (toJSStr val)
 
 -- | Create an element.
-newElem :: (Functor m, MonadIO m) => String -> m Elem
+newElem :: MonadIO m => String -> m Elem
 newElem = J.newElem . toJSStr
 
 -- | Create a text node.
-newTextElem :: (Functor m, MonadIO m) => String -> m Elem
+newTextElem :: MonadIO m => String -> m Elem
 newTextElem = J.newTextElem . toJSStr
 
 -- | Set a property of the given element.
-setProp :: (IsElem e, Functor m, MonadIO m) => e -> PropID -> String -> m ()
+setProp :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
 setProp e prop val = J.setProp e (toJSStr prop) (toJSStr val)
 
 -- | Set an attribute of the given element.
-setAttr :: (IsElem e, Functor m, MonadIO m) => e -> PropID -> String -> m ()
+setAttr :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
 setAttr e prop val = J.setAttr e (toJSStr prop) (toJSStr val)
 
 -- | Get a property of an element.
-getProp :: (IsElem e, Functor m, MonadIO m) => e -> PropID -> m String
-getProp e prop = fromJSStr `fmap` J.getProp e (toJSStr prop)
+getProp :: (IsElem e, MonadIO m) => e -> PropID -> m String
+getProp e prop = J.getProp e (toJSStr prop) >>= return . fromJSStr
 
 -- | Get an attribute of an element.
-getAttr :: (IsElem e, Functor m, MonadIO m) => e -> PropID -> m String
-getAttr e prop = fromJSStr `fmap` J.getAttr e (toJSStr prop)
+getAttr :: (IsElem e, MonadIO m) => e -> PropID -> m String
+getAttr e prop = J.getAttr e (toJSStr prop) >>= return . fromJSStr
 
 -- | Get a CSS style property of an element.
-getStyle :: (IsElem e, Functor m, MonadIO m) => e -> PropID -> m String
-getStyle e prop = fromJSStr `fmap` J.getStyle e (toJSStr prop)
+getStyle :: (IsElem e, MonadIO m) => e -> PropID -> m String
+getStyle e prop = J.getStyle e (toJSStr prop) >>= return . fromJSStr
 
 -- | Set a CSS style property on an element.
-setStyle :: (IsElem e, Functor m, MonadIO m) => e -> PropID -> String -> m ()
+setStyle :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
 setStyle e prop val = J.setStyle e (toJSStr prop) (toJSStr val)
 
 -- | Get an element by its HTML ID attribute.
-elemById :: (Functor m, MonadIO m) => ElemID -> m (Maybe Elem)
+elemById :: MonadIO m => ElemID -> m (Maybe Elem)
 elemById = J.elemById . toJSStr
 
 -- | Get all elements of the given class.
-elemsByClass :: (Functor m, MonadIO m) => ElemClass -> m [Elem]
+elemsByClass :: MonadIO m => ElemClass -> m [Elem]
 elemsByClass = J.elemsByClass . toJSStr
 
 -- | Get all children elements matching a query selector.
-elemsByQS :: (Functor m, MonadIO m) => Elem -> QuerySelector -> m [Elem]
+elemsByQS :: MonadIO m => Elem -> QuerySelector -> m [Elem]
 elemsByQS el = J.elemsByQS el . toJSStr
 
 -- | Perform an IO action on an element.
-withElem :: (Functor m, MonadIO m) => ElemID -> (Elem -> m a) -> m a
+withElem :: MonadIO m => ElemID -> (Elem -> m a) -> m a
 withElem = J.withElem . toJSStr
 
 -- | Perform an IO action over several elements. Throws an error if some of the
 --   elements are not found.
-withElems :: (Functor m, MonadIO m) => [ElemID] -> ([Elem] -> m a) -> m a
+withElems :: MonadIO m => [ElemID] -> ([Elem] -> m a) -> m a
 withElems = J.withElems . map toJSStr
 
 -- | Perform an IO action over the a list of elements matching a query
 --   selector.
-withElemsQS :: (IsElem e, Functor m, MonadIO m)
+withElemsQS :: (IsElem e, MonadIO m)
             => e
             -> QuerySelector
             -> ([Elem] -> m a)
@@ -101,7 +101,7 @@ withElemsQS :: (IsElem e, Functor m, MonadIO m)
 withElemsQS el = J.withElemsQS el . toJSStr
 
 -- | Map an IO computation over the list of elements matching a query selector.
-mapQS :: (IsElem e, Functor m, MonadIO m)
+mapQS :: (IsElem e, MonadIO m)
       => e
       -> QuerySelector
       -> (Elem -> m a)
@@ -109,7 +109,7 @@ mapQS :: (IsElem e, Functor m, MonadIO m)
 mapQS el = J.mapQS el . toJSStr
 
 -- | Like @mapQS@ but returns no value.
-mapQS_ :: (IsElem e, Functor m, MonadIO m)
+mapQS_ :: (IsElem e, MonadIO m)
        => e
        -> QuerySelector
        -> (Elem -> m a)
@@ -119,17 +119,17 @@ mapQS_ el = J.mapQS_ el . toJSStr
 -- | Get the name of the currently selected file from a file input element.
 --   Any directory information is stripped, and only the actual file name is
 --   returned, as the directory information is useless (and faked) anyway.
-getFileName :: (IsElem e, Functor m, MonadIO m) => e -> m String
-getFileName = fmap fromJSStr . J.getFileName
+getFileName :: (IsElem e, MonadIO m) => e -> m String
+getFileName e = J.getFileName e >>= return . fromJSStr
 
 -- | Add or remove a class from an element's class list.
-setClass :: (IsElem e, Functor m, MonadIO m) => e -> String -> Bool -> m ()
+setClass :: (IsElem e, MonadIO m) => e -> String -> Bool -> m ()
 setClass e sel = J.setClass e (toJSStr sel)
 
 -- | Toggle the existence of a class within an elements class list.
-toggleClass :: (IsElem e, Functor m, MonadIO m) => e -> String -> m ()
+toggleClass :: (IsElem e, MonadIO m) => e -> String -> m ()
 toggleClass e = J.toggleClass e . toJSStr
 
 -- | Does the given element have a particular class?
-hasClass :: (IsElem e, Functor m, MonadIO m) => e -> String -> m Bool
+hasClass :: (IsElem e, MonadIO m) => e -> String -> m Bool
 hasClass e = J.hasClass e . toJSStr
