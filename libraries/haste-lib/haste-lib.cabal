@@ -70,7 +70,7 @@ Library
         transformers,
         monads-tf,
         ghc-prim,
-        containers < 0.5.6,
+        containers > 0.5.6 && < 0.5.7,
         bytestring >= 0.9.2.1
     if flag(haste-cabal)
         Build-Depends:
