@@ -10,7 +10,7 @@ import Control.Applicative
 import Control.Monad
 import qualified Data.Map as M
 import qualified Data.Set as S
-import qualified Data.ByteString.Char8 as BS (cons)
+import qualified Data.ByteString.Char8 as BS
 
 -- | Turn tail recursion into loops.
 fixTailCalls :: Var -> Exp -> TravM Exp
@@ -243,7 +243,7 @@ zapJSStringConversions ast =
 -- | Optimize thunks in the following ways:
 --   1. A(thunk(return f), xs)
 --        => A(f, xs)
---   2. thunk(x@(JSLit _))
+--   2. thunk(x@(JSLit s)) | s is a JS function object or marked eager
 --        => x
 --   3. thunk(x@(Lit _))
 --        => x
@@ -262,13 +262,33 @@ optimizeThunks ast =
       | Just x' <- fromThunkEx x           = return x'
       | definitelyNotThunk x               = return x
     optEx ex@(Thunk _ _)
-      | Just l@(JSLit _) <- fromThunkEx ex = return l
+      | Just l@(JSLit s) <- fromThunkEx ex =
+        case maybeExtractStrict s of
+          Just s'           -> return $ JSLit s'
+          _ | isJSFunDecl s -> return l
+            | otherwise     -> return ex
     optEx ex@(Thunk _ _)
       | Just l@(Lit _) <- fromThunkEx ex   = return l
     optEx (Call arity calltype f as)
       | Just f' <- fromThunkEx f           = return $ Call arity calltype f' as
-    optEx ex =
-      return ex
+    optEx ex                               = return ex
+
+maybeExtractStrict :: BS.ByteString -> Maybe BS.ByteString
+maybeExtractStrict js
+  | "__strict(" `BS.isPrefixOf` js && ")" `BS.isSuffixOf` js =
+    Just $ BS.init $ BS.drop 9 js
+  | otherwise =
+    Nothing
+
+-- | Conservatively approximate whether a given JS literal is a function
+--   declaration or not.
+--
+--   TODO: proper parsing here.
+isJSFunDecl :: BS.ByteString -> Bool
+isJSFunDecl s
+  | "function(" `BS.isPrefixOf` s && "}" `BS.isSuffixOf` s  = True
+  | "(function(" `BS.isPrefixOf` s && ")" `BS.isSuffixOf` s = True
+  | otherwise                                               = False
 
 -- | Unpack the given expression if it's a thunk.
 fromThunk :: Exp -> Maybe Stm
@@ -727,7 +747,7 @@ safeToUnThunk :: Exp -> Bool
 safeToUnThunk ex =
   case ex of
     Lit _      -> True
-    JSLit _    -> True
+    JSLit l    -> isJSFunDecl l
     Fun _ _    -> True
     Thunk _ _  -> True
     Arr arr    -> all safeToUnThunk arr

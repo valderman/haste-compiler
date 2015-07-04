@@ -83,6 +83,16 @@ ffiio !f !as = __apply f (toPtr as) >>= fromAny
 --
 --   In other words, this function is as unsafe as the JS it calls on. You
 --   have been warned.
+--
+--   The imported JS is evaluated lazily, unless (a) it is a function object
+--   in which case evaluation order does not affect the semantics of the
+--   imported code, or if (b) the imported code is explicitly marked as strict:
+--
+--       someFunction = ffi "__strict(someJSFunction)"
+--
+--   Literals which depends on some third party initialization, the existence
+--   of a DOM tree or some other condition which is not fulfilled at load time
+--   should *not* be marked strict.
 ffi :: FFI a => JSString -> a
 ffi s = __ffi f []
   where
