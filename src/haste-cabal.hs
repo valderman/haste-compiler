@@ -16,7 +16,9 @@ cabal args = do
     _      -> exitSuccess
   where
     args' = [arg | arg <- args, arg /= "--install-global", arg /= "--global"]
-    hasteargs 
+    hasteargs
+      | "update" `elem` args =
+        []
       | "build" `elem` args =
         ["--with-ghc=" ++ hasteBinary]
       | otherwise =
@@ -35,13 +37,17 @@ cabal args = do
 main :: IO ()
 main = do
   as <- getArgs
-  as <- return $ if "--install-jsmods" `elem` as || not ("build" `elem` as)
-                   then libinstall : filter (/= "--install-jsmods") as
-                   else as
-  as <- return $ if "--unbooted" `elem` as
-                   then unbooted : filter (/= "--unbooted") as
-                   else as
-  cabal as
+  if "update" `elem` as
+    then do
+      cabal as
+    else do
+      as <- return $ if "--install-jsmods" `elem` as || not ("build" `elem` as)
+                       then libinstall : filter (/= "--install-jsmods") as
+                       else as
+      as <- return $ if "--unbooted" `elem` as
+                       then unbooted : filter (/= "--unbooted") as
+                       else as
+      cabal as
   where
     libinstall = "--ghc-option=--libinstall"
     unbooted   = "--ghc-option=--unbooted"
