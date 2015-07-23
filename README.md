@@ -228,16 +228,7 @@ You can build your own set of docs for haste-lib by running
 `cabal haddock` in the Haste base directory as with any other package.
 
 Or you could just look at
-[the online docs](http://hackage.haskell.org/package/haste-compiler).
-
-
-Reactive web EDSL
------------------
-
-Fursuit, the reactive EDSL previously shipped together with Haste, had several
-serious problems and has now been deprecated. Other, much better, solutions
-which work with Haste include [Yampa](http://hackage.haskell.org/package/Yampa),
-[elerea](http://hackage.haskell.org/package/elerea) and others.
+[the online docs](http://haste-lang.org/docs/).
 
 
 Libraries
@@ -249,14 +240,6 @@ of them will give you a compiler warning, then die at runtime with an angry
 error. Some libraries also depend on external C code - if you wish to use such
 a library, you will need to port the C bits to JavaScript yourself (perhaps
 using Emscripten) and link them into your program using `--with-js`.
-
-
-Why yet another Haskell to JavaScript compiler?
------------------------------------------------
-
-Existing implementations either produce huge code, require a fair amount of
-work to get going, or both. With Haste, the idea is to give you a drop-in
-replacement for GHC that generates relatively lean code.
 
 
 Known issues
