@@ -62,9 +62,8 @@ hasteOpts unbooted = [
            "Enable all optimizations, safe and unsafe. Equivalent to " ++
            "--opt-all --opt-unsafe-ints",
     Option "" ["opt-minify"]
-           (OptArg updateClosureCfg "PATH") $
-           "Minify JS output using Google Closure compiler. " ++
-           "Optionally, use the Closure compiler located at PATH.",
+           (NoArg updateClosureCfg) $
+           "Minify JS output using Google Closure compiler.",
     Option "" ["opt-minify-flag"]
            (ReqArg updateClosureFlags "FLAG") $
            "Pass a flag to Closure. " ++
@@ -176,14 +175,11 @@ optAllUnsafe = optAllSafe . unsafeMath . enableWholeProgramOpts
 
 -- | Enable all safe optimizations.
 optAllSafe :: Config -> Config
-optAllSafe = enableWholeProgramOpts . updateClosureCfg Nothing
+optAllSafe = enableWholeProgramOpts . updateClosureCfg
 
 -- | Set the path to the Closure compiler.jar to use.
-updateClosureCfg :: Maybe FilePath -> Config -> Config
-updateClosureCfg (Just fp) cfg =
-  cfg {useGoogleClosure = Just fp}
-updateClosureCfg _ cfg =
-  cfg {useGoogleClosure = Just closureCompiler}
+updateClosureCfg :: Config -> Config
+updateClosureCfg cfg = cfg {useGoogleClosure = Just closureCompiler}
 
 -- | Add flags for Google Closure to use
 updateClosureFlags :: String -> Config -> Config

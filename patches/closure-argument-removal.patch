@@ -1,0 +1,14 @@
+diff --git a/src/com/google/javascript/jscomp/RemoveUnusedVars.java b/src/com/google/javascript/jscomp/RemoveUnusedVars.java
+index 2fa7ebf..1591923 100644
+--- a/src/com/google/javascript/jscomp/RemoveUnusedVars.java
++++ b/src/com/google/javascript/jscomp/RemoveUnusedVars.java
+@@ -180,9 +180,6 @@ class RemoveUnusedVars
+ 
+     interpretAssigns();
+     removeUnreferencedVars();
+-    for (Scope fnScope : allFunctionScopes) {
+-      removeUnreferencedFunctionArgs(fnScope);
+-    }
+   }
+ 
+   /**

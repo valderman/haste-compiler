@@ -58,6 +58,11 @@ variable as such: `JS=other-js-interpreter ./runtests.sh`. Other JavaScript
 interpreters may or may not work. `runtests.sh` isn’t downloaded when installing
 from Hackage. You would have to download it from GitHub.
 
+To build the patched Closure compiler used when compiling using `--opt-minify`,
+get the Closure source, apply `patches/closure-argument-removal.patch` and
+build it as you normally would. This is not usually necessary however,
+as `haste-boot` fetches a pre-compiled Closure binary when run.
+
 Haste has been tested to work on Windows and OSX platforms, but is primarily
 developed on GNU/Linux. As such, running on a GNU/Linux platform will likely
 get you less bugs.
@@ -262,3 +267,11 @@ Known issues
   the problem.
 
 * Template Haskell is still broken.
+
+* Generated code is not compatible with the vanilla Closure compiler's
+  `ADVANCED_OPTIMIZATIONS`, as it is not guaranteed to preserve
+  `Function.length`.
+  `haste-boot` bundles a compatibility patched version of Closure which does
+  preserve this property. Invoking `hastec` with the `--opt-minify` option
+  will use this patched version to minify the generated code with advanced
+  optimizations.
