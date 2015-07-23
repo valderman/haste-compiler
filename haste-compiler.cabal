@@ -237,6 +237,12 @@ Executable haste-cat
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
+    if flag(static)
+        if os(windows)
+          GHC-Options: -static -optl-static
+        else
+          if os(linux)
+            GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
         shellmate >= 0.1.5,
