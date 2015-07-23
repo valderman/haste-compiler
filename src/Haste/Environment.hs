@@ -128,7 +128,7 @@ hasteInstHisBinary = hasteBinDir </> "haste-install-his"
 
 -- | JAR for Closure compiler.
 closureCompiler :: FilePath
-closureCompiler = hasteBinDir </> "compiler.jar"
+closureCompiler = hasteSysDir </> "compiler.jar"
 
 -- | File indicating whether Haste is booted or not, and for which Haste+GHC
 --   version combo.
