@@ -18,7 +18,9 @@ main = do
                  "_build directory\n  instead of rebuilding from scratch."
       exitFailure
 
-    when ("--debghcdeps" `elem` args) $ putStr "ghc"
+    when ("--debghcdeps" `elem` args) $ do
+      putStr "ghc"
+      exitSuccess
 
     res <- shell $ do
       srcdir <- pwd
