@@ -1,6 +1,5 @@
 -- | Paths to GHC binaries and directories.
 module Haste.GHCPaths where
-import Control.Shell
 import System.IO.Unsafe
 import System.Directory (findExecutable)
 import Config (cProjectVersion)
@@ -27,9 +26,3 @@ ghcPkgBinary = unsafePerformIO $ do
     _       -> error $  "No appropriate ghc-pkg executable in search path!\n"
                      ++ "Are you sure you have GHC " ++ cProjectVersion
                      ++ " installed?"
-
--- | GHC library directory.
-ghcLibDir :: FilePath
-ghcLibDir = unsafePerformIO $ do
-  Right out <- shell $ run ghcBinary ["--print-libdir"] ""
-  return $ init out

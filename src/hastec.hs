@@ -54,7 +54,7 @@ main = do
 
     mkGhcCfg fs args = defaultConfig {
         cfgGhcFlags = fs,
-        cfgGhcLibDir = Just ghcLibDir,
+        cfgGhcLibDir = Just hasteSysDir,
         cfgUseTargetsFromFlags = True,
         cfgUseGhcErrorLogger = True,
         cfgUpdateDynFlags = \dfs -> dfs {
@@ -167,7 +167,7 @@ runMode :: [String] -> RunMode
 runMode args
   | "--help" `elem` args                 = Run (Haste Booted)
   | "--info" `elem` args                 = DontRun ghcInfo
-  | "--print-libdir" `elem` args         = DontRun ghcLibDir
+  | "--print-libdir" `elem` args         = DontRun hasteSysDir
   | "--version" `elem` args              = DontRun $ showVersion hasteVersion
   | "--numeric-version" `elem` args      = DontRun $ showVersion ghcVersion
   | "--supported-extensions" `elem` args = DontRun exts
@@ -178,7 +178,7 @@ runMode args
   where
     exts = unlines supportedLanguagesAndExtensions
     ghcInfo = unsafePerformIO $ do
-      dfs <- runGhc (Just ghcLibDir) $ getSessionDynFlags
+      dfs <- runGhc (Just hasteSysDir) $ getSessionDynFlags
       return $ formatInfo $ compilerInfo dfs
     formatInfo = ('[' :) . tail . unlines . (++ ["]"]) . map ((',' :) . show)
 

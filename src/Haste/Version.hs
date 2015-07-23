@@ -5,11 +5,8 @@ module Haste.Version (
     showBootVersion, parseBootVersion,
     showVersion
   ) where
-import System.IO.Unsafe
-import Control.Shell (shell, run)
 import Data.Version
 import Config (cProjectVersion)
-import Haste.GHCPaths (ghcBinary)
 import Text.ParserCombinators.ReadP
 import Data.Maybe (listToMaybe)
 
@@ -29,11 +26,7 @@ ghcVersion :: Version
 ghcVersion =
     fst $ head $ filter (\(_,s) -> null s) parses
   where
-    parses = readP_to_S parseVersion . unsafePerformIO $ do
-      res <- shell $ run ghcBinary ["--numeric-version"] ""
-      case res of
-        Right ver -> return $ init ver -- remove trailing newline
-        _         -> return cProjectVersion
+    parses = readP_to_S parseVersion cProjectVersion
 
 -- | Haste + GHC version combo.
 bootVersion :: BootVer

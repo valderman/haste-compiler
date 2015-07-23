@@ -3,8 +3,8 @@
 module Haste.Environment (
     hasteSysDir, jsmodSysDir, hasteCabalSysDir, pkgSysDir, pkgSysLibDir, jsDir,
     hasteUserDir, jsmodUserDir, hasteCabalUserDir, pkgUserDir, pkgUserLibDir,
-    hostWordSize, ghcLibDir,
-    ghcBinary, ghcPkgBinary,
+    hostWordSize,
+    ghcPkgBinary, ghcBinary,
     hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteCabalBinary,
     hasteCopyPkgBinary, closureCompiler, portableHaste,
     needsReboot, bootFile
@@ -15,7 +15,7 @@ import Foreign.C.Types (CIntPtr)
 import Control.Shell hiding (hClose)
 import Paths_haste_compiler
 import System.IO
-import Haste.GHCPaths (ghcBinary, ghcPkgBinary, ghcLibDir)
+import Haste.GHCPaths (ghcPkgBinary, ghcBinary)
 import Haste.Version
 #if defined(PORTABLE)
 import System.Environment (getExecutablePath)
