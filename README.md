@@ -83,15 +83,13 @@ Building Haste this way yourself is not recommended however, as pre-booted
 [binary packages](http://haste-lang.org/#downloads) built this way are
 available for your convenience. Why jump through hoops if you don't have to?
 
-A portable installation needs a working GHC install of the same version
-that was used to build Haste available on your `$PATH`.
-
 Be aware that a portable installation is **statically linked**, and thus
 includes `libgmp`. This two things:
 
   * you will need the static `libgmp` libraries (`.a` files) to build, and
   * if you are distributing portable Haste binaries with proprietary
-    modifications, *you are violating the LGPL license of libgmp*!
+    modifications, *you are violating the LGPL license of libgmp* unless you
+    also provide your application in source or object format.
     If this is a problem for you, consider contributing your changes back to
     mainline Haste under the BSD3 license.
 
