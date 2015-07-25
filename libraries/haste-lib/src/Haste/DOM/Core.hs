@@ -6,10 +6,12 @@ module Haste.DOM.Core (
     set, with, attribute, children,
     click, focus, blur,
     document, documentBody,
-    removeChild, clearChildren,
+    deleteChild, clearChildren,
     setChildren, getChildren,
     getLastChild, getFirstChild, getChildBefore,
-    addChildBefore, addChild    
+    insertChildBefore, appendChild,
+    -- Deprecated
+    removeChild, addChild, addChildBefore
   ) where
 import Haste.Prim
 import Control.Monad.IO.Class
@@ -156,18 +158,29 @@ documentBody :: Elem
 documentBody = constant "document.body"
 
 -- | Append the first element as a child of the second element.
-addChild :: (IsElem parent, IsElem child, MonadIO m) => child -> parent -> m ()
-addChild child parent = liftIO $ jsAppendChild (elemOf child) (elemOf parent)
+appendChild :: (IsElem parent, IsElem child, MonadIO m) => parent -> child -> m ()
+appendChild parent child = liftIO $ jsAppendChild (elemOf child) (elemOf parent)
 
--- | Insert the first element as a child into the second, before the third.
+{-# DEPRECATED addChild "Use appendChild instead" #-}
+-- | DEPRECATED: use 'appendChild' instead!
+addChild :: (IsElem parent, IsElem child, MonadIO m) => child -> parent -> m ()
+addChild = flip appendChild
+
+-- | Insert an element into a container, before another element.
 --   For instance:
 -- @
---   addChildBefore childToAdd theContainer olderChild
+--   insertChildBefore theContainer olderChild childToAdd
 -- @
+insertChildBefore :: (IsElem parent, IsElem before, IsElem child, MonadIO m)
+               => parent -> before -> child -> m ()
+insertChildBefore parent oldChild child =
+  liftIO $ jsAddChildBefore (elemOf child) (elemOf parent) (elemOf oldChild)
+
+{-# DEPRECATED addChildBefore "Use insertChildBefore instead" #-}
+-- | DEPRECATED: use 'insertChildBefore' instead!
 addChildBefore :: (IsElem parent, IsElem child, MonadIO m)
                => child -> parent -> child -> m ()
-addChildBefore child parent oldChild =
-  liftIO $ jsAddChildBefore (elemOf child) (elemOf parent) (elemOf oldChild)
+addChildBefore child parent oldChild = insertChildBefore parent oldChild child
 
 -- | Get the sibling before the given one, if any.
 getChildBefore :: (IsElem e, MonadIO m) => e -> m (Maybe Elem)
@@ -197,7 +210,15 @@ setChildren e ch = liftIO $ jsSetChildren (elemOf e) (toPtr $ map elemOf ch)
 clearChildren :: (IsElem e, MonadIO m) => e -> m ()
 clearChildren = liftIO . jsClearChildren . elemOf
 
--- | Remove the first element from the second's children.
+-- | Remove the second element from the first's children.
+deleteChild :: (IsElem parent, IsElem child, MonadIO m)
+            => parent
+            -> child
+            -> m ()
+deleteChild parent child = liftIO $ jsKillChild (elemOf child) (elemOf parent)
+
+{-# DEPRECATED removeChild "Use deleteChild instead" #-}
+-- | DEPRECATED: use 'deleteChild' instead!
 removeChild :: (IsElem parent, IsElem child, MonadIO m)
             => child
             -> parent
