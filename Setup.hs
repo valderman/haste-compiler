@@ -46,7 +46,7 @@ portablePostBuild pkgdesc buildinfo = do
 
   -- Copy settings and tools, except on Windows where we need a working
   -- Haskell Platform anyway.
-#ifndef ming32_HOST_OS
+#ifndef mingw32_HOST_OS
   copyGhcSettings outdir
 #endif
 
