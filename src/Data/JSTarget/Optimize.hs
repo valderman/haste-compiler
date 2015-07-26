@@ -41,6 +41,7 @@ optimizeFun f ast =
     >>= ifReturnToTernary
     >>= smallStepInline
     >>= inlineJSPrimitives
+    >>= mapJS (const True) pure (pure . removeNonsenseAssigns)
 
 topLevelInline :: Stm -> Stm
 topLevelInline ast =
@@ -86,6 +87,12 @@ tryTernary self scrut retEx def [(m, alt)] =
           return Nothing
 tryTernary _ _ _ _ _ =
   Nothing
+
+-- | Remove bogus assignments of the form @literal = exp@, which may arise from
+--   other optimizations.
+removeNonsenseAssigns :: Stm -> Stm
+removeNonsenseAssigns (Assign (LhsExp _ (Lit _)) _ next) = next
+removeNonsenseAssigns stm                                = stm
 
 -- | How many times does an expression satisfying the given predicate occur in
 --   an AST (including jumps)?
@@ -163,8 +170,8 @@ inlineAssigns ast = do
             return keep
     inl _ stm = return stm
 
--- | Remove an occurrence of @ex = E(ex)@. Only call this for @ex@ which are
---   guaranteed to never be thunks.
+-- | Remove an occurrence of @ex = E(ex)@ or @lit = ex@.
+--   Only call this for @ex@ which are guaranteed to never be thunks.
 removeUpdate :: (Var -> Bool) -> Stm -> Stm
 removeUpdate p stm@(Assign _ _ next) | isEvalUpd p stm = next
 removeUpdate _ stm                                     = stm
