@@ -195,7 +195,6 @@ buildLibs cfg = do
           run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
-        run_ hasteCopyPkgBinary ["Cabal"] ""
         inDirectory "integer-gmp" $ do
           hasteCabal ("install" : "--solver" : "topdown" : ghcOpts)
 
