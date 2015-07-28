@@ -149,7 +149,7 @@ closureCompiler = hasteSysDir </> "compiler.jar"
 -- | File indicating whether Haste is booted or not, and for which Haste+GHC
 --   version combo.
 bootFile :: FilePath
-bootFile = hasteSysDir </> "booted"
+bootFile = hasteUserDir </> "booted"
 
 -- | Returns which parts of Haste need rebooting. A change in the boot file
 --   format triggers a full reboot.

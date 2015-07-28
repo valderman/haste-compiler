@@ -45,17 +45,19 @@ data Cfg = Cfg {
     useLocalLibs          :: Bool,
     tracePrimops          :: Bool,
     forceBoot             :: Bool,
-    populateSetupExeCache :: Bool
+    populateSetupExeCache :: Bool,
+    initialPortableBoot   :: Bool
   }
 
 defCfg :: Cfg
 defCfg = Cfg {
-    getLibs = True,
-    getClosure = True,
-    useLocalLibs = False,
-    tracePrimops = False,
-    forceBoot = False,
-    populateSetupExeCache = True
+    getLibs               = True,
+    getClosure            = True,
+    useLocalLibs          = False,
+    tracePrimops          = False,
+    forceBoot             = False,
+    populateSetupExeCache = True,
+    initialPortableBoot   = False
   }
 
 devBoot :: Cfg -> Cfg
@@ -66,42 +68,67 @@ devBoot cfg = cfg {
     populateSetupExeCache = False
   }
 
+defPortableCfg :: Cfg
+defPortableCfg = Cfg {
+    getLibs               = True,
+    useLocalLibs          = False,
+    forceBoot             = False,
+    getClosure            = False,
+    populateSetupExeCache = True,
+    tracePrimops          = False,
+    initialPortableBoot   = False
+  }
+
+setInitialPortableBoot :: Cfg -> Cfg
+setInitialPortableBoot cfg = cfg {
+    getLibs = True,
+    useLocalLibs = True,
+    forceBoot = True,
+    getClosure = True
+  }
+
 specs :: [OptDescr (Cfg -> Cfg)]
 specs = [
-    Option "" ["dev"]
+#ifndef PORTABLE
+      Option "" ["dev"]
            (NoArg devBoot) $
            "Boot Haste for development. Implies --force " ++
-           "--local --no-closure --no-populate-setup-exe-cache",
-    Option "" ["force"]
+           "--local --no-closure --no-populate-setup-exe-cache"
+    , Option "" ["force"]
+#else
+      Option "" ["force"]
+#endif
            (NoArg $ \cfg -> cfg {forceBoot = True}) $
-           "Re-boot Haste even if already properly booted.",
-    Option "" ["local"]
+           "Re-boot Haste even if already properly booted."
+#ifndef PORTABLE
+    , Option "" ["local"]
            (NoArg $ \cfg -> cfg {useLocalLibs = True}) $
            "Use libraries from source repository rather than " ++
            "downloading a matching set from the Internet. " ++
            "This is nearly always necessary when installing " ++
            "Haste from Git rather than from Hackage. " ++
            "When using --local, your current working directory " ++
-           "must be the root of the Haste source tree.",
-    Option "" ["no-closure"]
+           "must be the root of the Haste source tree."
+    , Option "" ["no-closure"]
            (NoArg $ \cfg -> cfg {getClosure = False}) $
            "Don't download Closure compiler. You won't be able " ++
            "to use --opt-minify, unless you manually " ++
-           "give hastec the path to compiler.jar.",
-    Option "" ["no-libs"]
+           "give hastec the path to compiler.jar."
+    , Option "" ["no-libs"]
            (NoArg $ \cfg -> cfg {getLibs = False}) $
            "Don't install any libraries. This is probably not " ++
-           "what you want.",
-    Option "" ["no-populate-setup-exe-cache"]
+           "what you want."
+    , Option "" ["no-populate-setup-exe-cache"]
            (NoArg $ \cfg -> cfg {populateSetupExeCache = False}) $
            "Don't populate Cabal's setup-exe-cache. Speeds up boot, " ++
            "but vill fail spectacularly unless your setup-exe-cache " ++
-           "is already populated.",
-    Option "" ["trace-primops"]
+           "is already populated."
+    , Option "" ["trace-primops"]
            (NoArg $ \cfg -> cfg {tracePrimops = True}) $
            "Build standard libs for tracing of primitive " ++
            "operations. Only use if you're debugging the code " ++
            "generator."
+#endif
   ]
 
 hdr :: String
@@ -112,7 +139,13 @@ main = do
   args <- getArgs
   case parseArgs specs hdr args of
     Right (mkConfig, _) -> do
+#ifdef PORTABLE
+      let cfg = if "--initial" `elem` args
+                  then mkConfig $ setInitialPortableBoot $ defPortableCfg
+                  else mkConfig defPortableCfg
+#else
       let cfg = mkConfig defCfg
+#endif
       when (needsReboot || forceBoot cfg) $ do
         res <- shell $ if useLocalLibs cfg
                          then bootHaste cfg "."
@@ -128,25 +161,31 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
   removeBootFile <- isFile bootFile
   when removeBootFile $ rm bootFile
   when (getLibs cfg) $ do
+    when (not $ useLocalLibs cfg) $ do
+      fetchLibs tmpdir
     when (populateSetupExeCache cfg) $ do
       void $ run "cabal" ["update"] ""
       void $ run "cabal" ["install", "-j", "populate-setup-exe-cache"] ""
       inDirectory "popcache" . void $ run "cabal" ["install", "-j"] ""
       void $ run "ghc-pkg" ["unregister", "haste-populate-configure"] ""
       void $ run "ghc-pkg" ["unregister", "populate-setup-exe-cache"] ""
-    when (not $ useLocalLibs cfg) $ do
-      fetchLibs tmpdir
     mapM_ clearDir [hasteCabalUserDir, jsmodUserDir, pkgUserDir,
                     hasteCabalSysDir, jsmodSysDir, pkgSysDir]
-    buildLibs cfg
-    when (portableHaste) $ do
+
+    when (not portableHaste || initialPortableBoot cfg) $ do
+      buildLibs cfg
+
+#ifdef PORTABLE
+    when (initialPortableBoot cfg) $ do
       mapM_ relocate ["array", "bytestring", "containers", "data-default",
                       "data-default-class", "data-default-instances-base",
                       "data-default-instances-containers",
                       "data-default-instances-dlist",
                       "data-default-instances-old-locale",
                       "deepseq", "dlist", "haste-lib", "integer-gmp",
-                      "monads-tf", "old-locale", "transformers"]
+                      "monads-tf", "old-locale", "transformers", "time"]
+#endif
+
   when (getClosure cfg) $ do
     installClosure
   file bootFile (showBootVersion bootVersion)

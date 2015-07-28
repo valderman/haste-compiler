@@ -71,18 +71,21 @@ buildPortable = do
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-boot.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-cabal.exe"] ""
+        run_ "strip" ["-s", "haste-compiler\\bin\\haste-boot.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\hastec.exe"] ""
       "linux" -> do
         -- linux
         run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
         run_ "strip" ["-s", "haste-compiler/bin/haste-cabal"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
       _ -> do
         -- darwin
         run_ "strip" ["haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["haste-compiler/bin/haste-pkg"] ""
         run_ "strip" ["haste-compiler/bin/haste-cabal"] ""
+        run_ "strip" ["haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["haste-compiler/bin/hastec"] ""
 
     -- Get versions
@@ -103,12 +106,10 @@ bootPortable = do
         -- windows
         rm "haste-compiler\\bin\\haste-copy-pkg.exe"
         rm "haste-compiler\\bin\\haste-install-his.exe"
-        rm "haste-compiler\\bin\\haste-boot.exe"
       _ -> do
         -- linux/darwin
         rm "haste-compiler/bin/haste-copy-pkg"
         rm "haste-compiler/bin/haste-install-his"
-        rm "haste-compiler/bin/haste-boot"
     forEachFile "haste-compiler" $ \f -> do
       when ((f `hasExt` ".o") || (f `hasExt` ".a")) $ rm f
   where
