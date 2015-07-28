@@ -173,7 +173,7 @@ runMode args
   | "--supported-extensions" `elem` args = DontRun exts
   | "--supported-languages" `elem` args  = DontRun exts
   | "--unbooted" `elem` args             = Run (chooseCompilerFor args Unbooted)
-  | needsReboot                          = DontRun rebootMsg
+  | hasteNeedsReboot                     = DontRun rebootMsg
   | otherwise                            = Run (chooseCompilerFor args Booted)
   where
     exts = unlines supportedLanguagesAndExtensions

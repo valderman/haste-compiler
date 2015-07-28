@@ -4,6 +4,7 @@ import System.Environment
 import System.Exit
 import Haste.Environment
 import Control.Shell
+import Control.Monad (when)
 import Data.List
 
 type Match = (String -> Bool, [String] -> [String])
@@ -37,6 +38,11 @@ cabal args = do
 main :: IO ()
 main = do
   as <- getArgs
+  when (hasteCabalNeedsReboot && not ("--unbooted" `elem` as)) $ do
+    putStrLn "WARNING: haste-cabal has not been properly booted."
+    putStrLn "If you experience problems installing packages, or simply want to"
+    putStrLn "get rid of this message, please run 'haste-boot'."
+
   if "update" `elem` as
     then do
       cabal as

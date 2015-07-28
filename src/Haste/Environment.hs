@@ -8,7 +8,7 @@ module Haste.Environment (
     ghcPkgBinary, ghcBinary,
     hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteCabalBinary,
     hasteCopyPkgBinary, closureCompiler, portableHaste,
-    needsReboot, bootFile
+    hasteNeedsReboot, hasteCabalNeedsReboot, bootFile
   ) where
 import System.IO.Unsafe
 import Data.Bits
@@ -153,8 +153,16 @@ bootFile = hasteUserDir </> "booted"
 
 -- | Returns which parts of Haste need rebooting. A change in the boot file
 --   format triggers a full reboot.
-needsReboot :: Bool
-needsReboot = unsafePerformIO $ do
+hasteNeedsReboot :: Bool
+#ifdef PORTABLE
+hasteNeedsReboot = False
+#else
+hasteNeedsReboot = hasteCabalNeedsReboot
+#endif
+
+-- | Does haste-cabal possibly needs rebooting?
+hasteCabalNeedsReboot :: Bool
+hasteCabalNeedsReboot = unsafePerformIO $ do
   exists <- shell $ isFile bootFile
   case exists of
     Right True -> do

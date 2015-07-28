@@ -146,7 +146,7 @@ main = do
   case parseArgs specs hdr args of
     Right (mkConfig, _) -> do
       let cfg = mkConfig defCfg
-      when (needsReboot || forceBoot cfg) $ do
+      when (hasteNeedsReboot || hasteCabalNeedsReboot || forceBoot cfg) $ do
         res <- shell $ if useLocalLibs cfg
                          then bootHaste cfg "."
                          else withTempDirectory "haste" $ bootHaste cfg
