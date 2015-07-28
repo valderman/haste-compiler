@@ -169,10 +169,10 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
       inDirectory "popcache" . void $ run "cabal" ["install", "-j"] ""
       void $ run "ghc-pkg" ["unregister", "haste-populate-configure"] ""
       void $ run "ghc-pkg" ["unregister", "populate-setup-exe-cache"] ""
-    mapM_ clearDir [hasteCabalUserDir, jsmodUserDir, pkgUserDir,
-                    hasteCabalSysDir, jsmodSysDir, pkgSysDir]
 
     when (not portableHaste || initialPortableBoot cfg) $ do
+      mapM_ clearDir [hasteCabalUserDir, jsmodUserDir, pkgUserDir,
+                      hasteCabalSysDir, jsmodSysDir, pkgSysDir]
       buildLibs cfg
 
     when (initialPortableBoot cfg) $ do
