@@ -50,6 +50,17 @@ data Cfg = Cfg {
   }
 
 defCfg :: Cfg
+#ifdef PORTABLE
+defCfg = Cfg {
+    getLibs               = True,
+    getClosure            = False,
+    useLocalLibs          = False,
+    tracePrimops          = False,
+    forceBoot             = False,
+    populateSetupExeCache = True,
+    initialPortableBoot   = False
+  }
+#else
 defCfg = Cfg {
     getLibs               = True,
     getClosure            = True,
@@ -59,6 +70,7 @@ defCfg = Cfg {
     populateSetupExeCache = True,
     initialPortableBoot   = False
   }
+#endif
 
 devBoot :: Cfg -> Cfg
 devBoot cfg = cfg {
@@ -68,23 +80,13 @@ devBoot cfg = cfg {
     populateSetupExeCache = False
   }
 
-defPortableCfg :: Cfg
-defPortableCfg = Cfg {
-    getLibs               = True,
-    useLocalLibs          = False,
-    forceBoot             = False,
-    getClosure            = False,
-    populateSetupExeCache = True,
-    tracePrimops          = False,
-    initialPortableBoot   = False
-  }
-
 setInitialPortableBoot :: Cfg -> Cfg
 setInitialPortableBoot cfg = cfg {
-    getLibs = True,
-    useLocalLibs = True,
-    forceBoot = True,
-    getClosure = True
+    getLibs             = True,
+    useLocalLibs        = True,
+    forceBoot           = True,
+    getClosure          = True,
+    initialPortableBoot = True
   }
 
 specs :: [OptDescr (Cfg -> Cfg)]
@@ -100,6 +102,10 @@ specs = [
 #endif
            (NoArg $ \cfg -> cfg {forceBoot = True}) $
            "Re-boot Haste even if already properly booted."
+    , Option "" ["initial"]
+           (NoArg setInitialPortableBoot) $
+           "Prepare boot files for binary distribution. Should only ever " ++
+           "be called by the release build scripts, never by users."
 #ifndef PORTABLE
     , Option "" ["local"]
            (NoArg $ \cfg -> cfg {useLocalLibs = True}) $
@@ -139,13 +145,7 @@ main = do
   args <- getArgs
   case parseArgs specs hdr args of
     Right (mkConfig, _) -> do
-#ifdef PORTABLE
-      let cfg = if "--initial" `elem` args
-                  then mkConfig $ setInitialPortableBoot $ defPortableCfg
-                  else mkConfig defPortableCfg
-#else
       let cfg = mkConfig defCfg
-#endif
       when (needsReboot || forceBoot cfg) $ do
         res <- shell $ if useLocalLibs cfg
                          then bootHaste cfg "."
@@ -175,7 +175,6 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
     when (not portableHaste || initialPortableBoot cfg) $ do
       buildLibs cfg
 
-#ifdef PORTABLE
     when (initialPortableBoot cfg) $ do
       mapM_ relocate ["array", "bytestring", "containers", "data-default",
                       "data-default-class", "data-default-instances-base",
@@ -184,7 +183,6 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
                       "data-default-instances-old-locale",
                       "deepseq", "dlist", "haste-lib", "integer-gmp",
                       "monads-tf", "old-locale", "transformers", "time"]
-#endif
 
   when (getClosure cfg) $ do
     installClosure
