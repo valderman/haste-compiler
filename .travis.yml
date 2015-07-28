@@ -7,4 +7,4 @@ install:
   - cabal install -j --only-dependencies
 
 script:
-  - cabal install -j -f portable && haste-compiler/bin/haste-boot --force --local
+  - cabal install -j -f portable && haste-compiler/bin/haste-boot --force --initial
