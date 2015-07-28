@@ -131,6 +131,8 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
     when (populateSetupExeCache cfg) $ do
       void $ run "cabal" ["update"] ""
       void $ run "cabal" ["install", "-j", "populate-setup-exe-cache"] ""
+      inDirectory "popcache" . void $ run "cabal" ["install", "-j"] ""
+      void $ run "ghc-pkg" ["unregister", "haste-populate-configure"] ""
       void $ run "ghc-pkg" ["unregister", "populate-setup-exe-cache"] ""
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
@@ -224,6 +226,7 @@ buildLibs cfg = do
       -- Install time
       inDirectory "time" $ do
         run_ "autoreconf" [] ""
+        run_ "cabal" ["configure"] ""
         hasteCabal ("install" : ghcOpts)
 
       -- Export monads-tf; it seems to be hidden by default
