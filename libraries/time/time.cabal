@@ -1,0 +1,155 @@
+name:           time
+version:        1.5.0.1
+stability:      stable
+license:        BSD3
+license-file:   LICENSE
+author:         Ashley Yakeley
+maintainer:     <ashley@semantic.org>
+homepage:       https://github.com/haskell/time
+bug-reports:    https://github.com/haskell/time/issues
+synopsis:       A time library
+description:    A time library
+category:       System
+build-type:     Configure
+cabal-version:  >=1.14
+x-follows-version-policy:
+
+extra-source-files:
+    aclocal.m4
+    configure.ac
+    configure
+    lib/include/HsConfigure.h
+    lib/include/HsTime.h
+    lib/include/HsTimeConfig.h.in
+    test/Test/*.c
+    test/Test/*.h
+extra-tmp-files:
+    config.log
+    config.status
+    autom4te.cache
+    lib/include/HsTimeConfig.h
+
+source-repository head
+  type:     git
+  location: https://github.com/haskell/time
+
+flag haste-cabal
+    default: False
+    description: Are we building for Haste?
+
+library
+    hs-source-dirs: lib
+    build-depends:
+        base >= 4.4 && < 5,
+        deepseq >= 1.1
+    ghc-options: -Wall
+    default-language: Haskell2010
+    if impl(ghc)
+        default-extensions:
+            Rank2Types
+            DeriveDataTypeable
+            StandaloneDeriving
+        cpp-options: -DLANGUAGE_Rank2Types -DLANGUAGE_DeriveDataTypeable -DLANGUAGE_StandaloneDeriving
+    else
+        if impl(hugs)
+            default-extensions: Rank2Types
+            cpp-options: -DLANGUAGE_Rank2Types
+    if os(windows)
+        build-depends: Win32
+    if flag(haste-cabal)
+        build-depends: haste-lib
+    exposed-modules:
+        Data.Time.Calendar,
+        Data.Time.Calendar.MonthDay,
+        Data.Time.Calendar.OrdinalDate,
+        Data.Time.Calendar.WeekDate,
+        Data.Time.Calendar.Julian,
+        Data.Time.Calendar.Easter,
+        Data.Time.Clock,
+        Data.Time.Clock.POSIX,
+        Data.Time.Clock.TAI,
+        Data.Time.LocalTime,
+        Data.Time.Format,
+        Data.Time
+    default-extensions:    CPP
+    c-sources: lib/cbits/HsTime.c
+    other-modules:
+        Data.Time.Calendar.Private,
+        Data.Time.Calendar.Days,
+        Data.Time.Calendar.Gregorian,
+        Data.Time.Calendar.JulianYearDay,
+        Data.Time.Clock.Scale,
+        Data.Time.Clock.UTC,
+        Data.Time.Clock.CTimeval,
+        Data.Time.Clock.UTCDiff,
+        Data.Time.LocalTime.TimeZone,
+        Data.Time.LocalTime.TimeOfDay,
+        Data.Time.LocalTime.LocalTime,
+        Data.Time.Format.Parse
+        Data.Time.Format.Locale
+    include-dirs: lib/include
+    if os(windows)
+        install-includes:
+            HsTime.h
+    else
+        install-includes:
+            HsTime.h
+            HsTimeConfig.h
+
+test-suite ShowDefaultTZAbbreviations
+    hs-source-dirs: test
+    type: exitcode-stdio-1.0
+    build-depends:
+        base,
+        time == 1.5.0.1
+    main-is: ShowDefaultTZAbbreviations.hs
+
+test-suite tests
+    hs-source-dirs: test
+    type: exitcode-stdio-1.0
+    default-language: Haskell2010
+    default-extensions:
+        Rank2Types
+        CPP
+        DeriveDataTypeable
+        StandaloneDeriving
+        ExistentialQuantification
+        MultiParamTypeClasses
+        FlexibleInstances
+        UndecidableInstances
+        ScopedTypeVariables
+    ghc-options: -Wall
+    c-sources: test/Test/TestFormatStuff.c
+    build-depends:
+        base,
+        deepseq,
+        time == 1.5.0.1,
+        QuickCheck >= 2.5.1,
+        test-framework >= 0.8,
+        test-framework-quickcheck2 >= 0.3,
+        unix
+    main-is: Test.hs
+    other-modules:
+        Test.Tests
+        Test.TestTime
+        Test.TestTimeRef
+        Test.TestParseDAT
+        Test.TAI_UTC_DAT
+        Test.TestParseDAT_Ref
+        Test.TestParseTime
+        Test.TestMonthDay
+        Test.TestMonthDayRef
+        Test.TestFormat
+        Test.TestEaster
+        Test.TestEasterRef
+        Test.TestCalendars
+        Test.TestCalendarsRef
+        Test.LongWeekYears
+        Test.LongWeekYearsRef
+        Test.ConvertBack
+        Test.ClipDates
+        Test.ClipDatesRef
+        Test.AddDays
+        Test.AddDaysRef
+        Test.TestUtil
+
