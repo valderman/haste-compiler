@@ -91,8 +91,9 @@ tryTernary _ _ _ _ _ =
 -- | Remove bogus assignments of the form @literal = exp@, which may arise from
 --   other optimizations.
 removeNonsenseAssigns :: Stm -> Stm
-removeNonsenseAssigns (Assign (LhsExp _ (Lit _)) _ next) = next
-removeNonsenseAssigns stm                                = stm
+removeNonsenseAssigns (Assign (LhsExp _ (Lit _)) _ next)    = next
+removeNonsenseAssigns (Assign (LhsExp _ a) b next) | a == b = next
+removeNonsenseAssigns stm                                   = stm
 
 -- | How many times does an expression satisfying the given predicate occur in
 --   an AST (including jumps)?
