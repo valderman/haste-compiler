@@ -18,9 +18,9 @@ fi
 runTest() {
     module=$1
     quiet=$2
-    haste_stderr_file=`mktemp`
-    haste_opt_stderr_file=`mktemp`
-    ghc_stderr_file=`mktemp`
+    haste_stderr_file=`mktemp /tmp/runtest-hastec.XXXXXX`
+    haste_opt_stderr_file=`mktemp /tmp/runtest-hastec.XXXXXX`
+    ghc_stderr_file=`mktemp /tmp/runtest-hastec.XXXXXX`
     echo "Running test $module..."
 
     ghc_output=`cabal exec runghc -- -w -DTEST_MODULE=$module TestDriver.hs 2> $ghc_stderr_file`
