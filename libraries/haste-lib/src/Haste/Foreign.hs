@@ -29,7 +29,7 @@ foreign import ccall __app4  :: JSFun
 foreign import ccall __app5  :: JSFun
                              -> JSAny -> JSAny -> JSAny -> JSAny -> JSAny
                              -> IO JSAny
-foreign import ccall __createJSFunc :: JSAny -> IO JSAny
+foreign import ccall __createJSFunc :: Int -> JSAny -> IO JSAny
 #else
 __eval :: JSString -> JSFun
 __eval _ = undefined
@@ -47,7 +47,7 @@ __app4  :: JSFun -> JSAny -> JSAny -> JSAny -> JSAny -> IO JSAny
 __app4 _ _ _ _ _ = return undefined
 __app5  :: JSFun -> JSAny -> JSAny -> JSAny -> JSAny -> JSAny -> IO JSAny
 __app5 _ _ _ _ _ _ = return undefined
-__createJSFunc :: JSAny -> IO JSAny
+__createJSFunc :: Int -> JSAny -> IO JSAny
 __createJSFunc _ = return undefined
 #endif
 
@@ -131,21 +131,26 @@ type family JS a where
 
 class JSFunc a where
   mkJSFunc :: a -> JS a
+  arity    :: a -> Int
 
 instance (ToAny a, JS a ~ JSAny) => JSFunc a where
   mkJSFunc = toAny
+  arity _  = 0
 
 instance ToAny a => JSFunc (IO a) where
   mkJSFunc = fmap toAny
+  arity _  = 1
 
 instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
   mkJSFunc f = mkJSFunc . f . unsafePerformIO . fromAny
+  arity f    = 1 + arity (f undefined)
 
 instance (FromAny a, JSFunc b) => ToAny (a -> b) where
-  toAny = unsafePerformIO . __createJSFunc . toAny . toOpaque . mkJSFunc
+  toAny f =
+    unsafePerformIO . __createJSFunc (arity f) . toAny . toOpaque $ mkJSFunc f
 
 instance ToAny a => ToAny (IO a) where
-  toAny = unsafePerformIO . __createJSFunc . toAny . toOpaque . mkJSFunc
+  toAny = unsafePerformIO . __createJSFunc 0 . toAny . toOpaque . mkJSFunc
 
 #if __GLASGOW_HASKELL__ < 710
 instance FFI a => FromAny a where
