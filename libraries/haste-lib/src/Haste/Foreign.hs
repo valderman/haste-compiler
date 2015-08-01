@@ -12,7 +12,6 @@ module Haste.Foreign (
   ) where
 import Haste.Prim
 import Haste.Any
-import System.IO.Unsafe
 
 -- | A JS function.
 type JSFun = JSAny
@@ -101,7 +100,7 @@ ffi s = __ffi f []
 
 -- | Create a Haskell value from a constant JS expression.
 constant :: FromAny a => JSString -> a
-constant = unsafePerformIO . fromAny . __eval
+constant = veryUnsafePerformIO . fromAny . __eval
 
 -- Don't build intermediate list for functions of <= 5 arguments.
 {-# RULES
@@ -142,15 +141,15 @@ instance ToAny a => JSFunc (IO a) where
   arity _  = 1
 
 instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
-  mkJSFunc f = mkJSFunc . f . unsafePerformIO . fromAny
+  mkJSFunc f = mkJSFunc . f . veryUnsafePerformIO . fromAny
   arity f    = 1 + arity (f undefined)
 
 instance (FromAny a, JSFunc b) => ToAny (a -> b) where
   toAny f =
-    unsafePerformIO . __createJSFunc (arity f) . toAny . toOpaque $ mkJSFunc f
+    veryUnsafePerformIO . __createJSFunc (arity f) . toAny . toOpaque $ mkJSFunc f
 
 instance ToAny a => ToAny (IO a) where
-  toAny = unsafePerformIO . __createJSFunc 0 . toAny . toOpaque . mkJSFunc
+  toAny = veryUnsafePerformIO . __createJSFunc 0 . toAny . toOpaque . mkJSFunc
 
 #if __GLASGOW_HASKELL__ < 710
 instance FFI a => FromAny a where

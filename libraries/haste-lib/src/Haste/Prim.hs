@@ -1,8 +1,8 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
-    TypeSynonymInstances, FlexibleInstances, CPP #-}
+    TypeSynonymInstances, FlexibleInstances, CPP, UnboxedTuples #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Haste.Prim (JSString (..), URL, toJSStr, fromJSStr, catJSStr, JSAny (..),
-                   Ptr, toPtr, fromPtr) where
+                   Ptr, toPtr, fromPtr, veryUnsafePerformIO) where
 import Foreign.Ptr
 import Data.String
 #ifdef __HASTE__
@@ -13,6 +13,7 @@ import qualified GHC.HastePrim as HP
 import Data.List (intercalate)
 #endif
 import GHC.Prim
+import GHC.Types (IO (..))
 
 type URL = String
 
@@ -21,6 +22,14 @@ newtype JSAny = JSAny (Ptr Any)
 
 instance Eq JSAny where
   (==) = __eq
+
+{-# INLINE veryUnsafePerformIO #-}
+-- | Strict, inlineable, dupable version of 'unsafePerformIO'. Only use if you
+--   are extremely sure this is not a problem. So please don't.
+veryUnsafePerformIO :: IO a -> a
+veryUnsafePerformIO (IO act) =
+  case act realWorld# of
+    (# _, x #) -> x
 
 -- | Concatenate a series of JSStrings using the specified separator.
 catJSStr :: JSString -> [JSString] -> JSString

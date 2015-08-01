@@ -22,7 +22,6 @@ import Data.Int
 import Data.Word
 import Unsafe.Coerce
 import Control.Applicative
-import System.IO.Unsafe -- for toObject
 
 #ifdef __HASTE__
 foreign import ccall __lst2arr :: Ptr [a] -> JSAny
@@ -71,7 +70,7 @@ nullValue = jsNull
 
 -- | Build a new JS object from a list of key:value pairs.
 toObject :: [(JSString, JSAny)] -> JSAny
-toObject ps = unsafePerformIO $ do
+toObject ps = veryUnsafePerformIO $ do
   o <- __new
   mapM_ (uncurry $ __set o) ps
   return o
