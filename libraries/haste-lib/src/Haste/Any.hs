@@ -220,7 +220,7 @@ instance FromAny Word32 where
 instance FromAny Float where
   fromAny x = return (unsafeCoerce (jsNumber x))
 instance FromAny Double where
-  fromAny x = return (unsafeCoerce x) -- return (jsNumber x)
+  fromAny x = return (jsNumber x)
 instance FromAny Char where
   fromAny x = return (unsafeCoerce (jsNumber x))
   listFromAny x = fromJSStr <$> fromAny x
