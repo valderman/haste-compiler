@@ -10,23 +10,13 @@ bug-reports:    https://github.com/haskell/time/issues
 synopsis:       A time library
 description:    A time library
 category:       System
-build-type:     Configure
+build-type:     Simple
 cabal-version:  >=1.14
 x-follows-version-policy:
 
 extra-source-files:
-    aclocal.m4
-    configure.ac
-    configure
     lib/include/HsConfigure.h
     lib/include/HsTime.h
-    lib/include/HsTimeConfig.h.in
-    test/Test/*.c
-    test/Test/*.h
-extra-tmp-files:
-    config.log
-    config.status
-    autom4te.cache
     lib/include/HsTimeConfig.h
 
 source-repository head
@@ -95,61 +85,3 @@ library
         install-includes:
             HsTime.h
             HsTimeConfig.h
-
-test-suite ShowDefaultTZAbbreviations
-    hs-source-dirs: test
-    type: exitcode-stdio-1.0
-    build-depends:
-        base,
-        time == 1.5.0.1
-    main-is: ShowDefaultTZAbbreviations.hs
-
-test-suite tests
-    hs-source-dirs: test
-    type: exitcode-stdio-1.0
-    default-language: Haskell2010
-    default-extensions:
-        Rank2Types
-        CPP
-        DeriveDataTypeable
-        StandaloneDeriving
-        ExistentialQuantification
-        MultiParamTypeClasses
-        FlexibleInstances
-        UndecidableInstances
-        ScopedTypeVariables
-    ghc-options: -Wall
-    c-sources: test/Test/TestFormatStuff.c
-    build-depends:
-        base,
-        deepseq,
-        time == 1.5.0.1,
-        QuickCheck >= 2.5.1,
-        test-framework >= 0.8,
-        test-framework-quickcheck2 >= 0.3,
-        unix
-    main-is: Test.hs
-    other-modules:
-        Test.Tests
-        Test.TestTime
-        Test.TestTimeRef
-        Test.TestParseDAT
-        Test.TAI_UTC_DAT
-        Test.TestParseDAT_Ref
-        Test.TestParseTime
-        Test.TestMonthDay
-        Test.TestMonthDayRef
-        Test.TestFormat
-        Test.TestEaster
-        Test.TestEasterRef
-        Test.TestCalendars
-        Test.TestCalendarsRef
-        Test.LongWeekYears
-        Test.LongWeekYearsRef
-        Test.ConvertBack
-        Test.ClipDates
-        Test.ClipDatesRef
-        Test.AddDays
-        Test.AddDaysRef
-        Test.TestUtil
-

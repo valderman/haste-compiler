@@ -1,86 +1,87 @@
+/* lib/include/HsTimeConfig.h.  Generated from HsTimeConfig.h.in by configure.  */
 /* lib/include/HsTimeConfig.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the declaration of `altzone', and to 0 if you
    don't. */
-#undef HAVE_DECL_ALTZONE
+#define HAVE_DECL_ALTZONE 0
 
 /* Define to 1 if you have the declaration of `tzname', and to 0 if you don't.
    */
-#undef HAVE_DECL_TZNAME
+/* #undef HAVE_DECL_TZNAME */
 
 /* Define to 1 if you have the `gmtime_r' function. */
-#undef HAVE_GMTIME_R
+#define HAVE_GMTIME_R 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
-#undef HAVE_INTTYPES_H
+#define HAVE_INTTYPES_H 1
 
 /* Define to 1 if you have the `localtime_r' function. */
-#undef HAVE_LOCALTIME_R
+#define HAVE_LOCALTIME_R 1
 
 /* Define to 1 if you have the <memory.h> header file. */
-#undef HAVE_MEMORY_H
+#define HAVE_MEMORY_H 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#undef HAVE_STDINT_H
+#define HAVE_STDINT_H 1
 
 /* Define to 1 if you have the <stdlib.h> header file. */
-#undef HAVE_STDLIB_H
+#define HAVE_STDLIB_H 1
 
 /* Define to 1 if you have the <strings.h> header file. */
-#undef HAVE_STRINGS_H
+#define HAVE_STRINGS_H 1
 
 /* Define to 1 if you have the <string.h> header file. */
-#undef HAVE_STRING_H
+#define HAVE_STRING_H 1
 
 /* Define to 1 if `tm_zone' is a member of `struct tm'. */
-#undef HAVE_STRUCT_TM_TM_ZONE
+#define HAVE_STRUCT_TM_TM_ZONE 1
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
-#undef HAVE_SYS_STAT_H
+#define HAVE_SYS_STAT_H 1
 
 /* Define to 1 if you have the <sys/time.h> header file. */
-#undef HAVE_SYS_TIME_H
+#define HAVE_SYS_TIME_H 1
 
 /* Define to 1 if you have the <sys/types.h> header file. */
-#undef HAVE_SYS_TYPES_H
+#define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <time.h> header file. */
-#undef HAVE_TIME_H
+#define HAVE_TIME_H 1
 
 /* Define to 1 if your `struct tm' has `tm_zone'. Deprecated, use
    `HAVE_STRUCT_TM_TM_ZONE' instead. */
-#undef HAVE_TM_ZONE
+#define HAVE_TM_ZONE 1
 
 /* Define to 1 if you don't have `tm_zone' but do have the external array
    `tzname'. */
-#undef HAVE_TZNAME
+/* #undef HAVE_TZNAME */
 
 /* Define to 1 if you have the <unistd.h> header file. */
-#undef HAVE_UNISTD_H
+#define HAVE_UNISTD_H 1
 
 /* Define to the address where bug reports for this package should be sent. */
-#undef PACKAGE_BUGREPORT
+#define PACKAGE_BUGREPORT "ashley@semantic.org"
 
 /* Define to the full name of this package. */
-#undef PACKAGE_NAME
+#define PACKAGE_NAME "Haskell time package"
 
 /* Define to the full name and version of this package. */
-#undef PACKAGE_STRING
+#define PACKAGE_STRING "Haskell time package 1.4.0.2"
 
 /* Define to the one symbol short name of this package. */
-#undef PACKAGE_TARNAME
+#define PACKAGE_TARNAME "time"
 
 /* Define to the home page for this package. */
-#undef PACKAGE_URL
+#define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#undef PACKAGE_VERSION
+#define PACKAGE_VERSION "1.4.0.2"
 
 /* Define to 1 if you have the ANSI C header files. */
-#undef STDC_HEADERS
+#define STDC_HEADERS 1
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
-#undef TIME_WITH_SYS_TIME
+#define TIME_WITH_SYS_TIME 1
 
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
-#undef TM_IN_SYS_TIME
+/* #undef TM_IN_SYS_TIME */
