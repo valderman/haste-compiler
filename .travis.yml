@@ -1,4 +1,5 @@
 language: haskell
+sudo: false
 
 ghc:
   - 7.8
