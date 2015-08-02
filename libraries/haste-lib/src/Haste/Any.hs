@@ -13,7 +13,7 @@
 module Haste.Any (
     ToAny (..), FromAny (..), Generic, JSAny (..),
     Opaque, toOpaque, fromOpaque,
-    nullValue, toObject, has, get
+    nullValue, toObject, has, get, index
   ) where
 import GHC.Generics
 import Haste.Prim
@@ -80,6 +80,12 @@ toObject ps = veryUnsafePerformIO $ do
 {-# INLINE get #-}
 get :: FromAny a => JSAny -> JSString -> IO a
 get o k = __get o k >>= fromAny
+
+{-# INLINE index #-}
+-- | Read an element from a JS array. Throws an error if the member can not be
+--   marshalled into a value of type @a@.
+index :: FromAny a => JSAny -> Int -> IO a
+index o k = __get o (unsafeCoerce k) >>= fromAny
 
 -- | Check if a JS object has a particular member.
 {-# INLINE has #-}
