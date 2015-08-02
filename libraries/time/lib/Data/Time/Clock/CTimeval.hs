@@ -1,5 +1,7 @@
--- #hide
+{-# LANGUAGE OverloadedStrings #-}
 module Data.Time.Clock.CTimeval where
+import Haste.Foreign
+import Unsafe.Coerce
 
 #if __GLASGOW_HASKELL__ >= 709
 import Foreign
@@ -9,6 +11,13 @@ import Foreign.Safe
 import Foreign.C
 
 data CTimeval = MkCTimeval CLong CLong
+
+instance FromAny CTimeval where
+  fromAny x = do
+    s <- index x 0 :: IO Int
+    us <- index x 1 :: IO Int
+    -- CLong and Int have the same representation
+    return $! s `seq` us `seq` MkCTimeval (unsafeCoerce s) (unsafeCoerce us)
 
 instance Storable CTimeval where
 	sizeOf _ = (sizeOf (undefined :: CLong)) * 2
@@ -21,11 +30,8 @@ instance Storable CTimeval where
 		pokeElemOff (castPtr p) 0 s
 		pokeElemOff (castPtr p) 1 mus
 
-foreign import ccall unsafe "time.h gettimeofday" gettimeofday :: Ptr CTimeval -> Ptr () -> IO CInt
-
 -- | Get the current POSIX time from the system clock.
 getCTimeval :: IO CTimeval
-getCTimeval = with (MkCTimeval 0 0) (\ptval -> do
-	throwErrnoIfMinus1_ "gettimeofday" $ gettimeofday ptval nullPtr
-	peek ptval
-	)
+getCTimeval =
+  ffi "(function(){var ms = new Date().getTime();\
+                   return [(ms/1000)|0, ((ms % 1000)*1000)|0];})"
