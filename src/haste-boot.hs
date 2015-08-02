@@ -261,10 +261,7 @@ buildLibs cfg = do
       inDirectory "haste-lib" $ hasteCabal ("install" : ghcOpts)
 
       -- Install time
-      inDirectory "time" $ do
-        run_ "autoreconf" [] ""
-        run_ "cabal" ["configure"] ""
-        hasteCabal ("install" : ghcOpts)
+      inDirectory "time" $ hasteCabal ("install" : ghcOpts)
 
       -- Export monads-tf; it seems to be hidden by default
       run_ hastePkgBinary ["expose", "monads-tf"] ""
