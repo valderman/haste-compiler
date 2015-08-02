@@ -1,9 +1,6 @@
 -- #hide
 module Data.Time.Clock.CTimeval where
 
-#ifndef mingw32_HOST_OS
--- All Unix-specific, this
-
 #if __GLASGOW_HASKELL__ >= 709
 import Foreign
 #else
@@ -32,5 +29,3 @@ getCTimeval = with (MkCTimeval 0 0) (\ptval -> do
 	throwErrnoIfMinus1_ "gettimeofday" $ gettimeofday ptval nullPtr
 	peek ptval
 	)
-
-#endif

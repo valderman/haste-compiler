@@ -44,8 +44,6 @@ library
         if impl(hugs)
             default-extensions: Rank2Types
             cpp-options: -DLANGUAGE_Rank2Types
-    if os(windows)
-        build-depends: Win32
     if flag(haste-cabal)
         build-depends: haste-lib
     exposed-modules:
