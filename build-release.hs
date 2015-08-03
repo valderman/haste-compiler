@@ -62,7 +62,11 @@ main = do
 buildPortable = do
     -- Build compiler
     run_ "cabal" ["configure", "-f", "portable", "-f", "static"] ""
+    run_ "cabal" ["haddock"] ""
     run_ "dist/setup/setup" ["build"] ""
+
+    -- Copy docs
+    cpDir "dist/doc/html/haste-compiler" "haste-compiler/docs"
 
     -- Strip symbols
     case os of
