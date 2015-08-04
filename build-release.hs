@@ -122,7 +122,7 @@ buildBinaryTarball ver ghcver = do
     return tarball
   where
     tarball =
-      concat ["haste-compiler-",ver,"-ghc-",ghcver,"-",os,"-",arch,".tar.bz2"]
+      concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",os,".tar.bz2"]
 
 arch = if bits == 64 then "amd64" else "i686"
   where
