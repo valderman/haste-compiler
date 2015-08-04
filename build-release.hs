@@ -13,7 +13,7 @@ main = do
     args <- fixAllArg `fmap` getArgs
     when (null args) $ do
       putStrLn $ "Usage: runghc build-release.hs [no-rebuild] formats\n"
-      putStrLn $ "Supported formats: deb, tarball, all\n"
+      putStrLn $ "Supported formats: deb, tarball, 7z, all\n"
       putStrLn $ "no-rebuild\n  Repackage whatever is already in the " ++
                  "_build directory\n  instead of rebuilding from scratch."
       exitFailure
@@ -49,6 +49,10 @@ main = do
             tar <- buildBinaryTarball ver ghcver
             mv tar (outdir </> tar)
 
+          when ("7z" `elem` args) $ do
+            f <- buildBinary7z ver ghcver
+            mv f (outdir </> f)
+
           when ("deb" `elem` args) $ do
             deb <- buildDebianPackage srcdir ver ghcver
             mv (".." </> deb) (outdir </> deb)
@@ -56,7 +60,7 @@ main = do
       Left err -> error $ "FAILED: " ++ err
       _        -> return ()
   where
-    fixAllArg args | "all" `elem` args = "deb" : "tarball" : args
+    fixAllArg args | "all" `elem` args = "deb" : "tarball" : "7z" : args
                    | otherwise         = args
 
 buildPortable = do
@@ -123,6 +127,14 @@ buildBinaryTarball ver ghcver = do
   where
     tarball =
       concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",os,".tar.bz2"]
+
+buildBinary7z ver ghcver = do
+    -- Get versions and create binary tarball
+    run_ "7z" ["a", "-i!haste-compiler", name] ""
+    return $ name
+  where
+    name =
+      concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",os,".7z"]
 
 arch = if bits == 64 then "amd64" else "i686"
   where
