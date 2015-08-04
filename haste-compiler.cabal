@@ -279,7 +279,7 @@ Executable haste-cat
 
 Library
     Hs-Source-Dirs: libraries/haste-lib/src, src
-    GHC-Options: -Wall -Werror -O2
+    GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
         Haste.Ajax
