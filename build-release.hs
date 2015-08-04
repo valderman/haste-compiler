@@ -6,56 +6,66 @@ import Control.Monad
 import System.Environment (getArgs)
 import System.Exit
 
+inBuildDir :: [String] -> Shell a -> Shell a
+inBuildDir args act = do
+  srcdir <- pwd
+  isdir <- isDirectory "_build"
+  when (isdir && not ("no-rebuild" `elem` args)) $ rmdir "_build"
+  mkdir True "_build"
+  inDirectory "_build" $ do
+    unless ("no-rebuild" `elem` args) $ run_ "git" ["clone", srcdir] ""
+    inDirectory "haste-compiler" act
+
 -- Packages will end up in ghc-$GHC_MAJOR.$GHC_MINOR. If the directory does
 -- not exist, it is created. If the package already exists in that directory,
 -- it is overwritten.
 main = do
     args <- fixAllArg `fmap` getArgs
     when (null args) $ do
-      putStrLn $ "Usage: runghc build-release.hs [no-rebuild] formats\n"
+      putStrLn $ "Usage: runghc build-release.hs [no-rebuild|in-place] formats\n"
       putStrLn $ "Supported formats: deb, tarball, 7z, all\n"
       putStrLn $ "no-rebuild\n  Repackage whatever is already in the " ++
                  "_build directory\n  instead of rebuilding from scratch."
+      putStrLn $ "in-place\n  Build package in current directory.\n" ++
+                 "  Packages end up in ghc-$GHC_MAJOR.$GHC_MINOR."
       exitFailure
 
     when ("--debghcdeps" `elem` args) $ do
       putStr "ghc"
       exitSuccess
 
+    let inplace = "in-place" `elem` args
+        chdir = if inplace then id else inBuildDir args
+
     res <- shell $ do
-      srcdir <- pwd
-      isdir <- isDirectory "_build"
-      when (isdir && not ("no-rebuild" `elem` args)) $ rmdir "_build"
-      mkdir True "_build"
+      chdir $ do
+        (ver, ghcver) <- if ("no-rebuild" `elem` args)
+                           then do
+                             getVersions
+                           else do
+                             vers <- buildPortable
+                             bootPortable
+                             return vers
 
-      inDirectory "_build" $ do
-        unless ("no-rebuild" `elem` args) $ do
-          run_ "git" ["clone", srcdir] ""
-        inDirectory "haste-compiler" $ do
-          (ver, ghcver) <- if ("no-rebuild" `elem` args)
-                             then do
-                               getVersions
-                             else do
-                               vers <- buildPortable
-                               bootPortable
-                               return vers
+        let (major, '.':rest) = break (== '.') ghcver
+            (minor, _) = break (== '.') rest
+            outdir
+              | inplace   = "ghc-" ++ major ++ "." ++ minor
+              | otherwise = ".." </> ".." </> ("ghc-" ++ major ++ "." ++ minor)
+        mkdir True outdir
 
-          let (major, '.':rest) = break (== '.') ghcver
-              (minor, _) = break (== '.') rest
-              outdir = ".." </> ".." </> ("ghc-" ++ major ++ "." ++ minor)
-          mkdir True outdir
+        when ("tarball" `elem` args) $ do
+          tar <- buildBinaryTarball ver ghcver
+          mv tar (outdir </> tar)
 
-          when ("tarball" `elem` args) $ do
-            tar <- buildBinaryTarball ver ghcver
-            mv tar (outdir </> tar)
+        when ("7z" `elem` args) $ do
+          f <- buildBinary7z ver ghcver
+          mv f (outdir </> f)
 
-          when ("7z" `elem` args) $ do
-            f <- buildBinary7z ver ghcver
-            mv f (outdir </> f)
+        when ("deb" `elem` args) $ do
+          deb <- buildDebianPackage ver ghcver
+          mv (".." </> deb) (outdir </> deb)
 
-          when ("deb" `elem` args) $ do
-            deb <- buildDebianPackage srcdir ver ghcver
-            mv (".." </> deb) (outdir </> deb)
     case res of
       Left err -> error $ "FAILED: " ++ err
       _        -> return ()
@@ -146,6 +156,6 @@ arch = if bits == 64 then "amd64" else "i686"
 
 -- Debian packaging based on https://wiki.debian.org/IntroDebianPackaging.
 -- Requires build-essential, devscripts and debhelper.
-buildDebianPackage srcdir ver ghcver = do
+buildDebianPackage ver ghcver = do
     run_ "debuild" ["-us", "-uc", "-b"] ""
     return $ "haste-compiler_" ++ ver ++ "-1_" ++ arch ++ ".deb"
