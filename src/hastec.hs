@@ -151,7 +151,7 @@ initUserPkgDB = do
     pkgDirExists <- Sh.isDirectory pkgUserDir
     when (not pkgDirExists) $ do
       Sh.mkdir True pkgUserLibDir
-      Sh.runInteractive ghcPkgBinary ["init", pkgUserDir]
+      Sh.runInteractive hastePkgBinary ["init", pkgUserDir]
   return ()
 
 type Message = String

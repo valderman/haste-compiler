@@ -173,6 +173,7 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
     when (not portableHaste || initialPortableBoot cfg) $ do
       mapM_ clearDir [hasteCabalUserDir, jsmodUserDir, pkgUserDir,
                       hasteCabalSysDir, jsmodSysDir, pkgSysDir]
+      void $ run hastePkgBinary ["init", pkgSysDir] ""
       buildLibs cfg
 
     when (initialPortableBoot cfg) $ do

@@ -96,7 +96,7 @@ pkgSysLibDir = hasteCabalSysDir </> "lib"
 
 -- | Directory housing package information.
 pkgSysDir :: FilePath
-pkgSysDir = hasteSysDir </> "packages"
+pkgSysDir = hasteSysDir </> "package.conf.d"
 
 -- | Directory where user .jsmod files are stored.
 jsmodUserDir :: FilePath
@@ -112,7 +112,7 @@ pkgUserLibDir = hasteCabalUserDir </> "lib"
 
 -- | Directory housing package information.
 pkgUserDir :: FilePath
-pkgUserDir = hasteUserDir </> "packages"
+pkgUserDir = hasteUserDir </> "package.conf.d"
 
 -- | Host word size in bits.
 hostWordSize :: Int
