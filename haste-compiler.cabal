@@ -8,7 +8,7 @@ Description:    This package provides a featureful compiler from Haskell to
                 use of standard Haskell libraries, integrates with Cabal,
                 supports most GHC extensions and works on Windows, Linux and
                 OSX.
-Category:       Javascript, Compiler, Web
+Category:       JavaScript, Compiler, Web
 Cabal-Version:  >= 1.10
 Build-Type:     Custom
 Author:         Anton Ekblad <anton@ekblad.cc>
