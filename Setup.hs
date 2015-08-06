@@ -44,11 +44,8 @@ portablePostBuild pkgdesc buildinfo = do
   createDirectoryIfMissing True (outdir </> "bin")
   writeFile (outdir </> ".hastedir") ""
 
-  -- Copy settings and tools, except on Windows where we need a working
-  -- Haskell Platform anyway.
-#ifndef mingw32_HOST_OS
+  -- Copy settings and tools.
   copyGhcSettings outdir
-#endif
 
   -- Copy executables
   forM_ exes $ \exe -> do
@@ -75,7 +72,11 @@ copyGhcSettings :: FilePath -> IO ()
 copyGhcSettings dest = do
   copyFile (libdir </> "settings") (dest </> "settings")
   copyFile (libdir </> "platformConstants") (dest </> "platformConstants")
+#ifdef mingw32_HOST_OS
+  copyFile (libdir </> "unlit.exe") (dest </> "unlit.exe")
+#else
   copyFile (libdir </> "unlit") (dest </> "unlit")
+#endif
 
 main = defaultMainWithHooks $ simpleUserHooks {
     postBuild = \_ _ pkgdesc buildinfo -> do

@@ -22,20 +22,9 @@ import Haste.Version
 import System.Environment (getExecutablePath)
 #endif
 
--- | Directory to search for GHC settings. Always equal to 'hasteSysDir'
---   except on Windows where we rely on a working Haskell Platform for GCC and
---   other needed tools.
+-- | Directory to search for GHC settings. Always equal to 'hasteSysDir'.
 hasteGhcLibDir :: FilePath
-#ifdef mingw32_HOST_OS
-hasteGhcLibDir = unsafePerformIO $ do
-  eout <- shell $ run ghcBinary ["--print-libdir"] ""
-  case eout of
-    Right out -> return $ init out
-    _         -> error $ "This Haste build requires a working " ++
-                         "Haskell Platform install!"
-#else
 hasteGhcLibDir = hasteSysDir
-#endif
 
 #if defined(PORTABLE)
 -- | Was Haste built in portable mode or not?
