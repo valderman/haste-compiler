@@ -165,7 +165,9 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
       fetchLibs tmpdir
     when (populateSetupExeCache cfg) $ do
       void $ run "cabal" ["update"] ""
-      void $ run "cabal" ["install", "-j", "populate-setup-exe-cache"] ""
+      void $ run "cabal" ["install", "-j",
+                          "populate-setup-exe-cache",
+                          "--allow-newer"] ""
       inDirectory "popcache" . void $ run "cabal" ["install", "-j"] ""
       void $ run "ghc-pkg" ["unregister", "haste-populate-configure"] ""
       void $ run "ghc-pkg" ["unregister", "populate-setup-exe-cache"] ""
