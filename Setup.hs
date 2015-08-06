@@ -70,11 +70,13 @@ cabalPostBuild pkgdesc lbi = do
 -- | Copy GHC settings and utils into the given directory.
 copyGhcSettings :: FilePath -> IO ()
 copyGhcSettings dest = do
-  copyFile (libdir </> "settings") (dest </> "settings")
   copyFile (libdir </> "platformConstants") (dest </> "platformConstants")
 #ifdef mingw32_HOST_OS
+  copyFile ("settings.windows") (dest </> "settings")
   copyFile (libdir </> "unlit.exe") (dest </> "unlit.exe")
+  copyFile (libdir </> "touchy.exe") (dest </> "touchy.exe")
 #else
+  copyFile (libdir </> "settings") (dest </> "settings")
   copyFile (libdir </> "unlit") (dest </> "unlit")
 #endif
 
