@@ -223,10 +223,15 @@ instance FromAny Word16 where
   fromAny x = return (convert (jsNumber x))
 instance FromAny Word32 where
   fromAny x = return (convert (jsNumber x))
+
+-- unsafeCoerce for Float and Double saves a lot on performance, and only
+-- differs in semantics if the value in question is a) not a number, and
+-- b) passed verbatim back into JS land
 instance FromAny Float where
-  fromAny x = return (unsafeCoerce (jsNumber x))
+  fromAny x = unsafeCoerce x
 instance FromAny Double where
-  fromAny x = return (jsNumber x)
+  fromAny x = unsafeCoerce x
+
 instance FromAny Char where
   fromAny x = return (unsafeCoerce (jsNumber x))
   listFromAny x = fromJSStr <$> fromAny x
