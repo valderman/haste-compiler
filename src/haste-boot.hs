@@ -110,7 +110,8 @@ specs = [
     , Option "" ["initial"]
            (NoArg setInitialPortableBoot) $
            "Prepare boot files for binary distribution. Should only ever " ++
-           "be called by the release build scripts, never by users."
+           "be called by the release build scripts, never by users.\n" ++
+           "Implies --local --force."
 #ifndef PORTABLE
     , Option "" ["local"]
            (NoArg $ \cfg -> cfg {useLocalLibs = True}) $

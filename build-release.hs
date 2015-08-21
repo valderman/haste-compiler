@@ -89,19 +89,19 @@ buildPortable = do
     case os of
       "mingw32" -> do
         -- windows
-        run_ "strip" ["-s", "haste-compiler\\bin\\haste-boot.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\hastec.exe"] ""
+        run_ "strip" ["-s", "haste-compiler\\bin\\haste-cat.exe"] ""
       "linux" -> do
         -- linux
-        run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
         run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
+        run_ "strip" ["-s", "haste-compiler/bin/haste-cat"] ""
       _ -> do
         -- darwin
-        run_ "strip" ["haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["haste-compiler/bin/haste-pkg"] ""
         run_ "strip" ["haste-compiler/bin/hastec"] ""
+        run_ "strip" ["haste-compiler/bin/haste-cat"] ""
 
     -- Get versions
     getVersions
@@ -119,10 +119,12 @@ bootPortable = do
     case os of
       "mingw32" -> do
         -- windows
+        rm "haste-compiler\\bin\\haste-boot.exe"
         rm "haste-compiler\\bin\\haste-copy-pkg.exe"
         rm "haste-compiler\\bin\\haste-install-his.exe"
       _ -> do
         -- linux/darwin
+        rm "haste-compiler/bin/haste-boot"
         rm "haste-compiler/bin/haste-copy-pkg"
         rm "haste-compiler/bin/haste-install-his"
     forEachFile "haste-compiler" $ \f -> do
