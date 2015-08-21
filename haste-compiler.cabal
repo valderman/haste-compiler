@@ -89,7 +89,8 @@ Executable haste-boot
         shellmate >= 0.1.5,
         ghc-paths,
         ghc,
-        directory
+        directory,
+        filepath
     Default-Language: Haskell98
 
 Executable hastec

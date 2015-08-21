@@ -10,6 +10,15 @@ import GHC.Paths
 import Data.Version
 import System.Info
 
+showBootVersion :: Version -> LocalBuildInfo -> String
+showBootVersion ver lbi =
+    "x86_64-" ++ os ++ "-haste-" ++ showVersion ver ++ "-ghc-" ++ ghcver
+  where
+    ghcver =
+      case compilerId $ compiler lbi of
+        CompilerId GHC ver -> showVersion ver
+        _                  -> error "Haste only supports building with GHC!"
+
 portablePostBuild :: PackageDescription -> LocalBuildInfo -> IO ()
 portablePostBuild pkgdesc buildinfo = do
   -- Figure out paths
@@ -18,10 +27,12 @@ portablePostBuild pkgdesc buildinfo = do
              | exe <- executables pkgdesc]
       builddir = buildDir buildinfo
       outdir = dirname
+      versubdir = showBootVersion (pkgVersion $ package pkgdesc) buildinfo
+      jsdir = outdir </> versubdir </> "js"
       datadir = dataDir $ localPkgDescr buildinfo
       jsfiles = dataFiles $ localPkgDescr buildinfo
       hastedirfile = ".hastedir" -- does Haste "own" this directory?
-         
+
   dirExists <- doesDirectoryExist outdir
   isHasteDir <- doesFileExist (outdir </> hastedirfile)
   when (dirExists && not isHasteDir) $
@@ -32,12 +43,9 @@ portablePostBuild pkgdesc buildinfo = do
     removeDirectoryRecursive outdir
 
   -- Create directory and mark as ours
-  createDirectoryIfMissing True (outdir </> "js")
+  createDirectoryIfMissing True jsdir
   createDirectoryIfMissing True (outdir </> "bin")
   writeFile (outdir </> ".hastedir") ""
-
-  -- Copy settings and tools.
-  copyGhcSettings outdir
 
   -- Copy executables
   forM_ exes $ \exe -> do
@@ -50,20 +58,7 @@ portablePostBuild pkgdesc buildinfo = do
 
   -- Copy libs
   forM_ jsfiles $ \js -> do
-    copyFile (datadir </> js) (outdir </> "js" </> js)
-
--- | Copy GHC settings and utils into the given directory.
-copyGhcSettings :: FilePath -> IO ()
-copyGhcSettings dest = do
-  copyFile (libdir </> "platformConstants") (dest </> "platformConstants")
-#ifdef mingw32_HOST_OS
-  copyFile ("settings.windows") (dest </> "settings")
-  copyFile (libdir </> "unlit.exe") (dest </> "unlit.exe")
-  copyFile (libdir </> "touchy.exe") (dest </> "touchy.exe")
-#else
-  copyFile (libdir </> "settings") (dest </> "settings")
-  copyFile (libdir </> "unlit") (dest </> "unlit")
-#endif
+    copyFile (datadir </> js) (jsdir </> js)
 
 main = defaultMainWithHooks $ simpleUserHooks {
     postBuild = \_ _ pkgdesc buildinfo -> do

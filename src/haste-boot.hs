@@ -21,6 +21,7 @@ import System.Console.GetOpt
 import GHC.Paths (libdir)
 import System.Info (os)
 import System.Directory (copyPermissions)
+import System.FilePath (takeDirectory)
 
 #if __GLASGOW_HASKELL__ >= 710
 libDir = "ghc-7.10"
@@ -299,7 +300,7 @@ buildLibs cfg = do
       ]
     configOpts = ["--with-hastec=" ++ hasteBinary,
                   "--with-haste-pkg=" ++ hastePkgBinary,
-                  "--libdir=" ++ pkgSysLibDir,
+                  "--libdir=" ++ takeDirectory pkgSysLibDir,
                   "--package-db=" ++ pkgSysDir]
     hasteCabal Configure args =
       withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
