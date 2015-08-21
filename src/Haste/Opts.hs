@@ -7,10 +7,9 @@ import Data.List
 import Control.Shell ((</>))
 
 -- | Haste's command line options. The boolean indicates whether we're running
---   unbooted or not. When unbooted, --libinstall will install jsmods into the
---   system jsmod dir rather than the user one.
-hasteOpts :: Bool -> [OptDescr (Config -> Config)]
-hasteOpts unbooted = [
+--   unbooted or not.
+hasteOpts :: [OptDescr (Config -> Config)]
+hasteOpts = [
     Option "" ["debug"]
            (NoArg $ \cfg -> cfg {ppOpts = debugPPOpts}) $
            "Output indented, fairly readable code, with all " ++
@@ -33,13 +32,9 @@ hasteOpts unbooted = [
     Option "?" ["help"]
            (NoArg id) $
            "Display this message.",
-    Option "" ["libinstall"]
-           (NoArg $ \cfg -> cfg {targetLibPath = if unbooted
-                                                   then jsmodSysDir
-                                                   else jsmodUserDir,
-                                 performLink = False}) $
-           "Install .jsmod files into the user's library. " ++
-           "Implies --dont-link.",
+    Option "" ["link-jslib"]
+           (NoArg $ \cfg -> cfg {linkJSLib = True}) $
+           "Create a jslib file instead of an executable.",
     Option "" ["no-use-strict"]
            (NoArg $ \cfg -> cfg {useStrict = False}) $
            "Do not emit '\"use strict\";' declaration. Does not affect " ++

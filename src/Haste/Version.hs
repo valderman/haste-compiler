@@ -39,7 +39,7 @@ data BootVer = BootVer {
 
 showBootVersion :: BootVer -> String
 showBootVersion (BootVer ver ghcver) =
-  "haste-" ++ showVersion ver ++ "_ghc-" ++ showVersion ghcver
+  "haste-" ++ showVersion ver ++ "-ghc-" ++ showVersion ghcver
 
 parseBootVersion :: String -> Maybe BootVer
 parseBootVersion =
@@ -48,6 +48,6 @@ parseBootVersion =
     parse = readP_to_S $ do
       _ <- string "haste-"
       hastever <- parseVersion
-      _ <- string "_ghc-"
+      _ <- string "-ghc-"
       ghcver <- parseVersion
       return $ BootVer hastever ghcver

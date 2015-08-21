@@ -1,14 +1,15 @@
 {-# LANGUAGE CPP #-}
 -- | Paths, host bitness and other environmental information about Haste.
 module Haste.Environment (
-    hasteSysDir, jsmodSysDir, hasteCabalSysDir, pkgSysDir, pkgSysLibDir, jsDir,
-    hasteUserDir, jsmodUserDir, hasteCabalUserDir, pkgUserDir, pkgUserLibDir,
+    hasteSysDir, jsmodSysDir, pkgSysDir, pkgSysLibDir, jsDir,
+    hasteUserDir, jsmodUserDir, pkgUserDir, pkgUserLibDir,
     hasteGhcLibDir,
     hostWordSize,
     ghcPkgBinary, ghcBinary,
-    hasteBinary, hastePkgBinary, hasteInstHisBinary, hasteCabalBinary,
-    hasteCopyPkgBinary, closureCompiler, portableHaste,
-    hasteNeedsReboot, hasteCabalNeedsReboot, bootFile
+    hasteBinDir, hasteBinary, hastePkgBinary, hasteInstHisBinary,
+    hasteCabalBinary, hasteCopyPkgBinary,
+    closureCompiler, bootFile,
+    portableHaste, hasteNeedsReboot
   ) where
 import System.IO.Unsafe
 import Data.Bits
@@ -16,11 +17,18 @@ import Foreign.C.Types (CIntPtr)
 import Control.Shell hiding (hClose)
 import Paths_haste_compiler
 import System.IO
+import System.Info
 import Haste.GHCPaths (ghcPkgBinary, ghcBinary)
 import Haste.Version
 #if defined(PORTABLE)
 import System.Environment (getExecutablePath)
 #endif
+
+-- | Subdirectory under Haste's root directory where all the stuff for this
+--   version lives.
+--   Only x86-64 supported.
+hasteVersionSubDir :: FilePath
+hasteVersionSubDir = "x86_64-" ++ os ++ "-" ++ showBootVersion bootVersion
 
 -- | Directory to search for GHC settings. Always equal to 'hasteSysDir'.
 hasteGhcLibDir :: FilePath
@@ -69,19 +77,15 @@ jsDir = unsafePerformIO $ getDataDir
 hasteUserDir :: FilePath
 Right hasteUserDir =
   unsafePerformIO . shell . withAppDirectory "haste" $ \d -> do
-    return $ d </> showBootVersion bootVersion
+    return $ d </> hasteVersionSubDir
 
 -- | Directory where user .jsmod files are stored.
 jsmodSysDir :: FilePath
-jsmodSysDir = hasteSysDir </> "jsmods"
-
--- | Base directory for haste-cabal; system packages.
-hasteCabalSysDir :: FilePath
-hasteCabalSysDir = hasteSysDir </> "libraries"
+jsmodSysDir = hasteSysDir
 
 -- | Base directory for Haste's system libraries.
 pkgSysLibDir :: FilePath
-pkgSysLibDir = hasteCabalSysDir </> "lib"
+pkgSysLibDir = hasteSysDir
 
 -- | Directory housing package information.
 pkgSysDir :: FilePath
@@ -89,15 +93,11 @@ pkgSysDir = hasteSysDir </> "package.conf.d"
 
 -- | Directory where user .jsmod files are stored.
 jsmodUserDir :: FilePath
-jsmodUserDir = hasteUserDir </> "jsmods"
-
--- | Base directory for haste-cabal.
-hasteCabalUserDir :: FilePath
-hasteCabalUserDir = hasteUserDir </> "libraries"
+jsmodUserDir = hasteUserDir
 
 -- | Directory containing library information.
 pkgUserLibDir :: FilePath
-pkgUserLibDir = hasteCabalUserDir </> "lib"
+pkgUserLibDir = hasteUserDir
 
 -- | Directory housing package information.
 pkgUserDir :: FilePath
@@ -144,14 +144,10 @@ bootFile = hasteUserDir </> "booted"
 --   format triggers a full reboot.
 hasteNeedsReboot :: Bool
 #ifdef PORTABLE
-hasteNeedsReboot = False
+Right hasteNeedsReboot = unsafePerformIO $ do
+  shell $ not `fmap` isFile hasteCabalBinary
 #else
-hasteNeedsReboot = hasteCabalNeedsReboot
-#endif
-
--- | Does haste-cabal possibly needs rebooting?
-hasteCabalNeedsReboot :: Bool
-hasteCabalNeedsReboot = unsafePerformIO $ do
+hasteNeedsReboot = unsafePerformIO $ do
   exists <- shell $ isFile bootFile
   case exists of
     Right True -> do
@@ -165,3 +161,4 @@ hasteCabalNeedsReboot = unsafePerformIO $ do
           return True
     _ -> do
       return True
+#endif

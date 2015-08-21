@@ -58,6 +58,6 @@ fixPaths pkgname pkgtext =
     isKey key str =
       and $ zipWith (==) key str
     
-    importDir  = "${pkgroot}" </> "libraries" </> "lib"
+    importDir  = "${pkgroot}"
     includeDir = "${pkgroot}" </> "include"
     pkgRoot    = "${pkgroot}"

@@ -23,10 +23,6 @@ source-repository head
   type:     git
   location: https://github.com/haskell/time
 
-flag haste-cabal
-    default: False
-    description: Are we building for Haste?
-
 library
     hs-source-dirs: lib
     build-depends:
@@ -44,7 +40,7 @@ library
         if impl(hugs)
             default-extensions: Rank2Types
             cpp-options: -DLANGUAGE_Rank2Types
-    if flag(haste-cabal)
+    if impl(haste)
         build-depends: haste-lib
     exposed-modules:
         Data.Time.Calendar,

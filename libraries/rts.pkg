@@ -15,8 +15,8 @@ exposed: True
 exposed-modules:
 hidden-modules:
 trusted: False
-import-dirs: ${pkgroot}/libraries/lib
-library-dirs: ${pkgroot}/libraries/lib
+import-dirs: ${pkgroot}
+library-dirs: ${pkgroot}
 hs-libraries:
 extra-ghci-libraries:
 include-dirs: ${pkgroot}/include

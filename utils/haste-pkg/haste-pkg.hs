@@ -104,6 +104,10 @@ main = do
            bye (usageInfo (usageHeader prog) flags)
         (cli,_,[]) | FlagVersion `elem` cli ->
            bye ourCopyright
+        (cli,_,[]) | FlagNumericVersion `elem` cli ->
+           bye $ showVersion hasteVersion ++ "\n"
+        (cli,_,[]) | FlagNumericGhcVersion `elem` cli ->
+           bye $ showVersion ghcVersion ++ "\n"
         (cli,nonopts,[]) ->
            case getVerbosity Normal cli of
            Right v -> runit v cli nonopts
@@ -124,6 +128,8 @@ data Flag
   | FlagGlobal
   | FlagHelp
   | FlagVersion
+  | FlagNumericVersion
+  | FlagNumericGhcVersion
   | FlagConfig FilePath
   | FlagGlobalConfig FilePath
   | FlagForce
@@ -171,6 +177,10 @@ flags = [
         "display this help and exit",
   Option ['V'] ["version"] (NoArg FlagVersion)
         "output version information and exit",
+  Option [] ["numeric-version"] (NoArg FlagNumericVersion)
+        "output version number and exit",
+  Option [] ["numeric-ghc-version"] (NoArg FlagNumericGhcVersion)
+        "output GHC version number and exit",
   Option [] ["simple-output"] (NoArg FlagSimpleOutput)
         "print output in easy-to-parse format for some commands",
   Option [] ["names-only"] (NoArg FlagNamesOnly)
@@ -199,7 +209,7 @@ deprecFlags = [
   ]
 
 ourCopyright :: String
-ourCopyright = "Haste package manager version " ++ showVersion ghcVersion ++ "\n"
+ourCopyright = "Haste package manager version " ++ showVersion hasteVersion ++ "\n"
 
 shortUsage :: String -> String
 shortUsage prog = "For usage information see '" ++ prog ++ " --help'."
@@ -539,7 +549,7 @@ getPkgDatabases verbosity modify use_cache expand_vars my_flags = do
           modify || user_exists = [user_conf, global_conf]
         | otherwise             = [global_conf]
 
-  e_pkg_path <- tryIO (System.Environment.getEnv "GHC_PACKAGE_PATH")
+  e_pkg_path <- tryIO (System.Environment.getEnv "HASTE_PACKAGE_PATH")
   let env_stack =
         case e_pkg_path of
                 Left  _ -> sys_databases
@@ -1387,7 +1397,8 @@ checkPackageConfig pkg verbosity db_stack auto_ghci_libs update = do
   mapM_ (checkFile   True "haddock-interfaces") (haddockInterfaces pkg)
   mapM_ (checkDirURL True "haddock-html")       (haddockHTMLs pkg)
   checkModules pkg
-  mapM_ (checkHSLib verbosity (libraryDirs pkg) auto_ghci_libs) (hsLibraries pkg)
+  -- TODO: move jsmod directory structure into single jslib file?
+  -- mapM_ (checkHSLib verbosity (libraryDirs pkg) auto_ghci_libs) (hsLibraries pkg)
   -- ToDo: check these somehow?
   --    extra_libraries :: [String],
   --    c_includes      :: [String],

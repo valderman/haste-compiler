@@ -8,15 +8,7 @@ import System.Directory
 import System.FilePath
 import GHC.Paths
 import Data.Version
-
-showBootVersion :: Version -> LocalBuildInfo -> String
-showBootVersion ver lbi =
-    "haste-" ++ showVersion ver ++ "_ghc-" ++ ghcver
-  where
-    ghcver =
-      case compilerId $ compiler lbi of
-        CompilerId GHC ver -> showVersion ver
-        _                  -> error "Haste only supports building with GHC!"
+import System.Info
 
 portablePostBuild :: PackageDescription -> LocalBuildInfo -> IO ()
 portablePostBuild pkgdesc buildinfo = do
@@ -60,13 +52,6 @@ portablePostBuild pkgdesc buildinfo = do
   forM_ jsfiles $ \js -> do
     copyFile (datadir </> js) (outdir </> "js" </> js)
 
-cabalPostBuild :: PackageDescription -> LocalBuildInfo -> IO ()
-cabalPostBuild pkgdesc lbi = do
-  appdir <- getAppUserDataDirectory "haste"
-  let dest = appdir </> showBootVersion (pkgVersion $ package pkgdesc) lbi
-  createDirectoryIfMissing True dest
-  copyGhcSettings dest
-
 -- | Copy GHC settings and utils into the given directory.
 copyGhcSettings :: FilePath -> IO ()
 copyGhcSettings dest = do
@@ -84,7 +69,7 @@ main = defaultMainWithHooks $ simpleUserHooks {
     postBuild = \_ _ pkgdesc buildinfo -> do
       if (buildinfo `has` "portable" || buildinfo `has` "portable-compiler")
         then portablePostBuild pkgdesc buildinfo
-        else cabalPostBuild pkgdesc buildinfo
+        else return ()
   }
 
 has :: LocalBuildInfo -> String -> Bool

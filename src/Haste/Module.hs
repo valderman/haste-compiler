@@ -4,9 +4,12 @@ import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import Control.Shell
 import Control.Applicative
+import Control.Monad (when)
 import Data.JSTarget
 import Data.Binary
+import Data.List (isSuffixOf)
 import qualified Data.ByteString.UTF8 as BS
+import qualified Haste.JSLib as JSLib
 
 -- | The file extension to use for modules.
 jsmodExt :: Bool -> String
@@ -19,29 +22,67 @@ moduleFilePath basepath pkgid modname boot =
 
 -- | Write a module to file, with the extension specified in `fileExt`.
 --   Assuming that fileExt = "jsmod", a module Foo.Bar is written to
---   basepath/Foo/Bar.jsmod
+--   @basepath/Foo/Bar.jsmod@.
+--
 --   If any directory in the path where the module is to be written doesn't
 --   exist, it gets created.
+--
+--   Boot modules and "normal" modules get merged at this stage.
 writeModule :: FilePath -> Module -> Bool -> IO ()
 writeModule basepath m@(Module pkgid modname _ _) boot =
   fromRight "writeModule" . shell $ do
     mkdir True (takeDirectory path)
-    liftIO $ B.writeFile path (encode m)
+    mcompanion <- readMod basepath pkgstr modstr (not boot)
+    m' <- case mcompanion of
+            Just companion -> do
+              bootfileExists <- isFile bootpath
+              when bootfileExists $ rm bootpath
+              return $ merge' m companion
+            _              -> do
+              return m
+    liftIO . B.writeFile path $ encode m'
   where
-    path =
-      moduleFilePath basepath (BS.toString pkgid) (BS.toString modname) boot
+    pkgstr = BS.toString pkgid
+    modstr = BS.toString modname
+    path = moduleFilePath basepath pkgstr modstr boot
+    bootpath = moduleFilePath basepath pkgstr modstr True
+    merge' = if boot then merge else flip merge
 
 -- | Read a module from file. If the module is not found at the specified path,
 --   libpath/path is tried instead. Returns Nothing is the module is not found
 --   on either path.
 readModule :: FilePath -> String -> String -> IO (Maybe Module)
 readModule basepath pkgid modname = fromRight "readModule" . shell $ do
+  libfile <- (basepath </>) `fmap` jslibFileName basepath pkgid
+  mmlib <- liftIO $ JSLib.readModule libfile modname
   mm <- readMod basepath pkgid modname False
   mmboot <- readMod basepath pkgid modname True
-  case (mm, mmboot) of
-    (Just m, Nothing)    -> return $ Just m
-    (Just m, Just mboot) -> return . Just $ merge mboot m
-    _                    -> return Nothing
+  case (mmlib, mm, mmboot) of
+    (Just m, _, _)          -> return $ Just m
+    (_, Just m, Nothing)    -> return $ Just m
+    (_, Just m, Just mboot) -> return . Just $ merge mboot m
+    _                       -> return Nothing
+
+-- | Get the file name for a given package identifier.
+jslibFileName :: FilePath -> String -> Shell FilePath
+jslibFileName basepath pkgid
+  | pkgid `elem` specials = do
+      dirs <- ls basepath
+      case filter (and . zipWith (==) pkgid) dirs of
+        (dir:_) -> do
+          files <- ls (basepath </> dir)
+          case filter (".jslib" `isSuffixOf`) files of
+            (f:_) -> return $ dir </> f
+            _     -> fail $ "Package " ++ pkgid ++ " has no jslib file!"
+        _ -> do
+          return stdname
+  | otherwise = do
+      return stdname
+  where
+    -- Use this for non-special packages
+    stdname = pkgid </> "libHS" ++ pkgid <.> "jslib"
+    -- These package ids are special and come without version number
+    specials = ["ghc-prim", "base", "integer-gmp"]
 
 readMod :: FilePath -> String -> String -> Bool -> Shell (Maybe Module)
 readMod basepath pkgid modname boot = do
@@ -49,8 +90,11 @@ readMod basepath pkgid modname boot = do
     let path' = if x then path else syspath
     isF <- isFile path'
     if isF
-       then Just . decode <$> liftIO (B.readFile path')
-       else return Nothing
+       then do
+         m <- decode <$> liftIO (B.readFile path')
+         m `seq` return (Just m)
+       else do
+         return Nothing
   where
     path = moduleFilePath "." pkgid modname boot
     syspath = moduleFilePath basepath pkgid modname boot

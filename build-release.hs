@@ -88,19 +88,16 @@ buildPortable = do
         -- windows
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-boot.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
-        run_ "strip" ["-s", "haste-compiler\\bin\\haste-cabal.exe"] ""
         run_ "strip" ["-s", "haste-compiler\\bin\\hastec.exe"] ""
       "linux" -> do
         -- linux
         run_ "strip" ["-s", "haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
-        run_ "strip" ["-s", "haste-compiler/bin/haste-cabal"] ""
         run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
       _ -> do
         -- darwin
         run_ "strip" ["haste-compiler/bin/haste-boot"] ""
         run_ "strip" ["haste-compiler/bin/haste-pkg"] ""
-        run_ "strip" ["haste-compiler/bin/haste-cabal"] ""
         run_ "strip" ["haste-compiler/bin/hastec"] ""
 
     -- Get versions

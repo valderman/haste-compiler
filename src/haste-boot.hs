@@ -18,6 +18,9 @@ import Data.Char (isDigit)
 import Control.Monad.IO.Class (liftIO)
 import Haste.Args
 import System.Console.GetOpt
+import GHC.Paths (libdir)
+import System.Info (os)
+import System.Directory (copyPermissions)
 
 #if __GLASGOW_HASKELL__ >= 710
 libDir = "ghc-7.10"
@@ -45,20 +48,20 @@ data Cfg = Cfg {
     useLocalLibs          :: Bool,
     tracePrimops          :: Bool,
     forceBoot             :: Bool,
-    populateSetupExeCache :: Bool,
-    initialPortableBoot   :: Bool
+    initialPortableBoot   :: Bool,
+    getHasteCabal         :: Bool
   }
 
 defCfg :: Cfg
 #ifdef PORTABLE
 defCfg = Cfg {
-    getLibs               = True,
+    getLibs               = False,
     getClosure            = False,
     useLocalLibs          = False,
     tracePrimops          = False,
     forceBoot             = False,
-    populateSetupExeCache = True,
-    initialPortableBoot   = False
+    initialPortableBoot   = False,
+    getHasteCabal         = True
   }
 #else
 defCfg = Cfg {
@@ -67,8 +70,8 @@ defCfg = Cfg {
     useLocalLibs          = False,
     tracePrimops          = False,
     forceBoot             = False,
-    populateSetupExeCache = True,
-    initialPortableBoot   = False
+    initialPortableBoot   = False,
+    getHasteCabal         = True
   }
 #endif
 
@@ -77,7 +80,7 @@ devBoot cfg = cfg {
     useLocalLibs          = True,
     forceBoot             = True,
     getClosure            = False,
-    populateSetupExeCache = False
+    getHasteCabal         = False
   }
 
 setInitialPortableBoot :: Cfg -> Cfg
@@ -86,7 +89,8 @@ setInitialPortableBoot cfg = cfg {
     useLocalLibs        = True,
     forceBoot           = True,
     getClosure          = True,
-    initialPortableBoot = True
+    initialPortableBoot = True,
+    getHasteCabal       = True
   }
 
 specs :: [OptDescr (Cfg -> Cfg)]
@@ -95,7 +99,7 @@ specs = [
       Option "" ["dev"]
            (NoArg devBoot) $
            "Boot Haste for development. Implies --force " ++
-           "--local --no-closure --no-populate-setup-exe-cache"
+           "--local --no-closure --no-haste-cabal"
     , Option "" ["force"]
 #else
       Option "" ["force"]
@@ -120,15 +124,14 @@ specs = [
            "Don't download Closure compiler. You won't be able " ++
            "to use --opt-minify, unless you manually " ++
            "give hastec the path to compiler.jar."
+    , Option "" ["no-haste-cabal"]
+           (NoArg $ \cfg -> cfg {getHasteCabal = False}) $
+           "Don't install haste-cabal. This is probably not " ++
+           "what you want."
     , Option "" ["no-libs"]
            (NoArg $ \cfg -> cfg {getLibs = False}) $
            "Don't install any libraries. This is probably not " ++
            "what you want."
-    , Option "" ["no-populate-setup-exe-cache"]
-           (NoArg $ \cfg -> cfg {populateSetupExeCache = False}) $
-           "Don't populate Cabal's setup-exe-cache. Speeds up boot, " ++
-           "but vill fail spectacularly unless your setup-exe-cache " ++
-           "is already populated."
     , Option "" ["trace-primops"]
            (NoArg $ \cfg -> cfg {tracePrimops = True}) $
            "Build standard libs for tracing of primitive " ++
@@ -140,13 +143,15 @@ specs = [
 hdr :: String
 hdr = "Fetch, build and install all libraries necessary to use Haste.\n"
 
+data CabalOp = Configure | Build | Install
+
 main :: IO ()
 main = do
   args <- getArgs
   case parseArgs specs hdr args of
     Right (mkConfig, _) -> do
       let cfg = mkConfig defCfg
-      when (hasteNeedsReboot || hasteCabalNeedsReboot || forceBoot cfg) $ do
+      when (hasteNeedsReboot || forceBoot cfg) $ do
         res <- shell $ if useLocalLibs cfg
                          then bootHaste cfg "."
                          else withTempDirectory "haste" $ bootHaste cfg
@@ -161,18 +166,17 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
   removeBootFile <- isFile bootFile
   when removeBootFile $ rm bootFile
   when (getLibs cfg) $ do
+    when (getHasteCabal cfg) $ do
+      installHasteCabal tmpdir
+
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
-    when (populateSetupExeCache cfg) $ do
-      void $ run "cabal" ["update"] ""
-      void $ run "cabal" ["install", "-j", "populate-setup-exe-cache"] ""
-      inDirectory "popcache" . void $ run "cabal" ["install", "-j"] ""
-      void $ run "ghc-pkg" ["unregister", "haste-populate-configure"] ""
-      void $ run "ghc-pkg" ["unregister", "populate-setup-exe-cache"] ""
 
     when (not portableHaste || initialPortableBoot cfg) $ do
-      mapM_ clearDir [hasteCabalUserDir, jsmodUserDir, pkgUserDir,
-                      hasteCabalSysDir, jsmodSysDir, pkgSysDir]
+      mapM_ clearDir [pkgUserLibDir, jsmodUserDir, pkgUserDir,
+                      pkgSysLibDir, jsmodSysDir, pkgSysDir]
+      mkdir True hasteSysDir
+      copyGhcSettings hasteSysDir
       void $ run hastePkgBinary ["init", pkgSysDir] ""
       buildLibs cfg
 
@@ -194,6 +198,15 @@ clearDir dir = do
   exists <- isDirectory dir
   when exists $ rmdir dir
 
+installHasteCabal :: FilePath -> Shell ()
+installHasteCabal tmpdir = do
+    echo "Downloading haste-cabal from GitHub"
+    f <- downloadFile hasteCabalUrl
+    liftIO $ BS.writeFile (hasteBinDir </> hasteCabalFile) f
+    liftIO $ copyPermissions hasteBinary (hasteBinDir </> hasteCabalFile)
+  where
+    hasteCabalUrl = "http://valderman.github.io/haste-libs/haste-cabal" <.> os
+    hasteCabalFile = "haste-cabal" ++ if os == "mingw32" then ".exe" else ""
 
 -- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> Shell ()
@@ -229,15 +242,18 @@ buildLibs cfg = do
       inDirectory libDir $ do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
-          hasteCabal ["configure", "--solver", "topdown"]
-          hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
+          hasteCabal Configure $ ["--solver", "topdown"] ++ ghcOpts
+          hasteCabal Build []
+          let primlibfile = "libHSghc-prim-0.3.0.0.jslib"
+              primlibdir  = pkgSysLibDir </> "ghc-prim-0.3.0.0"
+          mkdir True primlibdir
           run_ hasteInstHisBinary ["ghc-prim-0.3.0.0", "dist" </> "build"] ""
+          cp ("dist" </> "build" </> primlibfile) (primlibdir </> primlibfile)
           run_ hastePkgBinary ["update", "--global", "packageconfig"] ""
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
-        run_ hasteCopyPkgBinary ["Cabal"] ""
         inDirectory "integer-gmp" $ do
-          hasteCabal ("install" : "--solver" : "topdown" : ghcOpts)
+          hasteCabal Install ("--solver" : "topdown" : ghcOpts)
 
         -- Install base
         inDirectory "base" $ do
@@ -247,32 +263,56 @@ buildLibs cfg = do
             . filter (not . null)
             . filter (and . zipWith (==) "version")
             . lines
-          hasteCabal ["configure", "--solver", "topdown"]
-          hasteCabal $ ["build", "--install-jsmods"] ++ ghcOpts
+          hasteCabal Configure $ ["--solver", "topdown"] ++ ghcOpts
+          hasteCabal Build []
           let base = "base-" ++ basever
               pkgdb = "--package-db=dist" </> "package.conf.inplace"
+              baselibfile = "libHS" ++ base <.> "jslib"
+              baselibdir  = pkgSysLibDir </> base
+          mkdir True baselibdir
           run_ hasteInstHisBinary [base, "dist" </> "build"] ""
+          cp ("dist" </> "build" </> baselibfile) (baselibdir </> baselibfile)
           run_ hasteCopyPkgBinary [base, pkgdb] ""
           forEachFile "include" $ \f -> cp f (hasteSysDir </> "include")
 
         -- Install array
-        inDirectory "array" $ hasteCabal ("install" : ghcOpts)
+        inDirectory "array" $ hasteCabal Install []
 
       -- Install haste-lib
-      inDirectory "haste-lib" $ hasteCabal ("install" : ghcOpts)
+      inDirectory "haste-lib" $ hasteCabal Install []
 
       -- Install time
-      inDirectory "time" $ hasteCabal ("install" : ghcOpts)
+      inDirectory "time" $ hasteCabal Install []
 
       -- Export monads-tf; it seems to be hidden by default
       run_ hastePkgBinary ["expose", "monads-tf"] ""
   where
     ghcOpts = concat [
-        if tracePrimops cfg then ["--ghc-option=-debug"] else [],
-        ["--ghc-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
+        if tracePrimops cfg then ["--hastec-option=-debug"] else [],
+        ["--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
       ]
-    hasteCabal args =
-      run_ hasteCabalBinary ("--install-global" : "--unbooted" : args) ""
+    hasteCabal Configure args =
+      withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
+      where as = "configure" : "--haste" : args ++ ghcOpts
+    hasteCabal Install args =
+      withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
+      where as = "install" : "--haste" : args ++ ghcOpts
+    hasteCabal Build args =
+      withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
+      where as = "build" : args ++ ghcOpts
+
+-- | Copy GHC settings and utils into the given directory.
+copyGhcSettings :: FilePath -> Shell ()
+copyGhcSettings dest = do
+  cp (libdir </> "platformConstants") (dest </> "platformConstants")
+#ifdef mingw32_HOST_OS
+  cp ("settings.windows") (dest </> "settings")
+  cp (libdir </> "unlit.exe") (dest </> "unlit.exe")
+  cp (libdir </> "touchy.exe") (dest </> "touchy.exe")
+#else
+  cp (libdir </> "settings") (dest </> "settings")
+  cp (libdir </> "unlit") (dest </> "unlit")
+#endif
 
 relocate :: String -> Shell ()
 relocate pkg = run_ hastePkgBinary ["relocate", pkg] ""

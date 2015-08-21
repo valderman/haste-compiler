@@ -121,6 +121,7 @@ Executable hastec
         system-fileio,
         shellmate >= 0.1.5,
         either,
+        filepath,
         directory,
         ghc-simple >= 0.1.2.1
     Main-Is:
@@ -140,6 +141,7 @@ Executable hastec
         Haste.Builtins
         Haste.Errors
         Haste.CodeGen
+        Haste.JSLib
         Data.JSTarget
         Data.JSTarget.AST
         Data.JSTarget.Binary
@@ -149,27 +151,6 @@ Executable hastec
         Data.JSTarget.PP
         Data.JSTarget.Print
         Data.JSTarget.Traversal
-    default-language: Haskell98
-
-Executable haste-cabal
-    if flag(only-library)
-        buildable: False
-    Main-Is: haste-cabal.hs
-    Hs-Source-Dirs: src
-    if flag(portable)
-        CPP-Options: -DPORTABLE
-    if flag(static)
-        if os(windows)
-          GHC-Options: -static -optl-static
-        else
-          if os(linux)
-            GHC-Options: -static -optl-static -optl-pthread
-    Build-Depends:
-        base < 5,
-        shellmate,
-        ghc-paths,
-        ghc,
-        directory
     default-language: Haskell98
 
 Executable haste-pkg

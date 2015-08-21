@@ -150,8 +150,8 @@ type Alt = (Exp, Stm)
 data Module = Module {
     modPackageId   :: !BS.ByteString,
     modName        :: !BS.ByteString,
-    modDeps        :: !(M.Map Name (S.Set Name)),
-    modDefs        :: !(M.Map Name Exp)
+    modDeps        :: M.Map Name (S.Set Name),
+    modDefs        :: M.Map Name Exp
   }
 
 -- | Merge two modules. The module and package IDs of the second argument are

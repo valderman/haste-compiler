@@ -16,8 +16,8 @@ exposed-modules: GHC.Prim GHC.Classes GHC.CString GHC.Debug
                  GHC.Magic GHC.IntWord64 GHC.Tuple GHC.Types
 hidden-modules:
 trusted: False
-import-dirs: ${pkgroot}/libraries/lib/ghc-prim-0.3.0.0
-library-dirs: ${pkgroot}/libraries/lib/ghc-prim-0.3.0.0
+import-dirs: ${pkgroot}/ghc-prim-0.3.0.0
+library-dirs: ${pkgroot}/ghc-prim-0.3.0.0
 hs-libraries:
 extra-libraries:
 extra-ghci-libraries:

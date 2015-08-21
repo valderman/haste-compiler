@@ -136,7 +136,7 @@ getModuleOf libpaths v@(Name n _) =
         _       -> left v
 
 -- | Return the module at the given path, loading it into cache if it's not
---   already there.
+--   already there. Modules are preferentially loaded from jslib file.
 getModule :: [FilePath] -> BS.ByteString -> BS.ByteString -> DepM (Maybe Module)
 getModule libpaths pkgid modname = do
     st <- get
