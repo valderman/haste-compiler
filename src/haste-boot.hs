@@ -172,9 +172,14 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
     when (not $ useLocalLibs cfg) $ do
       fetchLibs tmpdir
 
-    when (not portableHaste || initialPortableBoot cfg) $ do
+    -- Don't clear dir when it contains binaries; portable should only be built
+    -- by scripts anyway, so this dir ought to be clean.
+    when (not portableHaste) $ do
       mapM_ clearDir [pkgUserLibDir, jsmodUserDir, pkgUserDir,
                       pkgSysLibDir, jsmodSysDir, pkgSysDir]
+
+
+    when (not portableHaste || initialPortableBoot cfg) $ do
       mkdir True hasteSysDir
       copyGhcSettings hasteSysDir
       void $ run hastePkgBinary ["init", pkgSysDir] ""
