@@ -112,25 +112,31 @@ hostWordSize = finiteBitSize (undefined :: CIntPtr)
 hostWordSize = bitSize (undefined :: CIntPtr)
 #endif
 
+-- | File extension of binaries on this system.
+binaryExt :: String
+binaryExt
+  | os == "mingw32" = ".exe"
+  | otherwise       = ""
+
 -- | The main Haste compiler binary.
 hasteBinary :: FilePath
-hasteBinary = hasteBinDir </> "hastec"
+hasteBinary = hasteBinDir </> "hastec" ++ binaryExt
 
 -- | Binary for haste-pkg.
 hastePkgBinary :: FilePath
-hastePkgBinary = hasteBinDir </> "haste-pkg"
+hastePkgBinary = hasteBinDir </> "haste-pkg" ++ binaryExt
 
 -- | Binary for haste-copy-pkg.
 hasteCopyPkgBinary :: FilePath
-hasteCopyPkgBinary = hasteBinDir </> "haste-copy-pkg"
+hasteCopyPkgBinary = hasteBinDir </> "haste-copy-pkg" ++ binaryExt
 
 -- | Binary for haste-pkg.
 hasteCabalBinary :: FilePath
-hasteCabalBinary = hasteBinDir </> "haste-cabal"
+hasteCabalBinary = hasteBinDir </> "haste-cabal" ++ binaryExt
 
 -- | Binary for haste-install-his.
 hasteInstHisBinary :: FilePath
-hasteInstHisBinary = hasteBinDir </> "haste-install-his"
+hasteInstHisBinary = hasteBinDir </> "haste-install-his" ++ binaryExt
 
 -- | JAR for Closure compiler.
 closureCompiler :: FilePath
