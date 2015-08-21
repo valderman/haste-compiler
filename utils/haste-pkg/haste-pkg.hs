@@ -1828,8 +1828,7 @@ relocate packages pkg = do
         case take 3 $ reverse $ splitPath s of
           [third, second, first] -> first </> second </> third
       | otherwise =
-        case take 2 $ reverse $ splitPath s of
-          [second, first] -> first </> second
+        last $ splitPath s
 
     isKey _ "" =
       False
