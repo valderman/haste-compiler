@@ -1823,12 +1823,7 @@ relocate packages pkg = do
 
     prefix s pfx path = pfx ++ ": " ++ path </> stripPrefix s
 
-    stripPrefix s
-      | os == "darwin" =
-        case take 3 $ reverse $ splitPath s of
-          [third, second, first] -> first </> second </> third
-      | otherwise =
-        last $ splitPath s
+    stripPrefix = joinPath . dropWhile (not . isKey pkg) . splitPath
 
     isKey _ "" =
       False
