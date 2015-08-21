@@ -201,11 +201,12 @@ clearDir dir = do
 installHasteCabal :: FilePath -> Shell ()
 installHasteCabal tmpdir = do
     echo "Downloading haste-cabal from GitHub"
-    f <- downloadFile hasteCabalUrl
+    f <- decompress `fmap` downloadFile hasteCabalUrl
     liftIO $ BS.writeFile (hasteBinDir </> hasteCabalFile) f
     liftIO $ copyPermissions hasteBinary (hasteBinDir </> hasteCabalFile)
   where
-    hasteCabalUrl = "http://valderman.github.io/haste-libs/haste-cabal" <.> os
+    baseUrl = "http://valderman.github.io/haste-libs/"
+    hasteCabalUrl = baseUrl ++ "haste-cabal" <.> os <.> "bz2"
     hasteCabalFile = "haste-cabal" ++ if os == "mingw32" then ".exe" else ""
 
 -- | Fetch the Haste base libs.
