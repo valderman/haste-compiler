@@ -42,12 +42,13 @@ portableHaste = True
 -- | Haste system directory. Identical to @hasteUserDir@ unless built with
 --   -f portable.
 hasteSysDir :: FilePath
-hasteSysDir =
-  joinPath . init . init . splitPath $ unsafePerformIO getExecutablePath
+hasteSysDir = dir </> hasteVersionSubDir
+  where
+    dir = joinPath . init . init . splitPath $ unsafePerformIO getExecutablePath
 
 -- | Haste @bin@ directory.
 hasteBinDir :: FilePath
-hasteBinDir = hasteSysDir </> "bin"
+hasteBinDir = takeDirectory $ unsafePerformIO getExecutablePath
 
 -- | Haste JS file directory.
 jsDir :: FilePath
