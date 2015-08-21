@@ -298,7 +298,9 @@ buildLibs cfg = do
         ["--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
       ]
     configOpts = ["--with-hastec=" ++ hasteBinary,
-                  "--with-haste-pkg=" ++ hastePkgBinary]
+                  "--with-haste-pkg=" ++ hastePkgBinary,
+                  "--libdir=" ++ pkgSysLibDir,
+                  "--package-db=" ++ pkgSysDir]
     hasteCabal Configure args =
       withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
       where as = "configure" : args ++ ghcOpts ++ configOpts
