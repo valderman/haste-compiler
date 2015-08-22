@@ -11,6 +11,7 @@ import Data.List
 import System.IO.Unsafe
 import System.IO
 import System.FilePath
+import System.Directory (copyFile)
 import Control.Monad
 import qualified Control.Shell as Sh
 import qualified Data.ByteString.UTF8 as BS
@@ -34,6 +35,7 @@ main = do
     as <- getArgs
     booting <- maybe False (const True) `fmap` lookupEnv "HASTE_BOOTING"
     let args = "-O2":concat [packageDBArgs,as,["-D__HASTE__="++show intVersion]]
+        prof = "-prof" `elem` args
     case parseHasteFlags booting args of
       Left act             -> act
       Right (fs, mkConfig) -> do
@@ -47,7 +49,7 @@ main = do
           Success (targets, mods) _ _ -> do
             when (performLink cfg) $ do
               if linkJSLib cfg
-                then buildJSLib cfg (fst $ head targets) mods
+                then buildJSLib prof cfg (fst $ head targets) mods
                 else mapM_ (uncurry $ linkAndMinify cfg) targets
   where
     -- TODO: this would be handled more elegantly modifying the dynflags
@@ -59,13 +61,18 @@ main = do
 
     dotToSlash '.' = '/'
     dotToSlash c   = c
-    buildJSLib cfg pkgkey mods = do
-      let basepath = targetLibPath cfg
-          modpath  = targetLibPath cfg ++ "/" ++ pkgkey
-          mods'    = [ modpath ++ "/" ++ map dotToSlash mn ++ ".jsmod"
-                     | mn <- mods]
-          libfile  = concat [basepath,"/","libHS",pkgkey,".jslib"]
+
+    buildJSLib profiling cfg pkgkey mods = do
+      let basepath    = targetLibPath cfg
+          modpath     = targetLibPath cfg ++ "/" ++ pkgkey
+          mods'       = [ modpath ++ "/" ++ map dotToSlash mn ++ ".jsmod"
+                        | mn <- mods]
+          libfile     = concat [basepath,"/","libHS",pkgkey,".jslib"]
+          profLibfile = reverse (drop 6 (reverse libfile)) ++ "_p.jslib"
+
       createJSLib libfile (BS.fromString pkgkey) mods'
+      when profiling . void $ do
+        copyFile libfile (profLibfile)
 
     compJS cfg (targets, mods) m = do
       compJSMod cfg m
@@ -173,7 +180,7 @@ initUserPkgDB = do
   return ()
 
 type Message = String
-data Compiler = Haste | GHC | BuildJSLib | InstallJSExe deriving (Show, Eq)
+data Compiler = Haste | GHC | InstallJSExe deriving (Show, Eq)
 data RunMode = Run !Compiler | DontRun !Message deriving (Show, Eq)
 
 rebootMsg :: Message
@@ -183,7 +190,6 @@ rebootMsg = "Haste needs to be rebooted; please run haste-boot"
 runMode :: Bool -> [String] -> RunMode
 runMode booting as
   | "--help" `elem` as                    = Run Haste
-  | "--build-jslib" `elem` as             = Run BuildJSLib
   | "--install-executable" `elem` as      = Run InstallJSExe
   | "--info" `elem` as                    = DontRun ghcInfo
   | "--print-libdir" `elem` as            = DontRun hasteGhcLibDir
@@ -212,9 +218,6 @@ parseHasteFlags booting args = do
      case parseArgs hasteOpts helpHeader args of
        Left msg          -> Left $ putStrLn msg
        Right (cfg, rest) -> Right (filter (/= "-prof") rest, cfg)
-   Run BuildJSLib -> do
-     let libfile : pkgid : modfiles = filter (\a -> take 1 a /= "-") args
-     Left $ createJSLib libfile (BS.fromString pkgid) modfiles
    Run InstallJSExe -> do
      Left $ installJSExe (jsexeIn args) (jsexeOut args)
    where
