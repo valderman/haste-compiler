@@ -15,7 +15,7 @@ module Haste.App (
     JSString, JSAny, URL, alert, prompt, eval, writeLog, catJSStr, fromJSStr,
     module Haste.DOM.Core,
     module Haste.Random,
-    module Haste.JSType,
+    module Haste.Prim.JSType,
     module Haste.Hash,
     module Haste.Binary
   ) where
@@ -24,7 +24,7 @@ import Haste.App.Monad
 import Haste.Binary (Binary (..))
 import Haste.DOM.Core
 import Haste.Random
-import Haste.JSType
+import Haste.Prim.JSType
 import Haste.Hash
 import Haste
 import Control.Monad.IO.Class

@@ -4,7 +4,7 @@
 -- | Low level XMLHttpRequest support. IE6 and older are not supported.
 module Haste.Ajax (Method (..), URL, ajaxRequest, noParams) where
 import Haste.Prim
-import Haste.JSType
+import Haste.Prim.JSType
 import Control.Monad.IO.Class
 
 #ifdef __HASTE__

@@ -33,8 +33,8 @@ import Data.Data
 #endif
 #ifdef __HASTE__
 import Data.Time.Calendar (toGregorian)
-import Haste (toString)
-import Haste.Foreign
+import Haste.Prim.JSType (toString)
+import Haste.Prim.Foreign
 #endif
 
 -- | A TimeZone is a whole number of minutes offset from UTC, together with a name and a \"just for summer\" flag.

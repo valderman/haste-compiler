@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Data.Time.Clock.CTimeval where
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Unsafe.Coerce
 
 #if __GLASGOW_HASKELL__ >= 709

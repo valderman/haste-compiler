@@ -260,7 +260,7 @@ Executable haste-cat
     default-language: Haskell98
 
 Library
-    Hs-Source-Dirs: libraries/haste-lib/src, src
+    Hs-Source-Dirs: libraries/haste-lib/src, libraries/haste-prim/src, src
     GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
@@ -287,7 +287,6 @@ Library
         Haste.Serialize
         Haste.WebSockets
     Other-Modules:
-        Haste.Any
         Haste.App.Client
         Haste.App.Monad
         Haste.App.Protocol
@@ -306,7 +305,8 @@ Library
         Haste.Events.MouseEvents
         Haste.GHCPaths
         Haste.Hash
-        Haste.JSType
+        Haste.Prim.Any
+        Haste.Prim.JSType
         Haste.Random
         Haste.Timer
         Haste.Version

@@ -10,14 +10,14 @@
 {-# LANGUAGE TupleSections #-}
 
 -- | Converting to/from JS-native data.
-module Haste.Any (
+module Haste.Prim.Any (
     ToAny (..), FromAny (..), Generic, JSAny (..),
     Opaque, toOpaque, fromOpaque,
     nullValue, toObject, has, get, index
   ) where
 import GHC.Generics
 import Haste.Prim
-import Haste.JSType
+import Haste.Prim.JSType
 import Data.Int
 import Data.Word
 import Unsafe.Coerce

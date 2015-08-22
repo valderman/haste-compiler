@@ -16,7 +16,7 @@ module Haste.Audio (
 import Haste.Audio.Events as Events
 import Haste.DOM.JSString
 import Haste.Foreign
-import Haste.JSType
+import Haste.Prim.JSType
 import Haste.Prim
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative

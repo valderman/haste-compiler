@@ -8,13 +8,13 @@
 module Haste (
     JSString, JSAny, URL,
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
-    module Haste.JSType, module Haste.DOM.Core, module Haste.Timer,
+    module Haste.Prim.JSType, module Haste.DOM.Core, module Haste.Timer,
     module Haste.Random, module Haste.Hash
   ) where
 import Haste.Prim
 import Haste.Timer
 import Haste.Random
-import Haste.JSType
+import Haste.Prim.JSType
 import Haste.DOM.Core
 import Haste.Hash
 import Control.Monad.IO.Class

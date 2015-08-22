@@ -2,7 +2,7 @@
              TypeSynonymInstances, FlexibleInstances, EmptyDataDecls,
              UnliftedFFITypes, UndecidableInstances, CPP, OverloadedStrings #-}
 -- | Efficient conversions to and from JS native types.
-module Haste.JSType (
+module Haste.Prim.JSType (
     JSType (..), JSNum (..), toString, fromString, convert
   ) where
 import GHC.Int

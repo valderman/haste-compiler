@@ -6,7 +6,7 @@ module Haste.Concurrent.Ajax (
   ) where
 import Haste.Concurrent.Monad
 import Haste.Ajax
-import Haste.JSType
+import Haste.Prim.JSType
 
 -- | Make a blocking AJAX request in the CIO monad.
 --   Note that unlike using the browser's native blocking AJAX facilities,

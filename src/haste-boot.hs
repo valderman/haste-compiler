@@ -195,8 +195,8 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
 
     when (initialPortableBoot cfg) $ do
       mapM_ relocate ["array", "bytestring", "containers",
-                      "deepseq", "dlist", "haste-lib", "integer-gmp",
-                      "monads-tf", "old-locale", "transformers", "time"]
+                      "deepseq", "dlist", "haste-prim", "time", "haste-lib",
+                      "monads-tf", "old-locale", "transformers", "integer-gmp"]
 
   when (getClosure cfg) $ do
     installClosure
@@ -288,11 +288,14 @@ buildLibs cfg = do
         -- Install array
         inDirectory "array" $ hasteCabal Install []
 
-      -- Install haste-lib
-      inDirectory "haste-lib" $ hasteCabal Install []
+      -- Install haste-prim
+      inDirectory "haste-prim" $ hasteCabal Install []
 
       -- Install time
       inDirectory "time" $ hasteCabal Install []
+
+      -- Install haste-lib
+      inDirectory "haste-lib" $ hasteCabal Install []
 
       -- Export monads-tf; it seems to be hidden by default
       run_ hastePkgBinary ["expose", "monads-tf"] ""

@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, CPP, OverloadedStrings #-}
 module Haste.Random (Random (..), Seed, next, mkSeed, newSeed) where
-import Haste.JSType
+import Haste.Prim.JSType
 import Data.Int
 import Data.Word
 import Data.List (unfoldr)

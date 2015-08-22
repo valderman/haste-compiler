@@ -1,8 +1,9 @@
 {-# LANGUAGE EmptyDataDecls, ForeignFunctionInterface, MagicHash, 
     TypeSynonymInstances, FlexibleInstances, CPP, UnboxedTuples #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Haste.Prim (JSString (..), URL, toJSStr, fromJSStr, catJSStr, JSAny (..),
-                   Ptr, toPtr, fromPtr, veryUnsafePerformIO) where
+module Haste.Prim (
+  JSString (..), URL, toJSStr, fromJSStr, catJSStr, JSAny (..),
+  Ptr, toPtr, fromPtr, veryUnsafePerformIO) where
 import Foreign.Ptr
 import Data.String
 #ifdef __HASTE__

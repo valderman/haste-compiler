@@ -41,7 +41,7 @@ library
             default-extensions: Rank2Types
             cpp-options: -DLANGUAGE_Rank2Types
     if impl(haste)
-        build-depends: haste-lib
+        build-depends: haste-prim
     exposed-modules:
         Data.Time.Calendar,
         Data.Time.Calendar.MonthDay,

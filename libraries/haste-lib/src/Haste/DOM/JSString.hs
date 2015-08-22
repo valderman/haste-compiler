@@ -14,7 +14,7 @@ module Haste.DOM.JSString (
     setClass, toggleClass, hasClass
   ) where
 import Haste.Prim
-import Haste.JSType
+import Haste.Prim.JSType
 import qualified Haste.DOM.Core as Core
   hiding (Elem (..), AttrName (..))
 import Haste.DOM.Core
