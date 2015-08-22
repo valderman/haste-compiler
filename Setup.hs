@@ -12,8 +12,11 @@ import System.Info
 
 showBootVersion :: Version -> LocalBuildInfo -> String
 showBootVersion ver lbi =
-    "x86_64-" ++ os ++ "-haste-" ++ showVersion ver ++ "-ghc-" ++ ghcver
+    arch ++ "-" ++ myos ++ "-haste-" ++ showVersion ver ++ "-ghc-" ++ ghcver
   where
+    myos
+      | os == "mingw32" = "windows"
+      | otherwise       = os
     ghcver =
       case compilerId $ compiler lbi of
         CompilerId GHC ver -> showVersion ver
