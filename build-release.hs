@@ -148,16 +148,12 @@ buildBinary7z ver ghcver = do
     name =
       concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",os,".7z"]
 
-arch = if bits == 64 then "amd64" else "i686"
-  where
-#if __GLASGOW_HASKELL__ >= 708
-    bits = finiteBitSize (0 :: Int)
-#else
-    bits = bitSize (0 :: Int)
-#endif
+arch :: String
+arch = "amd64" -- only amd64 supported
 
 -- Debian packaging based on https://wiki.debian.org/IntroDebianPackaging.
 -- Requires build-essential, devscripts and debhelper.
 buildDebianPackage ver ghcver = do
-    run_ "debuild" ["-us", "-uc", "-b"] ""
-    return $ "haste-compiler_" ++ ver ++ "-1_" ++ arch ++ ".deb"
+  run_ "debuild" ["-e", "LD_LIBRARY_PATH=haste-compiler/haste-cabal",
+                  "-us", "-uc", "-b"] ""
+  return $ "haste-compiler_" ++ ver ++ "_" ++ arch ++ ".deb"
