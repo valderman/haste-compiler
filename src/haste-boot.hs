@@ -304,13 +304,13 @@ buildLibs cfg = do
                   "--libdir=" ++ takeDirectory pkgSysLibDir,
                   "--package-db=" ++ pkgSysDir]
     hasteCabal Configure args =
-      withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
+      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
       where as = "configure" : args ++ ghcOpts ++ configOpts
     hasteCabal Install args =
-      withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
+      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
       where as = "install" : args ++ ghcOpts ++ configOpts
     hasteCabal Build args =
-      withEnv "HASTE_BOOTING" id $ run_ hasteCabalBinary as ""
+      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
       where as = "build" : args ++ ghcOpts
 
 -- | Copy GHC settings and utils into the given directory.
