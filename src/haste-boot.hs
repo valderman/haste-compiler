@@ -276,6 +276,13 @@ buildLibs cfg = do
     -- Set up dirs and copy includes
     mkdir True $ pkgSysLibDir
     cpDir "include" hasteSysDir
+
+    inDirectory ("utils" </> "unlit") $ do
+      let out = if os == "mingw32" then "unlit.exe" else "unlit"
+      run_ "gcc" ["-o" ++ out, "-O2", "unlit.c", "-static"] ""
+      run_ "strip" ["-s", out] ""
+      cp out (hasteSysDir </> out)
+
     run_ hastePkgBinary ["update", "--global", "libraries" </> "rts.pkg"] ""
 
     inDirectory "libraries" $ do
@@ -355,11 +362,9 @@ copyGhcSettings dest = do
   cp (libdir </> "platformConstants") (dest </> "platformConstants")
 #ifdef mingw32_HOST_OS
   cp ("settings.windows") (dest </> "settings")
-  cp (libdir </> "unlit.exe") (dest </> "unlit.exe")
   cp (libdir </> "touchy.exe") (dest </> "touchy.exe")
 #else
   cp (libdir </> "settings") (dest </> "settings")
-  cp (libdir </> "unlit") (dest </> "unlit")
 #endif
 
 relocate :: String -> Shell ()
