@@ -10,6 +10,7 @@ import Data.Binary
 import Data.List (isSuffixOf)
 import qualified Data.ByteString.UTF8 as BS
 import qualified Haste.JSLib as JSLib
+import qualified System.IO as IO
 
 -- | The file extension to use for modules.
 jsmodExt :: Bool -> String
@@ -91,8 +92,9 @@ readMod basepath pkgid modname boot = do
     isF <- isFile path'
     if isF
        then do
-         m <- decode <$> liftIO (B.readFile path')
-         m `seq` return (Just m)
+         liftIO $ IO.withFile path' IO.ReadMode $ \h -> do
+           m <- decode <$> (B.hGet h . fromInteger =<< IO.hFileSize h)
+           m `seq` return (Just m)
        else do
          return Nothing
   where
