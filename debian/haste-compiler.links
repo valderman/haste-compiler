@@ -1,5 +1,4 @@
 /usr/lib/haste-compiler/bin/hastec /usr/bin/hastec
 /usr/lib/haste-compiler/bin/haste-pkg /usr/bin/haste-pkg
 /usr/lib/haste-compiler/bin/haste-cabal /usr/bin/haste-cabal
-/usr/lib/haste-compiler/bin/haste-boot /usr/bin/haste-boot
 /usr/lib/haste-compiler/bin/haste-cat /usr/bin/haste-cat
