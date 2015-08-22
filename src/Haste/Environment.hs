@@ -25,10 +25,15 @@ import System.Environment (getExecutablePath)
 #endif
 
 -- | Subdirectory under Haste's root directory where all the stuff for this
---   version lives.
---   Only x86-64 supported.
+--   version lives. Use "windows" instead of "mingw32", since this is what
+--   cabal prefers.
 hasteVersionSubDir :: FilePath
-hasteVersionSubDir = "x86_64-" ++ os ++ "-" ++ showBootVersion bootVersion
+hasteVersionSubDir = arch ++ "-" ++ myos ++ "-" ++ myver
+  where
+    myos
+      | os == "mingw32" = "windows"
+      | otherwise       = os
+    myver               = showBootVersion bootVersion
 
 -- | Directory to search for GHC settings. Always equal to 'hasteSysDir'.
 hasteGhcLibDir :: FilePath
