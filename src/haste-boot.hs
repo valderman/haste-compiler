@@ -50,7 +50,8 @@ data Cfg = Cfg {
     tracePrimops          :: Bool,
     forceBoot             :: Bool,
     initialPortableBoot   :: Bool,
-    getHasteCabal         :: Bool
+    getHasteCabal         :: Bool,
+    verbose               :: Bool
   }
 
 defCfg :: Cfg
@@ -62,7 +63,8 @@ defCfg = Cfg {
     tracePrimops          = False,
     forceBoot             = False,
     initialPortableBoot   = False,
-    getHasteCabal         = True
+    getHasteCabal         = True,
+    verbose               = False
   }
 #else
 defCfg = Cfg {
@@ -72,7 +74,8 @@ defCfg = Cfg {
     tracePrimops          = False,
     forceBoot             = False,
     initialPortableBoot   = False,
-    getHasteCabal         = True
+    getHasteCabal         = True,
+    verbose               = False
   }
 #endif
 
@@ -139,6 +142,9 @@ specs = [
            "Build standard libs for tracing of primitive " ++
            "operations. Only use if you're debugging the code " ++
            "generator."
+    , Option "v" ["verbose"]
+           (NoArg $ \cfg -> cfg {verbose = True}) $
+           "Print absolutely everything."
 #endif
   ]
 
@@ -250,7 +256,7 @@ buildLibs cfg = do
       inDirectory libDir $ do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
-          hasteCabal Configure $ ["--solver", "topdown"] ++ ghcOpts
+          hasteCabal Configure ["--solver", "topdown"]
           hasteCabal Build []
           let primlibfile = "libHSghc-prim-0.3.0.0.jslib"
               primlibdir  = pkgSysLibDir </> "ghc-prim-0.3.0.0"
@@ -261,7 +267,7 @@ buildLibs cfg = do
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do
-          hasteCabal Install ("--solver" : "topdown" : ghcOpts)
+          hasteCabal Install ["--solver", "topdown"]
 
         -- Install base
         inDirectory "base" $ do
@@ -271,7 +277,7 @@ buildLibs cfg = do
             . filter (not . null)
             . filter (and . zipWith (==) "version")
             . lines
-          hasteCabal Configure $ ["--solver", "topdown"] ++ ghcOpts
+          hasteCabal Configure ["--solver", "topdown"]
           hasteCabal Build []
           let base = "base-" ++ basever
               pkgdb = "--package-db=dist" </> "package.conf.inplace"
@@ -297,6 +303,7 @@ buildLibs cfg = do
   where
     ghcOpts = concat [
         if tracePrimops cfg then ["--hastec-option=-debug"] else [],
+        if verbose cfg then ["--verbose"] else [],
         ["--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
       ]
     configOpts = ["--with-hastec=" ++ hasteBinary,
