@@ -174,18 +174,17 @@ bootHaste cfg tmpdir = inDirectory tmpdir $ do
   removeBootFile <- isFile bootFile
   when removeBootFile $ rm bootFile
   when (getLibs cfg) $ do
-    when (getHasteCabal cfg) $ do
-      installHasteCabal tmpdir
-
-    when (not $ useLocalLibs cfg) $ do
-      fetchLibs tmpdir
-
     -- Don't clear dir when it contains binaries; portable should only be built
     -- by scripts anyway, so this dir ought to be clean.
     when (not portableHaste) $ do
       mapM_ clearDir [pkgUserLibDir, jsmodUserDir, pkgUserDir,
                       pkgSysLibDir, jsmodSysDir, pkgSysDir]
 
+    when (getHasteCabal cfg) $ do
+      installHasteCabal portableHaste tmpdir
+
+    when (not $ useLocalLibs cfg) $ do
+      fetchLibs tmpdir
 
     when (not portableHaste || initialPortableBoot cfg) $ do
       mkdir True hasteSysDir
@@ -207,16 +206,47 @@ clearDir dir = do
   exists <- isDirectory dir
   when exists $ rmdir dir
 
-installHasteCabal :: FilePath -> Shell ()
-installHasteCabal tmpdir = do
+installHasteCabal :: Bool -> FilePath -> Shell ()
+installHasteCabal portable tmpdir = do
     echo "Downloading haste-cabal from GitHub"
     f <- decompress `fmap` downloadFile hasteCabalUrl
-    liftIO $ BS.writeFile (hasteBinDir </> hasteCabalFile) f
+    if os == "linux"
+      then do
+        mkdir True hasteCabalRootDir
+        liftIO . unpack hasteCabalRootDir $ read f
+        liftIO $ copyPermissions
+                    hasteBinary
+                    (hasteCabalRootDir </> "haste-cabal/haste-cabal.bin")
+        file (hasteBinDir </> hasteCabalFile) launcher
+      else do
+        liftIO $ BS.writeFile (hasteBinDir </> hasteCabalFile) f
     liftIO $ copyPermissions hasteBinary (hasteBinDir </> hasteCabalFile)
   where
     baseUrl = "http://valderman.github.io/haste-libs/"
-    hasteCabalUrl = baseUrl ++ "haste-cabal" <.> os <.> "bz2"
+    hasteCabalUrl
+      | os == "linux" = baseUrl ++ "haste-cabal.linux.tar.bz2"
+      | otherwise     = baseUrl ++ "haste-cabal" <.> os <.> "bz2"
     hasteCabalFile = "haste-cabal" ++ if os == "mingw32" then ".exe" else ""
+
+    hasteCabalRootDir
+      | portable  = hasteBinDir </> ".."
+      | otherwise = hasteSysDir
+
+    -- We need to determine the haste-cabal libdir at runtime if we're
+    -- portable
+    launcher
+      | portable = unlines [
+            "#!/bin/bash",
+            "DIR=\"$(dirname $0)/../haste-cabal\"",
+            "export LD_LIBRARY_PATH=$DIR",
+            "exec $DIR/haste-cabal.bin $@"
+          ]
+      | otherwise = unlines [
+            "#!/bin/bash",
+            "DIR=\"" ++ hasteCabalRootDir </> "haste-cabal" ++ "\"",
+            "export LD_LIBRARY_PATH=$DIR",
+            "exec $DIR/haste-cabal.bin $@"
+          ]
 
 -- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> Shell ()
