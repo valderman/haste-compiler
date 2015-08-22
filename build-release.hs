@@ -64,9 +64,7 @@ main = do
 
         when ("deb" `elem` args) $ do
           deb <- buildDebianPackage ver ghcver
-          if inplace
-            then mv (".." </> deb) (outdir </> deb)
-            else mv deb (outdir </> deb)
+          mv (".." </> deb) (outdir </> deb)
 
     case res of
       Left err -> error $ "FAILED: " ++ err
@@ -80,7 +78,6 @@ buildPortable = do
     run_ "cabal" ["configure", "-f", "portable", "-f", "static"] ""
     run_ "cabal" ["haddock"] ""
     run_ "dist/setup/setup" ["build"] ""
-    rm "haste-compiler/.hastedir"
 
     -- Copy docs
     cpDir "dist/doc/html/haste-compiler" "haste-compiler/docs"
