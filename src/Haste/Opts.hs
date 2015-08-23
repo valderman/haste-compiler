@@ -16,12 +16,13 @@ hasteOpts = [
            "external names included in comments.",
     Option "" ["ddisable-js-opts"]
            (NoArg $ \cfg -> cfg {optimize = False}) $
-           "Don't perform any optimizations on the JS at all.",
+           "Don't perform any optimizations on the JavaScript at all. " ++
+           "This notably includes tail call optimization.",
     Option "" ["dtrace-primops"]
            (NoArg $ \cfg -> cfg {tracePrimops = True,
                                  rtsLibs = debugLib : rtsLibs cfg}) $
            "Trace primops. Not really useful unless Haste was booted with " ++
-           "option.",
+           "primop tracing enabled.",
     Option "" ["dont-link"]
            (NoArg $ \cfg -> cfg {performLink = False}) $
            "Don't link generated .jsmod files into a .js blob.",
@@ -38,12 +39,12 @@ hasteOpts = [
     Option "" ["no-use-strict"]
            (NoArg $ \cfg -> cfg {useStrict = False}) $
            "Do not emit '\"use strict\";' declaration. Does not affect " ++
-           "minifier behavior, but *does* affect any external JS included " ++
-           "with --with-js.",
+           "minifier behavior, but *does* affect any external JavaScript " ++
+           "included using --with-js.",
     Option "" ["onexec"]
            (NoArg $ \cfg -> cfg {appStart = startCustom "onexec"}) $
-           "Launch application immediately when the JS file is loaded. " ++
-           "Shorthand for --start=onexec.",
+           "Launch application immediately when the JavaScript file is " ++
+           "loaded. Shorthand for --start=onexec.",
     Option "" ["onload"]
            (NoArg $ \cfg -> cfg {appStart = startCustom "onload"}) $
            "Launch application on window.onload. " ++
@@ -58,7 +59,7 @@ hasteOpts = [
            "--opt-all --opt-unsafe-ints",
     Option "" ["opt-minify"]
            (NoArg updateClosureCfg) $
-           "Minify JS output using Google Closure compiler.",
+           "Minify JavaScript output using Google Closure compiler.",
     Option "" ["opt-minify-flag"]
            (ReqArg updateClosureFlags "FLAG") $
            "Pass a flag to Closure. " ++
@@ -70,7 +71,7 @@ hasteOpts = [
            "--opt-vague-ints",
     Option "" ["opt-unsafe-mult"]
            (NoArg unsafeMul) $
-           "Use Javascript's built-in multiplication operator for "
+           "Use JavaScript's built-in multiplication operator for "
            ++ "fixed precision integer multiplication. This may speed "
            ++ "up Int multiplication by a factor of at least four, "
            ++ "but may give incorrect results when the product "
@@ -89,14 +90,14 @@ hasteOpts = [
            "May significantly increase link time.",
     Option "o" ["out"]
            (ReqArg (\f cfg -> cfg {outFile = \_ _ -> f}) "FILE") $
-           "Write JS output to FILE.",
+           "Write JavaScript output to FILE.",
     Option "" ["outdir"]
            (ReqArg (\d cfg -> cfg {targetLibPath = d}) "DIR") $
            "Write intermediate files to DIR.",
     Option "" ["output-html"]
            (NoArg $ \cfg -> cfg {outputHTML = True}) $
-           "Write the JS output to an HTML file together with a simple " ++
-           "HTML skeleton.",
+           "Write the JavaScript output to an HTML file together with a " ++
+           "minimal HTML skeleton.",
     Option "" ["own-namespace"]
            (NoArg $ \cfg -> cfg {wrapProg = True}) $
            "Wrap the whole program in a closure to avoid polluting the " ++
@@ -121,8 +122,8 @@ hasteOpts = [
     Option "" ["with-js"]
            (ReqArg (\js c -> c {jsExternals = jsExternals c ++ commaBreak js})
                    "FILES") $
-           "Link the given comma-separated list of JS files into the final " ++
-           "JS bundle."
+           "Link the given comma-separated list of JavaScript files into " ++
+           "the final \.js file."
   ]
 
 helpHeader :: String
