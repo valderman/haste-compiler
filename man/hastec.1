@@ -1,0 +1,178 @@
+.TH HASTEC 1
+
+.SH NAME
+hastec \- compile Haskell programs into JavaScript
+
+.SH SYNOPSIS
+.B hastec
+.RI [ option | filename ]...
+
+.SH DESCRIPTION
+This manual page documents briefly the
+.B hastec
+command.
+In addition to the options listed here,
+.B hastec
+also accepts all the same command line options as the GHC compiler,
+with the exception of
+.B -prof
+which is silently ignored.
+
+.BR
+By default,
+.B hastec
+behaves as though it was called with GHC's
+.B --make
+option, compiling and linking a complete JavaScript program which,
+when included into a web page, sets the program's
+.B main
+function to execute when the page has finished loading.
+
+
+.SH OPTIONS
+
+
+.SS Linking
+
+.TP
+.BR \-\-dont\-link
+Don't link generated .jsmod files into a .js blob.
+
+.TP
+.BR \-\-link\-jslib
+Create a jslib file instead of an executable.
+
+.TP
+.BR \-\-with\-js =\fIFILES\fR
+Link the given comma-separated list of JavaScript files into the final .js file.
+
+
+.SS Program startup
+
+.TP
+.BR \-\-onexec
+Launch application immediately when the JavaScript file is loaded.
+Shorthand for --start=onexec.
+
+.TP
+.BR \-\-onload
+Launch application on window.onload. Shorthand for --start=onload.
+
+.TP
+.BR \-\-start =\fICODE\fR
+Specify custom start code. '$HASTE_MAIN' will be replaced with the
+application's main function. For instance,
+--start='$("foo").onclick($HASTE_MAIN);' will use jQuery to launch the
+application whenever the element with the id "foo" is clicked.
+
+
+.SS Code generation
+
+.TP
+.BR \-\-full\-unicode
+Enable full generalCategory Unicode support. May bloat output by upwards of
+150 KB.
+
+.TP
+.BR \-\-no\-use\-strict
+Do not emit '"use strict";' declaration. Does not affect minifier behavior,
+but
+.B does
+affect any external JavaScript included using --with-js.
+
+.TP
+.BR \-o\fIFILE\fR ", " \-\-out =\fIFILE\fR
+Write JavaScript output to FILE.
+
+.TP
+.BR \-\-outdir =\fIDIR\fR
+Write intermediate files to DIR.
+
+.TP
+.BR \-\-output\-html
+Write the JavaScript output to an HTML file together with a simple HTML
+skeleton.
+
+.TP
+.BR \-\-own\-namespace
+Wrap the whole program in a closure to avoid polluting the global namespace.
+Incurs a performance hit, and makes minification slightly less effective.
+
+.TP
+.BR \-\-output\-jsflow
+Output code for use with the JSFlow interpreter. Note that this may leave
+your code crippled, since JSFlow doesn't all of Haste's needs.
+
+
+.SS Debugging
+
+.TP
+.BR \-\-debug
+Output indented, fairly readable code, with all external names included in
+comments.
+
+.TP
+.BR \-\-ddisable\-js\-opts
+Disable any and all optimizations over the resulting JavaScript code.
+This notably includes tail call optimization.
+
+.TP
+.BR \-\-dtrace\-primops
+Trace primops.
+Not really useful unless Haste was booted with primop tracing enabled.
+
+
+.SS Optimization
+
+.TP
+.BR \-\-opt\-all
+Enable all safe optimizations. Equivalent to --opt-minify
+--opt-whole-program.
+
+.TP
+.BR \-\-opt\-unsafe
+Enable all optimizations, safe and unsafe. Equivalent to --opt-all
+--opt-unsafe-ints
+
+.TP
+.BR \-\-opt\-minify
+Minify JavaScript output using Google Closure compiler.
+
+.TP
+.BR \-\-opt\-minify\-flag =\fIFLAG\fR
+Pass a flag to Closure. To minify programs in strict mode, use
+--opt-minify-flag='--language_in=ECMASCRIPT5_STRICT'
+
+.TP
+.BR \-\-opt\-unsafe\-ints
+Enable unsafe Int arithmetic. Implies --opt-unsafe-mult --opt-vague-ints
+
+.TP
+.BR \-\-opt\-unsafe\-mult
+Use JavaScript's built-in multiplication operator for fixed precision integer
+multiplication. This may speed up Int multiplication by a factor of at least
+four, but may give incorrect results when the product falls outside the
+interval [-2^52, 2^52]. In browsers which support Math.imul, this
+optimization will likely be slower than the default.
+
+.TP
+.BR \-\-opt\-vague\-ints
+Int math has 53 bits of precision, but gives incorrect results rather than
+properly wrapping around when those 53 bits are exceeded. Bitwise operations
+still only work on the lowest 32 bits.
+
+.TP
+.BR \-\-opt\-whole\-program
+Perform optimizations over the whole program during linking. May
+significantly increase link time.
+
+
+.SS Misc. options
+
+.TP
+.BR \-? ", " \-\-help
+Display help message.
+
+.TP
+.BR \-v ", " \-\-verbose
+Display even the most obnoxious warnings and messages.
