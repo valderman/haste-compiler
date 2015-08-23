@@ -1,5 +1,4 @@
-
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TupleSections #-}
 module Main where
 import System.Environment
 import Haste.Module
@@ -18,12 +17,16 @@ main = do
     else mapM_ printModule as
 
 printModule mpkg = do
-  let (pkg, (_:m)) = break (== ':') mpkg
-  mods <- mapM (\p -> readModule p pkg m) ("." : libPaths def)
-  mapM_ printDefs . map fromJust $ filter isJust mods
+  let (pkg, (_:mn)) = break (== ':') mpkg
+      paths = "." : libPaths def
+  mods <- mapM (\p -> (p, ) `fmap` readModule p pkg mn) paths
+  case filter (isJust . snd) mods of
+    ((p, Just m):_) -> printDefs p pkg mn m
+    _               -> return ()
 
-printDefs mod = do
-  mapM_ printDef $ M.toList $ modDefs mod
+printDefs :: FilePath -> String -> String -> Module -> IO ()
+printDefs path pkg mn m = do
+  mapM_ printDef $ M.toList $ modDefs m
 
 printDef (name, def) = do
   BS.putStrLn $ niceName name
