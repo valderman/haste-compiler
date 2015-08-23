@@ -8,7 +8,7 @@ Build-Depends: debhelper (>= 9)
 Package: haste-compiler
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${ghc:Depends}
-Description: A Haskell to JavaScript compiler.
-  Compiles Haskell programs into stand-alone JavaScript files. Supports
-  standard Haskell2010, most GHC extensions, and comes with a basic set of
-  libraries geared towards web development.
+Description: Haskell to JavaScript compiler
+ Compiles Haskell programs into self contained JavaScript files. Supports
+ standard Haskell2010 as well as most GHC extensions, and comes with
+ a basic set of libraries geared towards web development.
