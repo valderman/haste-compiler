@@ -53,10 +53,10 @@ If you are having problems with the `haste-cabal` installed by `haste-boot`,
 you can try building it from scratch and then passing the `--no-haste-cabal`
 flag to `haste-boot`:
 
-  $ git clone https://github.com/valderman/cabal.git
-  $ cd cabal && git checkout haste-cabal
-  $ cd Cabal && cabal install
-  $ cd ../cabal-install && cabal install
+    $ git clone https://github.com/valderman/cabal.git
+    $ cd cabal && git checkout haste-cabal
+    $ cd Cabal && cabal install
+    $ cd ../cabal-install && cabal install
 
 When installing Haste from GitHub, you should probably run the test suite first,
 to verify that everything is working. To do that, execute
