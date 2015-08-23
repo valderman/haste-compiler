@@ -49,8 +49,17 @@ Building from Github source is equally easy. After checking out the source,
     $ cabal install
     $ haste-boot --force --local
 
-When installing from GitHub, you should probably run the test suite first
-though, to verify that everything is working. To do that, execute
+If you are having problems with the `haste-cabal` installed by `haste-boot`,
+you can try building it from scratch and then passing the `--no-haste-cabal`
+flag to `haste-boot`:
+
+  $ git clone https://github.com/valderman/cabal.git
+  $ cd cabal && git checkout haste-cabal
+  $ cd Cabal && cabal install
+  $ cd ../cabal-install && cabal install
+
+When installing Haste from GitHub, you should probably run the test suite first,
+to verify that everything is working. To do that, execute
 `./runtests.sh` in the Haste root directory.  You may also run only a particular
 test by executing `./runtests.sh NameOfTest`.  The test suite uses the `nodejs`
 interpreter by default, but this may be modified by setting the `JS` environment
@@ -127,12 +136,12 @@ with vanilla GHC and cabal:
 
     $ haste-cabal install mtl
 
-This will only work for libraries, however, as installing JavaScript
-"executables" on your system doesn't make much sense. You can still use
-`haste-cabal build` to build your "executables" locally, however.
-
-Finally, you can interact with JavaScript code using the FFI. See
-`doc/js-externals.txt` for more information about that.
+Finally, you can interact with JavaScript code using the `Haste.Foreign`
+module in the bundled `haste-lib` library.
+See `doc/js-externals.txt` for more information about that.
+This library also contains all sorts of functionality for DOM manipulation,
+event handling, cooperative multitasking, canvas graphics, native JS
+string manipulation, etc.
 
 For more information on how Haste works, see
 [the Haste Report](http://haste-lang.org/hastereport.pdf "Haste Report"),
@@ -147,10 +156,12 @@ Interfacing with JavaScript
 ---------------------------
 
 When writing programs you will probably want to use some native JavaScript
-in your program; bindings to native libraries, for instance. There are two ways
-of doing this. You can either use the GHC FFI as described in
-`doc/js-externals.txt`, or you can use the Fay-like `ffi` function:
+in your program; bindings to native libraries, for instance.
+The preferred way of doing this is the `Haste.Foreign` module:
 
+    {-# LANGUAGE OverloadedStrings #-}
+    import Haste.Foreign
+    
     addTwo :: Int -> Int -> IO Int
     addTwo = ffi "(function(x, y) {return x + y;})"
 
@@ -164,6 +175,7 @@ them from JavaScript:
 
 fun.hs:
 
+    {-# LANGUAGE OverloadedStrings #-}
     import Haste.Foreign
     import Haste.Prim (toJSStr)
 
@@ -171,7 +183,7 @@ fun.hs:
     fun n s = return $ "The number is " ++ show n ++ " and the string is " ++ s
 
     main = do
-      export (toJSStr "fun") fun
+      export "fun" fun
 
 legacy.js:
 
@@ -189,6 +201,9 @@ function in `legacy.js`. Finally, we tell the compiler to start the program by
 first executing Haste's `main` function (the `$HASTE_MAIN` gets replaced by
 whatever name the compiler chooses for the Haste `main`) and then executing
 our own `mymain`.
+
+The mechanics of `Haste.Foreign` are described in detail in this
+[paper](http://haste-lang.org/ifl15.pdf).
 
 
 Effortless type-safe client-server communication
