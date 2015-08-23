@@ -123,7 +123,7 @@ hasteOpts = [
            (ReqArg (\js c -> c {jsExternals = jsExternals c ++ commaBreak js})
                    "FILES") $
            "Link the given comma-separated list of JavaScript files into " ++
-           "the final \.js file."
+           "the final .js file."
   ]
 
 helpHeader :: String
