@@ -26,6 +26,10 @@ printModule mpkg = do
 
 printDefs :: FilePath -> String -> String -> Module -> IO ()
 printDefs path pkg mn m = do
+  putStrLn $ "Package: " ++ pkg
+  putStrLn $ "Module:  " ++ mn
+  putStrLn $ "Path:    " ++ path
+  putStrLn "---\n"
   mapM_ printDef $ M.toList $ modDefs m
 
 printDef (name, def) = do
