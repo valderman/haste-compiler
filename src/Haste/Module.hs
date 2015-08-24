@@ -1,10 +1,11 @@
+{-# LANGUAGE CPP #-}
 -- | Read and write JSMods.
 module Haste.Module (writeModule, readModule) where
 import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import Control.Shell
 import Control.Applicative
-import Control.Monad (when)
+import Control.Monad (when, filterM)
 import Data.JSTarget
 import Data.Binary
 import Data.List (isSuffixOf)
@@ -78,12 +79,30 @@ jslibFileName basepath pkgid
         _ -> do
           return stdname
   | otherwise = do
+#if __GLASGOW_HASKELL__ < 709
       return stdname
+#else
+      dirs <- filter (pkgid `isSuffixOf`) . map (basepath </>) <$> ls basepath
+      dirs' <- filterM isDirectory dirs
+      case dirs' of
+        ds | not (null ds) -> findLibFile ds
+           | otherwise     -> return stdname
+#endif
   where
+    findLibFile (d:ds) = do
+      fs <- map (d </>) . filter (libfilesuffix `isSuffixOf`) <$> ls d
+      fs' <- filterM isFile fs
+      case fs' of
+        (f:_) -> return f
+        _     -> findLibFile ds
+    findLibFile _ = do
+      return stdname
+
     -- Use this for non-special packages
     stdname = pkgid </> "libHS" ++ pkgid <.> "jslib"
     -- These package ids are special and come without version number
     specials = ["ghc-prim", "base", "integer-gmp"]
+    libfilesuffix = pkgid <.> "jslib"
 
 readMod :: FilePath -> String -> String -> Bool -> Shell (Maybe Module)
 readMod basepath pkgid modname boot = do

@@ -153,7 +153,7 @@ specs = [
 hdr :: String
 hdr = "Fetch, build and install all libraries necessary to use Haste.\n"
 
-data CabalOp = Configure | Build | Install
+data CabalOp = Configure | Build | Install | Clean
 
 main :: IO ()
 main = do
@@ -294,14 +294,11 @@ buildLibs cfg = do
           cp "../../../include/ghcplatform.h" "../ghc_boot_platform.h"
           run_ "cpp" ["-P", "-I../../../include",
                       "../primops.txt.pp", "-o", "primops.txt"] ""
-          hasteCabal Configure ["--solver", "topdown"]
-          hasteCabal Build []
-          let primlibfile = "libHSghc-prim-" ++ primVersion ++ ".jslib"
-              primlibdir  = pkgSysLibDir </> "ghc-prim-" ++ primVersion
-          mkdir True primlibdir
-          run_ hasteInstHisBinary ["ghc-prim-" ++ primVersion,
-                                   "dist" </> "build"] ""
-          cp ("dist" </> "build" </> primlibfile) (primlibdir </> primlibfile)
+          hasteCabal Install ["--solver", "topdown"]
+
+          -- To get the GHC.Prim module in spite of pretending to have
+          -- build-type: Simple
+          run_ hastePkgBinary ["unregister", "--global","ghc-prim"] ""
           run_ hastePkgBinary ["update",
                                "--global","ghc-prim-"++primVersion++".conf"] ""
 
@@ -311,24 +308,8 @@ buildLibs cfg = do
 
         -- Install base
         inDirectory "base" $ do
-          basever <- file "base.cabal" >>= return
-            . dropWhile (not . isDigit)
-            . head
-            . filter (not . null)
-            . filter (and . zipWith (==) "version")
-            . lines
-          run_ "./configure" [] ""
-          hasteCabal Configure ["--solver", "topdown", "-finteger-gmp"]
-          forEachFile "../include" $ \f -> cp f "include"
-          hasteCabal Build []
-          let base = "base-" ++ basever
-              pkgdb = "--package-db=dist" </> "package.conf.inplace"
-              baselibfile = "libHS" ++ base <.> "jslib"
-              baselibdir  = pkgSysLibDir </> base
-          mkdir True baselibdir
-          run_ hasteInstHisBinary [base, "dist" </> "build"] ""
-          cp ("dist" </> "build" </> baselibfile) (baselibdir </> baselibfile)
-          run_ hasteCopyPkgBinary [base, pkgdb] ""
+          hasteCabal Clean []
+          hasteCabal Install ["--solver", "topdown", "-finteger-gmp"]
           forEachFile "include" $ \f -> cp f (hasteSysDir </> "include")
 
         -- Install array
@@ -348,13 +329,16 @@ buildLibs cfg = do
   where
     ghcOpts = concat [
         if tracePrimops cfg then ["--hastec-option=-debug"] else [],
-        if verbose cfg then ["--verbose"] else [],
-        ["--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++ show hostWordSize]
-      ]
-    configOpts = ["--with-hastec=" ++ hasteBinary,
-                  "--with-haste-pkg=" ++ hastePkgBinary,
-                  "--libdir=" ++ takeDirectory pkgSysLibDir,
-                  "--package-db=" ++ pkgSysDir]
+        if verbose cfg then ["--verbose"] else []]
+    configOpts = [ "--with-hastec=" ++ hasteBinary
+                 , "--with-haste-pkg=" ++ hastePkgBinary
+                 ,  "--libdir=" ++ takeDirectory pkgSysLibDir
+                 , "--package-db=" ++ pkgSysDir
+#if __GLASGOW_HASKELL__ < 709
+                 , ["--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++
+                    show hostWordSize]
+#endif
+                 ]
     hasteCabal Configure args =
       withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
       where as = "configure" : args ++ ghcOpts ++ configOpts
@@ -364,6 +348,11 @@ buildLibs cfg = do
     hasteCabal Build args =
       withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
       where as = "build" : args ++ ghcOpts
+    hasteCabal Clean args =
+      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
+      where as = "clean" : args
+
+    vanillaCabal args = run_ "cabal" args ""
 
 -- | Copy GHC settings and utils into the given directory.
 copyGhcSettings :: FilePath -> Shell ()

@@ -63,13 +63,14 @@ Library
         monads-tf,
         ghc-prim,
         containers > 0.5.6 && < 0.5.7,
-        bytestring >= 0.9.2.1,
+        bytestring < 0.10.6.0,
         haste-prim == 0.5.1.0,
         time == 1.5.0.1
     if impl(haste)
-        Build-Depends:
-            base == 4.6.0.1,
-            array == 0.4.0.1
+        if impl(ghc >= 7.10)
+            Build-Depends: array == 0.5.1.0, base >= 4.8 && < 4.9
+        else
+            Build-Depends: array == 0.4.0.1, base == 4.6.0.1
     else
         Build-Depends:
             base,

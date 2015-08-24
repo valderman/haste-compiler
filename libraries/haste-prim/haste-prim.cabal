@@ -44,8 +44,8 @@ library
     MultiParamTypeClasses
     UnliftedFFITypes
   build-depends:
-    base           >=4.6 && <4.8,
-    ghc-prim       >=0.3 && <0.4,
+    base           >=4.6 && <4.9,
+    ghc-prim       >=0.3 && <0.5,
     integer-gmp    >=0.5 && <0.6
   if !impl(haste)
     build-depends: haste-compiler == 0.5.1.0

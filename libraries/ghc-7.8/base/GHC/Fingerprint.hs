@@ -19,7 +19,8 @@
 module GHC.Fingerprint (
         Fingerprint(..), fingerprint0, 
         fingerprintString,
-        fingerprintFingerprints
+        fingerprintFingerprints,
+        getFileHash
    ) where
 
 import GHC.IO
@@ -84,3 +85,7 @@ mkWord64 (W# w1) (W# w2) = W64# (mkWord64# w1 w2)
 
 parseHex :: String -> Word
 parseHex str = parseInt# (toJSStr ('0':'x':str))
+
+getFileHash :: FilePath -> IO Fingerprint
+getFileHash _ =
+  return $ error "Fingerprinting a file does not make sense in a browser."

@@ -8,7 +8,7 @@ maintainer:     libraries@haskell.org
 bug-reports:    http://ghc.haskell.org/trac/ghc/newticket?component=libraries%20%28other%29&keywords=ghc-prim
 synopsis:       GHC primitives
 cabal-version:  >=1.10
-build-type:     Custom
+build-type:     Simple
 description:
     GHC primitives.
 
