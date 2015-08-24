@@ -94,7 +94,10 @@ data Config = Config {
 
     -- | Link as jslib file, instead of executable?
     linkJSLib :: Bool,
-    
+
+    -- | Output file name when linking jslib.
+    linkJSLibFile :: Maybe FilePath,
+
     -- | A function to call on each Int arithmetic primop.
     wrapIntMath :: Exp -> Exp,
 
@@ -160,6 +163,7 @@ defConfig = Config {
                                  in replaceExtension f ext,
     performLink      = True,
     linkJSLib        = False,
+    linkJSLibFile    = Nothing,
     wrapIntMath      = strictly32Bits,
     multiplyIntOp    = safeMultiply,
     verbose          = False,

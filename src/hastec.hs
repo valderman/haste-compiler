@@ -5,6 +5,7 @@ import Language.Haskell.GHC.Simple
 import Language.Haskell.GHC.Simple.PrimIface
 import GHC
 import Outputable (showPpr)
+import Packages
 
 import System.Environment (getArgs, lookupEnv)
 import System.Exit
@@ -37,7 +38,7 @@ main = do
     booting <- maybe False (const True) `fmap` lookupEnv "HASTE_BOOTING"
     let args = "-O2":concat [packageDBArgs,as,["-D__HASTE__="++show intVersion]]
         prof = "-prof" `elem` args
-    case parseHasteFlags booting args of
+    case parseHasteFlags booting args as of
       Left act             -> act
       Right (fs, mkConfig) -> do
         let ghcconfig = mkGhcCfg fs args
@@ -63,12 +64,14 @@ main = do
     dotToSlash '.' = '/'
     dotToSlash c   = c
 
+    packageNameToString (PackageName fs) = unpackFS fs
+
     buildJSLib profiling cfg pkgkey mods = do
       let basepath    = targetLibPath cfg
           modpath     = targetLibPath cfg ++ "/" ++ pkgkey
           mods'       = [ modpath ++ "/" ++ map dotToSlash mn ++ ".jsmod"
                         | mn <- mods]
-          libfile     = concat [basepath,"/","libHS",pkgkey,".jslib"]
+          libfile     = maybe (pkgkey <.> "jsmod") id (linkJSLibFile cfg)
           profLibfile = reverse (drop 6 (reverse libfile)) ++ "_p.jslib"
 
       createJSLib libfile (BS.fromString pkgkey) mods'
@@ -93,7 +96,7 @@ main = do
             ghcMode = if "-c" `elem` args
                         then OneShot
                         else CompManager,
-            hscTarget = HscNothing
+            hscTarget = HscAsm
           },
         cfgCustomPrimIface = Just (primOpInfo, primOpStrictness)
 
@@ -191,7 +194,7 @@ initUserPkgDB = do
   return ()
 
 type Message = String
-data Compiler = Haste | GHC | InstallJSExe deriving (Show, Eq)
+data Compiler = Haste | GHC | InstallJSExe | BuildRunner deriving (Show, Eq)
 data RunMode = Run !Compiler | DontRun !Message deriving (Show, Eq)
 
 rebootMsg :: Message
@@ -202,6 +205,7 @@ runMode :: Bool -> [String] -> RunMode
 runMode booting as
   | "--help" `elem` as                    = Run Haste
   | "--install-executable" `elem` as      = Run InstallJSExe
+  | "--build-runner" `elem` as            = Run BuildRunner
   | "--info" `elem` as                    = DontRun ghcInfo
   | "--print-libdir" `elem` as            = DontRun hasteGhcLibDir
   | "--print-global-package-db" `elem` as = DontRun pkgSysDir
@@ -220,8 +224,9 @@ runMode booting as
 
 -- | Parse Haste and static GHC flags, returning either an action to be taken
 --   before promptly exiting, or a Haste config and a list of flags for GHC.
-parseHasteFlags :: Bool -> [String] -> Either (IO ()) ([String], Config->Config)
-parseHasteFlags booting args = do
+parseHasteFlags :: Bool -> [String] -> [String]
+                -> Either (IO ()) ([String], Config->Config)
+parseHasteFlags booting args rawargs = do
   case runMode booting args of
    DontRun msg    -> Left $ putStrLn msg
    Run GHC        -> Left $ callVanillaGHC args
@@ -231,6 +236,8 @@ parseHasteFlags booting args = do
        Right (cfg, rest) -> Right (filter (/= "-prof") rest, cfg)
    Run InstallJSExe -> do
      Left $ installJSExe (jsexeIn args) (jsexeOut args)
+   Run BuildRunner -> do
+     Left $ callVanillaGHC (rawargs ++ ["-package-id", "Cabal-1.23.0.0-f701f4ea98ec7bed5883c4df743045e6"])
    where
      jsexeIn ("--install-executable":exe:_) = exe
      jsexeIn (_:xs)                         = jsexeIn xs

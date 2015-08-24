@@ -39,8 +39,9 @@ function to execute when the page has finished loading.
 Don't link generated .jsmod files into a .js blob.
 
 .TP
-.BR \-\-link\-jslib
-Create a jslib file instead of an executable.
+.BR \-\-link\-jslib [=\fIFILE\fR]
+Create a jslib file instead of an executable. If no FILE is given, the package
+key of the library currently being compiled is used as the library file name.
 
 .TP
 .BR \-\-with\-js =\fIFILES\fR

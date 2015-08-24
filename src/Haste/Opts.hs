@@ -34,7 +34,8 @@ hasteOpts = [
            (NoArg id) $
            "Display this message.",
     Option "" ["link-jslib"]
-           (NoArg $ \cfg -> cfg {linkJSLib = True}) $
+           (OptArg (\file cfg -> cfg {linkJSLib = True,
+                                      linkJSLibFile = file}) "FILE") $
            "Create a jslib file instead of an executable.",
     Option "" ["no-use-strict"]
            (NoArg $ \cfg -> cfg {useStrict = False}) $
