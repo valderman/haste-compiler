@@ -31,7 +31,6 @@ toObject = jsJSONParse . encodeJSON
 jsJSONParse :: JSString -> JSAny
 jsJSONParse = unsafePerformIO . go
   where
-    {-# NOINLINE go #-}
     go :: JSString -> IO JSAny
     go = ffi "(function(s){return JSON.parse(s);})"
 #else
