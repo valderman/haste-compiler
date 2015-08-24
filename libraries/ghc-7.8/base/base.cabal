@@ -140,6 +140,7 @@ Library {
         Data.Maybe,
         Data.Monoid,
         Data.Ord,
+        Data.Proxy,
         Data.Ratio,
         Data.STRef
         Data.STRef.Lazy
@@ -147,6 +148,9 @@ Library {
         Data.String,
         Data.Traversable
         Data.Tuple,
+        Data.Type.Bool,
+        Data.Type.Coercion,
+        Data.Type.Equality,
         Data.Typeable,
         Data.Typeable.Internal,
         Data.Unique,

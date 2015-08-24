@@ -291,9 +291,11 @@ buildLibs cfg = do
       inDirectory libDir $ do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
+#if __GLASGOW_HASKELL__ >= 710
           cp "../../../include/ghcplatform.h" "../ghc_boot_platform.h"
           run_ "cpp" ["-P", "-I../../../include",
                       "../primops.txt.pp", "-o", "primops.txt"] ""
+#endif
           hasteCabal Install ["--solver", "topdown"]
 
           -- To get the GHC.Prim module in spite of pretending to have
@@ -310,9 +312,9 @@ buildLibs cfg = do
         inDirectory "base" $ do
           hasteCabal Clean []
           hasteCabal Install ["--solver", "topdown", "-finteger-gmp"]
-          forEachFile "include" $ \f -> cp f (hasteSysDir </> "include")
 
         -- Install array
+        inDirectory "array" $ hasteCabal Clean []
         inDirectory "array" $ hasteCabal Install []
 
       -- Install haste-prim
@@ -335,8 +337,8 @@ buildLibs cfg = do
                  ,  "--libdir=" ++ takeDirectory pkgSysLibDir
                  , "--package-db=" ++ pkgSysDir
 #if __GLASGOW_HASKELL__ < 709
-                 , ["--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++
-                    show hostWordSize]
+                 , "--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++
+                    show hostWordSize
 #endif
                  ]
     hasteCabal Configure args =
@@ -353,6 +355,7 @@ buildLibs cfg = do
       where as = "clean" : args
 
     vanillaCabal args = run_ "cabal" args ""
+
 
 -- | Copy GHC settings and utils into the given directory.
 copyGhcSettings :: FilePath -> Shell ()

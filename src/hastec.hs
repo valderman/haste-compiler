@@ -2,10 +2,11 @@
 -- | Haste's main compiler driver.
 module Main where
 import Language.Haskell.GHC.Simple
+#if __GLASGOW_HASKELL__ >= 710
 import Language.Haskell.GHC.Simple.PrimIface
+#endif
 import GHC
 import Outputable (showPpr)
-import Packages
 
 import System.Environment (getArgs, lookupEnv)
 import System.Exit
@@ -64,8 +65,6 @@ main = do
     dotToSlash '.' = '/'
     dotToSlash c   = c
 
-    packageNameToString (PackageName fs) = unpackFS fs
-
     buildJSLib profiling cfg pkgkey mods = do
       let basepath    = targetLibPath cfg
           modpath     = targetLibPath cfg ++ "/" ++ pkgkey
@@ -97,9 +96,10 @@ main = do
                         then OneShot
                         else CompManager,
             hscTarget = HscAsm
-          },
-        cfgCustomPrimIface = Just (primOpInfo, primOpStrictness)
-
+          }
+#if __GLASGOW_HASKELL__ >= 710
+        , cfgCustomPrimIface = Just (primOpInfo, primOpStrictness)
+#endif
       }
     mkLinkerCfg dfs cfg = cfg {
         mainMod = Just (pkgKeyString $ modulePkgKey (mainModIs dfs),
@@ -107,6 +107,7 @@ main = do
       }
     setShowOutputable dfs cfg = cfg {showOutputable = showPpr dfs}
 
+#if __GLASGOW_HASKELL__ >= 710
 -- | Primop info for custom GHC.Prim interface.
 primOpInfo :: PrimOp -> PrimOpInfo
 #include "primop-info-710.hs"
@@ -114,6 +115,7 @@ primOpInfo :: PrimOp -> PrimOpInfo
 -- | Strictness info for custom GHC.Prim interface.
 primOpStrictness :: PrimOp -> Arity -> StrictSig
 #include "primop-stricts-710.hs"
+#endif
 
 -- | Compile an STG module into a JS module and write it to its appropriate
 --   location according to the given config.
