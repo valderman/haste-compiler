@@ -57,6 +57,8 @@ import GHC.Num
 import GHC.Show
 import GHC.List
 
+import Haste.Handle (jshRead, jshWrite)
+
 -- ---------------------------------------------------------------------------
 -- Simple input operations
 
@@ -187,8 +189,11 @@ hGetChar handle =
 
 hGetLine :: Handle -> IO String
 hGetLine h =
-  wantReadableHandle_ "hGetLine" h $ \ handle_ -> do
-     hGetLineBuffered handle_
+    go ""
+  where
+    go buf = do
+      [c] <- jshRead h 1
+      if c == '\n' then return (reverse buf) else go (c:buf)
 
 hGetLineBuffered :: Handle__ -> IO String
 hGetLineBuffered handle_@Handle__{..} = do
@@ -467,10 +472,7 @@ getSomeCharacters handle_@Handle__{..} buf@Buffer{..} =
 --  * 'isPermissionError' if another system resource limit would be exceeded.
 
 hPutChar :: Handle -> Char -> IO ()
-hPutChar handle c = do
-    c `seq` return ()
-    wantWritableHandle "hPutChar" handle $ \ handle_  -> do
-     hPutcBuffered handle_ c
+hPutChar handle c = jshWrite handle [c]
 
 hPutcBuffered :: Handle__ -> Char -> IO ()
 hPutcBuffered handle_@Handle__{..} c = do
@@ -528,14 +530,11 @@ hPutcBuffered handle_@Handle__{..} c = do
 --  * 'isPermissionError' if another system resource limit would be exceeded.
 
 hPutStr :: Handle -> String -> IO ()
-hPutStr handle str = hPutStr' handle str False
+hPutStr handle str = jshWrite handle str
 
 -- | The same as 'hPutStr', but adds a newline character.
 hPutStrLn :: Handle -> String -> IO ()
-hPutStrLn handle str = hPutStr' handle str True
-  -- An optimisation: we treat hPutStrLn specially, to avoid the
-  -- overhead of a single putChar '\n', which is quite high now that we
-  -- have to encode eagerly.
+hPutStrLn handle str = jshWrite handle str >> jshWrite handle "\n"
 
 hPutStr' :: Handle -> String -> Bool -> IO ()
 hPutStr' handle str add_nl =

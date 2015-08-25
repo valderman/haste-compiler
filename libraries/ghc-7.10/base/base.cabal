@@ -268,6 +268,7 @@ Library
         GHC.Unicode
         GHC.Weak
         GHC.Word
+        Haste.Handle
         Numeric
         Numeric.Natural
         Prelude
