@@ -310,6 +310,7 @@ Library
         Haste.GHCPaths
         Haste.Hash
         Haste.Prim.Any
+        Haste.Prim.Foreign
         Haste.Prim.JSType
         Haste.Random
         Haste.Timer
