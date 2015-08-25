@@ -309,6 +309,7 @@ genOp cfg op xs =
     PopCnt8Op      -> Right $ callForeign "popCnt" [head xs]
     PopCnt16Op     -> Right $ callForeign "popCnt" [head xs]
     PopCnt32Op     -> Right $ callForeign "popCnt" [head xs]
+    PopCnt64Op     -> Right $ callForeign "popCnt64" [head xs]
     DelayOp        -> Right $ defState
     SeqOp          -> Right $ eval $ head xs
     AtomicallyOp   -> Right $ callSaturated (xs !! 0) []
