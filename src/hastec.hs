@@ -66,8 +66,7 @@ main = do
     dotToSlash c   = c
 
     buildJSLib profiling cfg pkgkey mods = do
-      let basepath    = targetLibPath cfg
-          modpath     = targetLibPath cfg ++ "/" ++ pkgkey
+      let modpath     = targetLibPath cfg ++ "/" ++ pkgkey
           mods'       = [ modpath ++ "/" ++ map dotToSlash mn ++ ".jsmod"
                         | mn <- mods]
           libfile     = maybe (pkgkey <.> "jsmod") id (linkJSLibFile cfg)
