@@ -37,6 +37,13 @@ newtype Parser s a = Parser { runParser :: [s] -> Maybe ([s], a) }
 parserError s msg = Nothing
 parserAccept s a = Just (s, a)
 
+instance Functor (Parser s) where
+  fmap f m = m >>= return . f
+
+instance Applicative (Parser s) where
+  pure = return
+  f <*> x = f >>= \f' -> fmap f' x
+
 instance Monad (Parser s) where
   p >>= f = Parser $ \s ->
     case runParser p s of
