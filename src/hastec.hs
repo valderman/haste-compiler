@@ -8,7 +8,7 @@ import Language.Haskell.GHC.Simple.PrimIface
 import GHC
 import Outputable (showPpr)
 
-import System.Environment (getArgs, lookupEnv)
+import System.Environment (getArgs, lookupEnv, setEnv)
 import System.Exit
 import Data.List
 import System.IO.Unsafe
@@ -36,8 +36,9 @@ main :: IO ()
 main = do
     initUserPkgDB
     as <- getArgs
+    lookupEnv "HASTE_PACKAGE_PATH" >>= setEnv "GHC_PACKAGE_PATH" . maybe "" id
     booting <- maybe False (const True) `fmap` lookupEnv "HASTE_BOOTING"
-    let args = "-O2":concat [packageDBArgs,as,["-D__HASTE__="++show intVersion]]
+    let args = "-O2":concat [as, ["-D__HASTE__="++show intVersion]]
         prof = "-prof" `elem` args
     case parseHasteFlags booting args as of
       Left act             -> act
@@ -55,13 +56,6 @@ main = do
                 then buildJSLib prof cfg (fst $ head targets) mods
                 else mapM_ (uncurry $ linkAndMinify cfg) targets
   where
-    -- TODO: this would be handled more elegantly modifying the dynflags
-    --       directly
-    packageDBArgs = ["-no-global-package-db",
-                     "-no-user-package-db",
-                     "-package-db " ++ pkgSysDir,
-                     "-package-db " ++ pkgUserDir ]
-
     dotToSlash '.' = '/'
     dotToSlash c   = c
 

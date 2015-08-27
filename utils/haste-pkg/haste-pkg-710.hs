@@ -631,7 +631,7 @@ getPkgDatabases verbosity modify use_user use_cache expand_vars my_flags = do
 
   e_pkg_path <- tryIO (System.Environment.getEnv "HASTE_PACKAGE_PATH")
   let env_stack =
-        case e_pkg_path of
+        nub $ case e_pkg_path of
                 Left  _ -> sys_databases
                 Right path
                   | not (null path) && isSearchPathSeparator (last path)
