@@ -306,9 +306,10 @@ buildLibs cfg = do
 
           -- To get the GHC.Prim module in spite of pretending to have
           -- build-type: Simple
+          let osxprim = if os == "darwin" then "-osx" else ""
           run_ hastePkgBinary ["unregister", "--global","ghc-prim"] ""
-          run_ hastePkgBinary ["update",
-                               "--global","ghc-prim-"++primVersion++".conf"] ""
+          run_ hastePkgBinary ["update", "--global",
+                               "ghc-prim-"++primVersion++osxprim++".conf"] ""
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do
