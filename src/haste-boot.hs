@@ -284,10 +284,11 @@ buildLibs cfg = do
     cpDir "include" hasteSysDir
 
     inDirectory ("utils" </> "unlit") $ do
-      let out = if os == "mingw32" then "unlit.exe" else "unlit"
+      let out    = if os == "mingw32" then "unlit.exe" else "unlit"
           static = if os == "darwin" then [] else ["-static"]
+          dash_s = if os == "darwin" then [] else ["-s"]
       run_ "gcc" (["-o" ++ out, "-O2", "unlit.c"]++static) ""
-      run_ "strip" ["-s", out] ""
+      run_ "strip" (dash_s ++ [out]) ""
       cp out (hasteSysDir </> out)
 
     run_ hastePkgBinary ["update", "--global", "libraries" </> "rts.pkg"] ""
