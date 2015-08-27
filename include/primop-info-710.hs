@@ -1054,3 +1054,9 @@ primOpInfo PrefetchByteArrayOp0 = mkGenPrimOp (fsLit "prefetchByteArray0#")  [de
 primOpInfo PrefetchMutableByteArrayOp0 = mkGenPrimOp (fsLit "prefetchMutableByteArray0#")  [deltaTyVar] [mkMutableByteArrayPrimTy deltaTy, intPrimTy, mkStatePrimTy deltaTy] (mkStatePrimTy deltaTy)
 primOpInfo PrefetchAddrOp0 = mkGenPrimOp (fsLit "prefetchAddr0#")  [deltaTyVar] [addrPrimTy, intPrimTy, mkStatePrimTy deltaTy] (mkStatePrimTy deltaTy)
 primOpInfo PrefetchValueOp0 = mkGenPrimOp (fsLit "prefetchValue0#")  [alphaTyVar, deltaTyVar] [alphaTy, mkStatePrimTy deltaTy] (mkStatePrimTy deltaTy)
+
+#ifdef mingw32_HOST_OS
+primOpInfo AsyncReadOp = mkGenPrimOp (fsLit "asyncRead#")  [] [intPrimTy, intPrimTy, intPrimTy, addrPrimTy, mkStatePrimTy realWorldTy] ((mkTupleTy UnboxedTuple [mkStatePrimTy realWorldTy, intPrimTy, intPrimTy]))
+primOpInfo AsyncWriteOp = mkGenPrimOp (fsLit "asyncWrite#")  [] [intPrimTy, intPrimTy, intPrimTy, addrPrimTy, mkStatePrimTy realWorldTy] ((mkTupleTy UnboxedTuple [mkStatePrimTy realWorldTy, intPrimTy, intPrimTy]))
+primOpInfo AsyncDoProcOp = mkGenPrimOp (fsLit "asyncDoProc#")  [] [addrPrimTy, addrPrimTy, mkStatePrimTy realWorldTy] ((mkTupleTy UnboxedTuple [mkStatePrimTy realWorldTy, intPrimTy, intPrimTy]))
+#endif
