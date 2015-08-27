@@ -26,3 +26,14 @@ versions of base/GHC to Haste.
   * In the browser, Float and Double are the same thing. This means that the
     FLT_* constants in ieee-flpt.h must be modified to match their DBL_*
     counterparts.
+
+To enable booting on Windows:
+
+  * Ensure that Windows-specific primops are enabled when appropriate
+    through appropriate #ifdefs in the file containing primOpInfo.
+
+  * Enable any POSIX-specific foreign imports required to build OS stuff
+    on Windows as well in base; the functionality depending on this is
+    meaningless in the browser anyway, but we need the types for Haste.App and
+    similar compatibility matters.
+    This happens in GHC.IO.FD (isTerminal) and System.Posix.Internals.
