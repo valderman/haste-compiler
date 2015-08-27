@@ -2392,27 +2392,7 @@ primop PrefetchAddrOp0 "prefetchAddr0#" GenPrimOp
 primop PrefetchValueOp0 "prefetchValue0#" GenPrimOp
    a -> State# s -> State# s
    with strictness = { \ _arity -> mkClosedStrictSig [botDmd, topDmd] topRes }
-   has_side_effects = True
-
-primop  AsyncReadOp "asyncRead#" GenPrimOp
-   Int# -> Int# -> Int# -> Addr# -> State# RealWorld-> (# State# RealWorld, Int#, Int# #)
-   {Asynchronously read bytes from specified file descriptor.}
-   with
-   has_side_effects = True
-   out_of_line      = True
-primop  AsyncWriteOp "asyncWrite#" GenPrimOp
-   Int# -> Int# -> Int# -> Addr# -> State# RealWorld-> (# State# RealWorld, Int#, Int# #)
-   {Asynchronously write bytes from specified file descriptor.}
-   with
-   has_side_effects = True
-   out_of_line      = True
-primop  AsyncDoProcOp "asyncDoProc#" GenPrimOp
-   Addr# -> Addr# -> State# RealWorld-> (# State# RealWorld, Int#, Int# #)
-   {Asynchronously perform procedure (first arg), passing it 2nd arg.}
-   with
-   has_side_effects = True
-   out_of_line      = True
-
+        has_side_effects = True
 ------------------------------------------------------------------------
 --- ---
 ------------------------------------------------------------------------

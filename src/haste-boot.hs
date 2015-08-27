@@ -300,7 +300,7 @@ buildLibs cfg = do
 #if __GLASGOW_HASKELL__ >= 710
           cp "../../../include/ghcplatform.h" "../ghc_boot_platform.h"
           run_ "cpp" ["-P", "-I../../../include",
-                      "../primops.txt.pp", "-o", "primops.txt"] ""
+                      "-oprimops.txt", "../primops.txt.pp"] ""
 #endif
           hasteCabal Install ["--solver", "topdown"]
 
