@@ -173,10 +173,18 @@ closurize cfg cloPath f = do
 -- | Call vanilla GHC; used for C files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
-    _ <- Sh.shell $ Sh.run_ ghcBinary ghcArgs ""
+    booting <- maybe False (const True) `fmap` lookupEnv "HASTE_BOOTING"
+    _ <- Sh.shell $ Sh.run_ ghcBinary (pkgargs booting ++ ghcArgs) ""
     return ()
   where
     Right (_, ghcArgs) = parseArgs hasteOpts "" args
+    pkgargs booting =
+      ["-no-global-package-db",
+       "-no-user-package-db",
+       "-package-db=" ++ pkgSysDir] ++
+      if booting && portableHaste
+        then []
+        else ["-package-db=" ++ pkgUserDir]
 
 -- | Initialize the Haste package database, unless it already exists.
 initUserPkgDB :: IO ()
