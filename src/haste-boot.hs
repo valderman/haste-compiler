@@ -334,8 +334,9 @@ buildLibs cfg = do
         if verbose cfg then ["--verbose"] else []]
     configOpts = [ "--with-hastec=" ++ hasteBinary
                  , "--with-haste-pkg=" ++ hastePkgBinary
-                 ,  "--libdir=" ++ takeDirectory pkgSysLibDir
-                 , "--package-db=" ++ pkgSysDir
+                 , "--libdir=" ++ takeDirectory pkgSysLibDir
+                 , "--package-db=clear"
+                 , "--package-db=global"
 #if __GLASGOW_HASKELL__ < 709
                  , "--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++
                     show hostWordSize
