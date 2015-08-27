@@ -365,7 +365,7 @@ copyGhcSettings :: FilePath -> Shell ()
 copyGhcSettings dest = do
   cp (libdir </> "platformConstants") (dest </> "platformConstants")
 #ifdef mingw32_HOST_OS
-  cp ("settings-ghc-" ++ ghcMajorVersion ++ ".windows") (dest </> "settings")
+  cp ("settings-ghc-" ++ ghcMajor ++ ".windows") (dest </> "settings")
   cp (libdir </> "touchy.exe") (dest </> "touchy.exe")
 #else
   cp (libdir </> "settings") (dest </> "settings")
