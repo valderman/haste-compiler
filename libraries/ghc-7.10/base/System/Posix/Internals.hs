@@ -427,7 +427,6 @@ foreign import ccall unsafe "HsBase.h unlink"
 foreign import ccall unsafe "HsBase.h getpid"
    c_getpid :: IO CPid
 
-#if !defined(mingw32_HOST_OS) && !defined(__MINGW32__)
 foreign import capi unsafe "HsBase.h fcntl"
    c_fcntl_read  :: CInt -> CInt -> IO CInt
 
@@ -472,7 +471,6 @@ foreign import capi unsafe "HsBase.h utime"
 
 foreign import ccall unsafe "HsBase.h waitpid"
    c_waitpid :: CPid -> Ptr CInt -> CInt -> IO CPid
-#endif
 
 -- POSIX flags only:
 foreign import ccall unsafe "HsBase.h __hscore_o_rdonly" o_RDONLY :: CInt
