@@ -67,6 +67,26 @@ application's main function. For instance,
 application whenever the element with the id "foo" is clicked.
 
 
+.SS Output control
+
+.TP
+.BR \-o\fIFILE\fR ", " \-\-out =\fIFILE\fR
+Write JavaScript output to FILE.
+
+.TP
+.BR \-\-outdir =\fIDIR\fR
+Write intermediate files to DIR.
+
+.TP
+.BR \-\-output\-html
+Write the JavaScript output to an HTML file with a simple HTML skeleton.
+
+.TP
+.BR \-\-own\-namespace
+Wrap the whole program in a closure to avoid polluting the global namespace.
+Incurs a performance hit, and makes minification slightly less effective.
+
+
 .SS Code generation
 
 .TP
@@ -85,24 +105,6 @@ affect any external JavaScript included using --with-js.
 .BR \-\-overwrite\-scrutinees
 Overwrite scrutinees when evaluated rather than allocating a new local for
 the evaluated value. This is largely experimental.
-
-.TP
-.BR \-o\fIFILE\fR ", " \-\-out =\fIFILE\fR
-Write JavaScript output to FILE.
-
-.TP
-.BR \-\-outdir =\fIDIR\fR
-Write intermediate files to DIR.
-
-.TP
-.BR \-\-output\-html
-Write the JavaScript output to an HTML file together with a simple HTML
-skeleton.
-
-.TP
-.BR \-\-own\-namespace
-Wrap the whole program in a closure to avoid polluting the global namespace.
-Incurs a performance hit, and makes minification slightly less effective.
 
 .TP
 .BR \-\-output\-jsflow
