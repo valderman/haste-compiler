@@ -242,7 +242,8 @@ installHasteCabal portable tmpdir = do
     launcher
       | portable = unlines [
             "#!/bin/bash",
-            "DIR=\"$(dirname $0)/../haste-cabal\"",
+            "HASTEC=\"$(dirname $0)/hastec\"",
+            "DIR=\"$($HASTEC --print-libdir)/../haste-cabal\"",
             "export LD_LIBRARY_PATH=$DIR",
             "exec $DIR/haste-cabal.bin $@"
           ]
