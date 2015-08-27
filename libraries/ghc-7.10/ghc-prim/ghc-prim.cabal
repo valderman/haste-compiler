@@ -51,16 +51,6 @@ Library
     if flag(include-ghc-prim)
         exposed-modules: GHC.Prim
 
-    c-sources:
-        cbits/atomic.c
-        cbits/bswap.c
-        cbits/clz.c
-        cbits/ctz.c
-        cbits/debug.c
-        cbits/longlong.c
-        cbits/popcnt.c
-        cbits/word2float.c
-
     -- We need to set the package key to ghc-prim (without a version number)
     -- as it's magic.
     ghc-options: -this-package-key ghc-prim
