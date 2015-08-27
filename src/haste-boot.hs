@@ -174,36 +174,37 @@ main = do
       putStrLn halp
 
 bootHaste :: Cfg -> FilePath -> Shell ()
-bootHaste cfg tmpdir = inDirectory tmpdir $ do
-  removeBootFile <- isFile bootFile
-  when removeBootFile $ rm bootFile
-  when (getLibs cfg) $ do
-    -- Don't clear dir when it contains binaries; portable should only be built
-    -- by scripts anyway, so this dir ought to be clean.
-    when (not portableHaste) $ do
-      mapM_ clearDir [pkgUserLibDir, jsmodUserDir, pkgUserDir,
-                      pkgSysLibDir, jsmodSysDir, pkgSysDir]
+bootHaste cfg tmpdir =
+  withEnv "nodosfilewarning" (const "1") . inDirectory tmpdir $ do
+    removeBootFile <- isFile bootFile
+    when removeBootFile $ rm bootFile
+    when (getLibs cfg) $ do
+      -- Don't clear dir when it contains binaries; portable should only be built
+      -- by scripts anyway, so this dir ought to be clean.
+      when (not portableHaste) $ do
+        mapM_ clearDir [pkgUserLibDir, jsmodUserDir, pkgUserDir,
+                        pkgSysLibDir, jsmodSysDir, pkgSysDir]
 
-    when (getHasteCabal cfg) $ do
-      installHasteCabal portableHaste tmpdir
+      when (getHasteCabal cfg) $ do
+        installHasteCabal portableHaste tmpdir
 
-    when (not $ useLocalLibs cfg) $ do
-      fetchLibs tmpdir
+      when (not $ useLocalLibs cfg) $ do
+        fetchLibs tmpdir
 
-    when (not portableHaste || initialPortableBoot cfg) $ do
-      mkdir True hasteSysDir
-      copyGhcSettings hasteSysDir
-      void $ run hastePkgBinary ["init", pkgSysDir] ""
-      buildLibs cfg
+      when (not portableHaste || initialPortableBoot cfg) $ do
+        mkdir True hasteSysDir
+        copyGhcSettings hasteSysDir
+        void $ run hastePkgBinary ["init", pkgSysDir] ""
+        buildLibs cfg
 
-    when (initialPortableBoot cfg) $ do
-      mapM_ relocate ["array", "bytestring", "containers",
-                      "deepseq", "dlist", "haste-prim", "time", "haste-lib",
-                      "monads-tf", "old-locale", "transformers", "integer-gmp"]
+      when (initialPortableBoot cfg) $ do
+        mapM_ relocate ["array", "bytestring", "containers",
+                        "deepseq", "dlist", "haste-prim", "time", "haste-lib",
+                        "monads-tf", "old-locale", "transformers", "integer-gmp"]
 
-  when (getClosure cfg) $ do
-    installClosure
-  file bootFile (showBootVersion bootVersion)
+    when (getClosure cfg) $ do
+      installClosure
+    file bootFile (showBootVersion bootVersion)
 
 clearDir :: FilePath -> Shell ()
 clearDir dir = do
