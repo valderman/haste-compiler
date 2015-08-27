@@ -235,11 +235,12 @@ genArgVarsPair vps = do
 
 genCase :: AltType -> StgExpr -> Id -> [StgAlt] -> JSGen Config Exp
 genCase t ex scrut alts = do
+  cfg <- getCfg
   ex' <- genEx ex
   -- Return a scrutinee variable and a function to replace all occurrences of
   -- the STG scrutinee with our JS one, if needed.
   (scrut', withScrutinee) <- case ex' of
-    Eval (J.Var v) -> do
+    Eval (J.Var v) | overwriteScrutinees cfg -> do
       continue $ assignVar (reorderableType scrut) v ex'
       oldscrut <- genVar scrut
       return (v, rename oldscrut v)

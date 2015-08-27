@@ -89,6 +89,10 @@ hasteOpts = [
            (NoArg enableWholeProgramOpts) $
            "Perform optimizations over the whole program during linking. " ++
            "May significantly increase link time.",
+    Option "" ["overwrite-scrutinees"]
+           (NoArg $ \cfg -> cfg {overwriteScrutinees = True}) $
+           "Overwrite scrutinees when evaluated rather than allocating " ++
+           "a new local for the evaluated value. This is largely experimental.",
     Option "o" ["out"]
            (ReqArg (\f cfg -> cfg {outFile = \_ _ -> f}) "FILE") $
            "Write JavaScript output to FILE.",

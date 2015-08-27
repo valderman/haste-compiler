@@ -142,6 +142,10 @@ data Config = Config {
     --   Defaults to True.
     optimize :: Bool,
 
+    -- | Overwrite scrutinees when evaluated instead of allocating a new local.
+    --   Defaults to False.
+    overwriteScrutinees :: Bool,
+
     -- | Emit @"use strict";@ declaration. Does not affect minification, but
     --   *does* affect any external JS.
     --   Defaults to True.
@@ -151,33 +155,34 @@ data Config = Config {
 -- | Default compiler configuration.
 defConfig :: Config
 defConfig = Config {
-    rtsLibs          = stdJSLibs,
-    libPaths         = nub [jsmodUserDir, jsmodSysDir],
-    targetLibPath    = ".",
-    appStart         = startOnLoadComplete,
-    wrapProg         = False,
-    ppOpts           = def,
-    outFile          = \cfg f -> let ext = if outputHTML cfg
-                                             then "html"
-                                             else "js"
-                                 in replaceExtension f ext,
-    performLink      = True,
-    linkJSLib        = False,
-    linkJSLibFile    = Nothing,
-    wrapIntMath      = strictly32Bits,
-    multiplyIntOp    = safeMultiply,
-    verbose          = False,
-    wholeProgramOpts = False,
-    sloppyTCE        = False,
-    tracePrimops     = False,
-    useGoogleClosure = Nothing,
+    rtsLibs               = stdJSLibs,
+    libPaths              = nub [jsmodUserDir, jsmodSysDir],
+    targetLibPath         = ".",
+    appStart              = startOnLoadComplete,
+    wrapProg              = False,
+    ppOpts                = def,
+    outFile               = \cfg f -> let ext = if outputHTML cfg
+                                                  then "html"
+                                                  else "js"
+                                      in replaceExtension f ext,
+    performLink           = True,
+    linkJSLib             = False,
+    linkJSLibFile         = Nothing,
+    wrapIntMath           = strictly32Bits,
+    multiplyIntOp         = safeMultiply,
+    verbose               = False,
+    wholeProgramOpts      = False,
+    sloppyTCE             = False,
+    tracePrimops          = False,
+    useGoogleClosure      = Nothing,
     useGoogleClosureFlags = [],
-    jsExternals      = [],
-    outputHTML       = False,
-    showOutputable   = const "No showOutputable defined in config!",
-    mainMod          = Just ("main", "Main"),
-    optimize         = True,
-    useStrict        = True
+    jsExternals           = [],
+    outputHTML            = False,
+    showOutputable        = const "No showOutputable defined in config!",
+    mainMod               = Just ("main", "Main"),
+    optimize              = True,
+    overwriteScrutinees   = False,
+    useStrict             = True
   }
 
 instance Default Config where
