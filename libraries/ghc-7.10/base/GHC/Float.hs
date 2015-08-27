@@ -339,7 +339,7 @@ instance  RealFloat Float  where
     isIEEE _         = True
 
 instance  Show Float  where
-    showsPrec x = showSignedFloat (\f -> (jsShowF f ++)) x
+    showsPrec _ = (\f -> (jsShowF f ++))
     showList = showList__ (showsPrec 0)
 
 ------------------------------------------------------------------------
@@ -497,7 +497,7 @@ instance  RealFloat Double  where
     isIEEE _            = True
 
 instance  Show Double  where
-    showsPrec   x = showSignedFloat (\f -> (jsShowD f ++)) x
+    showsPrec   _ = (\f -> (jsShowD f ++))
     showList = showList__ (showsPrec 0)
 
 
