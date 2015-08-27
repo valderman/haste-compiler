@@ -340,7 +340,9 @@ buildLibs cfg = do
         if verbose cfg then ["--verbose"] else []]
     configOpts = [ "--with-hastec=" ++ hasteBinary
                  , "--with-haste-pkg=" ++ hastePkgBinary
-                 , "--libdir=" ++ takeDirectory pkgSysLibDir
+                 , "--libdir=" ++ if os == "darwin"
+                                    then pkgSysLibDir
+                                    else takeDirectory pkgSysLibDir
                  , "--package-db=clear"
                  , "--package-db=global"
 #if __GLASGOW_HASKELL__ < 709
