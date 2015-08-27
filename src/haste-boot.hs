@@ -24,9 +24,11 @@ import System.Directory (copyPermissions)
 import System.FilePath (takeDirectory)
 
 #if __GLASGOW_HASKELL__ >= 710
+ghcMajor = "7.10"
 libDir = "ghc-7.10"
 primVersion = "0.4.0.0"
 #else
+ghcMajor = "7.8"
 libDir = "ghc-7.8"
 primVersion = "0.3.0.0"
 #endif
@@ -363,7 +365,7 @@ copyGhcSettings :: FilePath -> Shell ()
 copyGhcSettings dest = do
   cp (libdir </> "platformConstants") (dest </> "platformConstants")
 #ifdef mingw32_HOST_OS
-  cp ("settings.windows") (dest </> "settings")
+  cp ("settings-ghc-" ++ ghcMajorVersion ++ ".windows") (dest </> "settings")
   cp (libdir </> "touchy.exe") (dest </> "touchy.exe")
 #else
   cp (libdir </> "settings") (dest </> "settings")
