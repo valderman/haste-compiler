@@ -285,7 +285,8 @@ buildLibs cfg = do
 
     inDirectory ("utils" </> "unlit") $ do
       let out = if os == "mingw32" then "unlit.exe" else "unlit"
-      run_ "gcc" ["-o" ++ out, "-O2", "unlit.c", "-static"] ""
+          static = if os == "darwin" then [] else ["-static"]
+      run_ "gcc" (["-o" ++ out, "-O2", "unlit.c"]++static) ""
       run_ "strip" ["-s", out] ""
       cp out (hasteSysDir </> out)
 
