@@ -7,7 +7,7 @@ import Haste.DOM
 import Haste.Events
 import qualified Data.ByteString.Lazy as BS
 
-main = runApp def $ do
+main = runApp defaultConfig $ do
   upload <- remote $ \name file -> do
     filedata <- getBlobData file
     liftIO $ BS.writeFile name (toByteString filedata)
