@@ -19,11 +19,12 @@ import Data.ByteString.Builder
 
 -- | Pretty-printing options
 data PPOpts = PPOpts {
-    nameComments   :: Bool,    -- ^ Emit comments for names, where available?
-    useIndentation :: Bool,    -- ^ Should we indent at all?
-    indentStr      :: Builder, -- ^ String to use for each step of indentation
-    useNewlines    :: Bool,    -- ^ Use line breaks?
-    useSpaces      :: Bool     -- ^ Use spaces other than where necessary?
+    nameComments       :: Bool,    -- ^ Emit comments for externals?
+    externalAnnotation :: Bool,    -- ^ Emit comments for names?
+    useIndentation     :: Bool,    -- ^ Should we indent at all?
+    indentStr          :: Builder, -- ^ Indentation step.
+    useNewlines        :: Bool,    -- ^ Use line breaks?
+    useSpaces          :: Bool     -- ^ Use spaces other than where necessary?
   }
 
 type IndentLvl = Int
@@ -62,21 +63,30 @@ infixl 1 .+.
 
 instance Default PPOpts where
   def = PPOpts {
-      nameComments   = False,
-      useIndentation = False,
-      indentStr      = "    ",
-      useNewlines    = False,
-      useSpaces      = False
+      nameComments        = False,
+      externalAnnotation  = False,
+      useIndentation      = False,
+      indentStr           = "    ",
+      useNewlines         = False,
+      useSpaces           = False
     }
 
-debugPPOpts :: PPOpts
-debugPPOpts = def {
-    nameComments   = True,
+-- | Print code using indentation, whitespace and newlines.
+withPretty :: PPOpts -> PPOpts
+withPretty opts = opts {
     useIndentation = True,
     indentStr      = "  ",
     useNewlines    = True,
     useSpaces      = True
   }
+
+-- | Annotate non-local, non-JS symbols with qualified names.
+withAnnotations :: PPOpts -> PPOpts
+withAnnotations opts = opts {nameComments = True}
+
+-- | Annotate externals with /* EXTERNAL */ comment.
+withExtAnnotation :: PPOpts -> PPOpts
+withExtAnnotation opts = opts {externalAnnotation = True}
 
 -- | Generate the final name for a variable.
 finalNameFor :: Name -> PP FinalName

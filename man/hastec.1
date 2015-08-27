@@ -115,9 +115,18 @@ your code crippled, since JSFlow doesn't all of Haste's needs.
 .SS Debugging
 
 .TP
+.BR \-\-annotate\-externals
+Annotate all JavaScript-native symbols and inline JavaScript in
+generated code with /* EXTERNAL */.
+
+.TP
+.BR \-\-annotate\-symbols
+Annotate all non-external, non-local symbols with their qualified Haskell names.
+
+.TP
 .BR \-\-debug
-Output indented, fairly readable code, with all external names included in
-comments.
+Output annotated, pretty-printed JavaScript code.
+Equivalent to --annotate-externals --annotate-symbols --pretty-print.
 
 .TP
 .BR \-\-ddisable\-js\-opts

@@ -32,9 +32,9 @@ printDefs path pkg mn m = do
   putStrLn "---\n"
   mapM_ printDef $ M.toList $ modDefs m
 
-printDef (name, def) = do
+printDef (name, d) = do
   BS.putStrLn $ niceName name
-  BSL.putStrLn $ pretty debugPPOpts def
+  BSL.putStrLn $ pretty (withPretty . withExtAnnotation $ withAnnotations def) d
   putStrLn ""
 
 niceName (Name n (Just (pkg, m))) =

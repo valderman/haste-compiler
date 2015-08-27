@@ -13,8 +13,10 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as BS
 
 instance Pretty Var where
-  pp (Foreign name) =
+  pp (Foreign name) = do
     put name
+    doComment <- getOpt externalAnnotation
+    when doComment . put $ byteString "/* EXTERNAL */"
   pp (Internal name@(Name _ _) comment _) = do
     pp name
     doComment <- getOpt nameComments

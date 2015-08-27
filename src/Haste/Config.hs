@@ -146,6 +146,16 @@ data Config = Config {
     --   Defaults to False.
     overwriteScrutinees :: Bool,
 
+    -- | Annotate all external symbols and JS literals with /* EXTERNAL */ in
+    --   generated code.
+    --   Defaults to False.
+    annotateExternals :: Bool,
+
+    -- | Annotate all non-local Haskell symbols and with their qualified
+    --   names.
+    --   Defaults to False.
+    annotateSymbols :: Bool,
+
     -- | Emit @"use strict";@ declaration. Does not affect minification, but
     --   *does* affect any external JS.
     --   Defaults to True.
@@ -182,6 +192,8 @@ defConfig = Config {
     mainMod               = Just ("main", "Main"),
     optimize              = True,
     overwriteScrutinees   = False,
+    annotateExternals     = False,
+    annotateSymbols       = False,
     useStrict             = True
   }
 

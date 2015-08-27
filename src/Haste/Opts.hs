@@ -2,7 +2,7 @@ module Haste.Opts (hasteOpts, helpHeader) where
 import System.Console.GetOpt
 import Haste.Config
 import Haste.Environment
-import Data.JSTarget.PP (debugPPOpts)
+import Data.JSTarget.PP (PPOpts, withExtAnnotation, withAnnotations, withPretty)
 import Data.List
 import Control.Shell ((</>))
 
@@ -10,10 +10,18 @@ import Control.Shell ((</>))
 --   unbooted or not.
 hasteOpts :: [OptDescr (Config -> Config)]
 hasteOpts = [
+    Option "" ["annotate-externals"]
+           (NoArg $ \cfg -> cfg {ppOpts = withExtAnnotation (ppOpts cfg)}) $
+           "Annotate all JavaScript-native symbols and inline JavaScript " ++
+           "in generated code with /* EXTERNAL */.",
+    Option "" ["annotate-symbols"]
+           (NoArg $ \cfg -> cfg {ppOpts = withAnnotations (ppOpts cfg)}) $
+           "Annotate all non-external, non-local symbols with their " ++
+           "qualified Haskell names.",
     Option "" ["debug"]
-           (NoArg $ \cfg -> cfg {ppOpts = debugPPOpts}) $
-           "Output indented, fairly readable code, with all " ++
-           "external names included in comments.",
+           (NoArg $ \cfg -> cfg {ppOpts = debugPPOpts (ppOpts cfg)}) $
+           "Output annotated, pretty-printed JavaScript code. Equivalent to " ++
+           "--annotate externals --annotate-symbols --pretty-print.",
     Option "" ["ddisable-js-opts"]
            (NoArg $ \cfg -> cfg {optimize = False}) $
            "Don't perform any optimizations on the JavaScript at all. " ++
@@ -108,6 +116,9 @@ hasteOpts = [
            "Wrap the whole program in a closure to avoid polluting the " ++
            "global namespace. Incurs a performance hit, and makes " ++
            "minification slightly less effective.",
+    Option "" ["pretty-print"]
+           (NoArg $ \cfg -> cfg {ppOpts = withPretty (ppOpts cfg)}) $
+           "Pretty-print JavaScript output.",
     Option "" ["start"]
            (ReqArg (\start cfg -> cfg {appStart = startCustom start})
                    "CODE") $
@@ -211,3 +222,6 @@ fullUnicode cfg =
     libs = rtsLibs cfg
     unicode = jsDir </> "unicode.js"
     cheap = jsDir </> "cheap-unicode.js"
+
+debugPPOpts :: PPOpts -> PPOpts
+debugPPOpts = withPretty . withAnnotations . withExtAnnotation
