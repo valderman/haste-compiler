@@ -13,10 +13,11 @@ prints the intermediate Haste code for the given Haskell module to standard
 output.
 
 .BR
-Package identifiers must be given with version numbers
-(e.g. haste-prim-0.5.1.0 as opposed to just haste-prim),
+Package identifiers must be given with version numbers and package keys
+(e.g. haste-prim-0.5.1.0-BtuKn3ytxKq6eTkR391Vdt as opposed to just haste-prim),
 to avoid ambiguity in the face of multiple installed
 versions of the same package.
+GHC 7.8-based builds don't use package keys and so should be omitted.
 
 See
 .B haste-pkg list
