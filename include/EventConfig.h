@@ -2,13 +2,13 @@
 /* include/EventConfig.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define if you have epoll support. */
-#define HAVE_EPOLL 1
+#undef HAVE_EPOLL
 
 /* Define to 1 if you have the `epoll_create1' function. */
 /* #undef HAVE_EPOLL_CREATE1 */
 
 /* Define to 1 if you have the `epoll_ctl' function. */
-#define HAVE_EPOLL_CTL 1
+#undef HAVE_EPOLL_CTL
 
 /* Define to 1 if you have the `eventfd' function. */
 #define HAVE_EVENTFD 1
@@ -50,7 +50,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
-#define HAVE_SYS_EPOLL_H 1
+#undef HAVE_SYS_EPOLL_H
 
 /* Define to 1 if you have the <sys/eventfd.h> header file. */
 #define HAVE_SYS_EVENTFD_H 1

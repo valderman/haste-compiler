@@ -314,10 +314,10 @@
 #define HAVE_CTYPE_H 1
 
 /* Define if you have epoll support. */
-#define HAVE_EPOLL 1
+#undef HAVE_EPOLL
 
 /* Define to 1 if you have the `epoll_ctl' function. */
-#define HAVE_EPOLL_CTL 1
+#undef HAVE_EPOLL_CTL
 
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
@@ -395,7 +395,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the <sys/epoll.h> header file. */
-#define HAVE_SYS_EPOLL_H 1
+#undef HAVE_SYS_EPOLL_H
 
 /* Define to 1 if you have the <sys/eventfd.h> header file. */
 #define HAVE_SYS_EVENTFD_H 1
