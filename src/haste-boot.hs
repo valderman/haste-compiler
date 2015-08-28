@@ -297,11 +297,6 @@ buildLibs cfg = do
       inDirectory libDir $ do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
-#if __GLASGOW_HASKELL__ >= 710
-          cp "../../../include/ghcplatform.h" "../ghc_boot_platform.h"
-          run_ "cpp" ["-P", "-I../../../include",
-                      "-oprimops.txt", "../primops.txt.pp"] ""
-#endif
           hasteCabal Install ["--solver", "topdown"]
 
           -- To get the GHC.Prim module in spite of pretending to have
