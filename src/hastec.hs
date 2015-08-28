@@ -38,7 +38,7 @@ main = do
     as <- getArgs
     lookupEnv "HASTE_PACKAGE_PATH" >>= setEnv "GHC_PACKAGE_PATH" . maybe "" id
     booting <- maybe False (const True) `fmap` lookupEnv "HASTE_BOOTING"
-    let args = "-O2":concat [as, ["-D__HASTE__="++show intVersion]]
+    let args = "-O2":concat [pkgs booting, as, ["-D__HASTE__="++show intVersion]]
         prof = "-prof" `elem` args
     case parseHasteFlags booting args as of
       Left act             -> act
@@ -58,6 +58,18 @@ main = do
   where
     dotToSlash '.' = '/'
     dotToSlash c   = c
+
+#if __GLASGOW_HASKELL__ < 710
+    pkgs booting =
+      ["-no-global-package-db",
+       "-no-user-package-db",
+       "-package-db=" ++ pkgSysDir] ++
+      if booting && portableHaste
+        then []
+        else ["-package-db=" ++ pkgUserDir]
+#else
+    pkgs _ = []
+#endif
 
     buildJSLib profiling cfg pkgkey mods = do
       let modpath     = targetLibPath cfg ++ "/" ++ pkgkey
