@@ -98,14 +98,18 @@ genEx (StgConApp con args) = do
   -- or Integer values.
   case (dataConNameModule con, args) of
     (("S#", "GHC.Integer.Type"), [StgLitArg (MachInt n)]) | tooLarge n -> do
-      return $ mkInteger n
+        return $ mkInteger n
+    (("True", "GHC.Types"), []) -> do
+        return $ lit True
+    (("False", "GHC.Types"), []) -> do
+        return $ lit False
     _ -> do
-      (tag, stricts) <- genDataCon con
-      (args', stricts') <- genArgsPair $ zip args stricts
-      -- Don't create unboxed tuples with a single element.
-      case (isNewtypeLikeCon con || isUnboxedTupleCon con, args') of
-        (True, [arg]) -> return $ evaluate arg (head stricts')
-        _             -> mkCon tag args' stricts'
+        (tag, stricts) <- genDataCon con
+        (args', stricts') <- genArgsPair $ zip args stricts
+        -- Don't create unboxed tuples with a single element.
+        case (isNewtypeLikeCon con || isUnboxedTupleCon con, args') of
+          (True, [arg]) -> return $ evaluate arg (head stricts')
+          _             -> mkCon tag args' stricts'
   where
     mkInteger n =
         array [litN 1, callForeign "I_fromBits" [array [lit lo, lit hi]]]
@@ -113,7 +117,7 @@ genEx (StgConApp con args) = do
         lo = n .&. 0xffffffff
         hi = n `shiftR` 32
     tooLarge n = n > 2147483647 || n < -2147483648
-    -- Always inline bools
+    -- Always inline enum-likes, bools are true/false, not 1/0.
     mkCon l _ _ | isEnumerationDataCon con = return l
     mkCon tag as ss = return $ array (tag : zipWith evaluate as ss)
     evaluate arg True = eval arg

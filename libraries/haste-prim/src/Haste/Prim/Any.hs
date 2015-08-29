@@ -19,6 +19,7 @@ module Haste.Prim.Any (
     nullValue, toObject, has, get, index
   ) where
 import GHC.Generics
+import Control.Exception
 import Haste.Prim
 import Haste.Prim.JSType
 import Data.Int
@@ -34,9 +35,7 @@ foreign import ccall __lst2arr :: Ptr [a] -> JSAny
 foreign import ccall __arr2lst :: Int -> JSAny -> Ptr [a]
 foreign import ccall "String" jsString :: JSAny -> JSString
 foreign import ccall "Number" jsNumber :: JSAny -> Double
-foreign import ccall "__jsNull" jsNull :: JSAny
-foreign import ccall "__jsTrue" jsTrue :: JSAny
-foreign import ccall "__jsFalse" jsFalse :: JSAny
+foreign import ccall __jsNull :: IO JSAny
 foreign import ccall __new :: IO JSAny
 foreign import ccall __set :: JSAny -> JSString -> JSAny -> IO ()
 foreign import ccall __get :: JSAny -> JSString -> IO JSAny
@@ -58,11 +57,14 @@ jsString :: JSAny -> JSString
 jsString _ = undefined
 jsNumber :: JSAny -> Double
 jsNumber _ = undefined
-jsNull, jsTrue, jsFalse :: JSAny
-jsNull = undefined
-jsTrue = undefined
-jsFalse = undefined
+__jsNull :: IO JSAny
+__jsNull = undefined
 #endif
+
+{-# NOINLINE jsNull #-}
+jsNull :: JSAny
+jsNull = unsafePerformIO __jsNull
+
 {-
   For theoretical purposes, imagine the following here:
   foreign import ccall __intToAny :: Int -> JSAny
@@ -129,6 +131,9 @@ class FromAny a where
   --   floating point numbers to integers, or turning signed integers into
   --   unsigned.
   fromAny :: JSAny -> IO a
+  default fromAny :: (GToAny (Rep a), GFromAny (Rep a), Generic a)
+                  => JSAny -> IO a
+  fromAny x = to <$> gFromAny False x
 
   listFromAny :: JSAny -> IO [a]
   listFromAny = mapM fromAny . fromPtr . __arr2lst 0
@@ -167,8 +172,7 @@ instance ToAny () where
 instance ToAny (Opaque a) where
   toAny (Opaque x) = unsafeCoerce $ toPtr x
 instance ToAny Bool where
-  toAny True  = jsTrue
-  toAny False = jsFalse
+  toAny = unsafeCoerce
 
 -- | Lists are marshalled into arrays, with the exception of 'String'.
 instance ToAny a => ToAny [a] where
@@ -246,8 +250,7 @@ instance FromAny () where
 instance FromAny (Opaque a) where
   fromAny x = Opaque . fromPtr <$> fromAny x
 instance FromAny Bool where
-  fromAny x | x == jsTrue = return True
-            | otherwise   = return False
+  fromAny = return . unsafeCoerce
 
 instance FromAny a => FromAny [a] where
   fromAny = listFromAny
@@ -296,7 +299,7 @@ instance (FromAny a, FromAny b, FromAny c, FromAny d,
 
 data Value = One !JSAny | List ![JSAny] | Tree ![(JSString, JSAny)]
 
--- Generic instances
+-- GToAny instances
 class GToAny f where
   gToAny :: Bool -> f a -> Value
   isEnum :: f a -> Bool
@@ -364,3 +367,102 @@ instance (GToAny a, GToAny b) => GToAny (a :+: b) where
   gToAny _ (L1 x) = gToAny True x
   gToAny _ (R1 x) = gToAny True x
   isEnum _ = isEnum (undefined :: a ()) && isEnum (undefined :: b ())
+
+
+
+
+
+-- GFromAny instances
+class GFromAny f where
+  gFromAny   :: Bool -> JSAny -> IO (f a)
+  isRecord   :: f a -> Bool
+  gFromList  :: Int -> JSAny -> IO (f a, Int)
+  gFromList = error "gFromList called on non-product!"
+
+instance GFromAny U1 where
+  gFromAny _ _ = return U1
+  isRecord _ = False
+
+instance (ToAny a, FromAny a) => GFromAny (K1 i a) where
+  gFromAny _ x = do
+    x' <- fromAny x
+    return $ K1 x'
+  isRecord _ = False
+  gFromList ix x = do
+    x' <- x `index` ix
+    return (K1 x', ix+1)
+
+instance (Selector c, GFromAny a) => GFromAny (M1 S c a) where
+  gFromAny mcs x = do
+      exists <- x `has` prop
+      if exists
+        then M1 <$> (get x prop >>= gFromAny mcs)
+        else error $ "No such member: '" ++ sn ++ "'"
+    where
+      sn   = selName (undefined :: M1 S c a ())
+      prop = toJSStr sn
+  isRecord _ = not (null $ selName (undefined :: M1 S c a ()))
+  gFromList ix x = do
+    (x', ix') <- gFromList ix x
+    return (M1 x', ix')
+
+instance Constructor c => GFromAny (M1 C c U1) where
+  gFromAny _ x = do
+      n <- fromAny x
+      if (n == cn)
+        then return $ M1 U1
+        else error $  "Couldn't fromAny constructor: expected " ++ cn
+                   ++ " but got " ++ n
+    where
+      cn = conName (undefined :: M1 C c U1 ())
+  isRecord _ = False
+
+#if __GLASGOW_HASKELL__ < 710
+instance (Constructor c, GFromAny a) => GFromAny (M1 C c a) where
+#else
+instance {-# OVERLAPPABLE #-} (Constructor c, GFromAny a) =>
+                               GFromAny (M1 C c a) where
+#endif
+  gFromAny many_constrs x
+    | many_constrs = do
+        t <- x `get` "$tag"
+        if t == tag
+          then M1 <$> (x `get` "$data" >>= gFromAny many_constrs)
+          else error $  "Couldn't fromAny constructor: expected " ++ tag
+                     ++ " but got " ++ t
+    | isRecord (undefined :: a ()) = do
+        M1 <$> gFromAny many_constrs x
+    | otherwise = do
+        M1 . fst <$> gFromList 0 x
+    where
+      tag = conName (undefined :: M1 C c a ())
+  isRecord _ = isRecord (undefined :: a ())
+
+instance GFromAny a => GFromAny (M1 D c a) where
+  gFromAny cs x = M1 <$> gFromAny cs x
+  isRecord _ = isRecord (undefined :: a ())
+  gFromList ix x = do
+    (x', ix') <- gFromList ix x
+    return (M1 x', ix')
+
+instance (GFromAny a, GFromAny b) => GFromAny (a :*: b) where
+  gFromAny cs x = do
+    a <- gFromAny cs x
+    b <- gFromAny cs x
+    return (a :*: b)
+  isRecord _ = isRecord (undefined :: a ())
+  gFromList ix x = do
+    (a, ix') <- gFromList ix x
+    (b, ix'') <- gFromList ix' x
+    return (a :*: b, ix'')
+
+instance (GFromAny a, GFromAny b) => GFromAny (a :+: b) where
+  gFromAny _ x = do
+    catch (L1 <$> gFromAny True x)
+          (withSomeException $ R1 <$> gFromAny True x)
+  isRecord _ = isRecord (undefined :: a ()) || isRecord (undefined :: b ())
+
+withSomeException :: IO a -> SomeException -> IO a
+withSomeException m _ = m
+
+foreign import ccall "jsLog" dbg :: JSAny -> IO ()

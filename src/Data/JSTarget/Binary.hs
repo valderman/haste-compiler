@@ -118,25 +118,27 @@ instance Binary Stm where
       n -> error $ "Bad tag in get :: Get Stm: " ++ show n
 
 instance Binary BinOp where
-  put Add    = putWord8 0
-  put Mul    = putWord8 1
-  put Sub    = putWord8 2
-  put Div    = putWord8 3
-  put Mod    = putWord8 4
-  put And    = putWord8 5
-  put Or     = putWord8 6
-  put Eq     = putWord8 7
-  put Neq    = putWord8 8
-  put LT     = putWord8 9
-  put GT     = putWord8 10
-  put LTE    = putWord8 11
-  put GTE    = putWord8 12
-  put Shl    = putWord8 13
-  put ShrL   = putWord8 14
-  put ShrA   = putWord8 15
-  put BitAnd = putWord8 16
-  put BitOr  = putWord8 17
-  put BitXor = putWord8 18
+  put Add       = putWord8 0
+  put Mul       = putWord8 1
+  put Sub       = putWord8 2
+  put Div       = putWord8 3
+  put Mod       = putWord8 4
+  put And       = putWord8 5
+  put Or        = putWord8 6
+  put Eq        = putWord8 7
+  put StrictEq  = putWord8 8
+  put Neq       = putWord8 9
+  put StrictNeq = putWord8 10
+  put LT        = putWord8 11
+  put GT        = putWord8 12
+  put LTE       = putWord8 13
+  put GTE       = putWord8 14
+  put Shl       = putWord8 15
+  put ShrL      = putWord8 16
+  put ShrA      = putWord8 17
+  put BitAnd    = putWord8 18
+  put BitOr     = putWord8 19
+  put BitXor    = putWord8 20
 
   get = (opTbl !) <$> getWord8
 
@@ -149,5 +151,5 @@ opTbl =
     listArray (0, arrLen-1) es
   where
     arrLen = fromIntegral $ length es
-    es = [Add, Mul, Sub, Div, Mod, And, Or, Eq, Neq, LT, GT,
-          LTE, GTE, Shl, ShrL, ShrA, BitAnd, BitOr, BitXor]
+    es = [Add, Mul, Sub, Div, Mod, And,  Or,   Eq,     StrictEq, Neq, StrictNeq,
+          LT,  GT,  LTE, GTE, Shl, ShrL, ShrA, BitAnd, BitOr,    BitXor]

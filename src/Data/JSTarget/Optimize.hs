@@ -674,7 +674,8 @@ inlineJSPrimitives =
         ("__app5", f:xs)         -> Call 0 (Fast False) f xs
         ("__get", [o, k])        -> Index o k
         ("__set", [o, k, v])     -> AssignEx (Index o k) v
-        ("__has", [o, k])        -> BinOp Neq (Index o k) (JSLit "undefined")
+        ("__has", [o, k])        -> BinOp StrictNeq (Index o k)
+                                                    (JSLit "undefined")
         _                        -> ex
     inl ex =
       ex
