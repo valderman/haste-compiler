@@ -156,8 +156,7 @@ bootFile = hasteUserDir </> "booted"
 --   format triggers a full reboot.
 hasteNeedsReboot :: Bool
 #ifdef PORTABLE
-Right hasteNeedsReboot = unsafePerformIO $ do
-  shell $ not `fmap` isFile hasteCabalBinary
+hasteNeedsReboot = False
 #else
 hasteNeedsReboot = unsafePerformIO $ do
   exists <- shell $ isFile bootFile
