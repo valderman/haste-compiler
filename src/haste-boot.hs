@@ -198,7 +198,7 @@ bootHaste cfg tmpdir =
         buildLibs cfg
 
       when (initialPortableBoot cfg) $ do
-        mapM_ relocate ["array", "bytestring", "containers",
+        mapM_ relocate ["array", "bytestring", "containers", "base",
                         "deepseq", "dlist", "haste-prim", "time", "haste-lib",
                         "monads-tf", "old-locale", "transformers", "integer-gmp"]
 
