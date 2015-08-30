@@ -42,6 +42,10 @@ Data-Files:
     jsstring.js
     Foreign.js
 
+extra-source-files:
+    include/primop-info-710.hs,
+    include/primop-stricts-710.hs
+    
 Flag portable
     Description:
         Install Haste into a self-contained directory. Package databases are
@@ -157,12 +161,11 @@ Executable hastec
 
 Executable haste-pkg
     Default-Language: Haskell2010
-    if impl(ghc >= 7.10)
-      Main-Is: haste-pkg-710.hs
-    else
-      Main-Is: haste-pkg.hs
-    Other-Modules:
+    Main-Is: haste-pkg.hs
     Other-Extensions: CPP
+    Other-Modules:
+      HastePkg710
+      HastePkg708
     Hs-Source-Dirs:
       src
       utils/haste-pkg
