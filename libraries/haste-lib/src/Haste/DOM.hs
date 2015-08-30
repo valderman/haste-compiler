@@ -1,9 +1,14 @@
 {-# LANGUAGE GADTs #-}
 -- | DOM manipulation functions using 'String' for string representation.
 module Haste.DOM (
-    module Core,
-    IsElem (..), Elem, PropID, ElemID, QuerySelector, ElemClass,
-    AttrName, AttrValue,
+    -- From Haste.DOM.Core
+    AttrName (..), Attribute, IsElem (..), Elem,
+    attribute, set, with, children,
+    click, focus, blur, document, documentBody, appendChild, addChild,
+    addChildBefore, insertChildBefore, getFirstChild, getLastChild, getChildren,
+    setChildren, clearChildren, deleteChild, removeChild,
+    -- Own exports
+    PropID, ElemID, QuerySelector, ElemClass, AttrValue,
     style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
@@ -14,8 +19,6 @@ module Haste.DOM (
     setClass, toggleClass, hasClass
   ) where
 import qualified Haste.DOM.JSString as J
-import qualified Haste.DOM.Core as Core
-  hiding (Elem (..), AttrName (..))
 import Haste.DOM.Core
 import Haste.Prim (fromJSStr, toJSStr)
 import Control.Monad.IO.Class
