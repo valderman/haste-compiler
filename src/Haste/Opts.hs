@@ -2,7 +2,7 @@ module Haste.Opts (hasteOpts, helpHeader) where
 import System.Console.GetOpt
 import Haste.Config
 import Haste.Environment
-import Data.JSTarget.PP (PPOpts, withExtAnnotation, withAnnotations, withPretty)
+import Data.JSTarget.PP (PPOpts, withExtAnnotation, withAnnotations, withPretty, withHSNames)
 import Data.List
 import Control.Shell ((</>))
 
@@ -21,7 +21,7 @@ hasteOpts = [
     Option "" ["debug"]
            (NoArg $ \cfg -> cfg {ppOpts = debugPPOpts (ppOpts cfg)}) $
            "Output annotated, pretty-printed JavaScript code. Equivalent to " ++
-           "--annotate externals --annotate-symbols --pretty-print.",
+           "--annotate externals --preserve-names --pretty-print.",
     Option "" ["ddisable-js-opts"]
            (NoArg $ \cfg -> cfg {optimize = False}) $
            "Don't perform any optimizations on the JavaScript at all. " ++
@@ -116,6 +116,9 @@ hasteOpts = [
            "Wrap the whole program in a closure to avoid polluting the " ++
            "global namespace. Incurs a performance hit, and makes " ++
            "minification slightly less effective.",
+    Option "" ["preserve-names"]
+           (NoArg $ \cfg -> cfg {ppOpts = withHSNames (ppOpts cfg)}) $
+           "Preserve Haskell names in JS code as far as possible.",
     Option "" ["pretty-print"]
            (NoArg $ \cfg -> cfg {ppOpts = withPretty (ppOpts cfg)}) $
            "Pretty-print JavaScript output.",
@@ -224,4 +227,4 @@ fullUnicode cfg =
     cheap = jsDir </> "cheap-unicode.js"
 
 debugPPOpts :: PPOpts -> PPOpts
-debugPPOpts = withPretty . withAnnotations . withExtAnnotation
+debugPPOpts = withPretty . withHSNames . withExtAnnotation

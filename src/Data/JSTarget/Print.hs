@@ -18,13 +18,17 @@ instance Pretty Var where
     doComment <- getOpt externalAnnotation
     when doComment . put $ byteString "/* EXTERNAL */"
   pp (Internal name@(Name _ _) comment _) = do
-    pp name
-    doComment <- getOpt nameComments
-    when doComment $ do
-      when (not $ BS.null comment) $ do
-        put $ byteString "/* "
-        put comment
-        put $ byteString " */"
+    hsnames <- getOpt preserveNames
+    if hsnames
+      then put $ buildStgName name
+      else do
+        pp name
+        doComment <- getOpt nameComments
+        when doComment $ do
+          when (not $ BS.null comment) $ do
+            put $ byteString "/* "
+            put comment
+            put $ byteString " */"
 
 instance Pretty Name where
   pp name = finalNameFor name >>= put . buildFinalName

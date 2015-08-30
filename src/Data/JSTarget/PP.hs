@@ -13,6 +13,7 @@ import Control.Monad
 import Control.Applicative
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Char8 as BSS
 import Data.ByteString (ByteString)
 import Data.JSTarget.AST (Name (..))
 import Data.ByteString.Builder
@@ -24,7 +25,8 @@ data PPOpts = PPOpts {
     useIndentation     :: Bool,    -- ^ Should we indent at all?
     indentStr          :: Builder, -- ^ Indentation step.
     useNewlines        :: Bool,    -- ^ Use line breaks?
-    useSpaces          :: Bool     -- ^ Use spaces other than where necessary?
+    useSpaces          :: Bool,    -- ^ Use spaces other than where necessary?
+    preserveNames      :: Bool     -- ^ Use STG names?
   }
 
 type IndentLvl = Int
@@ -68,7 +70,8 @@ instance Default PPOpts where
       useIndentation      = False,
       indentStr           = "    ",
       useNewlines         = False,
-      useSpaces           = False
+      useSpaces           = False,
+      preserveNames       = False
     }
 
 -- | Print code using indentation, whitespace and newlines.
@@ -87,6 +90,9 @@ withAnnotations opts = opts {nameComments = True}
 -- | Annotate externals with /* EXTERNAL */ comment.
 withExtAnnotation :: PPOpts -> PPOpts
 withExtAnnotation opts = opts {externalAnnotation = True}
+
+withHSNames :: PPOpts -> PPOpts
+withHSNames opts = opts {preserveNames = True}
 
 -- | Generate the final name for a variable.
 finalNameFor :: Name -> PP FinalName
@@ -119,7 +125,25 @@ runPP opts p =
 prettyProg :: Pretty a => PPOpts -> Name -> a -> (Builder, Builder)
 prettyProg opts mainSym ast = runPP opts $ do
   pp ast
-  buildFinalName <$> finalNameFor mainSym
+  hsnames <- getOpt preserveNames
+  if hsnames
+    then return $ buildStgName mainSym
+    else buildFinalName <$> finalNameFor mainSym
+
+-- | JS-mangled version of an internal name.
+buildStgName :: Name -> Builder
+buildStgName (Name n mq) =
+    byteString "$hs$" <> qual <> byteString (BSS.map mkjs n)
+  where
+    qual = case mq of
+             Just (_, m) -> byteString (BSS.map mkjs m) <> byteString "$"
+             _           -> mempty
+    mkjs c
+      | c >= 'a' && c <= 'z' = c
+      | c >= 'A' && c <= 'Z' = c
+      | c >= '0' && c <= '9' = c
+      | c == '$'             = c
+      | otherwise            = '_'
 
 -- | Turn a FinalName into a Builder.
 buildFinalName :: FinalName -> Builder
