@@ -131,7 +131,17 @@ bootPortable = do
 
 buildBinaryTarball ver ghcver = do
     -- Get versions and create binary tarball
+    mkdir True "haste-compiler/man"
+    cpDir "man/hastec.1" "haste-compiler/man/hastec.1"
+    cpDir "man/haste-cat.1" "haste-compiler/man/haste-cat.1"
+    cp "install.sh" "haste-compiler/install.sh"
+    cp "uninstall.sh" "haste-compiler/uninstall.sh"
+    cp "doc/readme-portable-linux.txt" "haste-compiler/readme.txt"
     run_ "tar" ["-cjf", tarball, "haste-compiler"] ""
+    mapM_ rm ["haste-compiler/install.sh",
+              "haste-compiler/uninstall.sh",
+              "haste-compiler/readme.txt"]
+    rmdir "haste-compiler/man"
     return tarball
   where
     tarball =
