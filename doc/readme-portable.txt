@@ -6,4 +6,16 @@ hierarchy.
 
 To install Haste into /usr/local, run install.sh as root.
 Haste may be uninstalled from /usr/local at any time using the uninstall.sh
-script from this distribution as root.
+script from this distribution as root, or from the
+/usr/local/lib/haste-compiler directory to which it is copied during
+installation.
+
+---
+
+Note that due to incompatibilities in the way Arch Linux handles locales,
+this Haste distribution, like pre-built versions of many other applications,
+may not be compatible with Arch Linux.
+
+If you experience difficulties using this Haste distribution, please try
+a source install instead; see http://haste-lang.org/downloads for source code
+and build instructions.
