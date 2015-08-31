@@ -59,7 +59,6 @@ main = do
     dotToSlash '.' = '/'
     dotToSlash c   = c
 
-#if __GLASGOW_HASKELL__ < 710
     pkgs booting =
       ["-no-global-package-db",
        "-no-user-package-db",
@@ -67,9 +66,6 @@ main = do
       if booting && portableHaste
         then []
         else ["-package-db=" ++ pkgUserDir]
-#else
-    pkgs _ = []
-#endif
 
     buildJSLib profiling cfg pkgkey mods = do
       let modpath     = targetLibPath cfg ++ "/" ++ pkgkey
