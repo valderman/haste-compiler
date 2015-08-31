@@ -55,6 +55,7 @@ topLevelInline ast =
     >>= smallStepInline
     >>= optimizeArrays
     >>= zapJSStringConversions
+    >>= inlineJSPrimitives
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var

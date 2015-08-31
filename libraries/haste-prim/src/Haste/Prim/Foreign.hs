@@ -9,9 +9,15 @@ module Haste.Prim.Foreign (
     module Haste.Prim.Any,
     FFI, JSFunc,
     ffi, constant, export
+#if __GLASGOW_HASKELL__ >= 710
+    , safe_ffi, StaticPtr
+#endif
   ) where
 import Haste.Prim
 import Haste.Prim.Any
+#if __GLASGOW_HASKELL__ >= 710
+import GHC.StaticPtr (StaticPtr, deRefStaticPtr)
+#endif
 
 -- | A JS function.
 type JSFun = JSAny
@@ -97,6 +103,11 @@ ffi s = __ffi f []
   where
     {-# NOINLINE f #-}
     f = __eval s
+
+#if __GLASGOW_HASKELL__ >= 710
+safe_ffi :: FFI a => StaticPtr JSString -> a
+safe_ffi = ffi . deRefStaticPtr
+#endif
 
 -- | Create a Haskell value from a constant JS expression.
 constant :: FromAny a => JSString -> a
