@@ -1,5 +1,5 @@
 Name:           haste-lib
-Version:        0.5.1.1
+Version:        0.5.1.2
 License:        BSD3
 License-File:   LICENSE
 Synopsis:       Base libraries for haste-compiler.

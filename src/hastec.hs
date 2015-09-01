@@ -48,7 +48,6 @@ main = do
         let ghcconfig = mkGhcCfg fs args
         (dfs, _) <- getDynFlagsForConfig ghcconfig
         extralibdirs <- getExtraLibDirs dfs
-        putStrLn $ "EXTRALIBDIRS: " ++ show extralibdirs
         let cfg = mkLinkerCfg dfs extralibdirs
                 . setShowOutputable dfs
                 $ mkConfig def

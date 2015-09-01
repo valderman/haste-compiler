@@ -1,5 +1,5 @@
-haste-compiler (0.5.1.1) UNRELEASED; urgency=medium
+haste-compiler (0.5.1.2) UNRELEASED; urgency=medium
 
   * Cabal sandbox libdir fix.
 
- -- Anton Ekblad <anton@ekblad.cc>  Wed, 02 Sep 2015 00:04:19 +0200
+ -- Anton Ekblad <anton@ekblad.cc>  Wed, 02 Sep 2015 00:12:01 +0200
