@@ -4,6 +4,8 @@ module Main where
 import Language.Haskell.GHC.Simple
 #if __GLASGOW_HASKELL__ >= 710
 import Language.Haskell.GHC.Simple.PrimIface
+import Packages
+import PackageConfig
 #endif
 import GHC
 import Outputable (showPpr)
@@ -45,7 +47,11 @@ main = do
       Right (fs, mkConfig) -> do
         let ghcconfig = mkGhcCfg fs args
         (dfs, _) <- getDynFlagsForConfig ghcconfig
-        let cfg = mkLinkerCfg dfs . setShowOutputable dfs $ mkConfig def
+        extralibdirs <- getExtraLibDirs dfs
+        putStrLn $ "EXTRALIBDIRS: " ++ show extralibdirs
+        let cfg = mkLinkerCfg dfs extralibdirs
+                . setShowOutputable dfs
+                $ mkConfig def
         res <- compileFold ghcconfig (compJS cfg) ([], []) []
         case res of
           Failure _ _         -> do
@@ -56,6 +62,12 @@ main = do
                 then buildJSLib prof cfg (fst $ head targets) mods
                 else mapM_ (uncurry $ linkAndMinify cfg) targets
   where
+#if __GLASGOW_HASKELL__ >= 710
+    getExtraLibDirs = fmap (concatMap libraryDirs) . readPackageConfigs
+#else
+    getExtraLibDirs = const (return [])
+#endif
+
     dotToSlash '.' = '/'
     dotToSlash c   = c
 
@@ -102,9 +114,10 @@ main = do
         , cfgCustomPrimIface = Just (primOpInfo, primOpStrictness)
 #endif
       }
-    mkLinkerCfg dfs cfg = cfg {
+    mkLinkerCfg dfs extralibdirs cfg = cfg {
         mainMod = Just (pkgKeyString $ modulePkgKey (mainModIs dfs),
-                        moduleNameString $ moduleName (mainModIs dfs))
+                        moduleNameString $ moduleName (mainModIs dfs)),
+        libPaths = extralibdirs ++ libPaths cfg
       }
     setShowOutputable dfs cfg = cfg {showOutputable = showPpr dfs}
 

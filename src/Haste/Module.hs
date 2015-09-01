@@ -82,21 +82,29 @@ jslibFileName basepath pkgid
 #if __GLASGOW_HASKELL__ < 709
       return stdname
 #else
-      dirs <- filter (pkgid `isSuffixOf`) . map (basepath </>) <$> ls basepath
-      dirs' <- filterM isDirectory dirs
-      case dirs' of
-        ds | not (null ds) -> findLibFile ds
-           | otherwise     -> return stdname
+      mfile <- findLibFile [basepath]
+      case mfile of
+        Just f -> do
+          -- Lib file was found directly in basepath
+          return f
+        _         -> do
+          -- Lib file wasn't found directly in basepath, so let's try subdirs
+          contents <- ls basepath
+          let dirs = [basepath </> p | p <- contents, pkgid `isSuffixOf` p]
+          dirs' <- filterM isDirectory dirs
+          case dirs' of
+            ds | not (null ds) -> maybe stdname id <$> findLibFile ds
+               | otherwise     -> return stdname
 #endif
   where
     findLibFile (d:ds) = do
       fs <- map (d </>) . filter (libfilesuffix `isSuffixOf`) <$> ls d
       fs' <- filterM isFile fs
       case fs' of
-        (f:_) -> return f
+        (f:_) -> return (Just f)
         _     -> findLibFile ds
     findLibFile _ = do
-      return stdname
+      return Nothing
 
     -- Use this for non-special packages
     stdname = pkgid </> "libHS" ++ pkgid <.> "jslib"
