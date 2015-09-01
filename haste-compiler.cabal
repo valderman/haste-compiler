@@ -8,6 +8,10 @@ Description:    This package provides a featureful compiler from Haskell to
                 use of standard Haskell libraries, integrates with Cabal,
                 supports most GHC extensions and works on Windows, Linux and
                 OSX.
+
+                Non-Linux users are strongly recommended to download pre-built
+                binary packages from http://haste-lang.org/downloads instead
+                of building from source.
 Category:       JavaScript, Compiler, Web
 Cabal-Version:  >= 1.10
 Build-Type:     Custom

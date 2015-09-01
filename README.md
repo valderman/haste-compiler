@@ -72,35 +72,11 @@ get the Closure source, apply `patches/closure-argument-removal.patch` and
 build it as you normally would. This is not usually necessary however,
 as `haste-boot` fetches a pre-compiled Closure binary when run.
 
+For more detailed build instructions, see `doc/building.md`.
+
 Haste has been tested to work on Windows and OSX platforms, but is primarily
 developed on GNU/Linux. As such, running on a GNU/Linux platform will likely
 get you less bugs.
-
-
-Portable installation
----------------------
-
-It is possible to install Haste along with its runtime system and base
-libraries into a portable directory.
-Each user still has their own package database, which makes this handy
-for global installations. To do this, check out the source and run:
-
-    $ cabal configure -f portable
-    $ cabal build
-
-Building Haste this way yourself is not recommended however, as pre-booted
-[binary packages](http://haste-lang.org/#downloads) built this way are
-available for your convenience. Why jump through hoops if you don't have to?
-
-Be aware that a portable installation is **statically linked**, and thus
-includes `libgmp`. This two things:
-
-  * you will need the static `libgmp` libraries (`.a` files) to build, and
-  * if you are distributing portable Haste binaries with proprietary
-    modifications, *you are violating the LGPL license of libgmp* unless you
-    also provide your application in source or object format.
-    If this is a problem for you, consider contributing your changes back to
-    mainline Haste under the BSD3 license.
 
 
 Usage
