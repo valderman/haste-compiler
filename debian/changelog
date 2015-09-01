@@ -1,5 +1,5 @@
-haste-compiler (0.5.1.0) UNRELEASED; urgency=medium
+haste-compiler (0.5.1.1) UNRELEASED; urgency=medium
 
-   * Replace cabal wrapper script with proper haste-cabal binary.
+  * Cabal sandbox libdir fix.
 
- -- Anton Ekblad <anton@ekblad.cc>  Sat, 22 Aug 2015 13:53:03 +0200
+ -- Anton Ekblad <anton@ekblad.cc>  Wed, 02 Sep 2015 00:04:19 +0200
