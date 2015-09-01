@@ -142,8 +142,9 @@ The preferred way of doing this is the `Haste.Foreign` module:
     addTwo = ffi "(function(x, y) {return x + y;})"
 
 The `ffi` function is a little bit safer than the GHC FFI in that it enforces
-some type invariants on values returned from JS, and is more convenient. It is,
-however, quite a bit slower due to its dynamic nature.
+some type invariants on values returned from JS, and is more convenient.
+Performance-wise, it is roughly as fast as the GHC FFI except for complex types
+(lists, records, etc.) where it is an order of magnitude faster.
 
 If you do not feel comfortable throwing out your entire legacy JavaScript
 code base, you can export selected functions from your Haste program and call
