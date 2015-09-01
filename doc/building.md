@@ -125,7 +125,7 @@ If you built the portable binaries, you instead need to run the `haste-boot`
 binary that got copied into `haste-compiler` (which is highly unlikely to be
 on your search path):
 
-    $ haste-boot/bin/haste-boot --local
+    $ haste-compiler/bin/haste-boot --local
 
 Haste will be bootstrapped into said directory rather than into `~/.haste`.
 
