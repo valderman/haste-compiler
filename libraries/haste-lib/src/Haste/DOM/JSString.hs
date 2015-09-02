@@ -78,6 +78,7 @@ attr :: JSString -> AttrName
 attr = AttrName
 
 -- | Create an 'Attribute'.
+infixl 4 =:
 (=:) :: AttrName -> AttrValue -> Attribute
 (=:) = attribute
 
