@@ -21,7 +21,7 @@ hasteOpts = [
     Option "" ["debug"]
            (NoArg $ \cfg -> cfg {ppOpts = debugPPOpts (ppOpts cfg)}) $
            "Output annotated, pretty-printed JavaScript code. Equivalent to " ++
-           "--annotate externals --preserve-names --pretty-print.",
+           "--annotate-externals --annotate-symbols --pretty-print.",
     Option "" ["ddisable-js-opts"]
            (NoArg $ \cfg -> cfg {optimize = False}) $
            "Don't perform any optimizations on the JavaScript at all. " ++
@@ -118,7 +118,8 @@ hasteOpts = [
            "minification slightly less effective.",
     Option "" ["preserve-names"]
            (NoArg $ \cfg -> cfg {ppOpts = withHSNames (ppOpts cfg)}) $
-           "Preserve Haskell names in JS code as far as possible.",
+           "Preserve Haskell names in JavaScript code as far as possible. " ++
+           "Highly experimental and may break your code.",
     Option "" ["pretty-print"]
            (NoArg $ \cfg -> cfg {ppOpts = withPretty (ppOpts cfg)}) $
            "Pretty-print JavaScript output.",
@@ -227,4 +228,4 @@ fullUnicode cfg =
     cheap = jsDir </> "cheap-unicode.js"
 
 debugPPOpts :: PPOpts -> PPOpts
-debugPPOpts = withPretty . withHSNames . withExtAnnotation
+debugPPOpts = withPretty . withAnnotations . withExtAnnotation

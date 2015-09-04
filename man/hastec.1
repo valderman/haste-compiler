@@ -126,7 +126,7 @@ Annotate all non-external, non-local symbols with their qualified Haskell names.
 .TP
 .BR \-\-debug
 Output annotated, pretty-printed JavaScript code.
-Equivalent to --annotate-externals --preserve-names --pretty-print.
+Equivalent to --annotate-externals --annotate-symbols --pretty-print.
 
 .TP
 .BR \-\-ddisable\-js\-opts
@@ -137,6 +137,11 @@ This notably includes tail call optimization.
 .BR \-\-dtrace\-primops
 Trace primops.
 Not really useful unless Haste was booted with primop tracing enabled.
+
+.TP
+.BR \-\-preserve\-names
+Preserve Haskell names in JavaScript code as far as possible.
+Highly experimental and may break your code.
 
 .TP
 .BR \-\-pretty\-print
