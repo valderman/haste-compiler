@@ -17,16 +17,29 @@ import qualified System.Random as SR
 newtype Seed = Seed JSAny deriving (ToAny, FromAny)
 
 nxt :: Seed -> IO Seed
-nxt = ffi "(function(s){return window['md51'](s.join(','));})"
+nxt = ffi "(function(s){\
+var ba = window['newByteArr'](16);\
+ba['v']['w32'][0] = s[0];\
+ba['v']['w32'][1] = s[1];\
+ba['v']['w32'][2] = s[2];\
+ba['v']['w32'][3] = s[3];\
+return window['md51'](ba,16);})"
 
 getN :: Seed -> IO Int
 getN = ffi "(function(s){return s[0];})"
 
 toSeed :: Int -> IO Seed
-toSeed = ffi "(function(n){return window['md51'](n.toString());})"
+toSeed = ffi "(function(n){\
+var ba = window['newByteArr'](16);\
+ba['v']['w32'][0] = n;\
+return window['md51'](ba,16);})"
 
 createSeed :: IO Seed
-createSeed = ffi "(function(){return window['md51'](jsRand().toString());})"
+createSeed = ffi "(function(){\
+var ba = window['newByteArr'](16);\
+ba['v']['f64'][0] = Math.random();\
+ba['v']['f64'][1] = Math.random();\
+return window['md51'](ba,16);})"
 #else
 newtype Seed = Seed (Int, SR.StdGen)
 
@@ -47,7 +60,7 @@ createSeed = SR.newStdGen >>= return . Seed . SR.next
 mkSeed :: Int -> Seed
 mkSeed = unsafePerformIO . toSeed
 
--- | Generate a new seed using Javascript's PRNG.
+-- | Generate a new seed using JavaScript's PRNG.
 newSeed :: MonadIO m => m Seed
 newSeed = liftIO createSeed
 
