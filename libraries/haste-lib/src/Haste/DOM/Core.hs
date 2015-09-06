@@ -161,8 +161,9 @@ documentBody = constant "document.body"
 appendChild :: (IsElem parent, IsElem child, MonadIO m) => parent -> child -> m ()
 appendChild parent child = liftIO $ jsAppendChild (elemOf child) (elemOf parent)
 
-{-# DEPRECATED addChild "Use appendChild instead" #-}
+{-# DEPRECATED addChild "Use appendChild instead. Note that appendChild == flip addChild." #-}
 -- | DEPRECATED: use 'appendChild' instead!
+--   Note that @appendChild == flip addChild@.
 addChild :: (IsElem parent, IsElem child, MonadIO m) => child -> parent -> m ()
 addChild = flip appendChild
 
@@ -176,8 +177,10 @@ insertChildBefore :: (IsElem parent, IsElem before, IsElem child, MonadIO m)
 insertChildBefore parent oldChild child =
   liftIO $ jsAddChildBefore (elemOf child) (elemOf parent) (elemOf oldChild)
 
-{-# DEPRECATED addChildBefore "Use insertChildBefore instead" #-}
+{-# DEPRECATED addChildBefore "Use insertChildBefore instead. Note insertChildBefore == \\parent new old -> addChildBefore new parent old." #-}
 -- | DEPRECATED: use 'insertChildBefore' instead!
+--   Note that
+--   @insertChildBefore == \parent new old -> addChildBefore new parent old@.
 addChildBefore :: (IsElem parent, IsElem child, MonadIO m)
                => child -> parent -> child -> m ()
 addChildBefore child parent oldChild = insertChildBefore parent oldChild child
@@ -217,10 +220,11 @@ deleteChild :: (IsElem parent, IsElem child, MonadIO m)
             -> m ()
 deleteChild parent child = liftIO $ jsKillChild (elemOf child) (elemOf parent)
 
-{-# DEPRECATED removeChild "Use deleteChild instead" #-}
+{-# DEPRECATED removeChild "Use deleteChild instead. Note that deleteChild = flip removeChild." #-}
 -- | DEPRECATED: use 'deleteChild' instead!
+--   Note that @deleteChild = flip removeChild@.
 removeChild :: (IsElem parent, IsElem child, MonadIO m)
             => child
             -> parent
             -> m ()
-removeChild child parent = liftIO $ jsKillChild (elemOf child) (elemOf parent)
+removeChild = flip deleteChild
