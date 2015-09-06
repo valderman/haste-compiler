@@ -197,7 +197,7 @@ callVanillaGHC args = do
     _ <- Sh.shell $ Sh.run_ ghcBinary (pkgargs booting ++ ghcArgs) ""
     return ()
   where
-    Right (_, ghcArgs) = parseArgs hasteOpts "" args
+    Right (_, ghcArgs, _) = parseArgs hasteOpts "" args
     pkgargs booting =
       ["-no-global-package-db",
        "-no-user-package-db",
@@ -251,17 +251,18 @@ parseHasteFlags :: Bool -> [String] -> [String]
                 -> Either (IO ()) ([String], Config->Config)
 parseHasteFlags booting args rawargs = do
   case runMode booting args of
-   DontRun msg    -> Left $ putStrLn msg
-   Run GHC        -> Left $ callVanillaGHC args
-   Run Haste -> do
-     case parseArgs hasteOpts helpHeader args of
-       Left msg          -> Left $ putStrLn msg
-       Right (cfg, rest) -> Right (filter (/= "-prof") rest, cfg)
-   Run InstallJSExe -> do
-     Left $ installJSExe (jsexeIn args) (jsexeOut args)
-   Run BuildRunner -> do
-     Left $ callVanillaGHC (rawargs ++ ["-package-id", "Cabal-1.23.0.0-f701f4ea98ec7bed5883c4df743045e6"])
-   where
+    DontRun msg -> Left $ putStrLn msg
+    Run GHC     -> Left $ callVanillaGHC args
+    Run Haste   -> do
+      case parseArgs hasteOpts helpHeader args of
+        Left msg              -> Left $ putStrLn msg
+        Right (cfg, rest, []) -> Right (filter (/= "-prof") rest, cfg)
+        Right (_, _,      es) -> Left (mapM_ putStr es >> exitFailure)
+    Run InstallJSExe -> do
+      Left $ installJSExe (jsexeIn args) (jsexeOut args)
+    Run BuildRunner -> do
+      Left $ callVanillaGHC (rawargs ++ ["-package-id", "Cabal-1.23.0.0-f701f4ea98ec7bed5883c4df743045e6"])
+  where
      jsexeIn ("--install-executable":exe:_) = exe
      jsexeIn (_:xs)                         = jsexeIn xs
      jsexeIn _                              = error "No executable to install!"

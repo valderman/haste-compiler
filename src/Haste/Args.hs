@@ -1,20 +1,21 @@
-module Haste.Args (parseArgs) where
+module Haste.Args (parseArgs, printHelp) where
 import System.Console.GetOpt
 import Data.List
 
--- | Parse a list of command line arguments into a config and a list of args
---   for GHC. Non-options are passed directly to GHC.
+-- | Parse a list of command line arguments into a config, a list of args
+--   for GHC, and a list of error messages.
+--   Non-options are passed directly to GHC.
 parseArgs :: [OptDescr (a -> a)]
           -> String
           -> [String]
-          -> Either String (a -> a, [String])
+          -> Either String (a -> a, [String], [String])
 parseArgs opts hdr args
   | "--help" `elem` args || "-?" `elem` args =
     Left $ printHelp hdr opts
   | otherwise =
     let (hasteArgs, ghcArgs) = splitOpts opts args
-        (cfgs, _, _) = getOpt Permute opts hasteArgs
-    in Right (foldl' (flip (.)) id cfgs, ghcArgs)
+        (cfgs, _, errs) = getOpt Permute opts hasteArgs
+    in Right (foldl' (flip (.)) id cfgs, ghcArgs, errs)
 
 -- | Split opts into Haste options and others.
 splitOpts :: [OptDescr a] -> [String] -> ([String], [String])
@@ -48,18 +49,8 @@ splitOpts opts args =
 
     isHasteOpt opt
       | "-o" `isPrefixOf` opt = False
-      | otherwise             = prefixElem opt optnames
-
-    optnames =
-      concatMap names opts
-
-    names (Option short long _ _) =
-      map (\c -> ['-',c]) short ++ map ("--" ++) long
-
--- | Does the given list exist as a prefix of some element in the list of
---   lists?
-prefixElem :: Eq a => [a] -> [[a]] -> Bool
-prefixElem x = or . map (\y -> take (length y) x == y)
+      | opt == "--make"       = False
+      | otherwise             = and $ zipWith (==) "--" opt
 
 printHelp :: String -> [OptDescr a] -> String
 printHelp hdr = (hdr ++) . ("\n" ++) . unlines . map helpString

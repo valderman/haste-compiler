@@ -5,6 +5,7 @@ import Network.Browser hiding (err)
 import Network.URI
 import qualified Data.ByteString.Lazy as BS
 import Data.Version
+import Data.List (foldl')
 import Data.Maybe (fromJust)
 import Codec.Compression.BZip
 import Codec.Archive.Tar
@@ -160,9 +161,13 @@ data CabalOp = Configure | Build | Install | Clean
 main :: IO ()
 main = do
   args <- getArgs
-  case parseArgs specs hdr args of
-    Right (mkConfig, _) -> do
-      let cfg = mkConfig defCfg
+  when ("--help" `elem` args || "-?" `elem` args) $ do
+    putStrLn $ printHelp hdr specs
+    exitSuccess
+
+  case getOpt Permute specs args of
+    (cfgs, [], []) -> do
+      let cfg = foldl' (flip (.)) id cfgs defCfg
       when (hasteNeedsReboot || forceBoot cfg) $ do
         res <- shell $ if useLocalLibs cfg
                          then bootHaste cfg "."
@@ -170,8 +175,9 @@ main = do
         case res of
           Right _  -> return ()
           Left err -> putStrLn err >> exitFailure
-    Left halp -> do
-      putStrLn halp
+    (cfgs, nonopts, errs) -> do
+      mapM_ putStr errs
+      mapM_ (\x -> putStrLn $ "unrecognized option `" ++ x ++ "'") nonopts
 
 bootHaste :: Cfg -> FilePath -> Shell ()
 bootHaste cfg tmpdir =
