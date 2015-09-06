@@ -117,13 +117,9 @@ bootPortable = do
       "mingw32" -> do
         -- windows
         rm "haste-compiler\\bin\\haste-boot.exe"
-        rm "haste-compiler\\bin\\haste-copy-pkg.exe"
-        rm "haste-compiler\\bin\\haste-install-his.exe"
       _ -> do
         -- linux/darwin
         rm "haste-compiler/bin/haste-boot"
-        rm "haste-compiler/bin/haste-copy-pkg"
-        rm "haste-compiler/bin/haste-install-his"
     forEachFile "haste-compiler" $ \f -> do
       when ((f `hasExt` ".o") || (f `hasExt` ".a")) $ rm f
   where

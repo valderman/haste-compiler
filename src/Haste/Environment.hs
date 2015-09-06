@@ -6,8 +6,7 @@ module Haste.Environment (
     hasteGhcLibDir,
     hostWordSize,
     ghcPkgBinary, ghcBinary,
-    hasteBinDir, hasteBinary, hastePkgBinary, hasteInstHisBinary,
-    hasteCabalBinary, hasteCopyPkgBinary,
+    hasteBinDir, hasteBinary, hastePkgBinary, hasteCabalBinary,
     closureCompiler, bootFile,
     portableHaste, hasteNeedsReboot
   ) where
@@ -131,17 +130,9 @@ hasteBinary = hasteBinDir </> "hastec" ++ binaryExt
 hastePkgBinary :: FilePath
 hastePkgBinary = hasteBinDir </> "haste-pkg" ++ binaryExt
 
--- | Binary for haste-copy-pkg.
-hasteCopyPkgBinary :: FilePath
-hasteCopyPkgBinary = hasteBinDir </> "haste-copy-pkg" ++ binaryExt
-
 -- | Binary for haste-pkg.
 hasteCabalBinary :: FilePath
 hasteCabalBinary = hasteBinDir </> "haste-cabal" ++ binaryExt
-
--- | Binary for haste-install-his.
-hasteInstHisBinary :: FilePath
-hasteInstHisBinary = hasteBinDir </> "haste-install-his" ++ binaryExt
 
 -- | JAR for Closure compiler.
 closureCompiler :: FilePath

@@ -204,39 +204,6 @@ Executable haste-pkg
     if os(windows)
         c-sources: utils/haste-pkg/CRT_noglob.c
 
-Executable haste-install-his
-    if flag(only-library)
-        buildable: False
-    Main-Is: haste-install-his.hs
-    Hs-Source-Dirs: src
-    if flag(portable)
-        CPP-Options: -DPORTABLE
-    Build-Depends:
-        base < 5,
-        shellmate,
-        ghc-paths,
-        ghc,
-        directory
-    default-language: Haskell98
-
-Executable haste-copy-pkg
-    if flag(only-library)
-        buildable: False
-    Main-Is: haste-copy-pkg.hs
-    Other-Modules:
-        Haste.Environment
-        Haste.GHCPaths
-    Hs-Source-Dirs: src
-    if flag(portable)
-        CPP-Options: -DPORTABLE
-    Build-Depends:
-        base < 5,
-        shellmate >= 0.1.5,
-        ghc-paths,
-        ghc,
-        directory
-    default-language: Haskell98
-
 Executable haste-cat
     if flag(only-library)
         buildable: False
