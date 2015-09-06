@@ -114,10 +114,10 @@ children = Children
 -- | Set a number of 'Attribute's on the element produced by an IO action.
 --   Gives more convenient syntax when creating elements:
 --
---     newElem "div" `with` [
---         style "border" =: "1px solid black",
---         ...
---       ]
+--   > newElem "div" `with` [
+--   >     style "border" =: "1px solid black",
+--   >     ...
+--   >   ]
 --
 with :: (IsElem e, MonadIO m) => m e -> [Attribute] -> m e
 with m attrs = do

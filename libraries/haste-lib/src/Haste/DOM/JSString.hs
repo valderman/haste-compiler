@@ -78,7 +78,7 @@ attr :: JSString -> AttrName
 attr = AttrName
 
 -- | Create a DOM property name.
---   See <http://stackoverflow.com/questions/6003819/properties-and-attributes-in-html> for more information about the difference between attributes and properties.prop :: JSString -> AttrName
+--   See <http://stackoverflow.com/questions/6003819/properties-and-attributes-in-html> for more information about the difference between attributes and properties.
 prop :: JSString -> AttrName
 prop = PropName
 

@@ -84,7 +84,8 @@ ffiio !f !as = __apply f (toPtr as) >>= fromAny
 --   save you from poorly typed JS here, but there are no guarantees.
 --
 --   For instance, the following WILL cause crazy behavior due to wrong types:
---   @ffi "(function(x) {return x+1;})" :: Int -> Int -> IO Int@
+--
+--   > ffi "(function(x) {return x+1;})" :: Int -> Int -> IO Int
 --
 --   In other words, this function is as unsafe as the JS it calls on. You
 --   have been warned.
@@ -93,7 +94,7 @@ ffiio !f !as = __apply f (toPtr as) >>= fromAny
 --   in which case evaluation order does not affect the semantics of the
 --   imported code, or if (b) the imported code is explicitly marked as strict:
 --
---       someFunction = ffi "__strict(someJSFunction)"
+--   > someFunction = ffi "__strict(someJSFunction)"
 --
 --   Literals which depends on some third party initialization, the existence
 --   of a DOM tree or some other condition which is not fulfilled at load time
@@ -125,10 +126,10 @@ constant = veryUnsafePerformIO . fromAny . __eval
   #-}
 
 -- | Export a symbol. That symbol may then be accessed from JavaScript through
---   Haste.name() as a normal function. Remember, however, that if you are
+--   @Haste.name()@ as a normal function. Remember, however, that if you are
 --   using --with-js to include your JS, in conjunction with
 --   --opt-minify or any option that implies it, you will instead need
---   to access your exports through Haste[\'name\'](), or Closure will mangle
+--   to access your exports through @Haste[\'name\']()@, or Closure will mangle
 --   your function names.
 {-# INLINE export #-}
 export :: ToAny a => JSString -> a -> IO ()

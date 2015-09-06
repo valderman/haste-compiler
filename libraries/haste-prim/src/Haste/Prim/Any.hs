@@ -103,15 +103,21 @@ has = __has
 -- | Any type that can be converted into a JavaScript value.
 class ToAny a where
   -- | Build a JS object from a Haskell value.
+  --
   --   The default instance creates an object from any type that derives
   --   'Generic' according to the following rules:
+  --
   --   * Records turn into plain JS objects, with record names as field names.
+  --
   --   * Non-record product types turn into objects containing a @$data@ field
   --     which contains all of the constructor's unnamed fields.
+  --
   --   * Values of enum types turn into strings matching their constructors.
+  --
   --   * Non-enum types with more than one constructor gain an extra field,
   --     @$tag@, which contains the name of the constructor used to create the
   --     object.
+  --
   toAny :: a -> JSAny
   default toAny :: (GToAny (Rep a), Generic a) => a -> JSAny
   toAny x =
@@ -130,6 +136,8 @@ class FromAny a where
   --   is not possible. Examples of reasonable conversions would be truncating
   --   floating point numbers to integers, or turning signed integers into
   --   unsigned.
+  --
+  --   The default instance is the inverse of the default 'ToAny' instance.
   fromAny :: JSAny -> IO a
   default fromAny :: (GToAny (Rep a), GFromAny (Rep a), Generic a)
                   => JSAny -> IO a
