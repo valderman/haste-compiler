@@ -9,7 +9,7 @@ module Haste.DOM.JSString (
     setChildren, clearChildren, deleteChild, removeChild,
     -- Own exports
     PropID, ElemID, QuerySelector, ElemClass, AttrValue,
-    style, attr, (=:),
+    prop, style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, getValue,
@@ -77,6 +77,11 @@ style = StyleName
 attr :: JSString -> AttrName
 attr = AttrName
 
+-- | Create a DOM property name.
+--   See <http://stackoverflow.com/questions/6003819/properties-and-attributes-in-html> for more information about the difference between attributes and properties.prop :: JSString -> AttrName
+prop :: JSString -> AttrName
+prop = PropName
+
 -- | Create an 'Attribute'.
 infixl 4 =:
 (=:) :: AttrName -> AttrValue -> Attribute
@@ -92,11 +97,11 @@ newTextElem = liftIO . jsCreateTextNode
 
 -- | Set a property of the given element.
 setProp :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
-setProp e prop val = liftIO $ jsSet (elemOf e) prop val
+setProp e property val = liftIO $ jsSet (elemOf e) property val
 
 -- | Set an attribute of the given element.
 setAttr :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
-setAttr e prop val = liftIO $ jsSetAttr (elemOf e) prop val
+setAttr e property val = liftIO $ jsSetAttr (elemOf e) property val
 
 -- | Get the value property of an element; a handy shortcut.
 getValue :: (IsElem e, MonadIO m, JSType a) => e -> m (Maybe a)
@@ -104,19 +109,19 @@ getValue e = liftIO $ fromJSString `fmap` jsGet (elemOf e) "value"
 
 -- | Get a property of an element.
 getProp :: (IsElem e, MonadIO m) => e -> PropID -> m JSString
-getProp e prop = liftIO $ jsGet (elemOf e) prop
+getProp e property = liftIO $ jsGet (elemOf e) property
 
 -- | Get an attribute of an element.
 getAttr :: (IsElem e, MonadIO m) => e -> PropID -> m JSString
-getAttr e prop = liftIO $ jsGetAttr (elemOf e) prop
+getAttr e property = liftIO $ jsGetAttr (elemOf e) property
 
 -- | Get a CSS style property of an element.
 getStyle :: (IsElem e, MonadIO m) => e -> PropID -> m JSString
-getStyle e prop = liftIO $ jsGetStyle (elemOf e) prop
+getStyle e property = liftIO $ jsGetStyle (elemOf e) property
 
 -- | Set a CSS style property on an element.
 setStyle :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
-setStyle e prop val = liftIO $ jsSetStyle (elemOf e) prop val
+setStyle e property val = liftIO $ jsSetStyle (elemOf e) property val
 
 -- | Get an element by its HTML ID attribute.
 elemById :: MonadIO m => ElemID -> m (Maybe Elem)

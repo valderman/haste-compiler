@@ -9,7 +9,7 @@ module Haste.DOM (
     setChildren, clearChildren, deleteChild, removeChild,
     -- Own exports
     PropID, ElemID, QuerySelector, ElemClass, AttrValue,
-    style, attr, (=:),
+    prop, style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
     setProp, getProp, setAttr, getAttr, J.getValue,
@@ -37,6 +37,11 @@ style = StyleName . toJSStr
 attr :: String -> AttrName
 attr = AttrName . toJSStr
 
+-- | Create a DOM property name.
+--   See <http://stackoverflow.com/questions/6003819/properties-and-attributes-in-html> for more information about the difference between attributes and properties.
+prop :: String -> AttrName
+prop = PropName . toJSStr
+
 -- | Create an 'Attribute'.
 (=:) :: AttrName -> AttrValue -> Attribute
 name =: val = attribute name (toJSStr val)
@@ -51,27 +56,27 @@ newTextElem = J.newTextElem . toJSStr
 
 -- | Set a property of the given element.
 setProp :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
-setProp e prop val = J.setProp e (toJSStr prop) (toJSStr val)
+setProp e property val = J.setProp e (toJSStr property) (toJSStr val)
 
 -- | Set an attribute of the given element.
 setAttr :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
-setAttr e prop val = J.setAttr e (toJSStr prop) (toJSStr val)
+setAttr e property val = J.setAttr e (toJSStr property) (toJSStr val)
 
 -- | Get a property of an element.
 getProp :: (IsElem e, MonadIO m) => e -> PropID -> m String
-getProp e prop = J.getProp e (toJSStr prop) >>= return . fromJSStr
+getProp e property = J.getProp e (toJSStr property) >>= return . fromJSStr
 
 -- | Get an attribute of an element.
 getAttr :: (IsElem e, MonadIO m) => e -> PropID -> m String
-getAttr e prop = J.getAttr e (toJSStr prop) >>= return . fromJSStr
+getAttr e property = J.getAttr e (toJSStr property) >>= return . fromJSStr
 
 -- | Get a CSS style property of an element.
 getStyle :: (IsElem e, MonadIO m) => e -> PropID -> m String
-getStyle e prop = J.getStyle e (toJSStr prop) >>= return . fromJSStr
+getStyle e property = J.getStyle e (toJSStr property) >>= return . fromJSStr
 
 -- | Set a CSS style property on an element.
 setStyle :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
-setStyle e prop val = J.setStyle e (toJSStr prop) (toJSStr val)
+setStyle e property val = J.setStyle e (toJSStr property) (toJSStr val)
 
 -- | Get an element by its HTML ID attribute.
 elemById :: MonadIO m => ElemID -> m (Maybe Elem)
