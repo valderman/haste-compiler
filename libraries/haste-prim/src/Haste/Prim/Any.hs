@@ -464,5 +464,3 @@ instance (GFromAny a, GFromAny b) => GFromAny (a :+: b) where
 
 withSomeException :: IO a -> SomeException -> IO a
 withSomeException m _ = m
-
-foreign import ccall "jsLog" dbg :: JSAny -> IO ()
