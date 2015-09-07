@@ -281,6 +281,7 @@ Library
         Haste.Events.Core
         Haste.Events.KeyEvents
         Haste.Events.MouseEvents
+        Haste.Events.TouchEvents
         Haste.GHCPaths
         Haste.Hash
         Haste.Prim.Any

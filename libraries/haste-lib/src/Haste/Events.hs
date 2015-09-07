@@ -12,9 +12,13 @@ module Haste.Events (
     KeyEvent (..), KeyData (..), mkKeyData,
 
     -- * Mouse-related events
-    MouseEvent (..), MouseData (..), MouseButton (..)
+    MouseEvent (..), MouseData (..), MouseButton (..),
+
+    -- * Touch-related events
+    TouchEvent (..), TouchData (..), Touch (..)
   ) where
 import Haste.Events.Core as Core
 import Haste.Events.BasicEvents as BasicEvents
 import Haste.Events.KeyEvents as KeyEvents
 import Haste.Events.MouseEvents as MouseEvents
+import Haste.Events.TouchEvents as TouchEvents

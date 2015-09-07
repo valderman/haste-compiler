@@ -27,7 +27,7 @@ mkKeyData n = KeyData {
     keyMeta  = False
   }
 
--- | Num instance for KeyData to enable pattern matching against numeric
+-- | Num instance for 'KeyData' to enable pattern matching against numeric
 --   key codes.
 instance Num KeyData where
   fromInteger = mkKeyData . fromInteger
