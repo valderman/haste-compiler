@@ -304,12 +304,24 @@ genOp cfg op xs =
     UnmaskAsyncExceptionsOp -> Right $ callSaturated (head xs) []
     MaskStatus              -> Right $ litN 0
 
-    -- Misc. ops
+    -- Bitwise ops
     PopCntOp       -> Right $ callForeign "popCnt" [head xs]
     PopCnt8Op      -> Right $ callForeign "popCnt" [head xs]
     PopCnt16Op     -> Right $ callForeign "popCnt" [head xs]
     PopCnt32Op     -> Right $ callForeign "popCnt" [head xs]
     PopCnt64Op     -> Right $ callForeign "popCnt64" [head xs]
+
+    ClzOp          -> Right $ callForeign "__clz" [litN 32, head xs]
+    Clz8Op         -> Right $ callForeign "__clz" [litN 8,  head xs]
+    Clz16Op        -> Right $ callForeign "__clz" [litN 16, head xs]
+    Clz32Op        -> Right $ callForeign "__clz" [litN 32, head xs]
+
+    CtzOp          -> Right $ callForeign "__ctz" [litN 32, head xs]
+    Ctz8Op         -> Right $ callForeign "__ctz" [litN 8,  head xs]
+    Ctz16Op        -> Right $ callForeign "__ctz" [litN 16, head xs]
+    Ctz32Op        -> Right $ callForeign "__ctz" [litN 32, head xs]    
+
+    -- Misc. ops
     DelayOp        -> Right $ defState
     SeqOp          -> Right $ eval $ head xs
     AtomicallyOp   -> Right $ callSaturated (xs !! 0) []
