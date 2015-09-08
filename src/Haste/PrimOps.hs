@@ -316,10 +316,12 @@ genOp cfg op xs =
     Clz16Op        -> Right $ callForeign "__clz" [litN 16, head xs]
     Clz32Op        -> Right $ callForeign "__clz" [litN 32, head xs]
 
+#if __GLASGOW_HASKELL__ >= 710
     CtzOp          -> Right $ callForeign "__ctz" [litN 32, head xs]
     Ctz8Op         -> Right $ callForeign "__ctz" [litN 8,  head xs]
     Ctz16Op        -> Right $ callForeign "__ctz" [litN 16, head xs]
     Ctz32Op        -> Right $ callForeign "__ctz" [litN 32, head xs]    
+#endif
 
     -- Misc. ops
     DelayOp        -> Right $ defState
