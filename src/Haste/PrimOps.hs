@@ -323,6 +323,10 @@ genOp cfg op xs =
     Ctz32Op        -> Right $ callForeign "__ctz" [litN 32, head xs]    
 #endif
 
+    -- Concurrency - only relevant in a threaded environment
+    NoDuplicateOp  -> Right $ defState
+    MyThreadIdOp   -> Right $ litN 0 -- thread ID is always 0
+
     -- Misc. ops
     DelayOp        -> Right $ defState
     SeqOp          -> Right $ eval $ head xs
@@ -334,8 +338,6 @@ genOp cfg op xs =
     TouchOp        -> Right $ defState
     RaiseOp        -> callF "die"
     RaiseIOOp      -> callF "die"
-    -- noDuplicate is only relevant in a threaded environment.
-    NoDuplicateOp  -> Right $ defState
     CatchOp        -> callF "jsCatch"
     x              -> Left $ "Unsupported PrimOp: " ++ showOutputable cfg x
   where
