@@ -1,6 +1,5 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings,
-             TypeSynonymInstances, FlexibleInstances, GADTs, CPP,
-             GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings, TypeSynonymInstances, FlexibleInstances,
+             GADTs, CPP, GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
@@ -34,80 +33,72 @@ import Data.Maybe (fromJust)
 import Haste
 import qualified Haste.DOM.JSString as J
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
-import Haste.Foreign (ToAny (..), FromAny (..))
-#ifdef __HASTE__
-import Haste.Prim (JSString (..), JSAny (..))
-#endif
+import Haste.Foreign (ToAny (..), FromAny (..), ffi)
 
-#ifdef __HASTE__
-foreign import ccall jsHasCtx2D :: Elem -> IO Bool
-foreign import ccall jsGetCtx2D :: Elem -> IO Ctx
-foreign import ccall jsBeginPath :: Ctx -> IO ()
-foreign import ccall jsMoveTo :: Ctx -> Double -> Double -> IO ()
-foreign import ccall jsLineTo :: Ctx -> Double -> Double -> IO ()
-foreign import ccall jsStroke :: Ctx -> IO ()
-foreign import ccall jsFill :: Ctx -> IO ()
-foreign import ccall jsRotate :: Ctx -> Double -> IO ()
-foreign import ccall jsTranslate :: Ctx -> Double -> Double -> IO ()
-foreign import ccall jsScale :: Ctx -> Double -> Double -> IO ()
-foreign import ccall jsPushState :: Ctx -> IO ()
-foreign import ccall jsPopState :: Ctx -> IO ()
-foreign import ccall jsResetCanvas :: Elem -> IO ()
-foreign import ccall jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
-foreign import ccall jsDrawImageClipped :: Ctx -> Elem
+jsHasCtx2D :: Elem -> IO Bool
+jsHasCtx2D = ffi "(function(e){return !!e.getContext;})"
+
+jsGetCtx2D :: Elem -> IO Ctx
+jsGetCtx2D = ffi "(function(e){return e.getContext('2d');})"
+
+jsBeginPath :: Ctx -> IO ()
+jsBeginPath = ffi "(function(ctx){ctx.beginPath();})"
+
+jsMoveTo :: Ctx -> Double -> Double -> IO ()
+jsMoveTo = ffi "(function(ctx,x,y){ctx.moveTo(x,y);})"
+
+jsLineTo :: Ctx -> Double -> Double -> IO ()
+jsLineTo = ffi "(function(ctx,x,y){ctx.lineTo(x,y);})"
+
+jsStroke :: Ctx -> IO ()
+jsStroke = ffi "(function(ctx){ctx.stroke();})"
+
+jsFill :: Ctx -> IO ()
+jsFill = ffi "(function(ctx){ctx.fill();})"
+
+jsRotate :: Ctx -> Double -> IO ()
+jsRotate = ffi "(function(ctx,rad){ctx.rotate(rad);})"
+
+jsTranslate :: Ctx -> Double -> Double -> IO ()
+jsTranslate = ffi "(function(ctx,x,y){ctx.translate(x,y);})"
+
+jsScale :: Ctx -> Double -> Double -> IO ()
+jsScale = ffi "(function(ctx,x,y){ctx.scale(x,y);})"
+
+jsPushState :: Ctx -> IO ()
+jsPushState = ffi "(function(ctx){ctx.save();})"
+
+jsPopState :: Ctx -> IO ()
+jsPopState = ffi "(function(ctx){ctx.restore();})"
+
+jsResetCanvas :: Elem -> IO ()
+jsResetCanvas = ffi "(function(e){e.width = e.width;})"
+
+jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
+jsDrawImage = ffi "(function(ctx,i,x,y){ctx.drawImage(i,x,y);})"
+
+jsDrawImageClipped :: Ctx -> Elem
                                         -> Double -> Double
                                         -> Double -> Double -> Double -> Double 
                                         -> IO ()
-foreign import ccall jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
-foreign import ccall jsClip :: Ctx -> IO ()
-foreign import ccall jsArc :: Ctx
-                           -> Double -> Double
-                           -> Double
-                           -> Double -> Double
-                           -> IO ()
-foreign import ccall jsCanvasToDataURL :: Elem -> IO JSString
-#else
-jsHasCtx2D :: Elem -> IO Bool
-jsGetCtx2D :: Elem -> IO Ctx
-jsBeginPath :: Ctx -> IO ()
-jsMoveTo :: Ctx -> Double -> Double -> IO ()
-jsLineTo :: Ctx -> Double -> Double -> IO ()
-jsStroke :: Ctx -> IO ()
-jsFill :: Ctx -> IO ()
-jsRotate :: Ctx -> Double -> IO ()
-jsTranslate :: Ctx -> Double -> Double -> IO ()
-jsScale :: Ctx -> Double -> Double -> IO ()
-jsPushState :: Ctx -> IO ()
-jsPopState :: Ctx -> IO ()
-jsResetCanvas :: Elem -> IO ()
-jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
-jsDrawImageClipped :: Ctx -> Elem -> Double -> Double
-                                  -> Double -> Double -> Double -> Double 
-                                  -> IO ()
+jsDrawImageClipped = ffi "(function(ctx, img, x, y, cx, cy, cw, ch){\
+ctx.drawImage(img, cx, cy, cw, ch, x, y, cw, ch);})"
+
 jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
+jsDrawText = ffi "(function(ctx,s,x,y){ctx.fillText(s,x,y);})"
+
 jsClip :: Ctx -> IO ()
-jsArc :: Ctx -> Double -> Double -> Double -> Double -> Double -> IO ()
+jsClip = ffi "(function(ctx){ctx.clip();})"
+
+jsArc :: Ctx -> Double -> Double
+             -> Double
+             -> Double -> Double
+             -> IO ()
+jsArc = ffi "(function(ctx, x, y, radius, fromAngle, toAngle){\
+ctx.arc(x, y, radius, fromAngle, toAngle);})"
+
 jsCanvasToDataURL :: Elem -> IO JSString
-jsHasCtx2D = error "Tried to use Canvas in native code!"
-jsGetCtx2D = error "Tried to use Canvas in native code!"
-jsBeginPath = error "Tried to use Canvas in native code!"
-jsMoveTo = error "Tried to use Canvas in native code!"
-jsLineTo = error "Tried to use Canvas in native code!"
-jsStroke = error "Tried to use Canvas in native code!"
-jsFill = error "Tried to use Canvas in native code!"
-jsRotate = error "Tried to use Canvas in native code!"
-jsTranslate = error "Tried to use Canvas in native code!"
-jsScale = error "Tried to use Canvas in native code!"
-jsPushState = error "Tried to use Canvas in native code!"
-jsPopState = error "Tried to use Canvas in native code!"
-jsResetCanvas = error "Tried to use Canvas in native code!"
-jsDrawImage = error "Tried to use Canvas in native code!"
-jsDrawImageClipped = error "Tried to use Canvas in native code!"
-jsDrawText = error "Tried to use Canvas in native code!"
-jsClip = error "Tried to use Canvas in native code!"
-jsArc = error "Tried to use Canvas in native code!"
-jsCanvasToDataURL = error "Tried to use Canvas in native code!"
-#endif
+jsCanvasToDataURL = ffi "(function(e){return e.toDataURL('image/png');})"
 
 -- | A bitmap, backed by an IMG element.
 --   JS representation is a reference to the backing IMG element.

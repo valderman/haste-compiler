@@ -37,7 +37,6 @@ Data-Files:
     unicode.js
     cheap-unicode.js
     debug.js
-    Canvas.js
     Handle.js
     Weak.js
     endian.js
