@@ -34,11 +34,8 @@ type AttrValue = JSString
 
 #ifdef __HASTE__
 foreign import ccall jsGet :: Elem -> JSString -> IO JSString
-foreign import ccall jsSet :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsGetAttr :: Elem -> JSString -> IO JSString
-foreign import ccall jsSetAttr :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsGetStyle :: Elem -> JSString -> IO JSString
-foreign import ccall jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 foreign import ccall jsFind :: JSString -> IO (Ptr (Maybe Elem))
 foreign import ccall jsQuerySelectorAll :: Elem -> JSString -> IO (Ptr [Elem])
 foreign import ccall jsElemsByClassName :: JSString -> IO (Ptr [Elem])
@@ -47,16 +44,10 @@ foreign import ccall jsCreateTextNode :: JSString -> IO Elem
 #else
 jsGet :: Elem -> JSString -> IO JSString
 jsGet = error "Tried to use jsGet on server side!"
-jsSet :: Elem -> JSString -> JSString -> IO ()
-jsSet = error "Tried to use jsSet on server side!"
 jsGetAttr :: Elem -> JSString -> IO JSString
 jsGetAttr = error "Tried to use jsGetAttr on server side!"
-jsSetAttr :: Elem -> JSString -> JSString -> IO ()
-jsSetAttr = error "Tried to use jsSetAttr on server side!"
 jsGetStyle :: Elem -> JSString -> IO JSString
 jsGetStyle = error "Tried to use jsGetStyle on server side!"
-jsSetStyle :: Elem -> JSString -> JSString -> IO ()
-jsSetStyle = error "Tried to use jsSetStyle on server side!"
 jsFind :: JSString -> IO (Ptr (Maybe Elem))
 jsFind = error "Tried to use jsFind on server side!"
 jsQuerySelectorAll :: Elem -> JSString -> IO (Ptr [Elem])

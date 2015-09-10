@@ -1,5 +1,4 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, GeneralizedNewtypeDeriving,
-             OverloadedStrings #-}
+{-# LANGUAGE CPP, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 -- | Core types and operations for DOM manipulation.
 module Haste.DOM.Core (
     Elem (..), IsElem (..), Attribute, AttrName (..),
@@ -10,6 +9,8 @@ module Haste.DOM.Core (
     setChildren, getChildren,
     getLastChild, getFirstChild, getChildBefore,
     insertChildBefore, appendChild,
+    -- Low level stuff
+    jsSet, jsSetAttr, jsSetStyle,
     -- Deprecated
     removeChild, addChild, addChildBefore
   ) where
@@ -18,45 +19,57 @@ import Control.Monad.IO.Class
 import Haste.Foreign
 import Data.String
 
-#ifdef __HASTE__
-foreign import ccall jsSet :: Elem -> JSString -> JSString -> IO ()
-foreign import ccall jsSetAttr :: Elem -> JSString -> JSString -> IO ()
-foreign import ccall jsSetStyle :: Elem -> JSString -> JSString -> IO ()
-foreign import ccall jsAppendChild :: Elem -> Elem -> IO ()
-foreign import ccall jsGetFirstChild :: Elem -> IO (Ptr (Maybe Elem))
-foreign import ccall jsGetLastChild :: Elem -> IO (Ptr (Maybe Elem))
-foreign import ccall jsGetChildren :: Elem -> IO (Ptr [Elem])
-foreign import ccall jsSetChildren :: Elem -> Ptr [Elem] -> IO ()
-foreign import ccall jsAddChildBefore :: Elem -> Elem -> Elem -> IO ()
-foreign import ccall jsGetChildBefore :: Elem -> IO (Ptr (Maybe Elem))
-foreign import ccall jsKillChild :: Elem -> Elem -> IO ()
-foreign import ccall jsClearChildren :: Elem -> IO ()
-#else
 jsSet :: Elem -> JSString -> JSString -> IO ()
-jsSet = error "Tried to use jsSet on server side!"
+jsSet = ffi "(function(e,p,v){e[p] = v;})"
+
 jsSetAttr :: Elem -> JSString -> JSString -> IO ()
-jsSetAttr = error "Tried to use jsSetAttr on server side!"
+jsSetAttr = ffi "(function(e,p,v){e.setAttribute(p, v);})"
+
 jsSetStyle :: Elem -> JSString -> JSString -> IO ()
-jsSetStyle = error "Tried to use jsSetStyle on server side!"
+jsSetStyle = ffi "(function(e,p,v){e.style[p] = v;})"
+
 jsAppendChild :: Elem -> Elem -> IO ()
-jsAppendChild = error "Tried to use jsAppendChild on server side!"
-jsGetFirstChild :: Elem -> IO (Ptr (Maybe Elem))
-jsGetFirstChild = error "Tried to use jsGetFirstChild on server side!"
-jsGetLastChild :: Elem -> IO (Ptr (Maybe Elem))
-jsGetLastChild = error "Tried to use jsGetLastChild on server side!"
-jsGetChildren :: Elem -> IO (Ptr [Elem])
-jsGetChildren = error "Tried to use jsGetChildren on server side!"
-jsSetChildren :: Elem -> Ptr [Elem] -> IO ()
-jsSetChildren = error "Tried to use jsSetChildren on server side!"
+jsAppendChild = ffi "(function(c,p){p.appendChild(c);})"
+
+jsGetFirstChild :: Elem -> IO (Maybe Elem)
+jsGetFirstChild = ffi "(function(e){\
+for(e = e.firstChild; e != null; e = e.nextSibling)\
+  {if(e instanceof HTMLElement) {return e;}}\
+return null;})"
+
+jsGetLastChild :: Elem -> IO (Maybe Elem)
+jsGetLastChild = ffi "(function(e){\
+for(e = e.lastChild; e != null; e = e.previousSibling)\
+  {if(e instanceof HTMLElement) {return e;}}\
+return null;})"
+
+jsGetChildren :: Elem -> IO [Elem]
+jsGetChildren = ffi "(function(e){\
+var ch = [];\
+for(e = e.firstChild; e != null; e = e.nextSibling)\
+  {if(e instanceof HTMLElement) {ch.push(e);}}\
+return ch;})"
+
+jsSetChildren :: Elem -> [Elem] -> IO ()
+jsSetChildren = ffi "(function(e,ch){\
+while(e.firstChild) {e.removeChild(e.firstChild);}\
+for(var i in ch) {e.appendChild(ch[i]);}})"
+
 jsAddChildBefore :: Elem -> Elem -> Elem -> IO ()
-jsAddChildBefore = error "Tried to use jsAddChildBefore on server side!"
-jsGetChildBefore :: Elem -> IO (Ptr (Maybe Elem))
-jsGetChildBefore = error "Tried to use jsGetChildBefore on server side!"
+jsAddChildBefore = ffi "(function(c,p,a){p.insertBefore(c,a);})"
+
+jsGetChildBefore :: Elem -> IO (Maybe Elem)
+jsGetChildBefore = ffi "(function(e){\
+for(; e != null; e = e.previousSibling)\
+  {if(e instanceof HTMLElement) {return e;}\
+return null;})"
+
 jsKillChild :: Elem -> Elem -> IO ()
-jsKillChild = error "Tried to use jsKillChild on server side!"
+jsKillChild = ffi "(function(c,p){p.removeChild(c);})"
+
 jsClearChildren :: Elem -> IO ()
-jsClearChildren = error "Tried to use jsClearChildren on server side!"
-#endif
+jsClearChildren = ffi "(function(e){\
+while(e.firstChild){e.removeChild(e.firstChild);}})"
 
 -- | A DOM node.
 newtype Elem = Elem JSAny
@@ -128,26 +141,23 @@ with m attrs = do
 -- | Generate a click event on an element.
 click :: (IsElem e, MonadIO m) => e -> m ()
 click = liftIO . click' . elemOf
-  where
-    {-# NOINLINE click' #-}
-    click' :: Elem -> IO ()
-    click' = ffi "(function(e) {e.click();})"
+
+click' :: Elem -> IO ()
+click' = ffi "(function(e) {e.click();})"
 
 -- | Generate a focus event on an element.
 focus :: (IsElem e, MonadIO m) => e -> m ()
 focus = liftIO . focus' . elemOf
-  where
-    {-# NOINLINE focus' #-}
-    focus' :: Elem -> IO ()
-    focus' = ffi "(function(e) {e.focus();})"
+
+focus' :: Elem -> IO ()
+focus' = ffi "(function(e) {e.focus();})"
 
 -- | Generate a blur event on an element.
 blur :: (IsElem e, MonadIO m) => e -> m ()
 blur = liftIO . blur' . elemOf
-  where
-    {-# NOINLINE blur' #-}
-    blur' :: Elem -> IO ()
-    blur' = ffi "(function(e) {e.blur();})"
+
+blur' :: Elem -> IO ()
+blur' = ffi "(function(e) {e.blur();})"
 
 -- | The DOM node corresponding to document.
 document :: Elem
@@ -187,19 +197,19 @@ addChildBefore child parent oldChild = insertChildBefore parent oldChild child
 
 -- | Get the sibling before the given one, if any.
 getChildBefore :: (IsElem e, MonadIO m) => e -> m (Maybe Elem)
-getChildBefore e = liftIO $ fromPtr `fmap` jsGetChildBefore (elemOf e)
+getChildBefore e = liftIO $ jsGetChildBefore (elemOf e)
 
 -- | Get the first of an element's children.
 getFirstChild :: (IsElem e, MonadIO m) => e -> m (Maybe Elem)
-getFirstChild e = liftIO $ fromPtr `fmap` jsGetFirstChild (elemOf e)
+getFirstChild e = liftIO $ jsGetFirstChild (elemOf e)
 
 -- | Get the last of an element's children.
 getLastChild :: (IsElem e, MonadIO m) => e -> m (Maybe Elem)
-getLastChild e = liftIO $ fromPtr `fmap` jsGetLastChild (elemOf e)
+getLastChild e = liftIO $ jsGetLastChild (elemOf e)
 
 -- | Get a list of all children belonging to a certain element.
 getChildren :: (IsElem e, MonadIO m) => e -> m [Elem]
-getChildren e = liftIO $ fromPtr `fmap` jsGetChildren (elemOf e)
+getChildren e = liftIO $ jsGetChildren (elemOf e)
 
 -- | Clear the given element's list of children, and append all given children
 --   to it.
@@ -207,7 +217,7 @@ setChildren :: (IsElem parent, IsElem child, MonadIO m)
             => parent
             -> [child]
             -> m ()
-setChildren e ch = liftIO $ jsSetChildren (elemOf e) (toPtr $ map elemOf ch)
+setChildren e ch = liftIO $ jsSetChildren (elemOf e) (map elemOf ch)
 
 -- | Remove all children from the given element.
 clearChildren :: (IsElem e, MonadIO m) => e -> m ()
