@@ -31,7 +31,8 @@ import Control.Applicative
 import Control.Monad.IO.Class
 import Data.Maybe (fromJust)
 import Haste
-import qualified Haste.DOM.JSString as J
+import Haste.DOM.JSString
+import Haste.DOM.Core
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
 import Haste.Foreign (ToAny (..), FromAny (..), ffi)
 
@@ -130,8 +131,8 @@ class BitmapSource src where
 
 instance BitmapSource URL where
   loadBitmap url = liftIO $ do
-    img <- J.newElem "img"
-    J.setProp img "src" (toJSString url)
+    img <- newElem "img"
+    setProp img "src" (toJSString url)
     loadBitmap img
 
 instance BitmapSource Elem where
@@ -246,7 +247,7 @@ instance Monad Shape where
 -- | Create a 2D drawing context from a DOM element identified by its ID.
 getCanvasById :: MonadIO m => String -> m (Maybe Canvas)
 getCanvasById eid = liftIO $ do
-  e <- J.elemById (toJSString eid)
+  e <- elemById (toJSString eid)
   maybe (return Nothing) getCanvas e
 
 -- | Create a 2D drawing context from a DOM element.
@@ -262,9 +263,9 @@ getCanvas e = liftIO $ do
 -- | Create an off-screen buffer of the specified size.
 createCanvas :: Int -> Int -> IO Canvas
 createCanvas w h = do
-  buf <- J.newElem "canvas"
-  J.setProp buf "width" (toJSString w)
-  J.setProp buf "height" (toJSString h)
+  buf <- newElem "canvas"
+  setProp buf "width" (toJSString w)
+  setProp buf "height" (toJSString h)
   fromJust <$> getCanvas buf
 
 -- | Clear a canvas, then draw a picture onto it.
@@ -302,42 +303,42 @@ withContext f = Picture $ \ctx -> f ctx
 -- | Set a new color for strokes.
 setStrokeColor :: Color -> Picture ()
 setStrokeColor c = Picture $ \(Ctx ctx) -> do
-  J.setProp (Elem ctx) "strokeStyle" (color2JSString c)
+  setProp (Elem ctx) "strokeStyle" (color2JSString c)
 
 -- | Set a new fill color.
 setFillColor :: Color -> Picture ()
 setFillColor c = Picture $ \(Ctx ctx) -> do
-  J.setProp (Elem ctx) "fillStyle" (color2JSString c)
+  setProp (Elem ctx) "fillStyle" (color2JSString c)
 
 -- | Draw a picture with the given opacity.
 opacity :: Double -> Picture () -> Picture ()
 opacity alpha (Picture pict) = Picture $ \(Ctx ctx) -> do
-  alpha' <- J.getProp (Elem ctx) "globalAlpha"
-  J.setProp (Elem ctx) "globalAlpha" (toJSString alpha)
+  alpha' <- getProp (Elem ctx) "globalAlpha"
+  setProp (Elem ctx) "globalAlpha" (toJSString alpha)
   pict (Ctx ctx)
-  J.setProp (Elem ctx) "globalAlpha" alpha'
+  setProp (Elem ctx) "globalAlpha" alpha'
 
 -- | Draw the given Picture using the specified Color for both stroke and fill,
 --   then restore the previous stroke and fill colors.
 color :: Color -> Picture () -> Picture ()
 color c (Picture pict) = Picture $ \(Ctx ctx) -> do
-    fc <- J.getProp (Elem ctx) "fillStyle"
-    sc <- J.getProp (Elem ctx) "strokeStyle"
-    J.setProp (Elem ctx) "fillStyle" c'
-    J.setProp (Elem ctx) "strokeStyle" c'
+    fc <- getProp (Elem ctx) "fillStyle"
+    sc <- getProp (Elem ctx) "strokeStyle"
+    setProp (Elem ctx) "fillStyle" c'
+    setProp (Elem ctx) "strokeStyle" c'
     pict (Ctx ctx)
-    J.setProp (Elem ctx) "fillStyle" fc
-    J.setProp (Elem ctx) "strokeStyle" sc
+    setProp (Elem ctx) "fillStyle" fc
+    setProp (Elem ctx) "strokeStyle" sc
   where
     c' = color2JSString c
 
 -- | Draw the given picture using a new line width.
 lineWidth :: Double -> Picture () -> Picture ()
 lineWidth w (Picture pict) = Picture $ \(Ctx ctx) -> do
-  lw <- J.getProp (Elem ctx) "lineWidth"
-  J.setProp (Elem ctx) "lineWidth" (toJSString w)
+  lw <- getProp (Elem ctx) "lineWidth"
+  setProp (Elem ctx) "lineWidth" (toJSString w)
   pict (Ctx ctx)
-  J.setProp (Elem ctx) "lineWidth" lw
+  setProp (Elem ctx) "lineWidth" lw
 
 -- | Draw the specified picture using the given point as the origin.
 translate :: Vector -> Picture () -> Picture ()
@@ -424,10 +425,10 @@ arc (x, y) radius from to = Shape $ \ctx -> jsArc ctx x y radius from to
 -- | Draw a picture using a certain font. Obviously only affects text.
 font :: String -> Picture () -> Picture ()
 font f (Picture pict) = Picture $ \(Ctx ctx) -> do
-  f' <- J.getProp (Elem ctx) "font"
-  J.setProp (Elem ctx) "font" (toJSString f)
+  f' <- getProp (Elem ctx) "font"
+  setProp (Elem ctx) "font" (toJSString f)
   pict (Ctx ctx)
-  J.setProp (Elem ctx) "font" f'
+  setProp (Elem ctx) "font" f'
 
 -- | Draw some text onto the canvas.
 text :: Point -> String -> Picture ()
