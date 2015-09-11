@@ -1,5 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, CPP,
-             OverloadedStrings #-}
+{-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, OverloadedStrings #-}
 -- | Haste's companion to the Prelude.
 --
 --   Note that this module should *not* be imported together with
@@ -17,34 +16,30 @@ import Haste.Random
 import Haste.Prim.JSType
 import Haste.DOM.Core
 import Haste.Hash
+import Haste.Foreign
 import Control.Monad.IO.Class
 
-#ifdef __HASTE__
-foreign import ccall jsAlert  :: JSString -> IO ()
-foreign import ccall jsLog    :: JSString -> IO ()
-foreign import ccall jsPrompt :: JSString -> IO JSString
-foreign import ccall jsEval   :: JSString -> IO JSString
+jsAlert :: String -> IO ()
+jsAlert = ffi "alert"
 
-#else
-jsAlert  :: JSString -> IO ()
-jsAlert = error "Tried to use jsAlert on server side!"
-jsLog    :: JSString -> IO ()
-jsLog = error "Tried to use jsLog on server side!"
-jsPrompt :: JSString -> IO JSString
-jsPrompt = error "Tried to use jsPrompt on server side!"
-jsEval   :: JSString -> IO JSString
-jsEval = error "Tried to use jsEval on server side!"
-#endif
+jsLog :: String -> IO ()
+jsLog = ffi "(function(x){console.log(x);})"
+
+jsPrompt :: String -> IO String
+jsPrompt = ffi "(function(s){var x = prompt(s);\
+\return (typeof x === 'undefined') ? 'undefined' : x.toString();})"
+
+jsEval :: JSString -> IO JSString
+jsEval = ffi "(function(s){var x = eval(s);\
+\return (typeof x === 'undefined') ? 'undefined' : x.toString();})"
 
 -- | Javascript alert() function.
 alert :: MonadIO m => String -> m ()
-alert = liftIO . jsAlert . toJSStr
+alert = liftIO . jsAlert
 
 -- | Javascript prompt() function.
 prompt :: MonadIO m => String -> m String
-prompt q = liftIO $ do
-  a <- jsPrompt (toJSStr q)
-  return (fromJSStr a)
+prompt = liftIO . jsPrompt
 
 -- | Javascript eval() function.
 eval :: MonadIO m => JSString -> m JSString
@@ -52,4 +47,4 @@ eval = liftIO . jsEval
 
 -- | Use console.log to write a message.
 writeLog :: MonadIO m => String -> m ()
-writeLog = liftIO . jsLog . toJSStr
+writeLog = liftIO . jsLog
