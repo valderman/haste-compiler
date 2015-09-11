@@ -3,27 +3,31 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
-  -- Types
-  Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..),
-  Ctx, AnyImageBuffer (..),
-  -- Classes
-  ImageBuffer (..), BitmapSource (..),
-  -- Obtaining a canvas for drawing
-  getCanvasById, getCanvas, createCanvas,
-  -- Rendering pictures, extracting data from a canvas
-  render, renderOnTop, buffer, toDataURL,
-  -- Working with colors and opacity
-  setStrokeColor, setFillColor, color, opacity, lineWidth,
-  -- Matrix operations
-  translate, scale, rotate,
-  -- Using shapes
-  stroke, fill, clip,
-  -- Creating shapes
-  line, path, rect, circle, arc,
-  -- Working with text
-  font, text,
-  -- Extending the library
-  withContext
+    -- * Basic types and classes
+    Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..),
+    Ctx, AnyImageBuffer (..),
+    ImageBuffer (..), BitmapSource (..),
+
+    -- *  Obtaining a canvas
+    getCanvasById, getCanvas, createCanvas,
+
+    -- * Rendering and reading canvases
+    render, renderOnTop, buffer, toDataURL,
+
+    -- * Colors and opacity
+    setStrokeColor, setFillColor, color, opacity,
+
+    -- * Matrix operations
+    translate, scale, rotate,
+    -- * Drawing shapes
+    stroke, fill, clip,
+    lineWidth, line, path, rect, circle, arc,
+
+    -- * Rendering text
+    font, text,
+
+    -- * Extending the library
+    withContext
   ) where
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative
