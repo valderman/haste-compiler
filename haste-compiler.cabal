@@ -42,7 +42,6 @@ Data-Files:
     endian.js
     floatdecode.js
     jsflow.js
-    jsstring.js
     Foreign.js
 
 extra-source-files:
