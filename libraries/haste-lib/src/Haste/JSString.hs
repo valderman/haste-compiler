@@ -11,15 +11,15 @@
 --   JavaScript's native regular expressions and thus only supported on the
 --   client.
 module Haste.JSString (
-    -- | Building JSStrings
+    -- * Building JSStrings
     empty, singleton, pack, cons, snoc, append, replicate,
-    -- | Deconstructing JSStrings
+    -- * Deconstructing JSStrings
     unpack, head, last, tail, drop, take, init, splitAt,
-    -- | Examining JSStrings
+    -- * Examining JSStrings
     null, length, any, all,
-    -- | Modifying JSStrings
+    -- * Modifying JSStrings
     map, reverse, intercalate, foldl', foldr, concat, concatMap,
-    -- | Regular expressions (client-side only)
+    -- * Regular expressions (client-side only)
     RegEx, match, matches, regex, replace
   ) where
 import qualified Data.List
