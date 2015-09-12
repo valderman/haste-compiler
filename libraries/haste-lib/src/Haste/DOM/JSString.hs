@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings, CPP #-}
+{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
 -- | DOM manipulation functions using 'JSString' for string representation.
 module Haste.DOM.JSString (
     -- From Haste.DOM.Core
@@ -32,33 +32,36 @@ type QuerySelector = JSString
 type ElemClass = JSString
 type AttrValue = JSString
 
-#ifdef __HASTE__
-foreign import ccall jsGet :: Elem -> JSString -> IO JSString
-foreign import ccall jsGetAttr :: Elem -> JSString -> IO JSString
-foreign import ccall jsGetStyle :: Elem -> JSString -> IO JSString
-foreign import ccall jsFind :: JSString -> IO (Ptr (Maybe Elem))
-foreign import ccall jsQuerySelectorAll :: Elem -> JSString -> IO (Ptr [Elem])
-foreign import ccall jsElemsByClassName :: JSString -> IO (Ptr [Elem])
-foreign import ccall jsCreateElem :: JSString -> IO Elem
-foreign import ccall jsCreateTextNode :: JSString -> IO Elem
-#else
 jsGet :: Elem -> JSString -> IO JSString
-jsGet = error "Tried to use jsGet on server side!"
+jsGet = ffi "(function(e,p){return e[p].toString();})"
+
 jsGetAttr :: Elem -> JSString -> IO JSString
-jsGetAttr = error "Tried to use jsGetAttr on server side!"
+jsGetAttr = ffi "(function(e,p){\
+\return e.hasAttribute(p) ? e.getAttribute(p) : '';})"
+
 jsGetStyle :: Elem -> JSString -> IO JSString
-jsGetStyle = error "Tried to use jsGetStyle on server side!"
-jsFind :: JSString -> IO (Ptr (Maybe Elem))
-jsFind = error "Tried to use jsFind on server side!"
-jsQuerySelectorAll :: Elem -> JSString -> IO (Ptr [Elem])
-jsQuerySelectorAll = error "Tried to use jsQuerySelectorAll on server side!"
-jsElemsByClassName :: JSString -> IO (Ptr [Elem])
-jsElemsByClassName = error "Tried to use jsElemsByClassName on server side!"
+jsGetStyle = ffi "(function(e,p){return e.style[p].toString();})"
+
+jsFind :: JSString -> IO (Maybe Elem)
+jsFind = ffi "(function(id){return document.getElementById(id);})"
+
+jsQuerySelectorAll :: Elem -> JSString -> IO [Elem]
+jsQuerySelectorAll = ffi "(function(e,q){\
+  \if(!e || typeof e.querySelectorAll !== 'function') {\
+    \return [];\
+  \} else {\
+    \return e.querySelectorAll(q);\
+  \}})"
+
+jsElemsByClassName :: JSString -> IO [Elem]
+jsElemsByClassName = ffi "(function(c){\
+\return document.getElementsByClassName(e);})"
+
 jsCreateElem :: JSString -> IO Elem
-jsCreateElem = error "Tried to use jsCreateElem on server side!"
+jsCreateElem = ffi "(function(t){return document.createElement(t);})"
+
 jsCreateTextNode :: JSString -> IO Elem
-jsCreateTextNode = error "Tried to use jsCreateTextNode on server side!"
-#endif
+jsCreateTextNode = ffi "(function(s){return document.createTextNode(s);})"
 
 -- | Create a style attribute name.
 style :: JSString -> AttrName
@@ -116,15 +119,15 @@ setStyle e property val = liftIO $ jsSetStyle (elemOf e) property val
 
 -- | Get an element by its HTML ID attribute.
 elemById :: MonadIO m => ElemID -> m (Maybe Elem)
-elemById eid = liftIO $ fromPtr `fmap` (jsFind eid)
+elemById eid = liftIO $ jsFind eid
 
 -- | Get all elements of the given class.
 elemsByClass :: MonadIO m => ElemClass -> m [Elem]
-elemsByClass cls = liftIO $ fromPtr `fmap` (jsElemsByClassName cls)
+elemsByClass cls = liftIO $ jsElemsByClassName cls
 
 -- | Get all children elements matching a query selector.
 elemsByQS :: (IsElem e, MonadIO m) => e -> QuerySelector -> m [Elem]
-elemsByQS el sel = liftIO $ fromPtr `fmap` (jsQuerySelectorAll (elemOf el) sel)
+elemsByQS el sel = liftIO $ jsQuerySelectorAll (elemOf el) sel
 
 -- | Perform an IO action on an element.
 withElem :: MonadIO m => ElemID -> (Elem -> m a) -> m a
