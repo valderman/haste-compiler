@@ -1,25 +1,37 @@
-{-# LANGUAGE CPP                      #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- | Low level XMLHttpRequest support. IE6 and older are not supported.
 module Haste.Ajax (Method (..), URL, ajaxRequest, noParams) where
+import Haste.Foreign
 import Haste.Prim
 import Haste.Prim.JSType
 import Control.Monad.IO.Class
+import Control.Monad (join)
 
-#ifdef __HASTE__
-foreign import ccall ajaxReq :: JSString    -- method
-                             -> JSString    -- url
-                             -> Bool        -- async?
-                             -> JSString    -- POST data
-                             -> Ptr (Maybe JSString -> IO ())
-                             -> IO ()
-#else
-ajaxReq :: JSString -> JSString -> Bool -> JSString -> Ptr (Maybe JSString -> IO ()) -> IO ()
-ajaxReq = error "Tried to use ajaxReq in native code!"
-#endif
+ajaxReq :: Method   -- method (GET/POST)
+        -> JSString -- URL
+        -> Bool     -- async?
+        -> JSString -- POST data
+        -> (Maybe JSString -> IO ()) -- callback
+        -> IO ()
+ajaxReq = ffi "(function(method, url, async, postdata, cb) {\
+    \var xhr = new XMLHttpRequest();\
+    \xhr.open(method, url, async);\
+    \if(method == 'POST') {\
+        \xhr.setRequestHeader('Content-type',\
+                             \'application/x-www-form-urlencoded');\
+    \}\
+    \xhr.onreadystatechange = function() {\
+        \if(xhr.readyState == 4) {\
+            \cb(xhr.status == 200 ? xhr.responseText : null);\
+        \}\
+    \};\
+    \xhr.send(postdata);})"
 
 data Method = GET | POST deriving Show
+
+instance ToAny Method where
+  toAny GET  = toAny ("GET" :: JSString)
+  toAny POST = toAny ("POST" :: JSString)
 
 -- | Pass to 'ajaxRequest' instead of @[]@ when no parameters are needed, to
 --   avoid type ambiguity errors.
@@ -35,14 +47,9 @@ ajaxRequest :: (MonadIO m, JSType a, JSType b, JSType c)
             -> (Maybe c -> IO ()) -- ^ Callback to invoke on completion.
             -> m ()
 ajaxRequest m url kv cb = liftIO $ do
-    _ <- ajaxReq (showm m) url' True pd cb'
+    _ <- ajaxReq m url' True pd (cb . join . fmap fromJSString)
     return ()
   where
-    showm GET  = "GET"
-    showm POST = "POST"
-    cb' = toPtr $ cb . fromJSS
-    fromJSS (Just jss) = fromJSString jss
-    fromJSS _          = Nothing
     url' = case m of
            GET
              | null kv   -> toJSString url
