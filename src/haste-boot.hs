@@ -147,10 +147,10 @@ specs = [
            "Build standard libs for tracing of primitive " ++
            "operations. Only use if you're debugging the code " ++
            "generator."
+#endif
     , Option "v" ["verbose"]
            (NoArg $ \cfg -> cfg {verbose = True}) $
            "Print absolutely everything."
-#endif
   ]
 
 hdr :: String
