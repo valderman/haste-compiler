@@ -89,6 +89,12 @@ jsDrawImageClipped :: Ctx -> Elem
 jsDrawImageClipped = ffi "(function(ctx, img, x, y, cx, cy, cw, ch){\
 ctx.drawImage(img, cx, cy, cw, ch, x, y, cw, ch);})"
 
+jsDrawImageScaled :: Ctx -> Elem
+                                        -> Double -> Double -> Double -> Double
+                                        -> IO ()
+jsDrawImageScaled = ffi "(function(ctx, img, x, y, w, h){\
+ctx.drawImage(img, x, y, w, h);})"
+
 jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
 jsDrawText = ffi "(function(ctx,s,x,y){ctx.fillText(s,x,y);})"
 
@@ -117,16 +123,22 @@ class ImageBuffer a where
   -- | Draw a portion of the image buffer with its top left corner at the
   --   specified point.
   drawClipped :: a -> Point -> Rect -> Picture ()
+  -- | Draw the image buffer within given rectangle.
+  drawScaled :: a -> Rect -> Picture ()
 
 instance ImageBuffer Canvas where
   draw (Canvas _ buf) (x, y) = Picture $ \ctx -> jsDrawImage ctx buf x y
   drawClipped (Canvas _ buf) (x, y) (Rect cx cy cw ch) = Picture $ \ctx ->
     jsDrawImageClipped ctx buf x y cx cy cw ch
+  drawScaled (Canvas _ buf) (Rect x y w h) = Picture $ \ctx ->
+    jsDrawImageScaled ctx buf x y w h
 
 instance ImageBuffer Bitmap where
   draw (Bitmap buf) (x, y) = Picture $ \ctx -> jsDrawImage ctx buf x y
   drawClipped (Bitmap buf) (x, y) (Rect cx cy cw ch) = Picture $ \ctx ->
     jsDrawImageClipped ctx buf x y cx cy cw ch
+  drawScaled (Bitmap buf) (Rect x y w h) = Picture $ \ctx ->
+    jsDrawImageScaled ctx buf x y w h
 
 -- | Any type that can be used to obtain a bitmap.
 class BitmapSource src where
@@ -148,6 +160,7 @@ data AnyImageBuffer where
 instance ImageBuffer AnyImageBuffer where
   draw (AnyImageBuffer buf) = draw buf
   drawClipped (AnyImageBuffer buf) = drawClipped buf
+  drawScaled (AnyImageBuffer buf) = drawScaled buf
 
 instance IsElem Canvas where
   elemOf (Canvas _ctx e) = e
