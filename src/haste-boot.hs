@@ -178,6 +178,7 @@ main = do
     (cfgs, nonopts, errs) -> do
       mapM_ putStr errs
       mapM_ (\x -> putStrLn $ "unrecognized option `" ++ x ++ "'") nonopts
+      exitFailure
 
 bootHaste :: Cfg -> FilePath -> Shell ()
 bootHaste cfg tmpdir =
