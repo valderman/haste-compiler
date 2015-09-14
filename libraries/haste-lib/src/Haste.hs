@@ -37,7 +37,7 @@ jsLog = ffi "(function(x){console.log(x);})"
 
 jsPrompt :: String -> IO String
 jsPrompt = ffi "(function(s){var x = prompt(s);\
-\return (typeof x === 'undefined') ? 'undefined' : x.toString();})"
+\return (x === null) ? '' : x.toString();})"
 
 jsEval :: JSString -> IO JSString
 jsEval = ffi "(function(s){var x = eval(s);\
