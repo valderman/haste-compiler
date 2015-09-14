@@ -18,25 +18,18 @@ import Data.String as S
 import Control.Applicative
 #endif
 import Haste.Parsing
-#else
-import System.IO.Unsafe
-import Haste.Foreign hiding (toObject)
 #endif
+import Haste.Foreign hiding (toObject)
 
--- | Create a Javascript object from a JSON object. Only makes sense in a
+-- | Create a JavaScript object from a JSON object. Only makes sense in a
 --   browser context, obviously.
 toObject :: JSON -> JSAny
-#ifdef __HASTE__
 toObject = jsJSONParse . encodeJSON
 jsJSONParse :: JSString -> JSAny
-jsJSONParse = unsafePerformIO . go
-  where
-    go :: JSString -> IO JSAny
-    go = ffi "(function(s){return JSON.parse(s);})"
-#else
-toObject j = error $ "Call to toObject in non-browser: " ++ show j
-#endif
+jsJSONParse = veryUnsafePerformIO . _jsJSONParse
 
+_jsJSONParse :: JSString -> IO JSAny
+_jsJSONParse = ffi "JSON.parse"
 
 -- Remember to update jsParseJSON if this data type changes!
 data JSON
@@ -60,7 +53,7 @@ instance JSType JSON where
 numFail :: a
 numFail = error "Num JSON: not a numeric JSON node!"
 
--- | This instance may be a bad idea, but it's nice to be able to create JSOn
+-- | This instance may be a bad idea, but it's nice to be able to create JSON
 --   objects using plain numeric literals.
 instance Num JSON where
   (Num a) + (Num b) = Num (a+b)
@@ -79,14 +72,15 @@ instance Num JSON where
 
 #ifdef __HASTE__
 foreign import ccall "jsShow" jsShowD :: Double -> JSString
-foreign import ccall "jsStringify" jsStringify :: JSString -> JSString
 foreign import ccall "jsParseJSON" jsParseJSON :: JSString -> Ptr (Maybe JSON)
+jsStringify :: JSString -> IO JSString
+jsStringify = ffi "JSON.stringify"
 #else
 jsShowD :: Double -> JSString
 jsShowD = toJSStr . show
 
-jsStringify :: JSString -> JSString
-jsStringify = toJSStr . ('"' :) . unq . fromJSStr
+jsStringify :: JSString -> IO JSString
+jsStringify = return . toJSStr . ('"' :) . unq . fromJSStr
   where
     unq ('"' : cs) = "\\\"" ++ unq cs
     unq (c : cs)
@@ -132,7 +126,7 @@ encodeJSON = catJSStr "" . enc []
     false   = "false"
     null    = "null"
     enc acc Null         = null : acc
-    enc acc (Str s)      = jsStringify s : acc
+    enc acc (Str s)      = veryUnsafePerformIO (jsStringify s) : acc
     enc acc (Num d)      = jsShowD d : acc
     enc acc (Bool True)  = true : acc
     enc acc (Bool False) = false : acc
@@ -144,8 +138,9 @@ encodeJSON = catJSStr "" . enc []
     enc acc (Dict elems)
       | ((key,val):xs) <- elems =
         let encElem (k, v) a = comma : quote : k : quote : colon : enc a v
-            encAll = opencu : jsStringify key : colon : encRest
-            encRest  = enc (foldr encElem (closecu:acc) xs) val
+            encAll =
+              opencu : veryUnsafePerformIO (jsStringify key) : colon : encRest
+            encRest = enc (foldr encElem (closecu:acc) xs) val
         in encAll
       | otherwise =
         opencu : closecu : acc
