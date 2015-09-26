@@ -315,9 +315,12 @@ fromThunkEx ex =
 -- | Gather a map of all inlinable symbols; that is, the ones that are used
 --   exactly once.
 gatherInlinable :: JSTrav ast => ast -> TravM (M.Map Var Occs)
-gatherInlinable ast = do
-    m <- foldJS (\_ _->True) countOccs (M.empty) ast
-    return (M.filter (< Lots) m)
+gatherInlinable ast = M.filter (< Lots) <$> countVarOccs ast
+
+-- | Count the occurrences of all variables in an AST.
+countVarOccs :: JSTrav ast => ast -> TravM (M.Map Var Occs)
+countVarOccs ast = do
+    foldJS (\_ _->True) countOccs (M.empty) ast
   where
     updVar (Just occs) = Just (occs+Once)
     updVar _           = Just Once
@@ -463,7 +466,7 @@ inlineReturns ast = do
     go outside (Case c d as next) = do
       next' <- go outside next
       case returnLike next' of
-        outside'@(Just _) ->
+        outside'@(Just (Var _, _)) ->
           Case c <$> go outside' d <*> mapM (goAlt outside') as <*> pure Stop
         _ ->
           Case c <$> go Nothing d <*> mapM (goAlt Nothing) as <*> pure next'
