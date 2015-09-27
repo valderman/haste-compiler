@@ -413,8 +413,11 @@ gatherNonTailcalling stm = do
 --   we can apply this procedure recursively three times and still be
 --   guaranteed to use no more stack frames than we would have without this
 --   optimization.
+--
+--   TODO: doing more than one pass breaks some programs - fix this and
+--         re-enable multiple passes!
 unTrampoline :: Stm -> TravM Stm
-unTrampoline = go >=> go >=> go
+unTrampoline = go -- >=> go >=> go
   where
     go s = do
       ntcs <- gatherNonTailcalling s
