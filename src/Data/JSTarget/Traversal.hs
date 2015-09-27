@@ -254,9 +254,17 @@ instance Pred (a -> Bool) where
 -- | Thunks and explicit lambdas count as lambda abstractions.
 {-# INLINE isLambda #-}
 isLambda :: ASTNode -> Bool
-isLambda (Exp (Fun _ _) _)   = True
-isLambda (Exp (Thunk _ _) _) = True
-isLambda _                   = False
+isLambda = isThunk .|. isFun
+
+{-# INLINE isThunk #-}
+isThunk :: ASTNode -> Bool
+isThunk (Exp (Thunk _ _) _) = True
+isThunk _                   = False
+
+{-# INLINE isFun #-}
+isFun :: ASTNode -> Bool
+isFun (Exp (Fun _ _) _)   = True
+isFun _                   = False
 
 {-# INLINE isLoop #-}
 isLoop :: ASTNode -> Bool
@@ -276,7 +284,7 @@ isShared _          = False
 
 {-# INLINE isSafeForInlining #-}
 isSafeForInlining :: ASTNode -> Bool
-isSafeForInlining = not <$> isLambda .|. isLoop .|. isShared
+isSafeForInlining = not <$> isFun .|. isLoop .|. isShared
 
 -- | Counts occurrences. Use ints or something for a more exact count.
 data Occs = Never | Once | Lots deriving (Eq, Show)

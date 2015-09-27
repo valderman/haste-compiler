@@ -56,6 +56,10 @@ topLevelInline ast =
     >>= optimizeArrays
     >>= zapJSStringConversions
     >>= inlineJSPrimitives
+    >>= removeUselessEvals
+    >>= inlineAssigns
+    >>= smallStepInline
+    >>= inlineAssigns
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -229,6 +233,30 @@ optimizeArrays ast =
     inlEx x =
       return x
 
+-- | Remove calls to E() where we know for sure the argument is already
+--   evaluated.
+removeUselessEvals :: JSTrav ast => ast -> TravM ast
+removeUselessEvals ast = do
+    mapJS (const True) return opt ast
+  where
+    opt (Assign lhs@(NewVar _ l) rhs next) = do
+      Assign lhs rhs <$> case rhs of
+        Eval r@(Var _) -> removeEval (Var l) next >>= removeEval r
+        _ | isHNF rhs  -> removeEval (Var l) next
+          | otherwise  -> return next
+    opt stm = do
+      return stm
+
+    isHNF (Lit {})   = True
+    isHNF (JSLit {}) = True
+    isHNF (Not {})   = True
+    isHNF (BinOp {}) = True
+    isHNF (Fun {})   = True
+    isHNF (Arr {})   = True
+    isHNF (Eval {})  = True
+    isHNF _          = False
+
+    removeEval x = replaceEx (const True) (Eval x) x
 
 -- | Turn toJSStr(unCStr(x)) into x, since rewrite rules absolutely refuse
 --   to work with unpackCString#.
@@ -755,7 +783,7 @@ eliminateEvalOf v ast = mapJS (const True) return elim ast
 
 -- | Is the given expression safe to extract from a thunk?
 --   An expression is safe to unthunk iff evaluating it will not cause
---   computation to take place or a variable do be dereferenced.
+--   computation to take place or a variable to be dereferenced.
 safeToUnThunk :: Exp -> Bool
 safeToUnThunk ex =
   case ex of
