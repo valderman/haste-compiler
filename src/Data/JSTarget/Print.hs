@@ -126,9 +126,9 @@ instance Pretty Exp where
   pp (Eval x) = do
     "E(" .+. pp x .+. ")"
   pp (Thunk True x) = do
-    "new T(function(){" .+. newl .+. indent (pp x) .+. "})"
+    "new T(function(){" .+. newl .+. indent (pp x) .+. ind .+. "})"
   pp (Thunk False x) = do
-    "new T(function(){" .+. newl .+. indent (pp x) .+. "},1)"
+    "new T(function(){" .+. newl .+. indent (pp x) .+. ind .+. "},1)"
 
 instance Pretty (Var, Exp) where
   pp (v, ex) = pp v .+. sp .+. "=" .+. sp .+. pp ex
@@ -140,7 +140,7 @@ instance Pretty Bool where
 -- | Print a series of NewVars at once, to avoid unnecessary "var" keywords.
 ppAssigns :: Stm -> PP ()
 ppAssigns stm = do
-    line $ "var " .+. ppList sep assigns .+. ";"
+    line $ "var " .+. ppList (",\n" .+. ind) assigns .+. ";"
     pp next
   where
     (assigns, next) = gather [] stm
