@@ -87,7 +87,7 @@ utc = TimeZone 0 False "UTC"
 #ifdef __HASTE__
 -- JS is doing it wrong WRT time zone offsets, so we have to negate it.
 tzOffMins :: Int -> Int -> Int -> IO Int
-tzOffMins = ffi "(function(y,m,d){return -(new Date(y,m,d).getTimezoneOffset());})"
+tzOffMins = ffi "(function(y,m,d){return -(new Date(y,m-1,d-1).getTimezoneOffset());})"
 
 tzIsSummerOnly :: IO Bool
 tzIsSummerOnly = ffi "(function(){\
