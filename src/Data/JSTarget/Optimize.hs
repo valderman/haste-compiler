@@ -392,6 +392,8 @@ gatherNonTailcalling stm = do
   where
     countTCs s (Exp (Var v@(Foreign _)) _) = do
       return $ S.insert v s
+    countTCs s (Stm (Assign (NewVar _ v) (JSLit {}) _) _) = do
+      return $ S.insert v s
     countTCs s (Stm (Assign (NewVar _ v) (Fun _ body) _) _) = do
       tc <- mayTailcall body
       return $ if not tc then S.insert v s else s      
