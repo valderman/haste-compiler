@@ -46,7 +46,7 @@ optimizeFun f ast =
 topLevelInline :: Stm -> Stm
 topLevelInline ast =
   runTravM $ do
-    unTrampoline ast
+    pure ast
     >>= unevalLits
     >>= inlineIntoEval
     >>= inlineAssigns
@@ -60,6 +60,7 @@ topLevelInline ast =
     >>= inlineAssigns
     >>= smallStepInline
     >>= inlineAssigns
+    >>= unTrampoline
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -374,11 +375,11 @@ countVarOccs ast = do
 --     eliminated.
 mayTailcall :: JSTrav ast => ast -> TravM Bool
 mayTailcall ast = do
-  foldJS enter countTCs False ast
+    foldJS enter countTCs False ast
   where
     enter True _                = False
     enter _ (Exp (Thunk _ _) _) = False
---    enter _ (Exp (Fun _ _) _)   = False
+    enter _ (Exp (Fun _ _) _)   = False
     enter _ _                   = True
     countTCs _ (Stm (Tailcall _) _) = return True
     countTCs acc _                  = return acc
@@ -414,24 +415,18 @@ gatherNonTailcalling stm = do
 --   guaranteed to use no more stack frames than we would have without this
 --   optimization.
 --
---   TODO: doing more than one pass breaks some programs - fix this and
---         re-enable multiple passes!
+--   Note that we can only do this for fast calls, as we need to be able to
+--   know exactly what function is actually called upon saturated application.
 unTrampoline :: Stm -> TravM Stm
-unTrampoline = go -- >=> go >=> go
+unTrampoline = go >=> go >=> go
   where
     go s = do
       ntcs <- gatherNonTailcalling s
       mapJS (const True) (unTr ntcs) (unTC ntcs) s
 
-    unTr ntcs (Call ar (Normal True) f@(Var v) xs)
-      | v `S.member` ntcs =
-        return $ Call ar (Normal False) f xs
     unTr ntcs (Call ar (Fast True) f@(Var v) xs)
       | v `S.member` ntcs =
         return $ Call ar (Fast False) f xs
-    unTr _ c@(Call ar (Normal True) f@(Fun _ body) xs) = do
-        tc <- mayTailcall body
-        return $ if tc then c else Call ar (Normal False) f xs
     unTr _ c@(Call ar (Fast True) f@(Fun _ body) xs) = do
         tc <- mayTailcall body
         return $ if tc then c else Call ar (Fast False) f xs
@@ -562,6 +557,18 @@ trampoline = mapJS (pure True) pure bounce
 --       }
 --     }
 --   }
+-- | Turn tail recursion on the given var into a loop, if possible.
+--   Tail recursive functions that create closures turn into:
+--   function f(a', b', c') {
+--     while(1) {
+--       var r = (function(a, b, c) {
+--         a' = a; b' = b; c' = c;
+--       })(a', b', c');
+--       if(r != null) {
+--         return r;
+--       }
+--     }
+--   }
 tailLoopify :: Var -> Exp -> TravM Exp
 tailLoopify f fun@(Fun args body) = do
     tailrecs <- occurrences (not <$> isLambda) isTailRec body
@@ -573,12 +580,13 @@ tailLoopify f fun@(Fun args body) = do
             let args' = map newName args
                 ret = Return (Lit $ LNull)
             b <- mapJS (not <$> isLambda) pure (replaceByAssign ret args') body
+            tailcalls <- occurrences (const True) isHiddenTailcall body
             let nn = newName f
                 nv = NewVar False nn
                 body' =
                   Forever $
-                  Assign nv (Call 0 (Fast False) (Fun args b)
-                                                 (map Var args')) $
+                  Assign nv (Call 0 (Fast (tailcalls > Never)) (Fun args b)
+                                                               (map Var args')) $
                   Case (Var nn) (Return (Var nn)) [(Lit $ LNull, Stop)] $
                   Stop
             return $ Fun args' body'
@@ -591,6 +599,9 @@ tailLoopify f fun@(Fun args body) = do
   where
     isTailRec (Stm (Return (Call _ _ (Var f') _)) _) = f == f'
     isTailRec _                                      = False
+
+    isHiddenTailcall (Stm (Return (Call {})) _) = True
+    isHiddenTailcall _                          = False
     
     -- Only traverse until we find a closure
     createsClosures = foldJS (\acc _ -> not acc) isClosure False
