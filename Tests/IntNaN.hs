@@ -7,5 +7,5 @@ x = return 0
 runTest :: IO ()
 runTest = do
   x' <- x
-  print (x'/x')
-  print (round (x'/x') :: Int)
+  print $ isNaN (x'/x')
+  print $ 0 == (round (x'/x') :: Int)
