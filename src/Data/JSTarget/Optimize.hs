@@ -80,8 +80,8 @@ tryTernary self scrut retEx def [(m, alt)] =
       -- Make sure the return expression is used somewhere, then cut away all
       -- useless assignments. If what's left is a single Return statement,
       -- we have a pure expression suitable for use with ?:.
-      def'' <- inlineAssignsLocal def'
-      alt'' <- inlineAssignsLocal alt'
+      def'' <- inlineAssigns def'
+      alt'' <- inlineAssigns alt'
       -- If self occurs in either branch, we can't inline or we risk ruining
       -- tail call elimination.
       selfInDef <- occurrences (const True) selfOccurs def''
@@ -94,12 +94,13 @@ tryTernary self scrut retEx def [(m, alt)] =
 tryTernary _ _ _ _ _ =
   Nothing
 
--- | Remove bogus assignments of the form @literal = exp@, which may arise from
---   other optimizations.
+-- | Remove bogus assignments of the form @literal = exp@ and @_ = _@,
+--   which may arise from other optimizations.
 removeNonsenseAssigns :: Stm -> Stm
-removeNonsenseAssigns (Assign (LhsExp _ (Lit _)) _ next)    = next
-removeNonsenseAssigns (Assign (LhsExp _ a) b next) | a == b = next
-removeNonsenseAssigns stm                                   = stm
+removeNonsenseAssigns (Assign (LhsExp _ (Lit _)) _ next)          = next
+removeNonsenseAssigns (Assign (LhsExp _ a) b next)       | a == b = next
+removeNonsenseAssigns (Assign (NewVar _ a) (Var b) next) | a == b = next
+removeNonsenseAssigns stm                                         = stm
 
 -- | How many times does an expression satisfying the given predicate occur in
 --   an AST (including jumps)?
@@ -120,62 +121,86 @@ occurrences tr p ast =
 --   things horribly.
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
---
---   Note: a thunk may ONLY be inlined into a lambda if it performs no useful
---         work, to avoid computing expensive thunks more than once.
 inlineAssigns :: JSTrav ast => ast -> TravM ast
 inlineAssigns ast = do
-    inlinable <- gatherInlinable ast
+    inlinable <- countVarOccs ast
     mapJS (const True) return (inl inlinable) ast
   where
-    varOccurs lhs (Exp (Var lhs') _) = lhs == lhs'
-    varOccurs _ _                    = False
+    -- Assume that an assignment that is never used is actually there for a
+    -- good reason and thus not inlinable.
+    isSafe i v
+      | Just Once <- M.lookup v i = True
+      | otherwise                 = False
 
-    appearsLHS ex =
-      foldJS (\x _ -> not x) (\x s -> return $ x || ex `isLHSOf` s) False
+    atLeastOnce i v
+      | Just occs <- M.lookup v i = occs > Never
+      | otherwise                 = False
 
-    -- Make an exception for expressions of the form @x = E(x)@: since we know
-    -- that @x@ is a literal and thus pointless to evaluate, we simply remove
-    -- any such statements.
-    isLHSOf v (Stm stm _) | isEvalUpd (==v) stm        = False
-    isLHSOf v (Stm (Assign (LhsExp _ (Var v')) _ _) _) = v == v'
-    isLHSOf v (Exp (AssignEx (Var v') _) _)            = v == v'
-    isLHSOf _ _                                        = False
+    isJSLit (Exp (JSLit {}) _) = True
+    isJSLit _                  = False
 
-    inl m keep@(Assign l ex next)
-      -- Inline all non-string literals l which do not appear at the LHS of an
-      -- assignment. Thunk updates of the form @x = E(x)@ where @x == l@
-      -- don't count as a proper LHS occurrence, and are removed outright
-      -- instead since a literal is guaranteed to never be a thunk.
-      | Just lhs <- inlinableAssignLHS l, Lit x <- ex, not (stringLit x) = do
-        isLHS <- appearsLHS lhs next
-        if isLHS
-          then do
-            return keep
-          else do
-            next' <- mapJS (const True) pure (pure . removeUpdate (==lhs)) next
-            replaceEx (const True) (Var lhs) ex next'
-      | Just lhs <- inlinableAssignLHS l = do
-        occursRec <- occurrences (const True) (varOccurs lhs) ex
-        if occursRec == Never
-          then do
-            occursLocal <- occurrences isSafeForInlining (varOccurs lhs) next
-            case M.lookup lhs m of
-              Just Once | okToInline ex && occursLocal == Once -> do
-                -- Inline any non-lambda, non-thunk, non JSLit value
-                replaceEx isSafeForInlining (Var lhs) ex next
-              _ | Lit _ <- ex -> do
-                -- Inline any string literals provided that they don't appear
-                -- more than once.
-                occurs <- occurrences (const True) (varOccurs lhs) next
-                if occurs == Once
-                  then replaceEx (const True) (Var lhs) ex next
-                  else return keep
-              _ -> do
-                return keep
-          else do
-            return keep
-    inl _ stm = return stm
+    isVar v (Exp (Var v') _) = v == v'
+    isVar _ _                = False
+
+    isWritten v (Exp (AssignEx (Var v') _) _)            = v == v'
+    isWritten v (Stm (Assign (LhsExp _ (Var v')) _ _) _) = v == v'
+    isWritten _ _                                        = False
+
+    -- It's OK to inline lambda-likes into anything that's not a loop or a
+    -- function (thunks are OK because they only get evaluated once).
+    goodInlineTgt = not <$> isLoop .|. isFun
+
+    -- Only inline safe-to-reorder vars - if a var is ever assigned to, it is
+    -- insanely unsafe to inline it.
+    inl safe keep@(Assign (NewVar True v) rhs next) = do
+      written <- occurrences (const True) (isWritten v) next
+      case rhs of
+        _ | written /= Never -> do
+          return keep
+        -- String lits: inline if used exactly once to avoid blowing up code size
+        l@(Lit (LStr _)) | isSafe safe v -> do
+          replaceEx (const True) (Var v) l next
+
+        -- Other lits: inline if used at least once
+        l@(Lit _) | atLeastOnce safe v -> do
+          occs <- occurrences (const True) (isVar v) next
+          if occs > Never
+            then replaceEx (const True) (Var v) l next
+            else return keep
+
+        -- Variables: inline if used at least once
+        v'@(Var {}) | atLeastOnce safe v -> do
+          occs <- occurrences (const True) (isVar v) next
+          if occs > Never
+            then replaceEx (const True) (Var v) v' next
+            else return keep
+
+        -- Everything else: inline if only used once and doesn't contain
+        -- lambda-likes. Lambda-likes may be inlined if they occur exactly
+        -- once, and this occurrence is not in a lambda or a loop.
+        ex | isSafe safe v -> do
+          lambdaoccs <- occurrences (const True) (isLambda .|. isJSLit) ex
+          recursive <- occurrences (const True) (isVar v) ex
+          case (lambdaoccs, recursive) of
+            (Never, Never) -> do
+              (reps, next') <- replaceExWithCount (const True) (Var v) ex next
+              if reps == 1
+                then return next'
+                else return keep
+            (Once, Never)  -> do
+              -- If we only made a single replacement in a good inline target,
+              -- then we know that everything is OK. If not, we accidentally
+              -- inlined into a bad code block, so we discard the result.
+              (reps, next') <- replaceExWithCount goodInlineTgt (Var v) ex next
+              if reps == 1
+                then return next'
+                else return keep
+            _              -> do
+              pure keep
+        _ -> do
+          pure keep
+    inl _ keep = do
+      pure keep
 
 -- | Remove an occurrence of @ex = E(ex)@ or @lit = ex@.
 --   Only call this for @ex@ which are guaranteed to never be thunks.
@@ -196,23 +221,6 @@ inlineIntoEval ast = do
 isEvalUpd :: (Var -> Bool) -> Stm -> Bool
 isEvalUpd p (Assign (LhsExp _ (Var v)) (Eval (Var v')) _) = p v && v == v'
 isEvalUpd _ _                                             = False
-
-stringLit :: Lit -> Bool
-stringLit (LStr _) = True
-stringLit _        = False
-
--- | Certain expressions are never OK to inline: lambdas, thunks and
---   JS literals (which are almost exclusively lambdas).
-okToInline :: Exp -> Bool
-okToInline (Fun {})   = False
-okToInline (Thunk {}) = False
-okToInline (JSLit {}) = False
-okToInline _          = True
-
-inlinableAssignLHS :: LHS -> Maybe Var
-inlinableAssignLHS (NewVar True v)       = Just v
-inlinableAssignLHS (LhsExp True (Var v)) = Just v
-inlinableAssignLHS _                     = Nothing
 
 -- | Turn if(foo) {return bar;} else {return baz;} into return foo ? bar : baz.
 ifReturnToTernary :: JSTrav ast => ast -> TravM ast
@@ -341,11 +349,6 @@ fromThunkEx ex =
     Just (ThunkRet ex') -> Just ex'
     _                   -> Nothing
 
--- | Gather a map of all inlinable symbols; that is, the ones that are used
---   exactly once.
-gatherInlinable :: JSTrav ast => ast -> TravM (M.Map Var Occs)
-gatherInlinable ast = M.filter (< Lots) <$> countVarOccs ast
-
 -- | Count the occurrences of all variables in an AST.
 countVarOccs :: JSTrav ast => ast -> TravM (M.Map Var Occs)
 countVarOccs ast = do
@@ -448,35 +451,6 @@ unTrampoline = go >=> go >=> go
     unTC _ x =
         return x
 
--- | Like 'inlineAssigns', but doesn't care what happens beyond a jump.
-inlineAssignsLocal :: JSTrav ast => ast -> TravM ast
-inlineAssignsLocal ast = do
-    mapJS isSafeForInlining return inl ast
-  where
-    varOccurs lhs (Exp (Var lhs') _) = lhs == lhs'
-    varOccurs _ _                    = False
-    inl keep@(Assign l ex next) | Just lhs <- inlinableAssignLHS l = do
-      occursRec <- occurrences (const True) (varOccurs lhs) ex
-      case occursRec of
-        Never -> do
-          occurs <- occurrences (const True) (varOccurs lhs) next
-          occursSafe <- occurrences isSafeForInlining (varOccurs lhs) next
-          case (occurs, occursSafe) of
-            (Never, Never) ->
-              return (Assign blackHole ex next)
-            _    | Fun _ _ <- ex -> do
-              -- Don't inline lambdas at the moment.
-              return keep
-            (Once, Once) | Nothing <- fromThunk ex ->
-              -- can't be recursive - inline
-              replaceEx (not <$> isShared) (Var lhs) ex next
-            _ ->
-              -- Really nothing to be done here.
-              return keep
-        _ ->
-          return keep
-    inl stm = return stm
-
 -- | Turn sequences like `v0 = foo; v1 = v0; v2 = v1; return v2;` into a
 --   straightforward `return foo;`.
 --   Ignores LhsExp assignments, since we only introduce those when we actually
@@ -559,18 +533,6 @@ trampoline = mapJS (pure True) pure bounce
 --       }
 --     }
 --   }
--- | Turn tail recursion on the given var into a loop, if possible.
---   Tail recursive functions that create closures turn into:
---   function f(a', b', c') {
---     while(1) {
---       var r = (function(a, b, c) {
---         a' = a; b' = b; c' = c;
---       })(a', b', c');
---       if(r != null) {
---         return r;
---       }
---     }
---   }
 tailLoopify :: Var -> Exp -> TravM Exp
 tailLoopify f fun@(Fun args body) = do
     tailrecs <- occurrences (not <$> isLambda) isTailRec body
@@ -628,7 +590,7 @@ tailLoopify f fun@(Fun args body) = do
         (Assign (NewVar False (newName v)) x . next,
          Assign (LhsExp False (Var v)) (Var $ newName v) final)
       | otherwise =
-        (Assign (LhsExp False (Var v)) x . next, final)
+        (next, Assign (LhsExp False (Var v)) x final)
     
     newName (Internal (Name n mmod) _ _) =
       Internal (Name (BS.cons ' ' n) mmod) "" True
