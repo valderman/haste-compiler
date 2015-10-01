@@ -4,6 +4,7 @@
 module Tests.DataToTag where
 import Control.Monad
 import System.IO.Unsafe
+import Control.Applicative (Applicative (..))
 
 #ifdef __HASTE__
 import Haste
