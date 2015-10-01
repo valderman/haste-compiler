@@ -442,10 +442,10 @@ unTrampoline = go >=> go >=> go
     -- tailcall in turn we should not tailcall it, since that would mean two
     -- activation records on the stack - one for the trampoline and one for
     -- the function itself.
-    unTC ntcs (Tailcall c@(Call _ _ (Var v) _))
+    unTC ntcs (Tailcall c@(Call _ (Fast _) (Var v) _))
       | v `S.member` ntcs =
         return $ Return c
-    unTC _ tc@(Tailcall c@(Call _ _ (Fun _ body) _)) = do
+    unTC _ tc@(Tailcall c@(Call _ (Fast _) (Fun _ body) _)) = do
         maytc <- mayTailcall body
         if not maytc then return (Return c) else return tc
     unTC _ x =
