@@ -140,7 +140,7 @@ instance Pretty Bool where
 -- | Print a series of NewVars at once, to avoid unnecessary "var" keywords.
 ppAssigns :: Stm -> PP ()
 ppAssigns stm = do
-    line $ "var " .+. ppList (",\n" .+. ind) assigns .+. ";"
+    line $ "var " .+. ppList ("," .+. newl .+. ind) assigns .+. ";"
     pp next
   where
     (assigns, next) = gather [] stm
