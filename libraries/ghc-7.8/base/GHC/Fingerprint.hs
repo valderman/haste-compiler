@@ -1,14 +1,13 @@
 {-# LANGUAGE Trustworthy #-}
-{-# LANGUAGE NoImplicitPrelude
+{-# LANGUAGE CPP
+           , NoImplicitPrelude
            , BangPatterns
            , ForeignFunctionInterface
            , EmptyDataDecls
-           , MagicHash
-           , UnliftedFFITypes
   #-}
 
 -- ----------------------------------------------------------------------------
--- 
+--
 --  (c) The University of Glasgow 2006
 --
 -- Fingerprints for recompilation checking and ABI versioning, and
@@ -17,7 +16,8 @@
 -- ----------------------------------------------------------------------------
 
 module GHC.Fingerprint (
-        Fingerprint(..), fingerprint0, 
+        Fingerprint(..), fingerprint0,
+        fingerprintData,
         fingerprintString,
         fingerprintFingerprints,
         getFileHash
@@ -28,11 +28,11 @@ import GHC.Base
 import GHC.Num
 import GHC.List
 import GHC.Real
+import GHC.Show
 import Foreign
 import Foreign.C
-import GHC.HastePrim
-import GHC.IntWord64
-import GHC.Word
+import System.IO
+import Control.Monad (when)
 
 import GHC.Fingerprint.Type
 
@@ -46,46 +46,72 @@ fingerprint0 :: Fingerprint
 fingerprint0 = Fingerprint 0 0
 
 fingerprintFingerprints :: [Fingerprint] -> Fingerprint
-fingerprintFingerprints = md5 . concat . map showFingerprint
+fingerprintFingerprints fs = unsafeDupablePerformIO $
+  withArrayLen fs $ \len p -> do
+    fingerprintData (castPtr p) (len * sizeOf (head fs))
 
-showFingerprint :: Fingerprint -> String
-showFingerprint (Fingerprint (W64# a) (W64# b)) =
-    unsafeCoerce# (fromJSStr# (md5# (jsShow# a))) ++
-    unsafeCoerce# (fromJSStr# (md5# (jsShow# b)))
+fingerprintData :: Ptr Word8 -> Int -> IO Fingerprint
+fingerprintData buf len = do
+  allocaBytes SIZEOF_STRUCT_MD5CONTEXT $ \pctxt -> do
+    c_MD5Init pctxt
+    c_MD5Update pctxt buf (fromIntegral len)
+    allocaBytes 16 $ \pdigest -> do
+      c_MD5Final pdigest pctxt
+      peek (castPtr pdigest :: Ptr Fingerprint)
 
 -- This is duplicated in compiler/utils/Fingerprint.hsc
 fingerprintString :: String -> Fingerprint
-fingerprintString = md5
+fingerprintString str = unsafeDupablePerformIO $
+  withArrayLen word8s $ \len p ->
+     fingerprintData p len
+    where word8s = concatMap f str
+          f c = let w32 :: Word32
+                    w32 = fromIntegral (ord c)
+                in [fromIntegral (w32 `shiftR` 24),
+                    fromIntegral (w32 `shiftR` 16),
+                    fromIntegral (w32 `shiftR` 8),
+                    fromIntegral w32]
 
-foreign import ccall unsafe "md5" md5# :: JSString -> JSString
-foreign import ccall unsafe "jsShowI" jsShow# :: Word64# -> JSString
-#if __GLASGOW_HASKELL__ >= 706
-foreign import ccall unsafe "parseInt" parseInt# :: JSString -> Word
-#else
-foreign import ccall unsafe "parseInt" _parseInt# :: JSString -> Int
-parseInt# :: JSString -> Word
-parseInt# = unsafeCoerce# _parseInt#
-#endif
-
-md5 :: String -> Fingerprint
-md5 str =
-    Fingerprint w64_1 w64_2
-  where
-    md5sum = unsafeCoerce# (fromJSStr# (md5# (toJSStr# (unsafeCoerce# str))))
-    (s1, rest')   = splitAt 8 md5sum
-    (s2, rest'')  = splitAt 8 rest'
-    (s3, rest''') = splitAt 8 rest''
-    (s4, _)       = splitAt 8 rest'''
-    (w1,w2,w3,w4) = (parseHex s1, parseHex s2, parseHex s3, parseHex s3)
-    w64_1         = mkWord64 w1 w2
-    w64_2         = mkWord64 w3 w4
-
-mkWord64 :: Word -> Word -> Word64
-mkWord64 (W# w1) (W# w2) = W64# (mkWord64# w1 w2)
-
-parseHex :: String -> Word
-parseHex str = parseInt# (toJSStr ('0':'x':str))
-
+-- | Computes the hash of a given file.
+-- This function loops over the handle, running in constant memory.
+--
+-- @since 4.7.0.0
 getFileHash :: FilePath -> IO Fingerprint
-getFileHash _ =
-  return $ error "Fingerprinting a file does not make sense in a browser."
+getFileHash path = withBinaryFile path ReadMode $ \h -> do
+  allocaBytes SIZEOF_STRUCT_MD5CONTEXT $ \pctxt -> do
+    c_MD5Init pctxt
+
+    processChunks h (\buf size -> c_MD5Update pctxt buf (fromIntegral size))
+
+    allocaBytes 16 $ \pdigest -> do
+      c_MD5Final pdigest pctxt
+      peek (castPtr pdigest :: Ptr Fingerprint)
+
+  where
+    _BUFSIZE = 4096
+
+    -- | Loop over _BUFSIZE sized chunks read from the handle,
+    -- passing the callback a block of bytes and its size.
+    processChunks :: Handle -> (Ptr Word8 -> Int -> IO ()) -> IO ()
+    processChunks h f = allocaBytes _BUFSIZE $ \arrPtr ->
+
+      let loop = do
+            count <- hGetBuf h arrPtr _BUFSIZE
+            eof <- hIsEOF h
+            when (count /= _BUFSIZE && not eof) $ error $
+              "GHC.Fingerprint.getFileHash: only read " ++ show count ++ " bytes"
+
+            f arrPtr count
+
+            when (not eof) loop
+
+      in loop
+
+data MD5Context
+
+foreign import ccall unsafe "__hsbase_MD5Init"
+   c_MD5Init   :: Ptr MD5Context -> IO ()
+foreign import ccall unsafe "__hsbase_MD5Update"
+   c_MD5Update :: Ptr MD5Context -> Ptr Word8 -> CInt -> IO ()
+foreign import ccall unsafe "__hsbase_MD5Final"
+   c_MD5Final  :: Ptr Word8 -> Ptr MD5Context -> IO ()
