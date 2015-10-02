@@ -8,7 +8,8 @@ import Control.Monad.IO.Class
 import Haste.Prim
 
 -- | Register a callback to be run whenever the URL hash changes.
---   The two arguments of the callback are the new and old hash respectively.
+--   The first and second argument of the callback are the old and new and
+--   hash respectively.
 onHashChange :: MonadIO m
              => (String -> String -> IO ())
              -> m ()
