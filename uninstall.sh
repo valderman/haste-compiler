@@ -12,7 +12,8 @@ if [ "$HASTEDIR" = "." ] ; then
     exit 1
 fi
 
-if [ -f $HASTEDIR/haste-cabal/haste-cabal.bin ] ; then
+if [ -f $HASTEDIR/haste-cabal/haste-cabal.bin ] ||
+   [ -f $HASTEDIR/bin/hastec ] ; then
     rm $BINDIR/hastec
     rm $BINDIR/haste-cat
     rm $BINDIR/haste-cabal

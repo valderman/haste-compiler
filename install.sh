@@ -8,10 +8,14 @@ if [ "$(whoami)" != "root" ] ; then
     exit 1
 fi
 
-if [ -f haste-cabal/haste-cabal.bin ] ; then
+if [ -f haste-cabal/haste-cabal.bin ] || [ -f bin/haste-cabal ] ; then
     mkdir -p $INSTDIR
     mkdir -p $MANDIR
-    cp -r bin docs haste-cabal man uninstall.sh x86_64-linux-haste* $INSTDIR/
+    mkdir -p $BINDIR
+    if [ -d haste-cabal ] ; then
+        cp -r haste-cabal $INSTDIR/
+    fi
+    cp -r bin docs man uninstall.sh x86_64-*-haste* $INSTDIR/
     ln -s $INSTDIR/bin/hastec $BINDIR/hastec
     ln -s $INSTDIR/bin/haste-cat $BINDIR/haste-cat
     ln -s $INSTDIR/bin/haste-cabal $BINDIR/haste-cabal
