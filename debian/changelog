@@ -1,5 +1,5 @@
-haste-compiler (0.5.2) UNRELEASED; urgency=medium
+haste-compiler (0.5.3) UNRELEASED; urgency=medium
 
-  * New primops, DOM events and canvas functions.
+  * New APIs. Also bug fixes.
 
- -- Anton Ekblad <anton@ekblad.cc>  Sun, 27 Sep 2015 11:18:20 +0200
+ -- Anton Ekblad <anton@ekblad.cc>  Mon, 05 Oct 2015 15:49:57 +0200

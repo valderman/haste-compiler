@@ -1,5 +1,5 @@
 Name:           haste-lib
-Version:        0.5.2
+Version:        0.5.3
 License:        BSD3
 License-File:   LICENSE
 Synopsis:       Base libraries for haste-compiler.
@@ -65,7 +65,7 @@ Library
         ghc-prim,
         containers > 0.5.6 && < 0.5.7,
         bytestring < 0.11,
-        haste-prim == 0.5.2,
+        haste-prim == 0.5.3,
         time == 1.5.0.1
     if impl(haste)
         if impl(ghc >= 7.10)
