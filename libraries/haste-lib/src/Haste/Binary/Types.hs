@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Haste.Binary.Types (
     Blob (..), BlobData (..),
-    blobSize, blobDataSize, toByteString, toBlob, strToBlob
+    blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob
   ) where
 import Haste.Prim
 import Haste.Foreign
@@ -32,6 +32,11 @@ blobDataSize (BlobData _ len _) = len
 -- | Convert a BlobData to a ByteString. Only usable server-side.
 toByteString :: BlobData -> BS.ByteString
 toByteString =
+  error "Haste.Binary.Types.toByteString called in browser context!"
+
+-- | Convert a ByteString to a BlobData. Only usable server-side.
+fromByteString :: BS.ByteString -> BlobData
+fromByteString =
   error "Haste.Binary.Types.toByteString called in browser context!"
 
 -- | Convert a piece of BlobData back into a Blob.
@@ -88,6 +93,10 @@ blobDataSize (BlobData bd) = fromIntegral $ BS.length bd
 -- | Convert a BlobData to a ByteString. Only usable server-side.
 toByteString :: BlobData -> BS.ByteString
 toByteString (BlobData bd) = bd
+
+-- | Convert a ByteString to a BlobData. Only usable server-side.
+fromByteString :: BS.ByteString -> BlobData
+fromByteString = BlobData
 
 -- | Convert a piece of BlobData back into a Blob.
 toBlob :: BlobData -> Blob

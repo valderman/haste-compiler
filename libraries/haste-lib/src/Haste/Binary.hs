@@ -11,7 +11,7 @@ module Haste.Binary (
     module Haste.Binary.Get,
     MonadBlob (..), Binary (..), getBlobText,
     Blob, BlobData,
-    blobSize, blobDataSize, toByteString, toBlob, strToBlob,
+    blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob,
     encode, decode, decodeBlob
   )where
 import Data.Int
