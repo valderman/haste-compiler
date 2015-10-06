@@ -9,6 +9,7 @@ import PackageConfig
 #endif
 import GHC
 import Outputable (showPpr)
+import Platform
 
 import System.Environment (getArgs, lookupEnv, setEnv)
 import System.Exit
@@ -97,17 +98,29 @@ main = do
         then return $ (modpair : targets, modName m : mods)
         else return (targets, modName m : mods)
 
-    mkGhcCfg fs args = defaultConfig {
+    mkGhcCfg fs args = disableCodeGen $ defaultConfig {
         cfgGhcFlags = fs,
         cfgGhcLibDir = Just hasteGhcLibDir,
         cfgUseTargetsFromFlags = True,
         cfgUseGhcErrorLogger = True,
         cfgUpdateDynFlags = \dfs -> dfs {
-            ghcLink = NoLink,
             ghcMode = if "-c" `elem` args
                         then OneShot
                         else CompManager,
-            hscTarget = HscAsm
+            settings = (settings dfs) {
+                sTargetPlatform = (sTargetPlatform $ settings dfs) {
+                    platformArch             = ArchX86,
+                    platformWordSize         = 4
+                  },
+                sPlatformConstants = (sPlatformConstants $ settings dfs) {
+                    pc_WORD_SIZE       = 4,
+                    pc_CINT_SIZE       = 4,
+                    pc_CLONG_SIZE      = 4,
+                    pc_CLONG_LONG_SIZE = 8,
+                    pc_DOUBLE_SIZE     = 8,
+                    pc_WORDS_BIGENDIAN = False
+                  }
+             }
           }
 #if __GLASGOW_HASKELL__ >= 710
         , cfgCustomPrimIface = Just (primOpInfo, primOpStrictness)
