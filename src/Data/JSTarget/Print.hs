@@ -105,7 +105,12 @@ instance Pretty Exp where
         Method m     ->
           pp f .+. put (BS.cons '.' m) .+. "(" .+. ppList sep args .+. ")"
     where
-      normalCall = "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
+      normalCall =
+        case args of
+          [x]     -> "A1(" .+. pp f .+. "," .+. pp x .+. ")"
+          [_,_]   -> "A2(" .+. pp f .+. "," .+. ppList sep args .+. ")"
+          [_,_,_] -> "A3(" .+. pp f .+. "," .+. ppList sep args .+. ")"
+          _       -> "A(" .+. pp f .+. ",[" .+. ppList sep args .+. "])"
       fastCall = ppCallFun f .+. "(" .+. ppList sep args .+. ")"
       ppCallFun fun@(Fun _ _) = "(" .+. pp fun .+. ")"
       ppCallFun fun           = pp fun
