@@ -110,18 +110,9 @@ instance Ord TyCon where
 -- TyCon for a derived Typeable instance will end up being statically
 -- allocated.
 
-#if HASTE_HOST_WORD_SIZE_IN_BITS < 64
 mkTyCon :: Word64# -> Word64# -> String -> String -> String -> TyCon
 mkTyCon high# low# pkg modl name
   = TyCon (Fingerprint (W64# high#) (W64# low#)) pkg modl name
-#else
-mkTyCon :: Word#   -> Word#   -> String -> String -> String -> TyCon
-mkTyCon high# low# pkg modl name
-  = TyCon (Fingerprint (mkw64# high#) (mkw64# low#)) pkg modl name
-
-mkw64# :: Word# -> Word64
-mkw64# w = W64# (wordToWord64# w)
-#endif
 
 -- | Applies a type constructor to a sequence of types
 mkTyConApp  :: TyCon -> [TypeRep] -> TypeRep
