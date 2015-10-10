@@ -61,11 +61,11 @@ hasteOpts = [
     Option "" ["opt-all"]
            (NoArg optAllSafe) $
            "Enable all safe optimizations. Equivalent to --opt-minify " ++
-           "--opt-whole-program.",
-    Option "" ["opt-unsafe"]
-           (NoArg optAllUnsafe) $
-           "Enable all optimizations, safe and unsafe. Equivalent to " ++
-           "--opt-all --opt-unsafe-ints",
+           "--opt-whole-program --opt-flow-analysis.",
+    Option "" ["opt-flow-analysis"]
+           (NoArg enableWholeProgramFlowAnalysis) $
+           "Enable whole program flow analysis. Slightly experimental and " ++
+           "possibly slow.",
     Option "" ["opt-minify"]
            (NoArg updateClosureCfg) $
            "Minify JavaScript output using Google Closure compiler.",
@@ -74,6 +74,10 @@ hasteOpts = [
            "Pass a flag to Closure. " ++
            "To minify programs in strict mode, use " ++
            "--opt-minify-flag='--language_in=ECMASCRIPT5_STRICT'",
+    Option "" ["opt-unsafe"]
+           (NoArg optAllUnsafe) $
+           "Enable all optimizations, safe and unsafe. Equivalent to " ++
+           "--opt-all --opt-unsafe-ints",
     Option "" ["opt-unsafe-ints"]
            (NoArg unsafeMath) $
            "Enable unsafe Int arithmetic. Implies --opt-unsafe-mult " ++
@@ -191,7 +195,9 @@ optAllUnsafe = optAllSafe . unsafeMath . enableWholeProgramOpts
 
 -- | Enable all safe optimizations.
 optAllSafe :: Config -> Config
-optAllSafe = enableWholeProgramOpts . updateClosureCfg
+optAllSafe = enableWholeProgramFlowAnalysis
+             . enableWholeProgramOpts
+             . updateClosureCfg
 
 -- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> Config
@@ -205,6 +211,10 @@ updateClosureFlags arg cfg = cfg {
 -- | Enable optimizations over the entire program.
 enableWholeProgramOpts :: Config -> Config
 enableWholeProgramOpts cfg = cfg {wholeProgramOpts = True}
+
+-- | Enable whole program flow analysis optimizations.
+enableWholeProgramFlowAnalysis :: Config -> Config
+enableWholeProgramFlowAnalysis cfg = cfg {flowAnalysisOpts = True}
 
 -- | Produce output for the JSFlow interpreter.
 enableJSFlow :: Config -> Config

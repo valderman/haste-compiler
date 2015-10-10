@@ -153,12 +153,11 @@ Print JavaScript output using whitespace and indentation.
 .TP
 .BR \-\-opt\-all
 Enable all safe optimizations. Equivalent to --opt-minify
---opt-whole-program.
+--opt-whole-program --opt-flow-analysis.
 
 .TP
-.BR \-\-opt\-unsafe
-Enable all optimizations, safe and unsafe. Equivalent to --opt-all
---opt-unsafe-ints
+.BR \-\-opt\-flow-analysis
+Enable whole program flow analysis. Slightly experimental and possibly slow.
 
 .TP
 .BR \-\-opt\-minify
@@ -168,6 +167,11 @@ Minify JavaScript output using Google Closure compiler.
 .BR \-\-opt\-minify\-flag =\fIFLAG\fR
 Pass a flag to Closure. To minify programs in strict mode, use
 --opt-minify-flag='--language_in=ECMASCRIPT5_STRICT'
+
+.TP
+.BR \-\-opt\-unsafe
+Enable all optimizations, safe and unsafe. Equivalent to --opt-all
+--opt-unsafe-ints
 
 .TP
 .BR \-\-opt\-unsafe\-ints

@@ -154,6 +154,7 @@ Executable hastec
         Data.JSTarget.AST
         Data.JSTarget.Binary
         Data.JSTarget.Constructors
+        Data.JSTarget.FlowAnalysis
         Data.JSTarget.Op
         Data.JSTarget.Optimize
         Data.JSTarget.PP

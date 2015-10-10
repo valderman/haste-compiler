@@ -33,7 +33,10 @@ link cfg pkgid target = do
          Just (m, p) -> (fromString m, fromString p)
          _           -> error "Haste.Linker.link called without main sym!"
   ds <- getAllDefs cfg (targetLibPath cfg : libPaths cfg) mainmod pkgid mainSym
-  let myDefs = if wholeProgramOpts cfg then topLevelInline ds else ds
+  let flow = flowAnalysisOpts cfg
+      myDefs = if wholeProgramOpts cfg
+                 then topLevelInline flow ds
+                 else ds
       (progText, myMain') = prettyProg (ppOpts cfg) mainSym myDefs
       callMain = stringUtf8 "B(A(" <> myMain' <> stringUtf8 ", [0]));"
       launchApp = appStart cfg (stringUtf8 "hasteMain")

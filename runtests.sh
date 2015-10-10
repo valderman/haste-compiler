@@ -33,9 +33,9 @@ runTest() {
     haste_output=`$JS TestDriver.js 2> $haste_stderr_file`
 
     if [[ $quiet == 1 ]] ; then
-        $hastec -fforce-recomp --opt-whole-program --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs > /dev/null 2>&1
+        $hastec -fforce-recomp --opt-whole-program --opt-flow-analysis --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs > /dev/null 2>&1
     else
-        $hastec -fforce-recomp --opt-whole-program --verbose --debug --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs
+        $hastec -fforce-recomp --opt-whole-program --opt-flow-analysis --verbose --debug --onexec -DO2 -DTEST_MODULE=$module --out=TestDriver.O2.js TestDriver.hs
     fi
     haste_opt_output=`$JS TestDriver.O2.js 2> $haste_opt_stderr_file`
 

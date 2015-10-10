@@ -5,6 +5,7 @@ module Data.JSTarget.Optimize (
   ) where
 import Data.JSTarget.AST
 import Data.JSTarget.Op
+import Data.JSTarget.FlowAnalysis
 import Data.JSTarget.Traversal
 import Control.Applicative
 import Control.Monad
@@ -43,8 +44,8 @@ optimizeFun f ast =
     >>= inlineJSPrimitives
     >>= mapJS (const True) pure (pure . removeNonsenseAssigns)
 
-topLevelInline :: Stm -> Stm
-topLevelInline ast =
+topLevelInline :: Bool -> Stm -> Stm
+topLevelInline flowAnalysis ast =
   runTravM $ do
     pure ast
     >>= unevalLits
@@ -61,6 +62,8 @@ topLevelInline ast =
     >>= smallStepInline
     >>= inlineAssigns
     >>= unTrampoline
+    >>= if flowAnalysis then flowOpts else pure
+
 
 -- | Attempt to turn two case branches into a ternary operator expression.
 tryTernary :: Var
@@ -771,3 +774,43 @@ safeToUnThunk ex =
     Thunk _ _  -> True
     Arr arr    -> all safeToUnThunk arr
     _          -> False
+
+-- | Create a mapping from (function name, argument #) to argument names
+--   for all function arguments.
+gatherArgNames :: JSTrav ast => ast -> TravM ArgMap
+gatherArgNames = foldJS (\_ _ -> True) (\m x -> pure (upd m x)) M.empty
+  where
+    upd m (Stm (Assign (NewVar _ v) (Fun args _) _) _) = M.insert v args m
+    upd m _                                            = m
+
+flowOpts :: Stm -> TravM Stm
+flowOpts ast = do
+    argvars <- gatherArgNames ast
+    let info = findVarInfos argvars ast
+    ast' <- mapJS (const True) (pure . removeEvals info) pure ast
+    mapJS (const True) (pure . makeFastCall info) pure ast'
+  where
+    name (Foreign s)      = show s
+    name (Internal s _ _) = show $ nameIdent s
+
+    alwaysStrict infos v =
+      case M.lookup v infos of
+        Just info -> varStrict info == Strict
+        _         -> False
+
+    arityIsAlways infos v = do
+      info <- M.lookup v infos
+      varArity info
+
+    removeEvals info (Eval ex@(Var v)) | alwaysStrict info v = ex
+    removeEvals _ ex                                         = ex
+
+    makeFastCall info ex@(Call _ (Normal bounce) f@(Var v) xs) =
+      case arityIsAlways info v of
+        Just ar'
+          | length xs == ar' -> Call 0 (Fast bounce) f xs
+          | length xs > ar'  -> Call 0 (Normal bounce)
+                                       (Call 0 (Fast bounce) f (take ar' xs))
+                                       (drop ar' xs)
+        _             -> ex
+    makeFastCall _ ex           = ex

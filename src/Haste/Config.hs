@@ -110,6 +110,10 @@ data Config = Config {
     -- | Perform optimizations over the whole program at link time?
     wholeProgramOpts :: Bool,
 
+    -- | Perform comprehensive whole program flow analysis optimizations at
+    --   link time?
+    flowAnalysisOpts :: Bool,
+
     -- | Allow the possibility that some tail recursion may not be optimized
     --   in order to gain slightly smaller code?
     sloppyTCE :: Bool,
@@ -182,6 +186,7 @@ defConfig = Config {
     multiplyIntOp         = safeMultiply,
     verbose               = False,
     wholeProgramOpts      = False,
+    flowAnalysisOpts      = False,
     sloppyTCE             = False,
     tracePrimops          = False,
     useGoogleClosure      = Nothing,
