@@ -61,11 +61,11 @@ hasteOpts = [
     Option "" ["opt-all"]
            (NoArg optAllSafe) $
            "Enable all safe optimizations. Equivalent to --opt-minify " ++
-           "--opt-whole-program --opt-flow-analysis.",
+           "--opt-whole-program.",
     Option "" ["opt-flow-analysis"]
            (NoArg enableWholeProgramFlowAnalysis) $
-           "Enable whole program flow analysis. Slightly experimental and " ++
-           "possibly slow.",
+           "Enable whole program flow analysis. Highly experimental and " ++
+           "possibly slow and/or incorrect. Don't use for now.",
     Option "" ["opt-minify"]
            (NoArg updateClosureCfg) $
            "Minify JavaScript output using Google Closure compiler.",
@@ -195,9 +195,7 @@ optAllUnsafe = optAllSafe . unsafeMath . enableWholeProgramOpts
 
 -- | Enable all safe optimizations.
 optAllSafe :: Config -> Config
-optAllSafe = enableWholeProgramFlowAnalysis
-             . enableWholeProgramOpts
-             . updateClosureCfg
+optAllSafe = enableWholeProgramOpts . updateClosureCfg
 
 -- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> Config

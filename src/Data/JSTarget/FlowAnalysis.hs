@@ -4,13 +4,10 @@ module Data.JSTarget.FlowAnalysis (
     mkVarInfo, nullInfo, mergeVarInfos, findVarInfos
   ) where
 import Data.JSTarget.AST
-import Data.JSTarget.Traversal
 import Control.Monad.State
 import Data.List (foldl', sort, group)
 import qualified Data.Set as S
 import qualified Data.Map as M
-
-import Debug.Trace
 
 data Strict = Strict | Unknown
   deriving (Eq, Show)
@@ -121,7 +118,7 @@ findVarInfos argmap = mergeAll . snd . flip runState M.empty . goS
     goE (JSLit _)                = return ()
     goE (Not ex)                 = goE ex
     goE (BinOp _ a b)            = goE a >> goE b
-    goE (Fun xs body)            = goS body
+    goE (Fun _ body)             = goS body
     goE (Call _ _ (Var f) xs)    = handleCall f xs
     goE (Call _ _ (Fun as b) xs) = handleArgs as xs >> goS b
     goE (Call _ _ f xs)          = mapM_ goE (f:xs)
@@ -152,7 +149,7 @@ findVarInfos argmap = mergeAll . snd . flip runState M.empty . goS
             Just nfo' -> do
               let aliases = filter (not . (`S.member` seen)) (varAlias nfo')
                   seen' = foldl' (flip S.insert) seen aliases
-              mapM_ (\v' -> setArgsOf v nfo seen') aliases
+              mapM_ (\v' -> setArgsOf v' nfo seen') aliases
 
 hasInfo :: Var -> VarInfo -> EvalM ()
 hasInfo v nfo = do
