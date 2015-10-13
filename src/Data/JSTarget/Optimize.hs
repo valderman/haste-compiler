@@ -545,7 +545,7 @@ tailLoopify f fun@(Fun args body) = do
         case needToCopy of
           True -> do
             let args' = map newName args
-                ret = Return (Lit $ LNull)
+                ret = Return continueSentinel
             b <- mapJS (not <$> isLambda) pure (replaceByAssign ret args') body
             tailcalls <- occurrences (const True) isHiddenTailcall body
             let nn = newName f
@@ -554,7 +554,7 @@ tailLoopify f fun@(Fun args body) = do
                   Forever $
                   Assign nv (Call 0 (Fast (tailcalls > Never)) (Fun args b)
                                                                (map Var args')) $
-                  Case (Var nn) (Return (Var nn)) [(Lit $ LNull, Stop)] $
+                  Case (Var nn) (Return (Var nn)) [(continueSentinel, Stop)] $
                   Stop
             return $ Fun args' body'
           False -> do
@@ -564,6 +564,7 @@ tailLoopify f fun@(Fun args body) = do
       else do
         return fun
   where
+    continueSentinel = Var $ Foreign "__continue"
     isTailRec (Stm (Return (Call _ _ (Var f') _)) _) = f == f'
     isTailRec _                                      = False
 
