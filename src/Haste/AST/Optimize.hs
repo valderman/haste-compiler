@@ -62,6 +62,7 @@ topLevelInline flowAnalysis ast =
     >>= smallStepInline
     >>= inlineAssigns
     >>= unTrampoline
+    >>= inlineLiteralFunCalls
     >>= if flowAnalysis then flowOpts else pure
 
 
@@ -210,6 +211,19 @@ inlineAssigns ast = do
 removeUpdate :: (Var -> Bool) -> Stm -> Stm
 removeUpdate p stm@(Assign _ _ next) | isEvalUpd p stm = next
 removeUpdate _ stm                                     = stm
+
+-- | Inline function calls of the form @return (function(as){body})(xs)@.
+--   TODO: 'inlineShortJumpTailcall' performs the same functionality for
+--   named local tail calls - merge?
+inlineLiteralFunCalls :: JSTrav ast => ast -> TravM ast
+inlineLiteralFunCalls ast = do
+    mapJS (const True) pure (pure . inline) ast
+  where
+    inline s@(Return (Call _ (Fast False) (Fun as body) xs)) =
+      maybe s id (zipAssign (map (NewVar True) as) xs body)
+    inline s@(ThunkRet (Call _ (Fast False) (Fun as body) xs)) =
+      maybe s id (zipAssign (map (NewVar True) as) xs body)
+    inline s = s
 
 -- | Turn the common pattern @var x = e ; x = E(x)@ into @var x = E(e)@.
 --   should run *after* 'unevalLits'.
