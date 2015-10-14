@@ -3,8 +3,8 @@ module Main where
 import System.Environment
 import Haste.Module
 import Haste.Config
-import Data.JSTarget
-import Data.JSTarget.PP
+import Haste.AST
+import Haste.AST.PP
 import Data.Maybe
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy.Char8 as BSL

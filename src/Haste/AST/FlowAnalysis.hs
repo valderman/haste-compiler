@@ -1,9 +1,9 @@
 -- | Basic data flow analysis over the Haste AST.
-module Data.JSTarget.FlowAnalysis (
+module Haste.AST.FlowAnalysis (
     Strict (..), VarInfo (..), InfoMap, ArgMap,
     mkVarInfo, nullInfo, mergeVarInfos, findVarInfos
   ) where
-import Data.JSTarget.AST
+import Haste.AST.Syntax
 import Control.Monad.State
 import Data.List (foldl', sort, group)
 import qualified Data.Set as S

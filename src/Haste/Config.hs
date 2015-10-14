@@ -2,7 +2,7 @@
 module Haste.Config (
   Config (..), AppStart, def, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, debugLib) where
-import Data.JSTarget
+import Haste.AST
 import Control.Shell (replaceExtension, (</>))
 import Data.ByteString.Builder
 import Data.Monoid

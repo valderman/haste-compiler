@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleInstances, TupleSections, PatternGuards, BangPatterns #-}
 -- | Generic traversal of JSTarget AST types.
-module Data.JSTarget.Traversal where
+module Haste.AST.Traversal where
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Identity
-import Data.JSTarget.AST
+import Haste.AST.Syntax
 
 -- | AST nodes we'd like to fold and map over.
 data ASTNode = Exp !Exp !Bool | Stm !Stm !Bool | Shared !Stm

@@ -3,7 +3,7 @@
 module Haste.Errors (runtimeError, warn, WarnLevel(..)) where
 import System.IO.Unsafe
 import System.IO
-import Data.JSTarget
+import Haste.AST
 import Haste.Monad
 import Haste.Config
 

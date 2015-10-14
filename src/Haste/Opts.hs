@@ -2,7 +2,9 @@ module Haste.Opts (hasteOpts, helpHeader) where
 import System.Console.GetOpt
 import Haste.Config
 import Haste.Environment
-import Data.JSTarget.PP (PPOpts, withExtAnnotation, withAnnotations, withPretty, withHSNames)
+import Haste.AST.PP (
+    PPOpts, withExtAnnotation, withAnnotations, withPretty, withHSNames
+  )
 import Data.List
 import Control.Shell ((</>))
 

@@ -7,7 +7,7 @@ import Data.Binary
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.UTF8 as BS
-import Data.JSTarget
+import Haste.AST
 import System.Directory (doesFileExist)
 import System.IO
 

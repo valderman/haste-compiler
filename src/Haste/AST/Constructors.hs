@@ -2,10 +2,10 @@
 #if __GLASGOW_HASKELL__ < 710
 {-# LANGUAGE OverlappingInstances #-}
 #endif
--- | User interface for the JSTarget AST.
-module Data.JSTarget.Constructors where
-import Data.JSTarget.AST
-import Data.JSTarget.Op
+-- | Smart constructors for Haste's AST.
+module Haste.AST.Constructors where
+import Haste.AST.Syntax
+import Haste.AST.Op
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as BS
 

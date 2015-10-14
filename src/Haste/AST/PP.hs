@@ -1,9 +1,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE OverloadedStrings, FlexibleInstances,
              GeneralizedNewtypeDeriving, CPP #-}
--- | JSTarget pretty printing machinery. The actual printing happens in 
---   Data.JSTarget.Print.
-module Data.JSTarget.PP where
+-- | Haste AST pretty printing machinery. The actual printing happens in 
+--   Haste.AST.Print.
+module Haste.AST.PP where
 import Data.Default
 import Data.Monoid
 import Data.String
@@ -15,7 +15,7 @@ import qualified Data.Map as M
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.ByteString.Char8 as BSS
 import Data.ByteString (ByteString)
-import Data.JSTarget.AST (Name (..))
+import Haste.AST.Syntax (Name (..))
 import Data.ByteString.Builder
 
 -- | Pretty-printing options
@@ -95,6 +95,9 @@ withHSNames :: PPOpts -> PPOpts
 withHSNames opts = opts {preserveNames = True}
 
 -- | Generate the final name for a variable.
+--   Up until this point, internal names may be just about anything.
+--   The "final name" scheme ensures that all internal names end up with a
+--   proper, unique JS name.
 finalNameFor :: Name -> PP FinalName
 finalNameFor n = PP $ \_ _ ns@(nextN, m) b ->
   case M.lookup n m of

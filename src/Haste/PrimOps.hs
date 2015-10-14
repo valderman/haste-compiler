@@ -2,7 +2,7 @@
 module Haste.PrimOps (genOp) where
 import Prelude hiding (LT, GT)
 import PrimOp
-import Data.JSTarget
+import Haste.AST
 import Haste.Config
 
 -- | Dummy State# RealWorld value for where one is needed.

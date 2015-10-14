@@ -6,7 +6,7 @@ import qualified Data.ByteString.Lazy as B
 import Control.Shell
 import Control.Applicative
 import Control.Monad (when, filterM)
-import Data.JSTarget
+import Haste.AST
 import Data.Binary
 import Data.List (isSuffixOf)
 import qualified Data.ByteString.UTF8 as BS
@@ -53,6 +53,11 @@ writeModule basepath m@(Module pkgid modname _ _) boot =
 -- | Read a module from file. If the module is not found at the specified path,
 --   libpath/path is tried instead. Returns Nothing is the module is not found
 --   on either path.
+--
+--   This function first looks for an appropriate jslib file. If none is
+--   found, then it looks for a standalone jsmod file, possibly with an
+--   accompanying jsmod-boot file. If neither is found, it concludes that
+--   the module simply does not exist on the given path and returns @Nothing@.
 readModule :: FilePath -> String -> String -> IO (Maybe Module)
 readModule basepath pkgid modname = fromRight "readModule" . shell $ do
   libfile <- (basepath </>) `fmap` jslibFileName basepath pkgid

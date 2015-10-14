@@ -1,12 +1,12 @@
 {-# LANGUAGE PatternGuards, TupleSections, DoAndIfThenElse, OverloadedStrings #-}
 -- | Optimizations over the JSTarget AST.
-module Data.JSTarget.Optimize (
+module Haste.AST.Optimize (
     optimizeFun, tryTernary, topLevelInline
   ) where
-import Data.JSTarget.AST
-import Data.JSTarget.Op
-import Data.JSTarget.FlowAnalysis
-import Data.JSTarget.Traversal
+import Haste.AST.Syntax
+import Haste.AST.Op
+import Haste.AST.FlowAnalysis
+import Haste.AST.Traversal
 import Control.Applicative
 import Control.Monad
 import qualified Data.Map as M

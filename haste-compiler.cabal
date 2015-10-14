@@ -135,8 +135,17 @@ Executable hastec
     Main-Is:
         hastec.hs
     Other-Modules:
-        Haste
         Haste.Args
+        Haste.AST
+        Haste.AST.Syntax
+        Haste.AST.Binary
+        Haste.AST.Constructors
+        Haste.AST.FlowAnalysis
+        Haste.AST.Op
+        Haste.AST.Optimize
+        Haste.AST.PP
+        Haste.AST.Print
+        Haste.AST.Traversal
         Haste.Opts
         Haste.Version
         Haste.Environment
@@ -150,16 +159,6 @@ Executable hastec
         Haste.Errors
         Haste.CodeGen
         Haste.JSLib
-        Data.JSTarget
-        Data.JSTarget.AST
-        Data.JSTarget.Binary
-        Data.JSTarget.Constructors
-        Data.JSTarget.FlowAnalysis
-        Data.JSTarget.Op
-        Data.JSTarget.Optimize
-        Data.JSTarget.PP
-        Data.JSTarget.Print
-        Data.JSTarget.Traversal
     default-language: Haskell98
 
 Executable haste-pkg

@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | Various functions generated as builtins
 module Haste.Builtins (toBuiltin) where
-import GhcPlugins as P
-import Data.JSTarget as J
+import GhcPlugins as GHC
+import Haste.AST as AST
 import Control.Applicative
 
 -- TODO: proxy# (and probably void#, realWorld# and coercionToken# as well)
 --       should really just go away in the final code.
 
-toBuiltin :: P.Var -> Maybe J.Var
+toBuiltin :: GHC.Var -> Maybe AST.Var
 toBuiltin v =
   case (modname, varname) of
     (Just "GHC.Prim", "coercionToken#") ->

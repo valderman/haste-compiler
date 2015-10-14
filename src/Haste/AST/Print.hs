@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE FlexibleInstances, GADTs, OverloadedStrings, CPP #-}
-module Data.JSTarget.Print () where
+module Haste.AST.Print () where
 import Prelude hiding (LT, GT)
-import Data.JSTarget.AST
-import Data.JSTarget.Op
-import Data.JSTarget.PP as PP
+import Haste.AST.Syntax
+import Haste.AST.Op
+import Haste.AST.PP as PP
 import Data.ByteString.Builder
 import Control.Monad
 import Data.Char

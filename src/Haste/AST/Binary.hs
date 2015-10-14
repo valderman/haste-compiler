@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Binary instances for JSTarget types.
-module Data.JSTarget.Binary () where
+module Haste.AST.Binary () where
 import Prelude hiding (LT, GT)
 import Data.Binary
 import Data.Array
 import Control.Applicative
-import Data.JSTarget.AST
-import Data.JSTarget.Op
+import Haste.AST.Syntax
+import Haste.AST.Op
 
 instance Binary Module where
   put (Module pkgid name deps defs) =

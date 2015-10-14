@@ -5,7 +5,7 @@ module Haste.Monad (
     pushBind, popBind, getCurrentBinding, whenCfg, rename, getActualName
   ) where
 import Control.Monad.State.Strict
-import Data.JSTarget as J hiding (modName)
+import Haste.AST as AST hiding (modName)
 import qualified Data.Set as S
 import Control.Applicative
 import qualified Data.Map as M
@@ -49,7 +49,7 @@ class Dependency a where
   -- | Mark a symbol as local, excluding it from the dependency graph.
   addLocal :: a -> JSGen cfg ()
 
-instance Dependency J.Name where
+instance Dependency AST.Name where
   {-# INLINE dependOn #-}
   dependOn v = JSGen $ do
     st <- get
@@ -60,7 +60,7 @@ instance Dependency J.Name where
     st <- get
     put st {locals = v : locals st}
 
-instance Dependency J.Var where
+instance Dependency AST.Var where
   {-# INLINE dependOn #-}
   dependOn (Foreign _)      = return ()
   dependOn (Internal n _ _) = dependOn n
@@ -80,7 +80,7 @@ instance Dependency a => Dependency (S.Set a) where
 genJS :: cfg         -- ^ Config to use for code generation.
       -> String      -- ^ Name of the module being compiled.
       -> JSGen cfg a -- ^ The code generation computation.
-      -> (a, S.Set J.Name, S.Set J.Name, Stm -> Stm)
+      -> (a, S.Set AST.Name, S.Set AST.Name, Stm -> Stm)
 genJS cfg myModName (JSGen gen) =
   case runState gen (initialState cfg) {modName = myModName} of
     (a, GenState dependencies loc cont _ _ _ _) ->

@@ -1,13 +1,14 @@
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, FlexibleInstances, CPP,
              OverloadedStrings #-}
-module Data.JSTarget.AST where
+-- | Abstract syntax of Haste's intermediate format.
+module Haste.AST.Syntax where
 import qualified Data.Set as S
 #if __GLASGOW_HASKELL__ >= 708
 import qualified Data.Map.Strict as M
 #else
 import qualified Data.Map as M
 #endif
-import Data.JSTarget.Op
+import Haste.AST.Op
 import qualified Data.ByteString as BS
 
 type Arity = Int

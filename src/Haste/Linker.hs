@@ -7,7 +7,7 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Control.Monad.State.Strict
 import Control.Monad.Trans.Either
-import Data.JSTarget
+import Haste.AST
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString as BS
 import Data.ByteString.UTF8 (toString, fromString)

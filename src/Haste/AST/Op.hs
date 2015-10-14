@@ -1,4 +1,5 @@
-module Data.JSTarget.Op where
+-- | Binary operations for the Haste AST.
+module Haste.AST.Op where
 import Prelude hiding (GT, LT)
 
 data BinOp

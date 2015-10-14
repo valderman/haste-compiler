@@ -19,8 +19,8 @@ import Language.Haskell.GHC.Simple as GHC
 import FastString (unpackFS)
 
 -- AST stuff
-import Data.JSTarget as J hiding ((.&.))
-import Data.JSTarget.AST as J (Exp (..), Stm (..), LHS (..))
+import Haste.AST as AST hiding ((.&.))
+import Haste.AST.Syntax as AST (Exp (..), Stm (..), LHS (..))
 
 -- General Haste stuff
 import Haste.Config
@@ -30,11 +30,11 @@ import Haste.PrimOps
 import Haste.Builtins
 
 -- | Generate an abstract JS module from a codegen config and an STG module.
-generate :: Config -> StgModule -> J.Module
+generate :: Config -> StgModule -> AST.Module
 generate cfg stg =
-  J.Module {
+  AST.Module {
       modPackageId   = BS.fromString $ GHC.modPackageKey stg,
-      J.modName      = BS.fromString $ GHC.modName stg,
+      AST.modName      = BS.fromString $ GHC.modName stg,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
     }
@@ -54,7 +54,7 @@ generate cfg stg =
       m
 
 -- | Generate JS AST for bindings.
-genAST :: Config -> String -> [StgBinding] -> [(S.Set J.Name, Stm)]
+genAST :: Config -> String -> [StgBinding] -> [(S.Set AST.Name, Stm)]
 genAST cfg modname binds =
     binds'
   where
@@ -212,7 +212,7 @@ genRhs _ (StgRhsClosure _ _ _ upd _ args body) = do
                then thunk' upd (body' $ thunkRet retExp)
                else fun args' (body' $ ret retExp)
   where
-    thunk' _ (Return l@(J.Lit _)) = l
+    thunk' _ (Return l@(AST.Lit _)) = l
     thunk' Updatable stm          = thunk True stm
     thunk' ReEntrant stm          = thunk True stm
     thunk' SingleEntry stm        = thunk False stm
@@ -230,7 +230,7 @@ unRec b           = [(Nothing, b)]
 --   Lists of vars are often accompanied by lists of strictness or usage
 --   annotations, which need to be filtered for types without representation
 --   as well.
-genArgVarsPair :: [(GHC.Var, a)] -> JSGen Config ([J.Var], [a])
+genArgVarsPair :: [(GHC.Var, a)] -> JSGen Config ([AST.Var], [a])
 genArgVarsPair vps = do
     vs' <- mapM genVar vs
     return (vs', xs)
@@ -244,7 +244,7 @@ genCase t ex scrut alts = do
   -- Return a scrutinee variable and a function to replace all occurrences of
   -- the STG scrutinee with our JS one, if needed.
   (scrut', withScrutinee) <- case ex' of
-    Eval (J.Var v) | overwriteScrutinees cfg -> do
+    Eval (AST.Var v) | overwriteScrutinees cfg -> do
       continue $ assignVar (reorderableType scrut) v ex'
       oldscrut <- genVar scrut
       return (v, rename oldscrut v)
@@ -310,7 +310,7 @@ splitAlts alts =
     isDefault (DEFAULT, _, _, _) = True
     isDefault _                  = False
 
-genAlt :: J.Var -> J.Var -> StgAlt -> JSGen Config (Exp, Stm -> Stm)
+genAlt :: AST.Var -> AST.Var -> StgAlt -> JSGen Config (Exp, Stm -> Stm)
 genAlt scrut res (con, args, used, body) = do
   construct <- case con of
     -- undefined is intentional here - the first element is never touched.
@@ -329,7 +329,7 @@ genAlt scrut res (con, args, used, body) = do
     bindVar v ix = newVar True v (index (varExp scrut) (litN ix))
 
 -- | Generate a result variable for the given scrutinee variable.
-genResultVar :: GHC.Var -> JSGen Config J.Var
+genResultVar :: GHC.Var -> JSGen Config AST.Var
 genResultVar v = do
   v' <- genVar v >>= getActualName
   case v' of
@@ -340,7 +340,7 @@ genResultVar v = do
 
 -- | Generate a new variable and add a dependency on it to the function
 --   currently being generated.
-genVar :: GHC.Var -> JSGen Config J.Var
+genVar :: GHC.Var -> JSGen Config AST.Var
 genVar v | hasRepresentation v = do
   case toBuiltin v of
     Just v' -> return v'
@@ -359,10 +359,10 @@ foreignName (CCall (CCallSpec (StaticTarget str _ _) _ _)) =
 foreignName _ =
   error "Dynamic foreign calls not supported!"
 
--- | Turn a 'GHC.Var' into a 'J.Var'. Falls back to a default module name,
+-- | Turn a 'GHC.Var' into a 'AST.Var'. Falls back to a default module name,
 --   typically the name of the current module under compilation, if the given
 --   Var isn't qualified.
-toJSVar :: String -> GHC.Var -> J.Var
+toJSVar :: String -> GHC.Var -> AST.Var
 toJSVar thisMod v =
   case idDetails v of
     FCallId fc -> foreignVar (foreignName fc)
