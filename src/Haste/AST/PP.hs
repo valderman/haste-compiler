@@ -4,7 +4,6 @@
 -- | Haste AST pretty printing machinery. The actual printing happens in 
 --   Haste.AST.Print.
 module Haste.AST.PP where
-import Data.Default
 import Data.Monoid
 import Data.String
 import Data.List (foldl')
@@ -17,17 +16,8 @@ import qualified Data.ByteString.Char8 as BSS
 import Data.ByteString (ByteString)
 import Haste.AST.Syntax (Name (..))
 import Data.ByteString.Builder
-
--- | Pretty-printing options
-data PPOpts = PPOpts {
-    nameComments       :: Bool,    -- ^ Emit comments for externals?
-    externalAnnotation :: Bool,    -- ^ Emit comments for names?
-    useIndentation     :: Bool,    -- ^ Should we indent at all?
-    indentStr          :: Builder, -- ^ Indentation step.
-    useNewlines        :: Bool,    -- ^ Use line breaks?
-    useSpaces          :: Bool,    -- ^ Use spaces other than where necessary?
-    preserveNames      :: Bool     -- ^ Use STG names?
-  }
+import Haste.Config
+import Haste.AST.PP.Opts
 
 type IndentLvl = Int
 
@@ -39,16 +29,16 @@ type NameSupply = (FinalName, M.Map Name FinalName)
 emptyNS :: NameSupply
 emptyNS = (FinalName 0, M.empty)
 
-newtype PP a = PP {unPP :: PPOpts
+newtype PP a = PP {unPP :: Config
                         -> IndentLvl
                         -> NameSupply
                         -> Builder
                         -> (NameSupply, Builder, a)}
 
 instance Monad PP where
-  PP m >>= f = PP $ \opts indentlvl ns b ->
-    case m opts indentlvl ns b of
-      (ns', b', x) -> unPP (f x) opts indentlvl ns' b'
+  PP m >>= f = PP $ \cfg indentlvl ns b ->
+    case m cfg indentlvl ns b of
+      (ns', b', x) -> unPP (f x) cfg indentlvl ns' b'
   return x = PP $ \_ _ ns b -> (ns, b, x)
 
 instance Applicative PP where
@@ -63,37 +53,6 @@ instance Functor PP where
 (.+.) = (>>)
 infixl 1 .+.
 
-instance Default PPOpts where
-  def = PPOpts {
-      nameComments        = False,
-      externalAnnotation  = False,
-      useIndentation      = False,
-      indentStr           = "    ",
-      useNewlines         = False,
-      useSpaces           = False,
-      preserveNames       = False
-    }
-
--- | Print code using indentation, whitespace and newlines.
-withPretty :: PPOpts -> PPOpts
-withPretty opts = opts {
-    useIndentation = True,
-    indentStr      = "  ",
-    useNewlines    = True,
-    useSpaces      = True
-  }
-
--- | Annotate non-local, non-JS symbols with qualified names.
-withAnnotations :: PPOpts -> PPOpts
-withAnnotations opts = opts {nameComments = True}
-
--- | Annotate externals with /* EXTERNAL */ comment.
-withExtAnnotation :: PPOpts -> PPOpts
-withExtAnnotation opts = opts {externalAnnotation = True}
-
-withHSNames :: PPOpts -> PPOpts
-withHSNames opts = opts {preserveNames = True}
-
 -- | Generate the final name for a variable.
 --   Up until this point, internal names may be just about anything.
 --   The "final name" scheme ensures that all internal names end up with a
@@ -106,27 +65,31 @@ finalNameFor n = PP $ \_ _ ns@(nextN, m) b ->
 
 -- | Returns the value of the given pretty-printer option.
 getOpt :: (PPOpts -> a) -> PP a
-getOpt f = PP $ \opts _ ns b -> (ns, b, f opts)
+getOpt f = getCfg (f . ppOpts)
 
--- | Runs the given printer iff the specifiet option is True.
+-- | Runs the given printer iff the specified PP option is True.
 whenOpt :: (PPOpts -> Bool) -> PP () -> PP ()
 whenOpt f p = getOpt f >>= \x -> when x p
 
+-- | Returns the value of the given pretty-printer option.
+getCfg :: (Config -> a) -> PP a
+getCfg f = PP $ \cfg _ ns b -> (ns, b, f cfg)
+
 -- | Pretty print an AST.
-pretty :: Pretty a => PPOpts -> a -> BS.ByteString
-pretty opts ast =
-  case runPP opts (pp ast) of
+pretty :: Pretty a => Config -> a -> BS.ByteString
+pretty cfg ast =
+  case runPP cfg (pp ast) of
     (b, _) -> toLazyByteString b
 
 -- | Run a pretty printer.
-runPP :: PPOpts -> PP a -> (Builder, a)
-runPP opts p =
-  case unPP p opts 0 emptyNS mempty of
+runPP :: Config -> PP a -> (Builder, a)
+runPP cfg p =
+  case unPP p cfg 0 emptyNS mempty of
     (_, b, x) -> (b, x)
 
 -- | Pretty-print a program and return the final name for its entry point.
-prettyProg :: Pretty a => PPOpts -> Name -> a -> (Builder, Builder)
-prettyProg opts mainSym ast = runPP opts $ do
+prettyProg :: Pretty a => Config -> Name -> a -> (Builder, Builder)
+prettyProg cfg mainSym ast = runPP cfg $ do
   pp ast
   hsnames <- getOpt preserveNames
   if hsnames
@@ -164,10 +127,10 @@ buildFinalName (FinalName fn) =
 
 -- | Indent the given builder another step.
 indent :: PP a -> PP a
-indent (PP p) = PP $ \opts indentlvl ns b ->
-  if useIndentation opts
-    then p opts (indentlvl+1) ns b
-    else p opts 0 ns b
+indent (PP p) = PP $ \cfg indentlvl ns b ->
+  if useIndentation (ppOpts cfg)
+    then p cfg (indentlvl+1) ns b
+    else p cfg 0 ns b
 
 class Buildable a where
   put :: a -> PP ()
@@ -195,8 +158,8 @@ instance Buildable Bool where
 
 -- | Emit indentation up to the current level.
 ind :: PP ()
-ind = PP $ \opts indentlvl ns b ->
-  (ns, foldl' (<>) b (replicate indentlvl (indentStr opts)), ())
+ind = PP $ \cfg indentlvl ns b ->
+  (ns, foldl' (<>) b (replicate indentlvl (indentStr $ ppOpts cfg)), ())
 
 -- | A space character.
 sp :: PP ()

@@ -2,7 +2,10 @@
 module Haste.Config (
   Config (..), AppStart, def, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, debugLib) where
-import Haste.AST
+import Haste.AST.PP.Opts
+import Haste.AST.Syntax
+import Haste.AST.Constructors
+import Haste.AST.Op
 import Control.Shell (replaceExtension, (</>))
 import Data.ByteString.Builder
 import Data.Monoid
@@ -146,6 +149,10 @@ data Config = Config {
     --   Defaults to True.
     optimize :: Bool,
 
+    -- | Bound tail call chains at @n@ stack frames.
+    --   Defaults to 10.
+    tailChainBound :: Int,
+
     -- | Overwrite scrutinees when evaluated instead of allocating a new local.
     --   Defaults to False.
     overwriteScrutinees :: Bool,
@@ -196,6 +203,7 @@ defConfig = Config {
     showOutputable        = const "No showOutputable defined in config!",
     mainMod               = Just ("main", "Main"),
     optimize              = True,
+    tailChainBound        = 0,
     overwriteScrutinees   = False,
     annotateExternals     = False,
     annotateSymbols       = False,

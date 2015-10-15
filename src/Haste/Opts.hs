@@ -2,9 +2,7 @@ module Haste.Opts (hasteOpts, helpHeader) where
 import System.Console.GetOpt
 import Haste.Config
 import Haste.Environment
-import Haste.AST.PP (
-    PPOpts, withExtAnnotation, withAnnotations, withPretty, withHSNames
-  )
+import Haste.AST.PP.Opts
 import Data.List
 import Control.Shell ((</>))
 
@@ -63,7 +61,7 @@ hasteOpts = [
     Option "" ["opt-all"]
            (NoArg optAllSafe) $
            "Enable all safe optimizations. Equivalent to --opt-minify " ++
-           "--opt-whole-program.",
+           "--opt-whole-program --opt-tail-chain-bound=20.",
     Option "" ["opt-flow-analysis"]
            (NoArg enableWholeProgramFlowAnalysis) $
            "Enable whole program flow analysis. Highly experimental and " ++
@@ -76,6 +74,9 @@ hasteOpts = [
            "Pass a flag to Closure. " ++
            "To minify programs in strict mode, use " ++
            "--opt-minify-flag='--language_in=ECMASCRIPT5_STRICT'",
+    Option "" ["opt-tail-chain-bound"]
+           (ReqArg setTailChainBound "N") $
+           "Bound tailcall chains to N stack frames. Default is 1.",
     Option "" ["opt-unsafe"]
            (NoArg optAllUnsafe) $
            "Enable all optimizations, safe and unsafe. Equivalent to " ++
@@ -197,7 +198,14 @@ optAllUnsafe = optAllSafe . unsafeMath . enableWholeProgramOpts
 
 -- | Enable all safe optimizations.
 optAllSafe :: Config -> Config
-optAllSafe = enableWholeProgramOpts . updateClosureCfg
+optAllSafe = enableWholeProgramOpts . updateClosureCfg . setTailChainBound "20"
+
+-- | Set the tail call chain bound.
+setTailChainBound :: String -> Config -> Config
+setTailChainBound s cfg =
+  case reads s of
+    [(n, "")] -> cfg {tailChainBound = n}
+    _         -> cfg {tailChainBound = 0}
 
 -- | Set the path to the Closure compiler.jar to use.
 updateClosureCfg :: Config -> Config

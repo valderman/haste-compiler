@@ -153,7 +153,7 @@ Print JavaScript output using whitespace and indentation.
 .TP
 .BR \-\-opt\-all
 Enable all safe optimizations. Equivalent to --opt-minify
---opt-whole-program.
+--opt-whole-program --opt-tail-chain-bound=20.
 
 .TP
 .BR \-\-opt\-flow-analysis
@@ -167,7 +167,15 @@ Minify JavaScript output using Google Closure compiler.
 .TP
 .BR \-\-opt\-minify\-flag =\fIFLAG\fR
 Pass a flag to Closure. To minify programs in strict mode, use
---opt-minify-flag='--language_in=ECMASCRIPT5_STRICT'
+--opt-minify-flag='--language_in=ECMASCRIPT5_STRICT'.
+
+.TP
+.BR \-\-opt\-tail-chain-bound =\fIN\fR
+Bound tailcall chains at \fIN\fR stack frames.
+By default, tail call chains are not allowed to grow the call stack at all.
+This is very inefficient, however, so ideally one wants to strike a balance
+between amortizing the cost of the trampolining machinery and the size of the
+call stack. A value between 10 and 100 is usually a good choice.
 
 .TP
 .BR \-\-opt\-unsafe

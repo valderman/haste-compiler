@@ -1,7 +1,7 @@
 #!/bin/bash
 
 hastec=hastec
-OPTIMIZE="--opt-whole-program"
+OPTIMIZE="--opt-whole-program --opt-tail-chain-bound=20"
 
 if [[ $JS == "" ]] ; then
     if [[ $(which nodejs) != "" ]] ; then

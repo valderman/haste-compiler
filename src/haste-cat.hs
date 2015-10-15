@@ -33,8 +33,9 @@ printDefs path pkg mn m = do
   mapM_ printDef $ M.toList $ modDefs m
 
 printDef (name, d) = do
+  let cfg = def {ppOpts = withPretty . withExtAnnotation $ withAnnotations def}
   BS.putStrLn $ niceName name
-  BSL.putStrLn $ pretty (withPretty . withExtAnnotation $ withAnnotations def) d
+  BSL.putStrLn $ pretty cfg d
   putStrLn ""
 
 niceName (Name n (Just (pkg, m))) =

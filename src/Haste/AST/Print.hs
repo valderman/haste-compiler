@@ -2,9 +2,11 @@
 {-# LANGUAGE FlexibleInstances, GADTs, OverloadedStrings, CPP #-}
 module Haste.AST.Print () where
 import Prelude hiding (LT, GT)
+import Haste.Config hiding (def)
 import Haste.AST.Syntax
 import Haste.AST.Op
 import Haste.AST.PP as PP
+import Haste.AST.PP.Opts as PP
 import Data.ByteString.Builder
 import Control.Monad
 import Data.Char
@@ -186,7 +188,11 @@ instance Pretty Stm where
   pp (Stop) = do
     return ()
   pp (Tailcall call) = do
-    line $ "return new F(function(){return " .+. pp call .+. ";});"
+    b <- getCfg tailChainBound
+    if b <= 1
+      then line $ "return new F(function(){return " .+. pp call .+. ";});"
+      else line $ "return C > " .+. put (b-1) .+. " ? new F(function(){return "
+                    .+. pp call .+. ";}) : (++C," .+. pp call .+. ");"
   pp (ThunkRet ex) = do
     line $ "return " .+. pp ex .+. ";"
 

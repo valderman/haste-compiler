@@ -37,7 +37,7 @@ link cfg pkgid target = do
       myDefs = if wholeProgramOpts cfg
                  then topLevelInline flow ds
                  else ds
-      (progText, myMain') = prettyProg (ppOpts cfg) mainSym myDefs
+      (progText, myMain') = prettyProg cfg mainSym myDefs
       callMain = stringUtf8 "B(A(" <> myMain' <> stringUtf8 ", [0]));"
       launchApp = appStart cfg (stringUtf8 "hasteMain")
   
