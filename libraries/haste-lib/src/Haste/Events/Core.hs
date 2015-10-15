@@ -41,8 +41,8 @@ data HandlerInfo = HandlerInfo {
   }
 
 -- | Unregister an event handler.
-unregisterHandler :: HandlerInfo -> IO ()
-unregisterHandler (HandlerInfo ev el f) = unregEvt el ev f
+unregisterHandler :: MonadIO m => HandlerInfo -> m ()
+unregisterHandler (HandlerInfo ev el f) = liftIO $ unregEvt el ev f
 
 -- | Reference to the event currently being handled.
 {-# NOINLINE evtRef #-}
