@@ -94,6 +94,7 @@ data AttrName
   = PropName  !JSString
   | StyleName !JSString
   | AttrName  !JSString
+  deriving (Eq, Ord)
 
 instance IsString AttrName where
   fromString = PropName . fromString
