@@ -164,6 +164,7 @@ instance ImageBuffer AnyImageBuffer where
 
 instance IsElem Canvas where
   elemOf (Canvas _ctx e) = e
+  fromElem               = getCanvas
 
 instance IsElem Bitmap where
   elemOf (Bitmap e) = e
@@ -211,7 +212,7 @@ data Canvas = Canvas !Ctx !Elem
 
 instance FromAny Canvas where
   fromAny c = do
-    mcan <- fromAny c >>= getCanvas
+    mcan <- fromAny c >>= fromElem
     case mcan of
       Just can -> return can
       _        -> error "Attempted to turn a non-canvas element into a Canvas!"
@@ -267,6 +268,7 @@ getCanvasById eid = liftIO $ do
   e <- elemById (toJSString eid)
   maybe (return Nothing) getCanvas e
 
+{-# DEPRECATED getCanvas "use the more general fromElem instead." #-}
 -- | Create a 2D drawing context from a DOM element.
 getCanvas :: MonadIO m => Elem -> m (Maybe Canvas)
 getCanvas e = liftIO $ do

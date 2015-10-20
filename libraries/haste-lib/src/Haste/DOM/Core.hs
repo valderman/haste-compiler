@@ -80,7 +80,8 @@ class IsElem a where
   -- | Get the element representing the object.
   elemOf :: a -> Elem
 
-  -- | Attempt to create an object from an 'Elem'.
+  -- | Attempt to create a DOM element backed object from an 'Elem'.
+  --   The default instance always returns @Nothing@.
   fromElem :: Elem -> IO (Maybe a)
   fromElem = const $ return Nothing
 
