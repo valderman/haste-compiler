@@ -169,13 +169,12 @@ document = constant "document"
 documentBody :: Elem
 documentBody = constant "document.body"
 
--- | Append the first element as a child of the second element.
+-- | Append the second element as a child of the first.
 appendChild :: (IsElem parent, IsElem child, MonadIO m) => parent -> child -> m ()
 appendChild parent child = liftIO $ jsAppendChild (elemOf child) (elemOf parent)
 
 {-# DEPRECATED addChild "Use appendChild instead. Note that appendChild == flip addChild." #-}
--- | DEPRECATED: use 'appendChild' instead!
---   Note that @appendChild == flip addChild@.
+-- | Append the first element as a child of the second element.
 addChild :: (IsElem parent, IsElem child, MonadIO m) => child -> parent -> m ()
 addChild = flip appendChild
 
@@ -190,9 +189,11 @@ insertChildBefore parent oldChild child =
   liftIO $ jsAddChildBefore (elemOf child) (elemOf parent) (elemOf oldChild)
 
 {-# DEPRECATED addChildBefore "Use insertChildBefore instead. Note insertChildBefore == \\parent new old -> addChildBefore new parent old." #-}
--- | DEPRECATED: use 'insertChildBefore' instead!
---   Note that
---   @insertChildBefore == \parent new old -> addChildBefore new parent old@.
+-- | Insert an element into a container, before another element.
+--   For instance:
+-- @
+--   addChildBefore childToAdd theContainer olderChild
+-- @
 addChildBefore :: (IsElem parent, IsElem child, MonadIO m)
                => child -> parent -> child -> m ()
 addChildBefore child parent oldChild = insertChildBefore parent oldChild child
