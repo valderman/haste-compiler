@@ -2,7 +2,7 @@
 -- | DOM manipulation functions using 'JSString' for string representation.
 module Haste.DOM.JSString (
     -- From Haste.DOM.Core
-    AttrName (..), Attribute, IsElem (..), Elem,
+    AttrName (..), Attribute, IsElem (..), Elem (..),
     attribute, set, with, children,
     click, focus, blur, document, documentBody, appendChild, addChild,
     addChildBefore, insertChildBefore, getFirstChild, getLastChild, getChildren,
