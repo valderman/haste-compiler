@@ -123,6 +123,10 @@ instance Pretty Exp where
        then "(" .+. pp arr .+. ")"
        else pp arr
     "[" .+. pp ix .+. "]"
+  pp (Member obj m) = do
+    pp obj .+. "." .+. put m
+  pp (Obj members) = do
+    "{" .+. ppList "," members .+. "}"
   pp (Arr exs) = do
     "[" .+. ppList sep exs .+. "]"
   pp (AssignEx l r) = do
@@ -138,6 +142,9 @@ instance Pretty Exp where
     "new T(function(){" .+. newl .+. indent (pp x) .+. ind .+. "})"
   pp (Thunk False x) = do
     "new T(function(){" .+. newl .+. indent (pp x) .+. ind .+. "},1)"
+
+instance Pretty (BS.ByteString, Exp) where
+  pp (n, x) = put n .+. ":" .+. pp x
 
 instance Pretty (Var, Exp) where
   pp (v, ex) = pp v .+. sp .+. "=" .+. sp .+. pp ex

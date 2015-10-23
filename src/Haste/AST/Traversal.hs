@@ -79,7 +79,14 @@ instance JSTrav Exp where
                 (acc', arr') <- go acc arr
                 (acc'', ix') <- go acc' ix
                 return (acc'', Index arr' ix')
+              Member ex m    -> do
+                (acc', ex') <- go acc ex
+                return (acc', Member ex' m)
               Arr exs        -> fmap Arr <$> foldMapJS tr fe fs acc exs
+              Obj ms         -> do
+                let (ts, exs) = unzip ms
+                (acc', exs') <- foldMapJS tr fe fs acc exs
+                return (acc', Obj $ zip ts exs')
               AssignEx l r   -> do
                 (acc', l') <- go acc l
                 (acc'', r') <- go acc' r
@@ -113,7 +120,9 @@ instance JSTrav Exp where
               Fun _ stm       -> foldJS tr f acc stm
               Call _ _ fun xs -> go acc fun >>= flip (foldJS tr f) xs
               Index arr ix    -> go acc arr >>= flip go ix
+              Member obj _    -> go acc obj
               Arr exs         -> foldJS tr f acc exs
+              Obj ms          -> foldJS tr f acc (map snd ms)
               AssignEx l r    -> go acc l >>= flip go r
               IfEx c th el    -> do
                 acc' <- go acc c

@@ -249,13 +249,18 @@ ifReturnToTernary ast = do
     opt stm =
       pure stm
 
--- | Turn occurrences of [a,b][1] into b.
+-- | Turn occurrences of @[a,b][1]@ or @{... x:b ...}.b@ into b.
 optimizeArrays :: JSTrav ast => ast -> TravM ast
 optimizeArrays ast =
     mapJS (const True) inlEx return ast
   where
     inlEx (Index (Arr xs) (Lit (LNum n))) =
       return $ xs !! truncate n
+    inlEx (Member (Obj xs) key) =
+      case lookup key xs of
+        Just x -> return x
+        _      -> error $  "Bad object literal deref: member " ++ show key
+                        ++ " doesn't exist!"
     inlEx x =
       return x
 
@@ -623,7 +628,9 @@ tailLoopify f fun@(Fun args body) = do
     contains (Fun _ _) _          = False
     contains (Call _ _ f' xs) var = f' `contains` var||any (`contains` var) xs
     contains (Index a i) var      = a `contains` var || i `contains` var
+    contains (Member o _) var     = o `contains` var
     contains (Arr xs) var         = any (`contains` var) xs
+    contains (Obj xs) var         = any (`contains` var) (map snd xs)
     contains (AssignEx l r) var   = l `contains` var || r `contains` var
     contains (IfEx c t e) var     = any (`contains` var) [c,t,e]
     contains (Eval x) var         = x `contains` var

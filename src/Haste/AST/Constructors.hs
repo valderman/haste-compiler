@@ -6,7 +6,7 @@
 module Haste.AST.Constructors where
 import Haste.AST.Syntax
 import Haste.AST.Op
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as BS
 
 -- | Literal types.
@@ -183,3 +183,16 @@ assignEx = AssignEx
 -- | Terminate a statement without doing anything at all.
 stop :: Stm
 stop = Stop
+
+-- | Data constructor application.
+--   TODO: @'a'..@ as the args list fails miserably for types with 27+ args.
+conApp :: Exp -> [Exp] -> Exp
+conApp tag = Obj . ((conTagField, tag) :) . zip (map BS.singleton ['a'..])
+
+-- | Get the data constructor tag of an object.
+getTag :: Exp -> Exp
+getTag e = e `select` conTagField
+
+-- | Get a member from an object.
+select :: Exp -> BS.ByteString -> Exp
+select = Member

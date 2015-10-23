@@ -67,6 +67,8 @@ instance Binary Exp where
   put (IfEx c th el)  = putWord8 10 >> put c >> put th >> put el
   put (Eval x)        = putWord8 11 >> put x
   put (Thunk upd x)   = putWord8 12 >> put upd >> put x
+  put (Member o m)    = putWord8 13 >> put o >> put m
+  put (Obj xs)        = putWord8 14 >> put xs
   
   get = do
     tag <- getWord8
@@ -84,6 +86,8 @@ instance Binary Exp where
       10  -> IfEx <$> get <*> get <*> get
       11 -> Eval <$> get
       12 -> Thunk <$> get <*> get
+      13 -> Member <$> get <*> get
+      14 -> Obj <$> get
       n  -> error $ "Bad tag in get :: Get Exp: " ++ show n
 
 instance Binary Stm where

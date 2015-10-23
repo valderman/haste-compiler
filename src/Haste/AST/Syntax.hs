@@ -110,7 +110,9 @@ data Exp where
   Fun       :: ![Var] -> !Stm -> Exp
   Call      :: !Arity -> !Call -> !Exp -> ![Exp] -> Exp
   Index     :: !Exp -> !Exp -> Exp
+  Member    :: !Exp -> !BS.ByteString -> Exp
   Arr       :: ![Exp] -> Exp
+  Obj       :: ![(BS.ByteString, Exp)] -> Exp
   AssignEx  :: !Exp -> !Exp -> Exp
   IfEx      :: !Exp -> !Exp -> !Exp -> Exp
   Eval      :: !Exp -> Exp
@@ -179,6 +181,14 @@ foreignModule = Module {
 --   printer to ignore assignments to it.
 blackHole :: LHS
 blackHole = LhsExp False $ Var blackHoleVar
+
+-- | Name of the data constructor tag field.
+conTagField :: BS.ByteString
+conTagField = "_"
+
+-- | The global "zero object", which represents @{_:0}@.
+zeroObject :: Exp
+zeroObject = Var $ Foreign "__Z"
 
 -- | The variable of the blackHole LHS.
 blackHoleVar :: Var

@@ -4,7 +4,7 @@ module Haste.AST (
     PPOpts (..), pretty, runPP, prettyProg, def,
     Arity, Comment, Name (..), Var (..), LHS, Call,
     Lit, Exp, Stm, Alt, Module (..),
-    foreignModule, moduleOf, pkgOf, blackHole, blackHoleVar, merge
+    foreignModule, moduleOf, pkgOf, blackHole, blackHoleVar, zeroObject, merge
   ) where
 import Haste.AST.Syntax
 import Haste.AST.Op as Op

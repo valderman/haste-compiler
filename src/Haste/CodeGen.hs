@@ -9,7 +9,7 @@ import Data.Word
 import Data.Char
 import Data.List (partition, foldl')
 import Data.Maybe (isJust)
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.UTF8 as BS
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -20,7 +20,7 @@ import FastString (unpackFS)
 
 -- AST stuff
 import Haste.AST as AST hiding ((.&.))
-import Haste.AST.Syntax as AST (Exp (..), Stm (..), LHS (..))
+import Haste.AST.Syntax as AST (Exp (..), Stm (..), LHS (..), Lit (..))
 
 -- General Haste stuff
 import Haste.Config
@@ -118,8 +118,10 @@ genEx (StgConApp con args) = do
         hi = n `shiftR` 32
     tooLarge n = n > 2147483647 || n < -2147483648
     -- Always inline enum-likes, bools are true/false, not 1/0.
-    mkCon l _ _ | isEnumerationDataCon con = return l
-    mkCon tag as ss = return $ array (tag : zipWith evaluate as ss)
+    mkCon l _ _
+      | isEnumerationDataCon con   = return l
+    mkCon (AST.Lit (LNum 0)) [] [] = return zeroObject
+    mkCon tag as ss                = return $ conApp tag (zipWith evaluate as ss)
     evaluate arg True = eval arg
     evaluate arg _    = arg
 genEx (StgOpApp op args _) = do
@@ -290,7 +292,6 @@ genCase t ex scrut alts = do
             continue $ case_ scrutinee defAlt' alts'
             return (varExp res)
   where
-    getTag s = index s (litN 0)
     cmp = case t of
       PrimAlt _ -> id
       AlgAlt tc -> if isEnumerationTyCon tc then id else getTag
@@ -319,14 +320,19 @@ genAlt scrut res (con, args, used, body) = do
     DataAlt c | tag <- genDataConTag c -> return (tag, )
   (args', used') <- genArgVarsPair (zip args used)
   addLocal args'
-  let binds = [bindVar v ix | (v, True, ix) <- zip3 args' used' [1..]]
+  let binds = [bindVar v ix | (v, True, ix) <- zip3 args' used' [0..]]
   (_, body') <- isolate $ do
     continue $ foldr (.) id binds
     retEx <- genEx body
     continue $ newVar False res retEx
   return $ construct body'
   where
-    bindVar v ix = newVar True v (index (varExp scrut) (litN ix))
+    bindVar v ix = newVar True v (select (varExp scrut) (tagNames !! ix))
+
+-- | Accessor names of data constructor tags.
+--   TODO: @'a'..@ falls apart for types with 27+ fields!
+tagNames :: [BS.ByteString]
+tagNames = map BS.singleton ['a'..]
 
 -- | Generate a result variable for the given scrutinee variable.
 genResultVar :: GHC.Var -> JSGen Config AST.Var
