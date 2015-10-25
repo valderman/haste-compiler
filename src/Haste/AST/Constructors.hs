@@ -185,13 +185,16 @@ stop :: Stm
 stop = Stop
 
 -- | Data constructor application.
---   TODO: @'a'..@ as the args list fails miserably for types with 27+ args.
 conApp :: Exp -> [Exp] -> Exp
-conApp tag = Obj . ((conTagField, tag) :) . zip (map BS.singleton ['a'..])
+conApp tag = Obj . ((dataConTagField, tag) :) . zip dataConFieldNames
 
--- | Get the data constructor tag of an object.
+-- | Get the data constructor tag of the given algebraic value.
 getTag :: Exp -> Exp
-getTag e = e `select` conTagField
+getTag e = e `select` dataConTagField
+
+-- | Get the @n@th field of the given algebraic value.
+getField :: Exp -> Int -> Exp
+getField e n = e `select` (dataConFieldNames !! n)
 
 -- | Get a member from an object.
 select :: Exp -> BS.ByteString -> Exp

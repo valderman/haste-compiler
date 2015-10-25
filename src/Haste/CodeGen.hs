@@ -320,19 +320,14 @@ genAlt scrut res (con, args, used, body) = do
     DataAlt c | tag <- genDataConTag c -> return (tag, )
   (args', used') <- genArgVarsPair (zip args used)
   addLocal args'
-  let binds = [bindVar v ix | (v, True, ix) <- zip3 args' used' [0..]]
+  let binds = [bindVar v ix | (v, True, ix) <- zip3 args' used' [0::Int .. ]]
   (_, body') <- isolate $ do
     continue $ foldr (.) id binds
     retEx <- genEx body
     continue $ newVar False res retEx
   return $ construct body'
   where
-    bindVar v ix = newVar True v (select (varExp scrut) (tagNames !! ix))
-
--- | Accessor names of data constructor tags.
---   TODO: @'a'..@ falls apart for types with 27+ fields!
-tagNames :: [BS.ByteString]
-tagNames = map BS.singleton ['a'..]
+    bindVar v = newVar True v . getField (varExp scrut)
 
 -- | Generate a result variable for the given scrutinee variable.
 genResultVar :: GHC.Var -> JSGen Config AST.Var

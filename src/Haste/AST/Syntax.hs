@@ -9,7 +9,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Map as M
 #endif
 import Haste.AST.Op
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS
 
 type Arity = Int
 type Comment = BS.ByteString
@@ -183,8 +183,17 @@ blackHole :: LHS
 blackHole = LhsExp False $ Var blackHoleVar
 
 -- | Name of the data constructor tag field.
-conTagField :: BS.ByteString
-conTagField = "_"
+dataConTagField :: BS.ByteString
+dataConTagField = "_"
+
+-- | Infinite list of data constructor names.
+dataConFieldNames :: [BS.ByteString]
+dataConFieldNames = names
+  where
+    prefix  = BS.singleton '_'
+    names   = concat [small, capital, map (BS.append prefix) names]
+    small   = map BS.singleton ['a'..'z']
+    capital = map BS.singleton ['A'..'Z']
 
 -- | The global "zero object", which represents @{_:0}@.
 zeroObject :: Exp
