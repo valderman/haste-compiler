@@ -7,6 +7,7 @@ import Haste.AST.Syntax
 import Haste.AST.Op
 import Haste.AST.FlowAnalysis
 import Haste.AST.Traversal
+import Haste.Config
 import Control.Applicative
 import Control.Monad
 import qualified Data.Map as M
@@ -24,10 +25,16 @@ fixTailCalls fun ast = do
     loopify stm =
       return stm
 
+-- | Apply the given optimization when enabled by the config.
+optWhen :: Bool -> (a -> TravM a) -> a -> TravM a
+optWhen doit opt
+  | doit      = opt
+  | otherwise = pure
+
 -- TODO: tryTernary may inline calls that would otherwise be in tail position
 --       which is something we'd really like to avoid.
-optimizeFun :: Var -> Exp -> Exp
-optimizeFun f ast =
+optimizeFun :: Config -> Var -> Exp -> Exp
+optimizeFun c f ast =
   runTravM $ do
     shrinkCase ast
     >>= inlineAssigns
@@ -36,16 +43,16 @@ optimizeFun f ast =
     >>= zapJSStringConversions
     >>= optimizeThunks
     >>= optimizeArrays
-    >>= fixTailCalls f
+    >>= optWhen (enableTailLoops c) (fixTailCalls f)
     >>= inlineShortJumpTailcall
-    >>= trampoline
+    >>= optWhen (enableProperTailcalls c) trampoline
     >>= ifReturnToTernary
     >>= smallStepInline
-    >>= inlineJSPrimitives
+    >>= optWhen (inlineJSPrim c) inlineJSPrimitives
     >>= mapJS (const True) pure (pure . removeNonsenseAssigns)
 
-topLevelInline :: Bool -> Stm -> Stm
-topLevelInline flowAnalysis ast =
+topLevelInline :: Config -> Stm -> Stm
+topLevelInline c ast =
   runTravM $ do
     pure ast
     >>= unevalLits
@@ -56,14 +63,15 @@ topLevelInline flowAnalysis ast =
     >>= smallStepInline
     >>= optimizeArrays
     >>= zapJSStringConversions
-    >>= inlineJSPrimitives
+    >>= optWhen (inlineJSPrim c) inlineJSPrimitives
     >>= removeUselessEvals
     >>= inlineAssigns
     >>= smallStepInline
     >>= inlineAssigns
-    >>= unTrampoline
+    >>= optWhen (detrampolineThreshold c > 0)
+                (unTrampoline $ detrampolineThreshold c)
     >>= inlineLiteralFunCalls
-    >>= if flowAnalysis then flowOpts else pure
+    >>= optWhen (flowAnalysisOpts c) flowOpts
 
 
 -- | Attempt to turn two case branches into a ternary operator expression.
@@ -444,13 +452,12 @@ gatherNonTailcalling stm = do
 --
 --   Note that we can only do this for fast calls, as we need to be able to
 --   know exactly what function is actually called upon saturated application.
-unTrampoline :: Stm -> TravM Stm
-unTrampoline = go >=> go >=> go
+unTrampoline :: Int -> Stm -> TravM Stm
+unTrampoline 0 s = pure s
+unTrampoline n s = do
+    ntcs <- gatherNonTailcalling s
+    mapJS (const True) (unTr ntcs) (unTC ntcs) s >>= unTrampoline (n-1)
   where
-    go s = do
-      ntcs <- gatherNonTailcalling s
-      mapJS (const True) (unTr ntcs) (unTC ntcs) s
-
     unTr ntcs (Call ar (Fast True) f@(Var v) xs)
       | v `S.member` ntcs =
         return $ Call ar (Fast False) f xs

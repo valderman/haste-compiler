@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types, PatternGuards #-}
 module Haste.Config (
   Config (..), AppStart, def, stdJSLibs, startCustom, fastMultiply,
-  safeMultiply, debugLib) where
+  safeMultiply, strictly32Bits, debugLib) where
 import Haste.AST.PP.Opts
 import Haste.AST.Syntax
 import Haste.AST.Constructors
@@ -149,6 +149,23 @@ data Config = Config {
     --   Defaults to True.
     optimize :: Bool,
 
+    -- | Enable tail loop transformation?
+    --   Defaults to True.
+    enableTailLoops :: Bool,
+
+    -- | Enable proper tailcalls?
+    --   Defaults to True.
+    enableProperTailcalls :: Bool,
+
+    -- | Inline @JSLit@ values?
+    --   Defaults to False.
+    inlineJSPrim :: Bool,
+
+    -- | Remove tailcalls and trampolines for tail call cycles provably
+    --   shorter than @N@ calls.
+    --   Defaults to 3.
+    detrampolineThreshold :: Int,
+
     -- | Bound tail call chains at @n@ stack frames.
     --   Defaults to 10.
     tailChainBound :: Int,
@@ -203,6 +220,10 @@ defConfig = Config {
     showOutputable        = const "No showOutputable defined in config!",
     mainMod               = Just ("main", "Main"),
     optimize              = True,
+    enableTailLoops       = True,
+    enableProperTailcalls = True,
+    inlineJSPrim          = False,
+    detrampolineThreshold = 3,
     tailChainBound        = 0,
     overwriteScrutinees   = False,
     annotateExternals     = False,

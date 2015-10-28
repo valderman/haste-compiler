@@ -4,6 +4,7 @@ import Haste.Config
 import Haste.Environment
 import Haste.AST.PP.Opts
 import Data.List
+import Data.Char (toLower)
 import Control.Shell ((</>))
 
 -- | Haste's command line options. The boolean indicates whether we're running
@@ -20,8 +21,8 @@ hasteOpts = [
            "qualified Haskell names.",
     Option "" ["debug"]
            (NoArg $ \cfg -> cfg {ppOpts = debugPPOpts (ppOpts cfg)}) $
-           "Output annotated, pretty-printed JavaScript code. Equivalent to " ++
-           "--annotate-externals --annotate-symbols --pretty-print.",
+           "Output annotated, pretty-printed JavaScript code. Equivalent " ++
+           "to --annotate-externals --annotate-symbols --pretty-print.",
     Option "" ["ddisable-js-opts"]
            (NoArg $ \cfg -> cfg {optimize = False}) $
            "Don't perform any optimizations on the JavaScript at all. " ++
@@ -32,18 +33,18 @@ hasteOpts = [
            "Trace primops. Not really useful unless Haste was booted with " ++
            "primop tracing enabled.",
     Option "" ["dont-link"]
-           (NoArg $ \cfg -> cfg {performLink = False}) $
+           (NoArg $ \cfg -> cfg {performLink = False})
            "Don't link generated .jsmod files into a .js blob.",
     Option "" ["full-unicode"]
            (NoArg fullUnicode) $
            "Enable full generalCategory Unicode support. " ++
            "May bloat output by upwards of 150 KB.",
     Option "?" ["help"]
-           (NoArg id) $
+           (NoArg id)
            "Display this message.",
     Option "" ["link-jslib"]
            (OptArg (\file cfg -> cfg {linkJSLib = True,
-                                      linkJSLibFile = file}) "FILE") $
+                                      linkJSLibFile = file}) "FILE")
            "Create a jslib file instead of an executable.",
     Option "" ["no-use-strict"]
            (NoArg $ \cfg -> cfg {useStrict = False}) $
@@ -60,23 +61,38 @@ hasteOpts = [
            "Shorthand for --start=onload.",
     Option "" ["opt-all"]
            (NoArg optAllSafe) $
-           "Enable all safe optimizations. Equivalent to --opt-minify " ++
-           "--opt-whole-program --opt-tail-chain-bound=20.",
+           "Enable all safe optimizations except minification. Individual " ++
+           "optimizations may be turned off using their individual flags.",
+    Option "" ["opt-detrampoline-threshold"]
+           (ReqArg setDetrampolineThreshold "N") $
+           "Remove trampolining and tail calls for provably finite tail " ++
+           "call chains shorter than N calls. Set to 0 to disable entirely.",
     Option "" ["opt-flow-analysis"]
-           (NoArg enableWholeProgramFlowAnalysis) $
+           (OptArg (setOpt (\x c -> c {flowAnalysisOpts = x})) "on/off") $
            "Enable whole program flow analysis. Highly experimental and " ++
            "possibly slow and/or incorrect. Don't use for now.",
+    Option "" ["opt-inline-ffi-primitives"]
+           (OptArg (setOpt (\x c -> c {inlineJSPrim = x})) "on/off")
+           "Inline FFI call primitives wherever possible.",
     Option "" ["opt-minify"]
-           (NoArg updateClosureCfg) $
+           (OptArg (setOpt updateClosureCfg) "on/off")
            "Minify JavaScript output using Google Closure compiler.",
     Option "" ["opt-minify-flag"]
            (ReqArg updateClosureFlags "FLAG") $
            "Pass a flag to Closure. " ++
            "To minify programs in strict mode, use " ++
            "--opt-minify-flag='--language_in=ECMASCRIPT5_STRICT'",
+    Option "" ["opt-proper-tailcalls"]
+           (OptArg (setOpt (\x c -> c {enableProperTailcalls=x})) "on/off") $
+           "Use trampolining to implement proper tail calls. " ++
+           "Enabled by default.",
     Option "" ["opt-tail-chain-bound"]
-           (ReqArg setTailChainBound "N") $
+           (ReqArg setTailChainBound "N")
            "Bound tailcall chains to N stack frames. Default is 1.",
+    Option "" ["opt-tail-loop-transform"]
+           (OptArg (setOpt (\x c -> c {enableTailLoops = x})) "on/off") $
+           "Optimize tail recursive functions into loops when possible. " ++
+           "Enabled by default.",
     Option "" ["opt-unsafe"]
            (NoArg optAllUnsafe) $
            "Enable all optimizations, safe and unsafe. Equivalent to " ++
@@ -86,7 +102,7 @@ hasteOpts = [
            "Enable unsafe Int arithmetic. Implies --opt-unsafe-mult " ++
            "--opt-vague-ints",
     Option "" ["opt-unsafe-mult"]
-           (NoArg unsafeMul) $
+           (OptArg (setOpt unsafeMul) "on/off") $
            "Use JavaScript's built-in multiplication operator for "
            ++ "fixed precision integer multiplication. This may speed "
            ++ "up Int multiplication by a factor of at least four, "
@@ -95,24 +111,25 @@ hasteOpts = [
            ++ "which support Math.imul, this optimization will likely be "
            ++ "slower than the default.",
     Option "" ["opt-vague-ints"]
-           (NoArg vagueInts) $
+           (OptArg (setOpt vagueInts) "on/off") $
            "Int math has 53 bits of precision, but gives incorrect "
            ++ "results rather than properly wrapping around when "
            ++ "those 53 bits are exceeded. Bitwise operations still "
            ++ "only work on the lowest 32 bits.",
     Option "" ["opt-whole-program"]
-           (NoArg enableWholeProgramOpts) $
+           (OptArg (setOpt enableWholeProgramOpts) "on/off") $
            "Perform optimizations over the whole program during linking. " ++
            "May significantly increase link time.",
     Option "" ["overwrite-scrutinees"]
            (NoArg $ \cfg -> cfg {overwriteScrutinees = True}) $
            "Overwrite scrutinees when evaluated rather than allocating " ++
-           "a new local for the evaluated value. This is largely experimental.",
+           "a new local for the evaluated value. This is largely " ++
+           "experimental.",
     Option "o" ["out"]
-           (ReqArg (\f cfg -> cfg {outFile = \_ _ -> f}) "FILE") $
+           (ReqArg (\f cfg -> cfg {outFile = \_ _ -> f}) "FILE")
            "Write JavaScript output to FILE.",
     Option "" ["outdir"]
-           (ReqArg (\d cfg -> cfg {targetLibPath = d}) "DIR") $
+           (ReqArg (\d cfg -> cfg {targetLibPath = d}) "DIR")
            "Write intermediate files to DIR.",
     Option "" ["output-html"]
            (NoArg $ \cfg -> cfg {outputHTML = True}) $
@@ -128,23 +145,23 @@ hasteOpts = [
            "Preserve Haskell names in JavaScript code as far as possible. " ++
            "Highly experimental and may break your code.",
     Option "" ["pretty-print"]
-           (NoArg $ \cfg -> cfg {ppOpts = withPretty (ppOpts cfg)}) $
+           (NoArg $ \cfg -> cfg {ppOpts = withPretty (ppOpts cfg)})
            "Pretty-print JavaScript output.",
     Option "" ["start"]
            (ReqArg (\start cfg -> cfg {appStart = startCustom start})
                    "CODE") $
-           "Specify custom start code. '$HASTE_MAIN' will be replaced with " ++
-           "the application's main function. For instance, " ++
+           "Specify custom start code. '$HASTE_MAIN' will be replaced " ++
+           "with the application's main function. For instance, " ++
            "--start='$(\"foo\").onclick($HASTE_MAIN);' " ++
-           "will use jQuery to launch the application whenever the element " ++
-           "with the id \"foo\" is clicked.",
+           "will use jQuery to launch the application whenever the " ++
+           "element with the id \"foo\" is clicked.",
     Option "" ["output-jsflow"]
            (NoArg enableJSFlow) $
            "Output code for use with the JSFlow interpreter. Note that " ++
            "this may leave your code crippled, since JSFlow doesn't " ++
            "all of Haste's needs.",
     Option "v" ["verbose"]
-           (NoArg $ \cfg -> cfg {verbose = True}) $
+           (NoArg $ \cfg -> cfg {verbose = True})
            "Display even the most obnoxious warnings and messages.",
     Option "" ["with-js"]
            (ReqArg (\js c -> c {jsExternals = jsExternals c ++ commaBreak js})
@@ -180,25 +197,35 @@ commaBreak s  =
     (w, ws) -> w : commaBreak (drop 1 ws)
 
 -- | Don't wrap Ints.
-vagueInts :: Config -> Config
-vagueInts cfg = cfg {wrapIntMath = id}
+vagueInts :: Bool -> Config -> Config
+vagueInts True cfg  = cfg {wrapIntMath = id}
+vagueInts False cfg = cfg {wrapIntMath = strictly32Bits}
 
 -- | Use fast but unsafe multiplication.
-unsafeMul :: Config -> Config
-unsafeMul cfg = cfg {multiplyIntOp = fastMultiply}
+unsafeMul :: Bool -> Config -> Config
+unsafeMul True cfg  = cfg {multiplyIntOp = fastMultiply}
+unsafeMul False cfg = cfg {multiplyIntOp = safeMultiply}
 
--- | Enable all unsafe math ops. Remember to update the info text when changing
---   this!
+-- | Enable all unsafe math ops. Remember to update the info text when
+--   changing this!
 unsafeMath :: Config -> Config
-unsafeMath = vagueInts . unsafeMul
+unsafeMath = vagueInts True . unsafeMul True
 
 -- | Enable all optimizations, both safe and unsafe.
 optAllUnsafe :: Config -> Config
-optAllUnsafe = optAllSafe . unsafeMath . enableWholeProgramOpts
+optAllUnsafe = optAllSafe . unsafeMath
 
 -- | Enable all safe optimizations.
 optAllSafe :: Config -> Config
-optAllSafe = enableWholeProgramOpts . updateClosureCfg . setTailChainBound "20"
+optAllSafe cfg = cfg {
+    wholeProgramOpts      = True,
+    tailChainBound        = 20,
+    detrampolineThreshold = 3,
+    inlineJSPrim          = True,
+    enableProperTailcalls = True,
+    enableTailLoops       = True,
+    optimize              = True
+  }
 
 -- | Set the tail call chain bound.
 setTailChainBound :: String -> Config -> Config
@@ -207,9 +234,17 @@ setTailChainBound s cfg =
     [(n, "")] -> cfg {tailChainBound = n}
     _         -> cfg {tailChainBound = 0}
 
+-- | Set the call chain threshold for detrampolining.
+setDetrampolineThreshold :: String -> Config -> Config
+setDetrampolineThreshold s cfg =
+  case reads s of
+    [(n, "")] -> cfg {detrampolineThreshold = n}
+    _         -> cfg {detrampolineThreshold = 0}
+
 -- | Set the path to the Closure compiler.jar to use.
-updateClosureCfg :: Config -> Config
-updateClosureCfg cfg = cfg {useGoogleClosure = Just closureCompiler}
+updateClosureCfg :: Bool -> Config -> Config
+updateClosureCfg True cfg  = cfg {useGoogleClosure = Just closureCompiler}
+updateClosureCfg False cfg = cfg {useGoogleClosure = Nothing}
 
 -- | Add flags for Google Closure to use
 updateClosureFlags :: String -> Config -> Config
@@ -217,12 +252,24 @@ updateClosureFlags arg cfg = cfg {
   useGoogleClosureFlags = useGoogleClosureFlags cfg ++ commaBreak arg}
 
 -- | Enable optimizations over the entire program.
-enableWholeProgramOpts :: Config -> Config
-enableWholeProgramOpts cfg = cfg {wholeProgramOpts = True}
+enableWholeProgramOpts :: Bool -> Config -> Config
+enableWholeProgramOpts x cfg = cfg {wholeProgramOpts = x}
 
--- | Enable whole program flow analysis optimizations.
-enableWholeProgramFlowAnalysis :: Config -> Config
-enableWholeProgramFlowAnalysis cfg = cfg {flowAnalysisOpts = True}
+-- | Set the value of an option with optional flags.
+--   @--option@ means enable the option, as does
+--   @--option=on|true|1|yes|enable@.
+--   @--option=off|false|1|no|disable@ means to disable the option.
+--   Flag arguments are case insensitive.
+setOpt :: (Bool -> Config -> Config) -> Maybe String -> Config -> Config
+setOpt set Nothing     = set True
+setOpt set (Just s)
+  | s' `elem` trueish  = set True
+  | s' `elem` falseish = set False
+  | otherwise          = error $ "Bad config flag boolean value: " ++ s
+  where
+    s' = map toLower s
+    trueish  = ["on",  "true",  "1", "yes", "enable"]
+    falseish = ["off", "false", "0", "no",  "disable"]
 
 -- | Produce output for the JSFlow interpreter.
 enableJSFlow :: Config -> Config

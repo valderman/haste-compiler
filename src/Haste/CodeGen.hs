@@ -39,7 +39,7 @@ generate cfg stg =
       modDefs        = foldl' insFun M.empty theMod
     }
   where
-    opt = if optimize cfg then optimizeFun else const id
+    opt = if optimize cfg then optimizeFun cfg else const id
     theMod = genAST cfg (GHC.modName stg) (modCompiledModule stg)
 
     insFun m (_, Assign (NewVar _ v@(Internal n _ _)) body _) =
