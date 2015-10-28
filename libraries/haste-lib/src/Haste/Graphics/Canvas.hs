@@ -83,15 +83,15 @@ jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
 jsDrawImage = ffi "(function(ctx,i,x,y){ctx.drawImage(i,x,y);})"
 
 jsDrawImageClipped :: Ctx -> Elem
-                                        -> Double -> Double
-                                        -> Double -> Double -> Double -> Double 
-                                        -> IO ()
+                   -> Double -> Double
+                   -> Double -> Double -> Double -> Double
+                   -> IO ()
 jsDrawImageClipped = ffi "(function(ctx, img, x, y, cx, cy, cw, ch){\
 ctx.drawImage(img, cx, cy, cw, ch, x, y, cw, ch);})"
 
 jsDrawImageScaled :: Ctx -> Elem
-                                        -> Double -> Double -> Double -> Double
-                                        -> IO ()
+                  -> Double -> Double -> Double -> Double
+                  -> IO ()
 jsDrawImageScaled = ffi "(function(ctx, img, x, y, w, h){\
 ctx.drawImage(img, x, y, w, h);})"
 
