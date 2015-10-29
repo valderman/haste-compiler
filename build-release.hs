@@ -79,8 +79,9 @@ buildPortable = do
     run_ "cabal" ["haddock"] ""
     run_ "dist/setup/setup" ["build"] ""
 
-    -- Copy docs
+    -- Copy docs and build manpages
     cpDir "dist/doc/html/haste-compiler" "haste-compiler/docs"
+    buildManPages
 
     -- Strip symbols
     case os of
@@ -125,11 +126,25 @@ bootPortable = do
   where
     f `hasExt` e = takeExtension f == e
 
+buildManPages = do
+    mkdir True "man"
+    buildManPage "hastec"
+    buildManPage "haste-cat"
+  where
+    buildManPage inf = run_ "pandoc" ["-s", "-o", outf, inf'] ""
+      where
+        ext | os == "mingw32" = "html"
+            | otherwise       = "1"
+        outf = "man" </> inf <.> ext
+        inf' = "doc" </> inf <.> "1.md"
+
 buildBinaryTarball ver ghcver = do
-    -- Get versions and create binary tarball
+    -- Copy manpages
     mkdir True "haste-compiler/man"
     cpDir "man/hastec.1" "haste-compiler/man/hastec.1"
     cpDir "man/haste-cat.1" "haste-compiler/man/haste-cat.1"
+
+    -- Get versions and create binary tarball
     cp "install.sh" "haste-compiler/install.sh"
     cp "uninstall.sh" "haste-compiler/uninstall.sh"
     cp "doc/readme-portable-linux.txt" "haste-compiler/readme.txt"
@@ -144,6 +159,11 @@ buildBinaryTarball ver ghcver = do
       concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",os,".tar.bz2"]
 
 buildBinary7z ver ghcver = do
+    -- Copy HTML "manpages"
+    mkdir True "haste-compiler/man"
+    cpDir "man/hastec.html" "haste-compiler/man/hastec.html"
+    cpDir "man/haste-cat.html" "haste-compiler/man/haste-cat.html"
+
     -- Get versions and create binary tarball
     run_ "7z" ["a", "-i!haste-compiler", name] ""
     return $ name
