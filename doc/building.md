@@ -19,6 +19,7 @@ bootstrap Haste.
   * GHC >= 7.8 && < 7.11
   * libgmp
   * libffi
+  * pandoc (to build man pages)
 
 ### Additional Windows dependencies
 
