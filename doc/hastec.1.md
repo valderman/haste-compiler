@@ -156,6 +156,11 @@ Passing an optimization option without this argument turns the optimization
 :   Enable all safe optimizations except minification. Individual optimizations
     may be turned off using their individual flags.
 
+--opt-anonymous-objects-only[=*on*|*off*]
+:   Only use anonymous objects to represent algebraic data types. This will
+    make all programs slightly smaller, some programs slightly faster,
+    and some programs a lot slower.
+
 --opt-detrampoline-threshold=*N*
 :   Remove trampolining and tail calls for provably finite tail call chains
     shorter than *N* calls. Set to *0* to disable. A value of *N=3* is implied

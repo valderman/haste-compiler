@@ -125,6 +125,8 @@ instance Pretty Exp where
     "[" .+. pp ix .+. "]"
   pp (Member obj m) = do
     pp obj .+. "." .+. put m
+  pp (Obj ms) | and $ zipWith (==) ["_","a","b","c","d","e"] (map fst ms) =
+    ppADT ms
   pp (Obj members) = do
     "{" .+. ppList "," members .+. "}"
   pp (Arr exs) = do
@@ -142,6 +144,16 @@ instance Pretty Exp where
     "new T(function(){" .+. newl .+. indent (pp x) .+. ind .+. "})"
   pp (Thunk False x) = do
     "new T(function(){" .+. newl .+. indent (pp x) .+. ind .+. "},1)"
+
+-- | Pretty-print an object representing an ADT.
+ppADT :: [(BS.ByteString, Exp)] -> PP ()
+ppADT ms = do
+    useClassy <- getCfg useClassyObjects
+    if useClassy && args <= 6
+      then "new T" .+. put args .+. "(" .+. ppList "," (map snd ms) .+. ")"
+      else "{" .+. ppList "," ms .+. "}"
+  where
+    args = length ms-1
 
 instance Pretty (BS.ByteString, Exp) where
   pp (n, x) = put n .+. ":" .+. pp x

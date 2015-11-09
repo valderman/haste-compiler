@@ -63,6 +63,11 @@ hasteOpts = [
            (NoArg optAllSafe) $
            "Enable all safe optimizations except minification. Individual " ++
            "optimizations may be turned off using their individual flags.",
+    Option "" ["opt-anonymous-objects-only"]
+           (OptArg (setOpt (\x c -> c {useClassyObjects = not x})) "on/off") $
+           "Only use anonymous objects to represent ADTs. Will make all " ++
+           "programs slightly smaller, some programs slightly faster, and " ++
+           "some programs a lot slower.",
     Option "" ["opt-detrampoline-threshold"]
            (ReqArg setDetrampolineThreshold "N") $
            "Remove trampolining and tail calls for provably finite tail " ++

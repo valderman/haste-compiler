@@ -187,7 +187,11 @@ data Config = Config {
     -- | Emit @"use strict";@ declaration. Does not affect minification, but
     --   *does* affect any external JS.
     --   Defaults to True.
-    useStrict :: Bool
+    useStrict :: Bool,
+
+    -- | Use classy objects for small ADTs?
+    --   Defaults to True.
+    useClassyObjects :: Bool
   }
 
 -- | Default compiler configuration.
@@ -228,7 +232,8 @@ defConfig = Config {
     overwriteScrutinees   = False,
     annotateExternals     = False,
     annotateSymbols       = False,
-    useStrict             = True
+    useStrict             = True,
+    useClassyObjects      = True
   }
 
 instance Default Config where
