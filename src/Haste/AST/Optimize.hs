@@ -188,8 +188,12 @@ inlineAssigns ast = do
             else return keep
 
         -- Everything else: inline if only used once and doesn't contain
-        -- lambda-likes. Lambda-likes may be inlined if they occur exactly
-        -- once, and this occurrence is not in a lambda or a loop.
+        -- lambda-likes. Lambda-likes may *never* be inlined as they may be
+        -- referred to in a *previous* binding and thus be recursive without
+        -- us knowing. We could fix this if we collected information about
+        -- lambda dependencies properly before starting any inlining,
+        -- if the lambda-like occurs exactly once, and this occurrence is not
+        -- in a lambda or a loop.but for now we disallow it.
         ex | isSafe safe v -> do
           lambdaoccs <- occurrences (const True) (isLambda .|. isJSLit) ex
           recursive <- occurrences (const True) (isVar v) ex
@@ -657,7 +661,7 @@ inlineShortJumpTailcall :: JSTrav ast => ast -> TravM ast
 inlineShortJumpTailcall ast = do
     mapJS (const True) return inl ast
   where
-    inl stm@(Assign (NewVar _ f) (Fun as b) tc)
+    inl stm@(Assign (NewVar True f) (Fun as b) tc)
       | Just (f', as') <- getTailcallInfo tc, f == f' = do
         occs <- occurrences (const True) (isEqualTo f) b
         case (occs, zipAssign (map (NewVar True) as) as' b) of

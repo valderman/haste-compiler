@@ -34,7 +34,7 @@ generate :: Config -> StgModule -> AST.Module
 generate cfg stg =
   AST.Module {
       modPackageId   = BS.fromString $ GHC.modPackageKey stg,
-      AST.modName      = BS.fromString $ GHC.modName stg,
+      AST.modName    = BS.fromString $ GHC.modName stg,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
     }
@@ -187,13 +187,15 @@ genBindRec b =
 --   as their dependencies get merged into their parent's anyway.
 genBind :: Bool -> Maybe Int -> StgBinding -> JSGen Config ()
 genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
-  v' <- genVar v
-  pushBind v'
-  when (not onTopLevel) $ do
-    addLocal v'
-  expr <- genRhs (isJust funsInRecGroup) rhs
-  popBind
-  continue $ newVar True v' expr
+    v' <- genVar v
+    pushBind v'
+    when (not onTopLevel) $ do
+      addLocal v'
+    expr <- genRhs isRecursive rhs
+    popBind
+    continue $ newVar (not isRecursive) v' expr
+  where
+    isRecursive = isJust funsInRecGroup
 genBind _ _ (StgRec _) =
   error $  "genBind got recursive bindings!"
 
