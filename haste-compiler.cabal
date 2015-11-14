@@ -25,6 +25,7 @@ Data-Dir:
     lib
 
 Data-Files:
+    bn.js
     rts.js
     stdlib.js
     MVar.js

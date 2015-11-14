@@ -112,7 +112,7 @@ genEx (StgConApp con args) = do
           _             -> mkCon tag args' stricts'
   where
     mkInteger n =
-        array [litN 1, callForeign "I_fromBits" [array [lit lo, lit hi]]]
+        litN 1 `conApp`  [callForeign "I_fromBits" [lit lo, lit hi]]
       where
         lo = n .&. 0xffffffff
         hi = n `shiftR` 32
@@ -487,7 +487,7 @@ genLit l = do
       where
         lo = n .&. 0xffffffff
         hi = n `shiftR` 32
-    word64 n = callForeign "I_fromBits" [array [lit lo, lit hi]]
+    word64 n = callForeign "I_fromBits" [lit lo, lit hi]
       where
         lo = n .&. 0xffffffff
         hi = n `shiftR` 32

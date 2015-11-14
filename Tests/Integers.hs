@@ -26,5 +26,9 @@ runTest = return [
   num1 + num2,
   num1 * num2,
   num2 `div` num1,
+  num2 `mod` num1,
+  num2 `quot` num1,
+  num2 `rem` num1,
+  num2 - num1,
   (num2 `xor` num1) .&. 43042900,
   num4]
