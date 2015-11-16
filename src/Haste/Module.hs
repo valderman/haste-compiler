@@ -5,7 +5,6 @@ import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import Control.Shell
 import Control.Applicative
-import Control.Monad (when, filterM)
 import Haste.AST
 import Data.Binary
 import Data.List (isSuffixOf)
@@ -37,10 +36,9 @@ writeModule basepath m@(Module pkgid modname _ _) boot =
     mcompanion <- readMod basepath pkgstr modstr (not boot)
     m' <- case mcompanion of
             Just companion -> do
-              bootfileExists <- isFile bootpath
-              when bootfileExists $ rm bootpath
+              when (isFile bootpath) $ rm bootpath
               return $ merge' m companion
-            _              -> do
+            _              ->
               return m
     liftIO . B.writeFile path $ encode m'
   where
@@ -133,9 +131,10 @@ readMod basepath pkgid modname boot = do
     path = moduleFilePath "." pkgid modname boot
     syspath = moduleFilePath basepath pkgid modname boot
 
-fromRight :: String -> IO (Either String b) -> IO b
+fromRight :: String -> IO (Either ExitReason b) -> IO b
 fromRight from m = do
   ex <- m
   case ex of
     Right x -> return x
-    Left e  -> fail $ "shell expression failed in " ++ from ++ ": " ++ e
+    Left e  -> fail $ "shell expression failed in " ++ from ++ ": " ++
+                      exitString e

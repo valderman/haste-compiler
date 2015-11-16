@@ -1,28 +1,22 @@
 {-# LANGUAGE CPP #-}
 import Prelude hiding (read)
-import Network.HTTP
-import Network.Browser hiding (err)
-import Network.URI
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString as BS
 import Data.Version
 import Data.List (foldl')
 import Data.Maybe (fromJust)
 import Codec.Compression.BZip
 import Codec.Archive.Tar
-import System.Environment (getArgs)
-import System.Exit
-import Control.Monad
 import Haste.Environment
 import Haste.Version
 import Control.Shell
+import Control.Shell.Download
 import Data.Char (isDigit)
-import Control.Monad.IO.Class (liftIO)
 import Haste.Args
 import System.Console.GetOpt
 import GHC.Paths (libdir)
 import System.Info (os)
 import System.Directory (copyPermissions)
-import System.FilePath (takeDirectory)
 
 #if __GLASGOW_HASKELL__ >= 710
 ghcMajor = "7.10"
@@ -33,20 +27,6 @@ ghcMajor = "7.8"
 libDir = "ghc-7.8"
 primVersion = "0.3.0.0"
 #endif
-
-downloadFile :: String -> Shell BS.ByteString
-downloadFile f = do
-  (_, rsp) <- liftIO $ Network.Browser.browse $ do
-    setAllowRedirects True
-    request $ Request {
-        rqURI = fromJust $ parseURI f,
-        rqMethod = GET,
-        rqHeaders = [],
-        rqBody = BS.empty
-      }
-  case rspCode rsp of 
-    (2, _, _) -> return $ rspBody rsp
-    _         -> fail $ "Failed to download " ++ f ++ ": " ++ rspReason rsp
 
 data Cfg = Cfg {
     getLibs               :: Bool,
@@ -159,26 +139,21 @@ hdr = "Fetch, build and install all libraries necessary to use Haste.\n"
 data CabalOp = Configure | Build | Install | Clean
 
 main :: IO ()
-main = do
-  args <- getArgs
-  when ("--help" `elem` args || "-?" `elem` args) $ do
-    putStrLn $ printHelp hdr specs
-    exitSuccess
+main = shell_ $ do
+  when ("--help" `elem` cmdline || "-?" `elem` cmdline) $ do
+    echo $ printHelp hdr specs
+    exit
 
-  case getOpt Permute specs args of
+  case getOpt Permute specs cmdline of
     (cfgs, [], []) -> do
       let cfg = foldl' (flip (.)) id cfgs defCfg
       when (hasteNeedsReboot || forceBoot cfg) $ do
-        res <- shell $ if useLocalLibs cfg
-                         then bootHaste cfg "."
-                         else withTempDirectory "haste" $ bootHaste cfg
-        case res of
-          Right _  -> return ()
-          Left err -> putStrLn err >> exitFailure
-    (cfgs, nonopts, errs) -> do
-      mapM_ putStr errs
-      mapM_ (\x -> putStrLn $ "unrecognized option `" ++ x ++ "'") nonopts
-      exitFailure
+        if useLocalLibs cfg
+          then bootHaste cfg "."
+          else withTempDirectory "haste" $ bootHaste cfg
+    (cfgs, nopts, errs) -> do
+      let errors = errs ++ map (\x -> "unrecognized option `" ++ x ++ "'") nopts
+      fail $ unlines errors
 
 bootHaste :: Cfg -> FilePath -> Shell ()
 bootHaste cfg tmpdir =
@@ -211,7 +186,7 @@ bootHaste cfg tmpdir =
 
     when (getClosure cfg) $ do
       installClosure
-    file bootFile (showBootVersion bootVersion)
+    output bootFile (showBootVersion bootVersion)
 
 clearDir :: FilePath -> Shell ()
 clearDir dir = do
@@ -221,7 +196,7 @@ clearDir dir = do
 installHasteCabal :: Bool -> FilePath -> Shell ()
 installHasteCabal portable tmpdir = do
     echo "Downloading haste-cabal from GitHub"
-    f <- decompress `fmap` downloadFile hasteCabalUrl
+    f <- (decompress . BSL.fromChunks . (:[])) `fmap` fetchBytes hasteCabalUrl
     if os == "linux"
       then do
         mkdir True hasteCabalRootDir
@@ -229,9 +204,9 @@ installHasteCabal portable tmpdir = do
         liftIO $ copyPermissions
                     hasteBinary
                     (hasteCabalRootDir </> "haste-cabal/haste-cabal.bin")
-        file (hasteBinDir </> hasteCabalFile) launcher
+        output (hasteBinDir </> hasteCabalFile) launcher
       else do
-        liftIO $ BS.writeFile (hasteBinDir </> hasteCabalFile) f
+        liftIO $ BSL.writeFile (hasteBinDir </> hasteCabalFile) f
     liftIO $ copyPermissions hasteBinary (hasteBinDir </> hasteCabalFile)
   where
     baseUrl = "http://valderman.github.io/haste-libs/"
@@ -265,8 +240,8 @@ installHasteCabal portable tmpdir = do
 fetchLibs :: FilePath -> Shell ()
 fetchLibs tmpdir = do
     echo "Downloading base libs from GitHub"
-    file <- downloadFile $ mkUrl hasteVersion
-    liftIO . unpack tmpdir . read . decompress $ file
+    file <- fetchBytes $ mkUrl hasteVersion
+    liftIO . unpack tmpdir . read . decompress $ BSL.fromChunks [file]
   where
     mkUrl v =
       "http://valderman.github.io/haste-libs/haste-libs-" ++ showVersion v ++ ".tar.bz2"
@@ -279,7 +254,7 @@ installClosure = do
       echo "Couldn't install Closure compiler; continuing without."
   where
     downloadClosure = do
-      downloadFile closureURI >>= (liftIO . BS.writeFile closureCompiler)
+      fetchBytes closureURI >>= (liftIO . BS.writeFile closureCompiler)
     closureURI =
       "http://valderman.github.io/haste-libs/compiler.jar"
 
@@ -288,7 +263,7 @@ buildLibs :: Cfg -> Shell ()
 buildLibs cfg = do
     -- Set up dirs and copy includes
     mkdir True $ pkgSysLibDir
-    cpDir "include" hasteSysDir
+    cpdir "include" hasteSysDir
 
     inDirectory ("utils" </> "unlit") $ do
       let out    = if os == "mingw32" then "unlit.exe" else "unlit"

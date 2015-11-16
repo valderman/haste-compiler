@@ -15,7 +15,6 @@ import Data.Bits
 import Foreign.C.Types (CIntPtr)
 import Control.Shell hiding (hClose)
 import Paths_haste_compiler
-import System.IO
 import System.Info
 import Haste.GHCPaths (ghcPkgBinary, ghcBinary)
 import Haste.Version
@@ -149,18 +148,12 @@ hasteNeedsReboot :: Bool
 #ifdef PORTABLE
 hasteNeedsReboot = False
 #else
-hasteNeedsReboot = unsafePerformIO $ do
-  exists <- shell $ isFile bootFile
-  case exists of
-    Right True -> do
-      fh <- openFile bootFile ReadMode
-      bootedVerString <- hGetLine fh
-      hClose fh
-      case parseBootVersion bootedVerString of
-        Just (BootVer hasteVer ghcVer) ->
-          return $ hasteVer /= hasteVersion || ghcVer /= ghcVersion
-        _ ->
-          return True
-    _ -> do
-      return True
+Right hasteNeedsReboot = unsafePerformIO . shell $ do
+  (guard (not <$> isFile bootFile) >> pure True) `orElse` do
+    bootedVerString <- withFile bootFile ReadMode hGetLine
+    case parseBootVersion bootedVerString of
+      Just (BootVer hasteVer ghcVer) ->
+        return $ hasteVer /= hasteVersion || ghcVer /= ghcVersion
+      _ ->
+        return True
 #endif

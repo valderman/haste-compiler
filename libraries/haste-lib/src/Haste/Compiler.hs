@@ -33,22 +33,22 @@ compile cf dir inp = do
     inTempDirectory $ do
       fil <- case inp of
         InFile f   -> return $ if isRelative f then incdir curdir </> f else f
-        InString s -> file "Main.hs" s >>= \() -> return "Main.hs"
-      (f,_,e) <- genericRun hasteBinary (fil : idir curdir : mkFlags cf) ""
-      if not f
+        InString s -> output "Main.hs" s >> return "Main.hs"
+      (f, _, e) <- genericRun hasteBinary (fil : idir curdir : mkFlags cf) ""
+      if f /= 0
         then do
-          return $ Failure e
+          return $ Haste.Compiler.Failure e
         else do
           case cfTarget cf of
             TargetFile tgt -> do
-              return $ Success $ OutFile tgt
+              return $ Haste.Compiler.Success $ OutFile tgt
             TargetString -> do
-              (Success . OutString) `fmap` file "haste.out"
+              (Haste.Compiler.Success . OutString) `fmap` input "haste.out"
   case eresult of
     Right result ->
       return result
-    Left e ->
-      return $ Failure $ "Run-time failure during compilation: " ++ e
+    Left e -> return $ Haste.Compiler.Failure $
+        "Run-time failure during compilation: " ++ exitString e
   where
     incdir cur = if isRelative dir then cur </> dir else dir
     idir cur = "-i" ++ incdir cur

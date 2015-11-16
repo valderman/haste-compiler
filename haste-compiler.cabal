@@ -93,7 +93,7 @@ Executable haste-boot
         network,
         network-uri,
         HTTP,
-        shellmate >= 0.1.5,
+        shellmate >= 0.2,
         ghc-paths,
         ghc,
         directory,

@@ -165,13 +165,13 @@ linkAndMinify cfg pkgkey infile = do
       _            -> return ()
     when (outputHTML cfg) $ do
       res <- Sh.shell $ Sh.withCustomTempFile "." $ \tmp h -> do
-        prog <- Sh.file outfile
+        prog <- Sh.input outfile
         Sh.hPutStrLn h (htmlSkeleton outfile prog)
         Sh.liftIO $ hClose h
         Sh.mv tmp outfile
       case res of
         Right () -> return ()
-        Left err -> error $ "Couldn't output HTML file: " ++ err
+        Left err -> error $ "Couldn't output HTML file: " ++ Sh.exitString err
   where
     outfile = outFile cfg cfg infile
 
@@ -197,10 +197,11 @@ closurize cfg cloPath f = do
         "--compilation_level", "ADVANCED_OPTIMIZATIONS",
         "--jscomp_off", "globalThis", f]
        ++ arguments) ""
-    Sh.file cloFile str :: Sh.Shell ()
+    Sh.output cloFile str
     Sh.mv cloFile f
   case res of
-    Left e  -> fail $ "Couldn't execute Google Closure compiler: " ++ e
+    Left e  -> fail $ "Couldn't execute Google Closure compiler: " ++
+                      Sh.exitString e
     Right _ -> return ()
 
 -- | Call vanilla GHC; used for C files and the like.
