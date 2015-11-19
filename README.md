@@ -121,7 +121,7 @@ Finally, you can interact with JavaScript code using the `Haste.Foreign`
 module in the bundled `haste-lib` library.
 See `doc/js-externals.txt` for more information about that.
 This library also contains all sorts of functionality for DOM manipulation,
-event handling, cooperative multitasking, canvas graphics, native JS
+event handling, preemptive multitasking, canvas graphics, native JS
 string manipulation, etc.
 
 For more information on how Haste works, see
