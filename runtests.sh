@@ -24,7 +24,9 @@ runTest() {
     ghc_stderr_file=`mktemp`
     echo "Running test $module..."
 
-    ghc_output=`cabal exec runghc -- -w -DTEST_MODULE=$module TestDriver.hs 2> $ghc_stderr_file`
+    cabal exec ghc -- -O0 --make -o runtest.tmp -w -DTEST_MODULE=$module TestDriver.hs > /dev/null 2> /dev/null
+    ghc_output=`./runtest.tmp 2> $ghc_stderr_file`
+    rm runtest.tmp
 
     if [[ $quiet == 1 ]] ; then
         $hastec -fforce-recomp --onexec -O0 -DTEST_MODULE=$module TestDriver.hs > /dev/null 2>&1
