@@ -121,7 +121,6 @@ Executable hastec
         mtl,
         binary,
         containers,
-        data-default,
         bytestring >= 0.10.4,
         utf8-string,
         array,
@@ -231,7 +230,6 @@ Executable haste-cat
         bytestring,
         array,
         random,
-        data-default,
         mtl,
         directory,
         utf8-string
@@ -304,7 +302,6 @@ Library
         utf8-string,
         -- For Haste.Compiler
         shellmate >= 0.2,
-        data-default,
         directory,
         filepath,
         process,

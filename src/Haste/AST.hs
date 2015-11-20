@@ -1,7 +1,7 @@
 -- | Haste's intermediate JavaScript representation.
 module Haste.AST (
     module Constr, module Op, module Optimize, module Trav, module Opts,
-    PPOpts (..), pretty, runPP, prettyProg, def,
+    PPOpts (..), pretty, runPP, prettyProg,
     Arity, Comment, Name (..), Var (..), LHS, Call,
     Lit, Exp, Stm, Alt, Module (..),
     foreignModule, moduleOf, pkgOf, blackHole, blackHoleVar, zeroObject, merge
@@ -15,4 +15,3 @@ import Haste.AST.PP.Opts as Opts
 import Haste.AST.Print as Print ()
 import Haste.AST.Binary ()
 import Haste.AST.Traversal as Trav
-import Data.Default (def)

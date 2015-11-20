@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 -- | Haste's main compiler driver.
 module Main where
-import Language.Haskell.GHC.Simple
+import Language.Haskell.GHC.Simple as GHC
 #if __GLASGOW_HASKELL__ >= 710
 import Language.Haskell.GHC.Simple.PrimIface
 import Packages
@@ -51,7 +51,7 @@ main = do
         extralibdirs <- getExtraLibDirs dfs
         let cfg = mkLinkerCfg dfs extralibdirs
                 . setShowOutputable dfs
-                $ mkConfig def
+                $ mkConfig Haste.Config.defaultConfig
         res <- compileFold ghcconfig (compJS cfg) ([], []) []
         case res of
           Failure _ _         -> do
@@ -98,7 +98,7 @@ main = do
         then return $ (modpair : targets, modName m : mods)
         else return (targets, modName m : mods)
 
-    mkGhcCfg fs args = disableCodeGen $ defaultConfig {
+    mkGhcCfg fs args = disableCodeGen $ GHC.defaultConfig {
         cfgGhcFlags = fs,
         cfgGhcLibDir = Just hasteGhcLibDir,
         cfgUseTargetsFromFlags = True,

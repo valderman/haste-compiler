@@ -18,7 +18,7 @@ main = do
 
 printModule mpkg = do
   let (pkg, (_:mn)) = break (== ':') mpkg
-      paths = "." : libPaths def
+      paths = "." : libPaths defaultConfig
   mods <- mapM (\p -> (p, ) `fmap` readModule p pkg mn) paths
   case filter (isJust . snd) mods of
     ((p, Just m):_) -> printDefs p pkg mn m
@@ -33,7 +33,9 @@ printDefs path pkg mn m = do
   mapM_ printDef $ M.toList $ modDefs m
 
 printDef (name, d) = do
-  let cfg = def {ppOpts = withPretty . withExtAnnotation $ withAnnotations def}
+  let cfg = defaultConfig {
+          ppOpts = withPretty . withExtAnnotation $ withAnnotations defaultPPOpts
+        }
   BS.putStrLn $ niceName name
   BSL.putStrLn $ pretty cfg d
   putStrLn ""

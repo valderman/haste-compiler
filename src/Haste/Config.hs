@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types, PatternGuards #-}
 module Haste.Config (
-  Config (..), AppStart, def, stdJSLibs, startCustom, fastMultiply,
+  Config (..), AppStart, defaultConfig, stdJSLibs, startCustom, fastMultiply,
   safeMultiply, strictly32Bits, debugLib) where
 import Haste.AST.PP.Opts
 import Haste.AST.Syntax
@@ -11,7 +11,6 @@ import Data.ByteString.Builder
 import Data.Monoid
 import Haste.Environment
 import Outputable (Outputable)
-import Data.Default
 import Data.List (stripPrefix, nub)
 
 type AppStart = Builder -> Builder
@@ -195,14 +194,14 @@ data Config = Config {
   }
 
 -- | Default compiler configuration.
-defConfig :: Config
-defConfig = Config {
+defaultConfig :: Config
+defaultConfig = Config {
     rtsLibs               = stdJSLibs,
     libPaths              = nub [jsmodUserDir, jsmodSysDir],
     targetLibPath         = ".",
     appStart              = startOnLoadComplete,
     wrapProg              = False,
-    ppOpts                = def,
+    ppOpts                = defaultPPOpts,
     outFile               = \cfg f -> let ext = if outputHTML cfg
                                                   then "html"
                                                   else "js"
@@ -235,6 +234,3 @@ defConfig = Config {
     useStrict             = True,
     useClassyObjects      = True
   }
-
-instance Default Config where
-  def = defConfig

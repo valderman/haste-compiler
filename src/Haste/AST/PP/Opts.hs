@@ -2,7 +2,6 @@
 -- | Basic config types for Haste's pretty printer.
 module Haste.AST.PP.Opts where
 import Data.ByteString.Builder
-import Data.Default
 
 -- | Pretty-printing options
 data PPOpts = PPOpts {
@@ -15,16 +14,16 @@ data PPOpts = PPOpts {
     preserveNames      :: Bool     -- ^ Use STG names?
   }
 
-instance Default PPOpts where
-  def = PPOpts {
-      nameComments        = False,
-      externalAnnotation  = False,
-      useIndentation      = False,
-      indentStr           = "    ",
-      useNewlines         = False,
-      useSpaces           = False,
-      preserveNames       = False
-    }
+defaultPPOpts :: PPOpts
+defaultPPOpts = PPOpts {
+    nameComments        = False,
+    externalAnnotation  = False,
+    useIndentation      = False,
+    indentStr           = "    ",
+    useNewlines         = False,
+    useSpaces           = False,
+    preserveNames       = False
+  }
 
 -- | Print code using indentation, whitespace and newlines.
 withPretty :: PPOpts -> PPOpts
