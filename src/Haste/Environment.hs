@@ -10,17 +10,20 @@ module Haste.Environment (
     closureCompiler, bootFile,
     portableHaste, hasteNeedsReboot
   ) where
-import System.IO.Unsafe
+#if __GLASGOW_HASKELL__ <= 708
+import Control.Applicative
+#endif
+import Control.Shell
 import Data.Bits
 import Foreign.C.Types (CIntPtr)
-import Control.Shell hiding (hClose)
-import Paths_haste_compiler
 import System.Info
-import Haste.GHCPaths (ghcPkgBinary, ghcBinary)
-import Haste.Version
+import System.IO.Unsafe
 #if defined(PORTABLE)
 import System.Environment (getExecutablePath)
 #endif
+import Haste.GHCPaths (ghcPkgBinary, ghcBinary)
+import Haste.Version
+import Paths_haste_compiler
 
 -- | Subdirectory under Haste's root directory where all the stuff for this
 --   version lives. Use "windows" instead of "mingw32", since this is what
