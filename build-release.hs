@@ -2,7 +2,6 @@
 import Control.Shell
 import Data.Bits
 import System.Info (os)
-import Control.Monad
 import System.Environment (getArgs)
 import System.Exit
 
@@ -19,56 +18,51 @@ inBuildDir args act = do
 -- Packages will end up in ghc-$GHC_MAJOR.$GHC_MINOR. If the directory does
 -- not exist, it is created. If the package already exists in that directory,
 -- it is overwritten.
-main = do
-    args <- fixAllArg `fmap` getArgs
+main = shell_ $ do
+    let args = fixAllArg cmdline
     when (null args) $ do
-      putStrLn $ "Usage: runghc build-release.hs [no-rebuild|in-place] formats\n"
-      putStrLn $ "Supported formats: deb, tarball, 7z, all\n"
-      putStrLn $ "no-rebuild\n  Repackage whatever is already in the " ++
-                 "_build directory\n  instead of rebuilding from scratch."
-      putStrLn $ "in-place\n  Build package in current directory.\n" ++
-                 "  Packages end up in ghc-$GHC_MAJOR.$GHC_MINOR."
-      exitFailure
+      echo $ "Usage: runghc build-release.hs [no-rebuild|in-place] formats\n"
+      echo $ "Supported formats: deb, tarball, 7z, all\n"
+      echo $ "no-rebuild\n  Repackage whatever is already in the " ++
+             "_build directory\n  instead of rebuilding from scratch."
+      echo $ "in-place\n  Build package in current directory.\n" ++
+             "  Packages end up in ghc-$GHC_MAJOR.$GHC_MINOR."
+      exit
 
     when ("--debghcdeps" `elem` args) $ do
-      putStr "ghc"
-      exitSuccess
+      echo "ghc"
+      exit
 
     let inplace = "in-place" `elem` args
         chdir = if inplace then id else inBuildDir args
 
-    res <- shell $ do
-      chdir $ do
-        (ver, ghcver) <- if ("no-rebuild" `elem` args)
-                           then do
-                             getVersions
-                           else do
-                             vers <- buildPortable
-                             bootPortable
-                             return vers
+    chdir $ do
+      (ver, ghcver) <- if ("no-rebuild" `elem` args)
+                         then do
+                           getVersions
+                         else do
+                           vers <- buildPortable
+                           bootPortable
+                           return vers
 
-        let (major, '.':rest) = break (== '.') ghcver
-            (minor, _) = break (== '.') rest
-            outdir
-              | inplace   = "ghc-" ++ major ++ "." ++ minor
-              | otherwise = ".." </> ".." </> ("ghc-" ++ major ++ "." ++ minor)
-        mkdir True outdir
+      let (major, '.':rest) = break (== '.') ghcver
+          (minor, _) = break (== '.') rest
+          outdir
+            | inplace   = "ghc-" ++ major ++ "." ++ minor
+            | otherwise = ".." </> ".." </> ("ghc-" ++ major ++ "." ++ minor)
+      mkdir True outdir
 
-        when ("tarball" `elem` args) $ do
-          tar <- buildBinaryTarball ver ghcver
-          mv tar (outdir </> tar)
+      when ("tarball" `elem` args) $ do
+        tar <- buildBinaryTarball ver ghcver
+        mv tar (outdir </> tar)
 
-        when ("7z" `elem` args) $ do
-          f <- buildBinary7z ver ghcver
-          mv f (outdir </> f)
+      when ("7z" `elem` args) $ do
+        f <- buildBinary7z ver ghcver
+        mv f (outdir </> f)
 
-        when ("deb" `elem` args) $ do
-          deb <- buildDebianPackage ver ghcver
-          mv (".." </> deb) (outdir </> deb)
-
-    case res of
-      Left err -> error $ "FAILED: " ++ err
-      _        -> return ()
+      when ("deb" `elem` args) $ do
+        deb <- buildDebianPackage ver ghcver
+        mv (".." </> deb) (outdir </> deb)
   where
     fixAllArg args | "all" `elem` args = "deb" : "tarball" : "7z" : args
                    | otherwise         = args
@@ -80,7 +74,7 @@ buildPortable = do
     run_ "dist/setup/setup" ["build"] ""
 
     -- Copy docs and build manpages
-    cpDir "dist/doc/html/haste-compiler" "haste-compiler/docs"
+    cpdir "dist/doc/html/haste-compiler" "haste-compiler/docs"
     buildManPages
 
     -- Strip symbols
@@ -141,8 +135,8 @@ buildManPages = do
 buildBinaryTarball ver ghcver = do
     -- Copy manpages
     mkdir True "haste-compiler/man"
-    cpDir "man/hastec.1" "haste-compiler/man/hastec.1"
-    cpDir "man/haste-cat.1" "haste-compiler/man/haste-cat.1"
+    cp "man/hastec.1" "haste-compiler/man/hastec.1"
+    cp "man/haste-cat.1" "haste-compiler/man/haste-cat.1"
 
     -- Get versions and create binary tarball
     cp "install.sh" "haste-compiler/install.sh"
@@ -161,8 +155,8 @@ buildBinaryTarball ver ghcver = do
 buildBinary7z ver ghcver = do
     -- Copy HTML "manpages"
     mkdir True "haste-compiler/man"
-    cpDir "man/hastec.html" "haste-compiler/man/hastec.html"
-    cpDir "man/haste-cat.html" "haste-compiler/man/haste-cat.html"
+    cpdir "man/hastec.html" "haste-compiler/man/hastec.html"
+    cpdir "man/haste-cat.html" "haste-compiler/man/haste-cat.html"
 
     -- Get versions and create binary tarball
     run_ "7z" ["a", "-i!haste-compiler", name] ""
