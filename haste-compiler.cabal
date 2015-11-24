@@ -195,7 +195,7 @@ Executable haste-pkg
                    binary,
                    bin-package-db,
                    bytestring,
-                   shellmate  >= 0.2,
+                   shellmate  >= 0.2.2,
                    ghc
     if !os(windows)
         Build-Depends: unix,
@@ -221,7 +221,7 @@ Executable haste-cat
             GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
-        shellmate >= 0.2,
+        shellmate >= 0.2.2,
         ghc-paths,
         ghc,
         binary,
@@ -301,7 +301,7 @@ Library
         bytestring,
         utf8-string,
         -- For Haste.Compiler
-        shellmate >= 0.2,
+        shellmate >= 0.2.2,
         directory,
         filepath,
         process,
