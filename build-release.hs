@@ -155,8 +155,8 @@ buildBinaryTarball ver ghcver = do
 buildBinary7z ver ghcver = do
     -- Copy HTML "manpages"
     mkdir True "haste-compiler/man"
-    cpdir "man/hastec.html" "haste-compiler/man/hastec.html"
-    cpdir "man/haste-cat.html" "haste-compiler/man/haste-cat.html"
+    cp "man/hastec.html" "haste-compiler/man/hastec.html"
+    cp "man/haste-cat.html" "haste-compiler/man/haste-cat.html"
 
     -- Get versions and create binary tarball
     run_ "7z" ["a", "-i!haste-compiler", name] ""
