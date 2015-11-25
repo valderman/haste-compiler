@@ -323,6 +323,7 @@ buildLibs cfg = do
                                     else takeDirectory pkgSysLibDir
                  , "--package-db=clear"
                  , "--package-db=global"
+                 , "--hastec-option=-fforce-recomp"
 #if __GLASGOW_HASKELL__ < 709
                  , "--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++
                     show hostWordSize

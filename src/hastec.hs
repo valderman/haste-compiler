@@ -29,6 +29,7 @@ import Haste.Environment
 import Haste.Version
 import Haste.Module
 import Haste.CodeGen
+import Haste.AST as AST (Module)
 import Haste.Linker
 import Haste.JSLib
 
@@ -46,13 +47,14 @@ main = do
     case parseHasteFlags booting args as of
       Left act             -> act
       Right (fs, mkConfig) -> do
-        let ghcconfig = mkGhcCfg fs args
-        (dfs, _) <- getDynFlagsForConfig ghcconfig
+        let hastecfg = mkConfig Haste.Config.defaultConfig
+            ghccfg = mkGhcCfg hastecfg fs args
+        (dfs, _) <- getDynFlagsForConfig ghccfg
         extralibdirs <- getExtraLibDirs dfs
         let cfg = mkLinkerCfg dfs extralibdirs
                 . setShowOutputable dfs
-                $ mkConfig Haste.Config.defaultConfig
-        res <- compileFold ghcconfig (compJS cfg) ([], []) []
+                $ hastecfg
+        res <- compileFold ghccfg (compJSMod cfg) finalize ([], []) []
         case res of
           Failure _ _         -> do
             exitFailure
@@ -80,9 +82,8 @@ main = do
         else ["-package-db=" ++ pkgUserDir]
 
     buildJSLib profiling cfg pkgkey mods = do
-      let modpath     = targetLibPath cfg ++ "/" ++ pkgkey
-          mods'       = [ modpath ++ "/" ++ map dotToSlash mn ++ ".jsmod"
-                        | mn <- mods]
+      let targetpath  = targetLibPath cfg
+          mods'       = [moduleFilePath targetpath mn False | mn <- mods]
           libfile     = maybe (pkgkey <.> "jsmod") id (linkJSLibFile cfg)
           profLibfile = reverse (drop 6 (reverse libfile)) ++ "_p.jslib"
 
@@ -90,19 +91,21 @@ main = do
       when profiling . void $ do
         copyFile libfile (profLibfile)
 
-    compJS cfg (targets, mods) m = do
-      compJSMod cfg m
-      let infile = maybe (modInterfaceFile m) id (modSourceFile m)
-          modpair = (modPackageKey m, infile)
-      if modIsTarget m
-        then return $ (modpair : targets, modName m : mods)
-        else return (targets, modName m : mods)
+    finalize (targets, mods) m = do
+      let meta = modMetaData m
+          infile = maybe (mmInterfaceFile meta) id (mmSourceFile meta)
+          modpair = (mmPackageKey meta, infile)
+      if mmIsTarget meta
+        then return (modpair : targets, mmName meta : mods)
+        else return (targets, mmName meta : mods)
 
-    mkGhcCfg fs args = disableCodeGen $ GHC.defaultConfig {
+    mkGhcCfg cfg fs args = disableCodeGen $ GHC.defaultConfig {
         cfgGhcFlags = fs,
         cfgGhcLibDir = Just hasteGhcLibDir,
         cfgUseTargetsFromFlags = True,
         cfgUseGhcErrorLogger = True,
+        cfgCacheDirectory = Just $ targetLibPath cfg,
+        cfgCacheFileExt = "jsmod",
         cfgUpdateDynFlags = \dfs -> dfs {
             ghcMode = if "-c" `elem` args
                         then OneShot
@@ -145,13 +148,13 @@ primOpStrictness :: PrimOp -> Arity -> StrictSig
 
 -- | Compile an STG module into a JS module and write it to its appropriate
 --   location according to the given config.
-compJSMod :: Config -> StgModule -> IO ()
-compJSMod cfg stg = do
+compJSMod :: Config -> ModMetadata -> [StgBinding] -> IO AST.Module
+compJSMod cfg meta stg = do
     logStr cfg $ "Compiling " ++ myName ++ " into " ++ targetpath
-    writeModule targetpath (generate cfg stg) boot
+    pure $ generate cfg meta stg
   where
-    boot = modSourceIsHsBoot stg
-    myName = modName stg ++ if boot then " [boot]" else ""
+    boot = mmSourceIsHsBoot meta
+    myName = mmName meta ++ if boot then " [boot]" else ""
     targetpath = targetLibPath cfg
 
 -- | Link a program starting from the 'mainMod' symbol of the given 'Config'.

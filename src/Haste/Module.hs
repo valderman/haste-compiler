@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 -- | Read and write JSMods.
-module Haste.Module (writeModule, readModule) where
+module Haste.Module (moduleFilePath, writeModule, readModule) where
 import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import Control.Shell
@@ -16,10 +16,14 @@ import qualified System.IO as IO
 jsmodExt :: Bool -> String
 jsmodExt boot = if boot then "jsmod-boot" else "jsmod"
 
-moduleFilePath :: FilePath -> String -> String -> Bool -> FilePath
-moduleFilePath basepath pkgid modname boot =
+-- | Build the path to the jsmod file corresponding to the given module.
+moduleFilePath :: FilePath -- ^ Base path to look for module in.
+               -> String   -- ^ Module name; e.g. @Foo.Bar@
+               -> Bool     -- ^ Build name for a boot module?
+               -> FilePath
+moduleFilePath basepath modname boot =
   flip addExtension (jsmodExt boot) $
-    basepath </> pkgid </> (moduleNameSlashes $ mkModuleName modname)
+    basepath </> moduleNameSlashes (mkModuleName modname)
 
 -- | Write a module to file, with the extension specified in `fileExt`.
 --   Assuming that fileExt = "jsmod", a module Foo.Bar is written to
@@ -30,10 +34,10 @@ moduleFilePath basepath pkgid modname boot =
 --
 --   Boot modules and "normal" modules get merged at this stage.
 writeModule :: FilePath -> Module -> Bool -> IO ()
-writeModule basepath m@(Module pkgid modname _ _) boot =
+writeModule basepath m@(Module _ modname _ _) boot =
   fromRight "writeModule" . shell $ do
     mkdir True (takeDirectory path)
-    mcompanion <- readMod basepath pkgstr modstr (not boot)
+    mcompanion <- readMod basepath modstr (not boot)
     m' <- case mcompanion of
             Just companion -> do
               when (isFile bootpath) $ rm bootpath
@@ -42,10 +46,9 @@ writeModule basepath m@(Module pkgid modname _ _) boot =
               return m
     liftIO . B.writeFile path $ encode m'
   where
-    pkgstr = BS.toString pkgid
     modstr = BS.toString modname
-    path = moduleFilePath basepath pkgstr modstr boot
-    bootpath = moduleFilePath basepath pkgstr modstr True
+    path = moduleFilePath basepath modstr boot
+    bootpath = moduleFilePath basepath modstr True
     merge' = if boot then merge else flip merge
 
 -- | Read a module from file. If the module is not found at the specified path,
@@ -60,8 +63,8 @@ readModule :: FilePath -> String -> String -> IO (Maybe Module)
 readModule basepath pkgid modname = fromRight "readModule" . shell $ do
   libfile <- (basepath </>) `fmap` jslibFileName basepath pkgid
   mmlib <- liftIO $ JSLib.readModule libfile modname
-  mm <- readMod basepath pkgid modname False
-  mmboot <- readMod basepath pkgid modname True
+  mm <- readMod basepath modname False
+  mmboot <- readMod basepath modname True
   case (mmlib, mm, mmboot) of
     (Just m, _, _)          -> return $ Just m
     (_, Just m, Nothing)    -> return $ Just m
@@ -115,8 +118,8 @@ jslibFileName basepath pkgid
     specials = ["ghc-prim", "base", "integer-gmp"]
     libfilesuffix = pkgid <.> "jslib"
 
-readMod :: FilePath -> String -> String -> Bool -> Shell (Maybe Module)
-readMod basepath pkgid modname boot = do
+readMod :: FilePath -> String -> Bool -> Shell (Maybe Module)
+readMod basepath modname boot = do
     x <- isFile path
     let path' = if x then path else syspath
     isF <- isFile path'
@@ -128,8 +131,8 @@ readMod basepath pkgid modname boot = do
        else do
          return Nothing
   where
-    path = moduleFilePath "." pkgid modname boot
-    syspath = moduleFilePath basepath pkgid modname boot
+    path = moduleFilePath "." modname boot
+    syspath = moduleFilePath basepath modname boot
 
 fromRight :: String -> IO (Either ExitReason b) -> IO b
 fromRight from m = do

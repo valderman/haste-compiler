@@ -30,17 +30,17 @@ import Haste.PrimOps
 import Haste.Builtins
 
 -- | Generate an abstract JS module from a codegen config and an STG module.
-generate :: Config -> StgModule -> AST.Module
-generate cfg stg =
+generate :: Config -> ModMetadata -> [StgBinding] -> AST.Module
+generate cfg meta stg =
   AST.Module {
-      modPackageId   = BS.fromString $ GHC.modPackageKey stg,
-      AST.modName    = BS.fromString $ GHC.modName stg,
+      modPackageId   = BS.fromString $ GHC.mmPackageKey meta,
+      AST.modName    = BS.fromString $ GHC.mmName meta,
       modDeps        = foldl' insDep M.empty theMod,
       modDefs        = foldl' insFun M.empty theMod
     }
   where
     opt = if optimize cfg then optimizeFun cfg else const id
-    theMod = genAST cfg (GHC.modName stg) (modCompiledModule stg)
+    theMod = genAST cfg (GHC.mmName meta) stg
 
     insFun m (_, Assign (NewVar _ v@(Internal n _ _)) body _) =
       M.insert n (opt v body) m

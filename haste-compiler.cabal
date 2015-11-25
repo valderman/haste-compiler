@@ -131,7 +131,7 @@ Executable hastec
         either,
         filepath,
         directory,
-        ghc-simple >= 0.1.3 && < 0.2
+        ghc-simple >= 0.2 && < 0.3
     Main-Is:
         hastec.hs
     Other-Modules:
