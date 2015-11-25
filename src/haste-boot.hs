@@ -10,6 +10,7 @@ import Codec.Archive.Tar
 import Haste.Environment
 import Haste.Version
 import Control.Shell
+import Control.Shell.Concurrent
 import Control.Shell.Download
 import Data.Char (isDigit)
 import Haste.Args
@@ -170,6 +171,9 @@ bootHaste cfg tmpdir =
       when (getHasteCabal cfg) $ do
         installHasteCabal portableHaste tmpdir
 
+      -- Spawn off closure download in the background.
+      closure <- future $ when (getClosure cfg) installClosure
+
       when (not $ useLocalLibs cfg) $ do
         fetchLibs tmpdir
 
@@ -184,8 +188,10 @@ bootHaste cfg tmpdir =
                         "deepseq", "dlist", "haste-prim", "time", "haste-lib",
                         "monads-tf", "old-locale", "transformers", "integer-gmp"]
 
-    when (getClosure cfg) $ do
-      installClosure
+      -- Wait for closure download to finish.
+      await closure
+
+
     output bootFile (showBootVersion bootVersion)
 
 clearDir :: FilePath -> Shell ()
