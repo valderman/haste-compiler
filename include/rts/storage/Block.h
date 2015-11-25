@@ -8,6 +8,9 @@
 
 #ifndef RTS_STORAGE_BLOCK_H
 #define RTS_STORAGE_BLOCK_H
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+#pragma GCC diagnostic ignored "-Wpointer-to-int-cast"
+#pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
 
 /* The actual block and megablock-size constants are defined in
  * includes/Constants.h, all constants here are derived from these.
