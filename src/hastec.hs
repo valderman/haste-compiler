@@ -92,10 +92,10 @@ main = do
         copyFile libfile (profLibfile)
 
     finalize (targets, mods) m = do
-      let meta = modMetaData m
+      let meta = modMetadata m
           infile = maybe (mmInterfaceFile meta) id (mmSourceFile meta)
           modpair = (mmPackageKey meta, infile)
-      if mmIsTarget meta
+      if modIsTarget m
         then return (modpair : targets, mmName meta : mods)
         else return (targets, mmName meta : mods)
 
