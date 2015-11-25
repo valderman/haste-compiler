@@ -148,7 +148,7 @@ primOpStrictness :: PrimOp -> Arity -> StrictSig
 compJSMod :: Config -> ModMetadata -> [StgBinding] -> IO AST.Module
 compJSMod cfg meta stg = do
     logStr cfg $ "Compiling " ++ myName ++ " into " ++ targetpath
-    pure $ generate cfg meta stg
+    return $ generate cfg meta stg
   where
     boot = mmSourceIsHsBoot meta
     myName = mmName meta ++ if boot then " [boot]" else ""
