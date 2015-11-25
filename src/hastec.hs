@@ -70,9 +70,6 @@ main = do
     getExtraLibDirs = const (return [])
 #endif
 
-    dotToSlash '.' = '/'
-    dotToSlash c   = c
-
     pkgs booting =
       ["-no-global-package-db",
        "-no-user-package-db",
