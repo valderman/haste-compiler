@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances, GADTs, OverloadedStrings, CPP #-}
 module Haste.AST.Print () where
 import Prelude hiding (LT, GT)
-import Haste.Config hiding (def)
+import Haste.Config
 import Haste.AST.Syntax
 import Haste.AST.Op
 import Haste.AST.PP as PP
