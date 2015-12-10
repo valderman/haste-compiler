@@ -172,7 +172,8 @@ bootHaste cfg tmpdir =
         installHasteCabal portableHaste tmpdir
 
       -- Spawn off closure download in the background.
-      closure <- future $ when (getClosure cfg) installClosure
+      dir <- pwd -- use absolute path for closure to avoid dir changing race
+      closure <- future $ when (getClosure cfg) (installClosure dir)
 
       when (not $ useLocalLibs cfg) $ do
         fetchLibs tmpdir
@@ -253,14 +254,14 @@ fetchLibs tmpdir = do
       "http://valderman.github.io/haste-libs/haste-libs-" ++ showVersion v ++ ".tar.bz2"
 
 -- | Fetch and install the Closure compiler.
-installClosure :: Shell ()
-installClosure = do
+installClosure :: FilePath -> Shell ()
+installClosure dir = do
     echo "Downloading Google Closure compiler..."
     downloadClosure `orElse` do
       echo "Couldn't install Closure compiler; continuing without."
   where
     downloadClosure = do
-      fetchBytes closureURI >>= (liftIO . BS.writeFile closureCompiler)
+      fetchBytes closureURI >>= (liftIO . BS.writeFile (dir </> closureCompiler))
     closureURI =
       "http://valderman.github.io/haste-libs/compiler.jar"
 
