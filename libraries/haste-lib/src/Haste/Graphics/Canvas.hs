@@ -12,7 +12,7 @@ module Haste.Graphics.Canvas (
     getCanvasById, getCanvas, createCanvas,
 
     -- * Rendering and reading canvases
-    render, renderOnTop, buffer, toDataURL,
+    render, renderOnTop, buffer, toDataURL, clearRect,
 
     -- * Colors and opacity
     setStrokeColor, setFillColor, color, opacity,
@@ -78,6 +78,12 @@ jsPopState = ffi "(function(ctx){ctx.restore();})"
 
 jsResetCanvas :: Elem -> IO ()
 jsResetCanvas = ffi "(function(e){e.width = e.width;})"
+
+jsClearRect :: Ctx
+            -> Double -> Double
+            -> Double -> Double
+            -> IO ()
+jsClearRect = ffi "(function(ctx,x,y,width,height){ctx.clearRect(x,y,width,height);})"
 
 jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
 jsDrawImage = ffi "(function(ctx,i,x,y){ctx.drawImage(i,x,y);})"
@@ -301,6 +307,10 @@ render (Canvas ctx el) (Picture p) = liftIO $ do
 renderOnTop :: MonadIO m => Canvas -> Picture a -> m a
 renderOnTop (Canvas ctx _) (Picture p) = liftIO $ p ctx
 
+-- | Clear the rectangular area between the given two points.
+clearRect :: Point -> Point -> Picture ()
+clearRect (x1, y1) (x2, y2) = Picture $ \ctx -> jsClearRect ctx x1 y1 (x2-x1) (y2-y1)
+
 -- | Generate a data URL from the contents of a canvas.
 toDataURL :: MonadIO m => Canvas -> m URL
 toDataURL (Canvas _ el) = liftIO $ do
@@ -389,7 +399,7 @@ fill (Shape shape) = Picture $ \ctx -> do
   jsBeginPath ctx
   shape ctx
   jsFill ctx
-  
+
 -- | Draw the contours of a shape.
 stroke :: Shape () -> Picture ()
 stroke (Shape shape) = Picture $ \ctx -> do
