@@ -12,7 +12,7 @@ module Haste.Graphics.Canvas (
     getCanvasById, getCanvas, createCanvas,
 
     -- * Rendering and reading canvases
-    render, renderOnTop, buffer, toDataURL, clearRect,
+    render, renderOnTop, renderOnTopBy, buffer, toDataURL, clearRect,
 
     -- * Colors and opacity
     setStrokeColor, setFillColor, color, opacity,
@@ -100,6 +100,9 @@ jsDrawImageScaled :: Ctx -> Elem
                   -> IO ()
 jsDrawImageScaled = ffi "(function(ctx, img, x, y, w, h){\
 ctx.drawImage(img, x, y, w, h);})"
+
+jsSetGlobalCompositeOperation :: String -> IO ()
+jsSetGlobalCompositeOperation = ffi "(function(s){globalCompositeOperation=s;})"
 
 jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
 jsDrawText = ffi "(function(ctx,s,x,y){ctx.fillText(s,x,y);})"
@@ -218,6 +221,36 @@ color2JSString (RGBA r g b a) =
                         toJSString b, ",",
                         toJSString a, ")"]
 
+-- | Composition operations. For detailed explanation, see <https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation>
+data CompositionOperation = Default
+                          | SourceOver
+                          | SourceIn
+                          | SourceOut
+                          | SourceAtop
+                          | DestinationOver
+                          | DestinationIn
+                          | DestinationOut
+                          | DestinationAtop
+                          | Lighter
+                          | Copy
+                          | Xor
+                          | Multiply
+                          | Screen
+                          | Overlay
+                          | Darken
+                          | Lighten
+                          | ColorDodge
+                          | ColorBurn
+                          | HardLight
+                          | SoftLight
+                          | Difference
+                          | Exclusion
+                          | Hue
+                          | Saturation
+                          | Color
+                          | Luminosity
+                          deriving Eq
+
 -- | A drawing context; part of a canvas.
 --   JS representation is the drawing context object itself.
 newtype Ctx = Ctx JSAny
@@ -319,6 +352,48 @@ render (Canvas ctx el) (Picture p) = liftIO $ do
 {-# SPECIALISE renderOnTop :: Canvas -> Picture a -> CIO a #-}
 renderOnTop :: MonadIO m => Canvas -> Picture a -> m a
 renderOnTop (Canvas ctx _) (Picture p) = liftIO $ p ctx
+
+-- | Draw a picture onto a canvas without first clearing it, with a specific composition method
+renderOnTopBy :: MonadIO m => Canvas -> Picture a -> CompositionOperation -> m a
+renderOnTopBy canvas pic composition = liftIO $ do
+    jsSetGlobalCompositeOperation $ translate composition
+    rst <- renderOnTop canvas pic
+    jsSetGlobalCompositeOperation $ translate Default
+    return rst
+        where
+            translate :: CompositionOperation -> String
+            translate c = fromJust $ lookup c dict
+
+            dict = [
+                (Default, "source-over"),
+                (SourceOver, "source-over"),
+                (SourceIn, "source-in"),
+                (SourceOut, "source-out"),
+                (SourceAtop, "source-atop"),
+                (DestinationOver, "destination-over"),
+                (DestinationIn, "destination-in"),
+                (DestinationOut, "destination-out"),
+                (DestinationAtop, "destination-atop"),
+                (Lighter, "lighter"),
+                (Copy, "copy"),
+                (Xor, "xor"),
+                (Multiply, "multiply"),
+                (Screen, "screen"),
+                (Overlay, "overlay"),
+                (Darken, "darken"),
+                (Lighten, "Lighten"),
+                (ColorDodge, "color-dodge"),
+                (ColorBurn, "color-burn"),
+                (HardLight, "hard-light"),
+                (SoftLight, "soft-light"),
+                (Difference, "difference"),
+                (Exclusion, "exclusion"),
+                (Hue, "hue"),
+                (Saturation, "saturation"),
+                (Color, "color"),
+                (Luminosity, "luminosity")
+                ]
+                -- It may actually run faster, if the lookuping is implemented in js. But for purity...
 
 -- | Clear the rectangular area between the given two points.
 clearRect :: Point -> Point -> Picture ()
@@ -469,10 +544,10 @@ quadraticCurve ::
     Point -- ^ Start point.
     -> Point -- ^ End point.
     -> Point -- ^ Control point.
-    -> Shape
+    -> Shape ()
 quadraticCurve (sx, sy) (ex, ey) (cx, cy) = Shape $ \ctx -> do
     jsMoveTo ctx sx sy
-    jsQuadraticCurve cx cy ex ey
+    jsQuadraticCurve ctx cx cy ex ey
 
 -- | Draw a Bezier curve.
 bezierCurve ::
@@ -480,10 +555,10 @@ bezierCurve ::
     -> Point -- ^ End point.
     -> Point -- ^ Start control point.
     -> Point -- ^ End control point.
-    -> Shape
+    -> Shape ()
 bezierCurve (sx, sy) (ex, ey) (scx, scy) (ecx, ecy) = Shape $ \ctx -> do
     jsMoveTo ctx sx sy
-    jsBezierCurve scx scy ecx ecy ex ey
+    jsBezierCurve ctx scx scy ecx ecy ex ey
 
 -- | Draw a picture using a certain font. Obviously only affects text.
 font :: String -> Picture () -> Picture ()
