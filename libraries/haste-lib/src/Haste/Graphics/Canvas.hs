@@ -21,7 +21,7 @@ module Haste.Graphics.Canvas (
     translate, scale, rotate,
     -- * Drawing shapes
     stroke, fill, clip,
-    lineWidth, line, path, rect, circle, arc,
+    lineWidth, line, path, rect, circle, arc, quadraticCurve, bezierCurve,
 
     -- * Rendering text
     font, text,
@@ -113,6 +113,19 @@ jsArc :: Ctx -> Double -> Double
              -> IO ()
 jsArc = ffi "(function(ctx, x, y, radius, fromAngle, toAngle){\
 ctx.arc(x, y, radius, fromAngle, toAngle);})"
+
+jsQuadraticCurve :: Ctx
+                 -> Double -> Double
+                 -> Double -> Double
+                 -> IO ()
+jsQuadraticCurve = ffi "(function(ctx,cx,cy,x,y){ctx.quadraticCurveTo(cx,cy,x,y);})"
+
+jsBezierCurve :: Ctx
+                 -> Double -> Double
+                 -> Double -> Double
+                 -> Double -> Double
+                 -> IO ()
+jsBezierCurve = ffi "(function(ctx,c1x,c1y,c2x,c2y,x,y){ctx.bezierCurveTo(c1x,c1y,c2x,c2y,x,y);})"
 
 jsCanvasToDataURL :: Elem -> IO JSString
 jsCanvasToDataURL = ffi "(function(e){return e.toDataURL('image/png');})"
@@ -450,6 +463,27 @@ twoPi = 2*pi
 --   (0, 0), with a radius of 10 pixels.
 arc :: Point -> Double -> Angle -> Angle -> Shape ()
 arc (x, y) radius from to = Shape $ \ctx -> jsArc ctx x y radius from to
+
+-- | Draw a quadratic Bezier curve.
+quadraticCurve ::
+    Point -- ^ Start point.
+    -> Point -- ^ End point.
+    -> Point -- ^ Control point.
+    -> Shape
+quadraticCurve (sx, sy) (ex, ey) (cx, cy) = Shape $ \ctx -> do
+    jsMoveTo ctx sx sy
+    jsQuadraticCurve cx cy ex ey
+
+-- | Draw a Bezier curve.
+bezierCurve ::
+    Point -- ^ Start point.
+    -> Point -- ^ End point.
+    -> Point -- ^ Start control point.
+    -> Point -- ^ End control point.
+    -> Shape
+bezierCurve (sx, sy) (ex, ey) (scx, scy) (ecx, ecy) = Shape $ \ctx -> do
+    jsMoveTo ctx sx sy
+    jsBezierCurve scx scy ecx ecy ex ey
 
 -- | Draw a picture using a certain font. Obviously only affects text.
 font :: String -> Picture () -> Picture ()
