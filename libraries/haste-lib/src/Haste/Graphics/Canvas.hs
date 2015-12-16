@@ -4,7 +4,7 @@
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
     -- * Basic types and classes
-    Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..),
+    Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..), CompositionOperation (..),
     Ctx, AnyImageBuffer (..),
     ImageBuffer (..), BitmapSource (..),
 
@@ -26,6 +26,9 @@ module Haste.Graphics.Canvas (
     -- * Rendering text
     font, text,
 
+    -- * Manipulating pixels
+    readPixel, modifyPixel, writePixel,
+
     -- * Extending the library
     withContext
   ) where
@@ -38,7 +41,8 @@ import Haste
 import Haste.DOM.JSString
 import Haste.DOM.Core
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
-import Haste.Foreign (ToAny (..), FromAny (..), ffi)
+import Haste.Foreign (ToAny (..), FromAny (..), ffi, get)
+import Haste.Prim
 
 jsHasCtx2D :: Elem -> IO Bool
 jsHasCtx2D = ffi "(function(e){return !!e.getContext;})"
@@ -129,6 +133,12 @@ jsBezierCurve :: Ctx
                  -> Double -> Double
                  -> IO ()
 jsBezierCurve = ffi "(function(ctx,c1x,c1y,c2x,c2y,x,y){ctx.bezierCurveTo(c1x,c1y,c2x,c2y,x,y);})"
+
+jsGetImageData :: Ctx
+           -> Double -> Double
+           -> Double -> Double
+           -> IO JSAny
+jsGetImageData = ffi "(function(ctx,left,top,width,height){return ctx.getImageData(left,top,width,height);})"
 
 jsCanvasToDataURL :: Elem -> IO JSString
 jsCanvasToDataURL = ffi "(function(e){return e.toDataURL('image/png');})"
@@ -571,3 +581,20 @@ font f (Picture pict) = Picture $ \(Ctx ctx) -> do
 -- | Draw some text onto the canvas.
 text :: Point -> String -> Picture ()
 text (x, y) str = Picture $ \ctx -> jsDrawText ctx (toJSString str) x y
+
+-- | Read a pixel. Returns RGBA.
+readPixel :: MonadIO m => Canvas -> Point -> m Color
+readPixel (Canvas ctx _) (x, y) = liftIO $ do
+    imageData <- jsGetImageData ctx x y 1 1
+    colorArray <- get imageData (toJSStr "data") :: IO [Int]
+    return $ RGBA (colorArray!!0) (colorArray!!1) (colorArray!!2) (fromIntegral $ colorArray!!3)
+
+-- | Set a pixel.
+writePixel :: MonadIO m => Canvas -> Point -> Color -> m ()
+writePixel c p (RGB r g b) = writePixel c p (RGBA r g b 255)
+writePixel c p (RGBA r g b a) = liftIO $ do
+    undefined
+
+-- | Modify a pixel
+modifyPixel :: MonadIO m => Canvas -> Point -> (Color -> Color) -> m ()
+modifyPixel = undefined
