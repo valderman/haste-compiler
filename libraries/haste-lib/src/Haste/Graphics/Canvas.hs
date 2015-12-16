@@ -372,13 +372,13 @@ renderOnTop (Canvas ctx _) (Picture p) = liftIO $ p ctx
 -- | Draw a picture onto a canvas without first clearing it, with a specific composition method
 renderOnTopBy :: MonadIO m => Canvas -> Picture a -> CompositionOperation -> m a
 renderOnTopBy canvas pic composition = liftIO $ do
-    jsSetGlobalCompositeOperation $ translate composition
+    jsSetGlobalCompositeOperation $ translateComposition composition
     rst <- renderOnTop canvas pic
-    jsSetGlobalCompositeOperation $ translate Default
+    jsSetGlobalCompositeOperation $ translateComposition Default
     return rst
         where
-            translate :: CompositionOperation -> String
-            translate c = fromJust $ lookup c dict
+            translateComposition :: CompositionOperation -> String
+            translateComposition c = fromJust $ lookup c dict
 
             dict = [
                 (Default, "source-over"),
@@ -607,5 +607,5 @@ writePixel (Canvas ctx _) (x, y) (RGBA r g b a) = liftIO $ do
 -- | Modify a pixel
 modifyPixel :: MonadIO m => Canvas -> Point -> (Color -> Color) -> m ()
 modifyPixel c p f = liftIO $ do
-    color <- readPixel c p
-    writePixel c p $ f color
+    color' <- readPixel c p
+    writePixel c p $ f color'
