@@ -140,6 +140,12 @@ jsGetImageData :: Ctx
            -> IO JSAny
 jsGetImageData = ffi "(function(ctx,left,top,width,height){return ctx.getImageData(left,top,width,height);})"
 
+jsPutImageData :: Ctx
+               -> JSAny
+               -> Double -> Double
+               -> IO ()
+jsPutImageData = ffi "(function(ctx,imgdata,x,y){ctx.putImageData(imgdata,x,y);})"
+
 jsCanvasToDataURL :: Elem -> IO JSString
 jsCanvasToDataURL = ffi "(function(e){return e.toDataURL('image/png');})"
 
@@ -592,9 +598,14 @@ readPixel (Canvas ctx _) (x, y) = liftIO $ do
 -- | Set a pixel.
 writePixel :: MonadIO m => Canvas -> Point -> Color -> m ()
 writePixel c p (RGB r g b) = writePixel c p (RGBA r g b 255)
-writePixel c p (RGBA r g b a) = liftIO $ do
-    undefined
+writePixel (Canvas ctx _) (x, y) (RGBA r g b a) = liftIO $ do
+    imageData <- jsGetImageData ctx x y 1 1
+    ffi "(function(imgdata,r,g,b,a){imgdata.data[0]=r;imgdata.data[1]=g;imgdata.data[2]=b;imgdata.data[3]=a;})" imageData r g b a :: IO ()
+    jsPutImageData ctx imageData x y
+    return ()
 
 -- | Modify a pixel
 modifyPixel :: MonadIO m => Canvas -> Point -> (Color -> Color) -> m ()
-modifyPixel = undefined
+modifyPixel c p f = liftIO $ do
+    color <- readPixel c p
+    writePixel c p $ f color
