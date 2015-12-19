@@ -564,13 +564,12 @@ integerLog2IsPowerOf2# (S# i) =
       w -> (# wordLog2# w, word2Int# (w `and#` (w `minusWord#` 1##)) #)
 -- Find the log2 as above, test whether that word is a power
 -- of 2, if so, check whether only zero bits follow.
-integerLog2IsPowerOf2# n@(J# _) =
+integerLog2IsPowerOf2# n@(J# x) =
     case integerLog2# n of
-      l -> (# l, if isTrue# (is2pow l) then 0# else 1# #)
+      l -> (# l, is2pow #)
   where
-    is2pow n =
-      case wordLog2# (int2Word# n) of 
-        l -> l +# l ==# n
+    one = int2Integer# 1#
+    is2pow = cmpIntegerInt# (andInteger# x (minusInteger# x one)) 0#
 
 -- Assumption: Integer and Int# are strictly positive, Int# is less
 -- than logBase 2 of Integer, otherwise havoc ensues.
