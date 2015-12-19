@@ -4,7 +4,7 @@
 -- | Basic Canvas graphics library.
 module Haste.Graphics.Canvas (
     -- * Basic types and classes
-    Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..),
+    Bitmap, Canvas, Shape, Picture, Point, Vector, Angle, Rect (..), Color (..), CompositionOperation (..),
     Ctx, AnyImageBuffer (..),
     ImageBuffer (..), BitmapSource (..),
 
@@ -12,7 +12,7 @@ module Haste.Graphics.Canvas (
     getCanvasById, getCanvas, createCanvas,
 
     -- * Rendering and reading canvases
-    render, renderOnTop, buffer, toDataURL,
+    render, renderOnTop, renderOnTopBy, buffer, toDataURL, clearRect,
 
     -- * Colors and opacity
     setStrokeColor, setFillColor, color, opacity,
@@ -21,10 +21,13 @@ module Haste.Graphics.Canvas (
     translate, scale, rotate,
     -- * Drawing shapes
     stroke, fill, clip,
-    lineWidth, line, path, rect, circle, arc,
+    lineWidth, line, path, rect, circle, arc, quadraticCurve, bezierCurve,
 
     -- * Rendering text
     font, text,
+
+    -- * Manipulating pixels
+    readPixel, modifyPixel, writePixel,
 
     -- * Extending the library
     withContext
@@ -38,7 +41,8 @@ import Haste
 import Haste.DOM.JSString
 import Haste.DOM.Core
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
-import Haste.Foreign (ToAny (..), FromAny (..), ffi)
+import Haste.Foreign (ToAny (..), FromAny (..), ffi, get)
+import Haste.Prim
 
 jsHasCtx2D :: Elem -> IO Bool
 jsHasCtx2D = ffi "(function(e){return !!e.getContext;})"
@@ -79,6 +83,12 @@ jsPopState = ffi "(function(ctx){ctx.restore();})"
 jsResetCanvas :: Elem -> IO ()
 jsResetCanvas = ffi "(function(e){e.width = e.width;})"
 
+jsClearRect :: Ctx
+            -> Double -> Double
+            -> Double -> Double
+            -> IO ()
+jsClearRect = ffi "(function(ctx,x,y,width,height){ctx.clearRect(x,y,width,height);})"
+
 jsDrawImage :: Ctx -> Elem -> Double -> Double -> IO ()
 jsDrawImage = ffi "(function(ctx,i,x,y){ctx.drawImage(i,x,y);})"
 
@@ -95,6 +105,9 @@ jsDrawImageScaled :: Ctx -> Elem
 jsDrawImageScaled = ffi "(function(ctx, img, x, y, w, h){\
 ctx.drawImage(img, x, y, w, h);})"
 
+jsSetGlobalCompositeOperation :: String -> IO ()
+jsSetGlobalCompositeOperation = ffi "(function(s){globalCompositeOperation=s;})"
+
 jsDrawText :: Ctx -> JSString -> Double -> Double -> IO ()
 jsDrawText = ffi "(function(ctx,s,x,y){ctx.fillText(s,x,y);})"
 
@@ -107,6 +120,31 @@ jsArc :: Ctx -> Double -> Double
              -> IO ()
 jsArc = ffi "(function(ctx, x, y, radius, fromAngle, toAngle){\
 ctx.arc(x, y, radius, fromAngle, toAngle);})"
+
+jsQuadraticCurve :: Ctx
+                 -> Double -> Double
+                 -> Double -> Double
+                 -> IO ()
+jsQuadraticCurve = ffi "(function(ctx,cx,cy,x,y){ctx.quadraticCurveTo(cx,cy,x,y);})"
+
+jsBezierCurve :: Ctx
+                 -> Double -> Double
+                 -> Double -> Double
+                 -> Double -> Double
+                 -> IO ()
+jsBezierCurve = ffi "(function(ctx,c1x,c1y,c2x,c2y,x,y){ctx.bezierCurveTo(c1x,c1y,c2x,c2y,x,y);})"
+
+jsGetImageData :: Ctx
+           -> Double -> Double
+           -> Double -> Double
+           -> IO JSAny
+jsGetImageData = ffi "(function(ctx,left,top,width,height){return ctx.getImageData(left,top,width,height);})"
+
+jsPutImageData :: Ctx
+               -> JSAny
+               -> Double -> Double
+               -> IO ()
+jsPutImageData = ffi "(function(ctx,imgdata,x,y){ctx.putImageData(imgdata,x,y);})"
 
 jsCanvasToDataURL :: Elem -> IO JSString
 jsCanvasToDataURL = ffi "(function(e){return e.toDataURL('image/png');})"
@@ -198,6 +236,36 @@ color2JSString (RGBA r g b a) =
                         toJSString g, ",",
                         toJSString b, ",",
                         toJSString a, ")"]
+
+-- | Composition operations. For detailed explanation, see <https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation>
+data CompositionOperation = Default
+                          | SourceOver
+                          | SourceIn
+                          | SourceOut
+                          | SourceAtop
+                          | DestinationOver
+                          | DestinationIn
+                          | DestinationOut
+                          | DestinationAtop
+                          | Lighter
+                          | Copy
+                          | Xor
+                          | Multiply
+                          | Screen
+                          | Overlay
+                          | Darken
+                          | Lighten
+                          | ColorDodge
+                          | ColorBurn
+                          | HardLight
+                          | SoftLight
+                          | Difference
+                          | Exclusion
+                          | Hue
+                          | Saturation
+                          | Color
+                          | Luminosity
+                          deriving Eq
 
 -- | A drawing context; part of a canvas.
 --   JS representation is the drawing context object itself.
@@ -301,6 +369,52 @@ render (Canvas ctx el) (Picture p) = liftIO $ do
 renderOnTop :: MonadIO m => Canvas -> Picture a -> m a
 renderOnTop (Canvas ctx _) (Picture p) = liftIO $ p ctx
 
+-- | Draw a picture onto a canvas without first clearing it, with a specific composition method
+renderOnTopBy :: MonadIO m => Canvas -> Picture a -> CompositionOperation -> m a
+renderOnTopBy canvas pic composition = liftIO $ do
+    jsSetGlobalCompositeOperation $ translateComposition composition
+    rst <- renderOnTop canvas pic
+    jsSetGlobalCompositeOperation $ translateComposition Default
+    return rst
+        where
+            translateComposition :: CompositionOperation -> String
+            translateComposition c = fromJust $ lookup c dict
+
+            dict = [
+                (Default, "source-over"),
+                (SourceOver, "source-over"),
+                (SourceIn, "source-in"),
+                (SourceOut, "source-out"),
+                (SourceAtop, "source-atop"),
+                (DestinationOver, "destination-over"),
+                (DestinationIn, "destination-in"),
+                (DestinationOut, "destination-out"),
+                (DestinationAtop, "destination-atop"),
+                (Lighter, "lighter"),
+                (Copy, "copy"),
+                (Xor, "xor"),
+                (Multiply, "multiply"),
+                (Screen, "screen"),
+                (Overlay, "overlay"),
+                (Darken, "darken"),
+                (Lighten, "Lighten"),
+                (ColorDodge, "color-dodge"),
+                (ColorBurn, "color-burn"),
+                (HardLight, "hard-light"),
+                (SoftLight, "soft-light"),
+                (Difference, "difference"),
+                (Exclusion, "exclusion"),
+                (Hue, "hue"),
+                (Saturation, "saturation"),
+                (Color, "color"),
+                (Luminosity, "luminosity")
+                ]
+                -- It may actually run faster, if the lookuping is implemented in js. But for purity...
+
+-- | Clear the rectangular area between the given two points.
+clearRect :: Point -> Point -> Picture ()
+clearRect (x1, y1) (x2, y2) = Picture $ \ctx -> jsClearRect ctx x1 y1 (x2-x1) (y2-y1)
+
 -- | Generate a data URL from the contents of a canvas.
 toDataURL :: MonadIO m => Canvas -> m URL
 toDataURL (Canvas _ el) = liftIO $ do
@@ -389,7 +503,7 @@ fill (Shape shape) = Picture $ \ctx -> do
   jsBeginPath ctx
   shape ctx
   jsFill ctx
-  
+
 -- | Draw the contours of a shape.
 stroke :: Shape () -> Picture ()
 stroke (Shape shape) = Picture $ \ctx -> do
@@ -441,6 +555,27 @@ twoPi = 2*pi
 arc :: Point -> Double -> Angle -> Angle -> Shape ()
 arc (x, y) radius from to = Shape $ \ctx -> jsArc ctx x y radius from to
 
+-- | Draw a quadratic Bezier curve.
+quadraticCurve ::
+    Point -- ^ Start point.
+    -> Point -- ^ End point.
+    -> Point -- ^ Control point.
+    -> Shape ()
+quadraticCurve (sx, sy) (ex, ey) (cx, cy) = Shape $ \ctx -> do
+    jsMoveTo ctx sx sy
+    jsQuadraticCurve ctx cx cy ex ey
+
+-- | Draw a Bezier curve.
+bezierCurve ::
+    Point -- ^ Start point.
+    -> Point -- ^ End point.
+    -> Point -- ^ Start control point.
+    -> Point -- ^ End control point.
+    -> Shape ()
+bezierCurve (sx, sy) (ex, ey) (scx, scy) (ecx, ecy) = Shape $ \ctx -> do
+    jsMoveTo ctx sx sy
+    jsBezierCurve ctx scx scy ecx ecy ex ey
+
 -- | Draw a picture using a certain font. Obviously only affects text.
 font :: String -> Picture () -> Picture ()
 font f (Picture pict) = Picture $ \(Ctx ctx) -> do
@@ -452,3 +587,25 @@ font f (Picture pict) = Picture $ \(Ctx ctx) -> do
 -- | Draw some text onto the canvas.
 text :: Point -> String -> Picture ()
 text (x, y) str = Picture $ \ctx -> jsDrawText ctx (toJSString str) x y
+
+-- | Read a pixel. Returns RGBA.
+readPixel :: MonadIO m => Canvas -> Point -> m Color
+readPixel (Canvas ctx _) (x, y) = liftIO $ do
+    imageData <- jsGetImageData ctx x y 1 1
+    colorArray <- get imageData (toJSStr "data") :: IO [Int]
+    return $ RGBA (colorArray!!0) (colorArray!!1) (colorArray!!2) (fromIntegral $ colorArray!!3)
+
+-- | Set a pixel.
+writePixel :: MonadIO m => Canvas -> Point -> Color -> m ()
+writePixel c p (RGB r g b) = writePixel c p (RGBA r g b 255)
+writePixel (Canvas ctx _) (x, y) (RGBA r g b a) = liftIO $ do
+    imageData <- jsGetImageData ctx x y 1 1
+    ffi "(function(imgdata,r,g,b,a){imgdata.data[0]=r;imgdata.data[1]=g;imgdata.data[2]=b;imgdata.data[3]=a;})" imageData r g b a :: IO ()
+    jsPutImageData ctx imageData x y
+    return ()
+
+-- | Modify a pixel
+modifyPixel :: MonadIO m => Canvas -> Point -> (Color -> Color) -> m ()
+modifyPixel c p f = liftIO $ do
+    color' <- readPixel c p
+    writePixel c p $ f color'
