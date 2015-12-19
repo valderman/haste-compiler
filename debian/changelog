@@ -1,5 +1,6 @@
-haste-compiler (0.5.3) UNRELEASED; urgency=medium
+haste-compiler (0.5.4) UNRELEASED; urgency=medium
 
-  * New APIs. Also bug fixes.
+  * Misc. bug fixes.
+  * Canvas API improvements.
 
- -- Anton Ekblad <anton@ekblad.cc>  Mon, 05 Oct 2015 15:49:57 +0200
+ -- Anton Ekblad <anton@ekblad.cc>  Sat, 19 Dec 2015 12:20:21 +0100
