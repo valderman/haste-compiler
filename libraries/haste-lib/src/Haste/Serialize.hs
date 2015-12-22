@@ -165,7 +165,7 @@ instance Applicative Parser where
 Dict o .: key =
   case lookup key o of
     Just x -> parseJSON x
-    _      -> Parser $ Left "Key not found"
+    _      -> Parser . Left $ "Key not found: " ++ fromJSStr key
 _ .: _ =
   Parser $ Left "Tried to do lookup on non-object!"
 
