@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, OverloadedStrings #-}
 -- | High level JavaScript foreign interface.
 module Haste.Foreign (
     -- * Conversion to/from JSAny
@@ -48,4 +48,4 @@ lookupAny root i = foldM hasGet (Just root) $ J.match dotsplit i
         hasGet (Just parent) id = do h <- has parent id
                                      if h then Just <$> get parent id
                                        else pure Nothing
-        dotsplit = J.regex (J.pack "[^.]+") (J.pack "g")
+        dotsplit = J.regex "[^.]+" "g"
