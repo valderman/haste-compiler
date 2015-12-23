@@ -43,6 +43,7 @@ hasAll a ks = and <$> mapM (has a) ks
 -- >>> lookupAny jsObject "child.childrer.childerest"
 lookupAny :: JSAny -> JSString -> IO (Maybe JSAny)
 lookupAny root i = foldM hasGet (Just root) $ J.match (J.regex "[^.]+" "g") i
-  where hasGet (Just parent) id = do h <- has parent id
+  where hasGet Nothing          = pure Nothing
+        hasGet (Just parent) id = do h <- has parent id
                                      if h then Just <$> get parent id
                                        else pure Nothing
