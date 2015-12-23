@@ -5,7 +5,7 @@ module Haste.Foreign (
     ToAny (..), FromAny (..), JSAny,
     Opaque, toOpaque, fromOpaque,
     nullValue, toObject, has, get, index,
-    getMaybe, hasAll, lookupAny
+    getMaybe, hasAll, lookupAny,
 
     -- * Importing and exporting JavaScript functions
     FFI, JSFunc,
@@ -15,7 +15,8 @@ module Haste.Foreign (
 #endif
   ) where
 import Haste.Prim.Foreign
-import Haste.Prim (JSString)
+import Haste.Prim (JSString, fromJSStr)
+import qualified Haste.JSString as J
 import Control.Monad (foldM)
 
 -- | Read a member from a JS object. Succeeds if the member exists.
@@ -42,8 +43,9 @@ hasAll a ks = and <$> mapM (has a) ks
 --
 -- >>> lookupAny jsObject "child.childrer.childerest"
 lookupAny :: JSAny -> JSString -> IO (Maybe JSAny)
-lookupAny root i = foldM hasGet (Just root) $ J.match (J.regex "[^.]+" "g") i
-  where hasGet Nothing          = pure Nothing
+lookupAny root i = foldM hasGet (Just root) $ J.match dotsplit i
+  where hasGet Nothing       _  = pure Nothing
         hasGet (Just parent) id = do h <- has parent id
                                      if h then Just <$> get parent id
                                        else pure Nothing
+        dotsplit = J.regex (J.pack "[^.]+") (J.pack "g")

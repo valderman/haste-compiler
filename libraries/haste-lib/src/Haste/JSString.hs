@@ -29,7 +29,7 @@ import Prelude hiding (foldr, concat, concatMap, reverse, map, all, any,
                        last, replicate)
 import Data.String
 import Haste.Prim
-import Haste.Foreign
+import Haste.Prim.Foreign
 
 #ifdef __HASTE__
 import GHC.Prim
