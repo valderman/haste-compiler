@@ -15,9 +15,10 @@ module Haste.Foreign (
 #endif
   ) where
 import Haste.Prim.Foreign
-import Haste.Prim (JSString, fromJSStr)
+import Haste.Prim (JSString)
 import qualified Haste.JSString as J
 import Control.Monad (foldM)
+import Control.Applicative ((<$>), pure)
 
 -- | Read a member from a JS object. Succeeds if the member exists.
 getMaybe :: (FromAny a) => JSAny -> JSString -> IO (Maybe a)
@@ -44,8 +45,8 @@ hasAll a ks = and <$> mapM (has a) ks
 -- >>> lookupAny jsObject "child.childrer.childerest"
 lookupAny :: JSAny -> JSString -> IO (Maybe JSAny)
 lookupAny root i = foldM hasGet (Just root) $ J.match dotsplit i
-  where hasGet Nothing       _  = pure Nothing
-        hasGet (Just parent) id = do h <- has parent id
-                                     if h then Just <$> get parent id
-                                       else pure Nothing
+  where hasGet Nothing       _     = pure Nothing
+        hasGet (Just parent) ident = do h <- has parent ident
+                                        if h then Just <$> get parent ident
+                                          else pure Nothing
         dotsplit = J.regex "[^.]+" "g"
