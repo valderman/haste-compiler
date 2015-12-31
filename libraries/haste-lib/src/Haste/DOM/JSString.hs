@@ -33,14 +33,16 @@ type ElemClass = JSString
 type AttrValue = JSString
 
 jsGet :: Elem -> JSString -> IO JSString
-jsGet = ffi "(function(e,p){return e[p].toString();})"
+jsGet = ffi "(function(e,p){var x = e[p];\
+  \return typeof x === 'undefined' ? '' : x.toString();})"
 
 jsGetAttr :: Elem -> JSString -> IO JSString
 jsGetAttr = ffi "(function(e,p){\
 \return e.hasAttribute(p) ? e.getAttribute(p) : '';})"
 
 jsGetStyle :: Elem -> JSString -> IO JSString
-jsGetStyle = ffi "(function(e,p){return e.style[p].toString();})"
+jsGetStyle = ffi "(function(e,p){var x = e.style[p];\
+  \return typeof x === 'undefined' ? '' : x.toString();})"
 
 jsFind :: JSString -> IO (Maybe Elem)
 jsFind = ffi "(function(id){return document.getElementById(id);})"
