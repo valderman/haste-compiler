@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 import Control.Shell
 import Data.Bits
-import System.Info (os)
+import qualified System.Info as Info (arch, os)
 import System.Environment (getArgs)
 import System.Exit
 
@@ -78,7 +78,7 @@ buildPortable = do
     buildManPages
 
     -- Strip symbols
-    case os of
+    case Info.os of
       "mingw32" -> do
         -- windows
         run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
@@ -108,7 +108,7 @@ bootPortable = do
     run_ "haste-compiler/bin/haste-boot" ["--force", "--initial"] ""
 
     -- Remove unnecessary binaries
-    case os of
+    case Info.os of
       "mingw32" -> do
         -- windows
         rm "haste-compiler\\bin\\haste-boot.exe"
@@ -127,8 +127,8 @@ buildManPages = do
   where
     buildManPage inf = run_ "pandoc" ["-s", "-o", outf, inf'] ""
       where
-        ext | os == "mingw32" = "html"
-            | otherwise       = "1"
+        ext | Info.os == "mingw32" = "html"
+            | otherwise            = "1"
         outf = "man" </> inf <.> ext
         inf' = "doc" </> inf <.> "1.md"
 
@@ -150,7 +150,7 @@ buildBinaryTarball ver ghcver = do
     return tarball
   where
     tarball =
-      concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",os,".tar.bz2"]
+      concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",Info.os,".tar.bz2"]
 
 buildBinary7z ver ghcver = do
     -- Copy HTML "manpages"
@@ -163,14 +163,16 @@ buildBinary7z ver ghcver = do
     return $ name
   where
     name =
-      concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",os,".7z"]
+      concat ["haste-compiler-",ver,"_ghc-",ghcver,"-",Info.os,".7z"]
 
-arch :: String
-arch = "amd64" -- only amd64 supported
+deb_arch :: String
+deb_arch
+  | Info.arch == "x86_64" = "amd64" -- only amd64 supported
+  | otherwise             = "i386"  -- not really supported, but may work
 
 -- Debian packaging based on https://wiki.debian.org/IntroDebianPackaging.
 -- Requires build-essential, devscripts and debhelper.
 buildDebianPackage ver ghcver = do
   run_ "debuild" ["-e", "LD_LIBRARY_PATH=haste-compiler/haste-cabal",
                   "-us", "-uc", "-b"] ""
-  return $ "haste-compiler_" ++ ver ++ "_" ++ arch ++ ".deb"
+  return $ "haste-compiler_" ++ ver ++ "_" ++ deb_arch ++ ".deb"
