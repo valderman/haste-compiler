@@ -29,6 +29,8 @@ libDir = "ghc-7.8"
 primVersion = "0.3.0.0"
 #endif
 
+data HasteCabal = Download | Prebuilt FilePath | Source (Maybe FilePath)
+
 data Cfg = Cfg {
     getLibs               :: Bool,
     getClosure            :: Bool,
@@ -36,7 +38,7 @@ data Cfg = Cfg {
     tracePrimops          :: Bool,
     forceBoot             :: Bool,
     initialPortableBoot   :: Bool,
-    getHasteCabal         :: Bool,
+    getHasteCabal         :: HasteCabal,
     verbose               :: Bool
   }
 
@@ -49,7 +51,7 @@ defCfg = Cfg {
     tracePrimops          = False,
     forceBoot             = False,
     initialPortableBoot   = False,
-    getHasteCabal         = True,
+    getHasteCabal         = Download,
     verbose               = False
   }
 #else
@@ -60,7 +62,7 @@ defCfg = Cfg {
     tracePrimops          = False,
     forceBoot             = False,
     initialPortableBoot   = False,
-    getHasteCabal         = True,
+    getHasteCabal         = Download,
     verbose               = False
   }
 #endif
@@ -70,7 +72,7 @@ devBoot cfg = cfg {
     useLocalLibs          = True,
     forceBoot             = True,
     getClosure            = False,
-    getHasteCabal         = False
+    getHasteCabal         = Source Nothing
   }
 
 setInitialPortableBoot :: Cfg -> Cfg
@@ -80,7 +82,7 @@ setInitialPortableBoot cfg = cfg {
     forceBoot           = True,
     getClosure          = True,
     initialPortableBoot = True,
-    getHasteCabal       = True
+    getHasteCabal       = Download
   }
 
 specs :: [OptDescr (Cfg -> Cfg)]
@@ -89,7 +91,7 @@ specs = [
       Option "" ["dev"]
            (NoArg devBoot) $
            "Boot Haste for development. Implies --force " ++
-           "--local --no-closure --no-haste-cabal"
+           "--local --no-closure --build-haste-cabal"
     , Option "" ["force"]
 #else
       Option "" ["force"]
@@ -115,10 +117,17 @@ specs = [
            "Don't download Closure compiler. You won't be able " ++
            "to use --opt-minify, unless you manually " ++
            "give hastec the path to compiler.jar."
-    , Option "" ["no-haste-cabal"]
-           (NoArg $ \cfg -> cfg {getHasteCabal = False}) $
-           "Don't install haste-cabal. This is probably not " ++
-           "what you want."
+    , Option "" ["download-haste-cabal"]
+           (NoArg $ \cfg -> cfg {getHasteCabal = Download}) $
+           "Download pre-built haste-cabal for your platform. " ++
+           "This is the default behaviour."
+    , Option "" ["with-haste-cabal"]
+           (ReqArg (\f cfg -> cfg {getHasteCabal = Prebuilt f}) "FILE") $
+           "Use FILE to provide haste-cabal."
+    , Option "" ["build-haste-cabal"]
+           (OptArg (\md cfg -> cfg {getHasteCabal = Source md}) "DIR") $
+           "Build haste-cabal from the source contained in DIR. " ++
+           "If DIR is not specified, `../cabal/' is assumed."
     , Option "" ["no-libs"]
            (NoArg $ \cfg -> cfg {getLibs = False}) $
            "Don't install any libraries. This is probably not " ++
@@ -168,8 +177,11 @@ bootHaste cfg tmpdir =
         mapM_ clearDir [pkgUserLibDir, jsmodUserDir, pkgUserDir,
                         pkgSysLibDir, jsmodSysDir, pkgSysDir]
 
-      when (getHasteCabal cfg) $ do
-        installHasteCabal portableHaste tmpdir
+      mkdir True (hasteCabalRootDir portableHaste)
+      case getHasteCabal cfg of
+        Download    -> installHasteCabal portableHaste tmpdir
+        Prebuilt fp -> copyHasteCabal portableHaste fp
+        Source mdir -> buildHasteCabal portableHaste (maybe "../cabal" id mdir)
 
       -- Spawn off closure download in the background.
       dir <- pwd -- use absolute path for closure to avoid dir changing race
@@ -200,48 +212,55 @@ clearDir dir = do
   exists <- isDirectory dir
   when exists $ rmdir dir
 
+copyHasteCabal :: Bool -> FilePath -> Shell ()
+copyHasteCabal portable file =
+  cp file (hasteCabalRootDir portable </> "haste-cabal")
+
+buildHasteCabal :: Bool -> FilePath -> Shell ()
+buildHasteCabal portable dir = do
+  inDirectory dir $ run_ "runghc" ["build-haste-cabal.hs"] ""
+  copyHasteCabal portable (dir </> "haste-cabal" </> "haste-cabal.bin")
+
 installHasteCabal :: Bool -> FilePath -> Shell ()
 installHasteCabal portable tmpdir = do
     echo "Downloading haste-cabal from GitHub"
     f <- (decompress . BSL.fromChunks . (:[])) `fmap` fetchBytes hasteCabalUrl
     if os == "linux"
       then do
-        mkdir True hasteCabalRootDir
-        liftIO . unpack hasteCabalRootDir $ read f
+        liftIO . unpack rootdir $ read f
         liftIO $ copyPermissions
                     hasteBinary
-                    (hasteCabalRootDir </> "haste-cabal/haste-cabal.bin")
-        output (hasteBinDir </> hasteCabalFile) launcher
+                    (rootdir </> "haste-cabal/haste-cabal.bin")
+        output (hasteBinDir </> hasteCabalFile) (hasteCabalLauncher portable)
       else do
         liftIO $ BSL.writeFile (hasteBinDir </> hasteCabalFile) f
     liftIO $ copyPermissions hasteBinary (hasteBinDir </> hasteCabalFile)
   where
+    rootdir = hasteCabalRootDir portable
     baseUrl = "http://valderman.github.io/haste-libs/"
     hasteCabalUrl
       | os == "linux" = baseUrl ++ "haste-cabal.linux.tar.bz2"
       | otherwise     = baseUrl ++ "haste-cabal" <.> os <.> "bz2"
     hasteCabalFile = "haste-cabal" ++ if os == "mingw32" then ".exe" else ""
 
-    hasteCabalRootDir
-      | portable  = hasteBinDir </> ".."
-      | otherwise = hasteSysDir
+hasteCabalRootDir :: Bool -> FilePath
+hasteCabalRootDir True  = hasteBinDir </> ".."
+hasteCabalRootDir False = hasteSysDir
 
-    -- We need to determine the haste-cabal libdir at runtime if we're
-    -- portable
-    launcher
-      | portable = unlines [
-            "#!/bin/bash",
-            "HASTEC=\"$(dirname $0)/hastec\"",
-            "DIR=\"$($HASTEC --print-libdir)/../haste-cabal\"",
-            "export LD_LIBRARY_PATH=$DIR",
-            "exec $DIR/haste-cabal.bin $@"
-          ]
-      | otherwise = unlines [
-            "#!/bin/bash",
-            "DIR=\"" ++ hasteCabalRootDir </> "haste-cabal" ++ "\"",
-            "export LD_LIBRARY_PATH=$DIR",
-            "exec $DIR/haste-cabal.bin $@"
-          ]
+-- We need to determine the haste-cabal libdir at runtime if we're
+-- portable
+hasteCabalLauncher :: Bool -> String
+hasteCabalLauncher True = unlines
+  [ "#!/bin/bash"
+  , "HASTEC=\"$(dirname $0)/hastec\""
+  , "DIR=\"$($HASTEC --print-libdir)/../haste-cabal\""
+  , "export LD_LIBRARY_PATH=$DIR"
+  , "exec $DIR/haste-cabal.bin $@" ]
+hasteCabalLauncher False = unlines
+  [ "#!/bin/bash"
+  , "DIR=\"" ++ hasteCabalRootDir False </> "haste-cabal" ++ "\""
+  , "export LD_LIBRARY_PATH=$DIR"
+  , "exec $DIR/haste-cabal.bin $@" ]
 
 -- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> Shell ()
