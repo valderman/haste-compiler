@@ -18,7 +18,9 @@ import Haste.Prim.Foreign
 import Haste.Prim (JSString)
 import qualified Haste.JSString as J
 import Control.Monad (foldM)
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>), pure)
+#endif
 
 -- | Read a member from a JS object. Succeeds if the member exists.
 getMaybe :: (FromAny a) => JSAny -> JSString -> IO (Maybe a)

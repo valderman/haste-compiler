@@ -14,7 +14,7 @@ Stability:      Experimental
 
 Library
     Hs-Source-Dirs: src
-    GHC-Options: -Wall -Werror -O2
+    GHC-Options: -Wall -O2
     Exposed-Modules:
         Haste
         Haste.Ajax
