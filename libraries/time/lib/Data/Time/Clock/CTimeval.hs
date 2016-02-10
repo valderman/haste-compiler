@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Trustworthy #-}
 module Data.Time.Clock.CTimeval where
 import Haste.Prim.Foreign
 import Unsafe.Coerce
