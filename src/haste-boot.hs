@@ -213,8 +213,14 @@ clearDir dir = do
   when exists $ rmdir dir
 
 copyHasteCabal :: Bool -> FilePath -> Shell ()
-copyHasteCabal portable file =
-  cp file (hasteCabalRootDir portable </> "haste-cabal")
+copyHasteCabal portable file = do
+    mkdir True cabalDir
+    cp file cabalBinary
+    output (hasteBinDir </> "haste-cabal") (hasteCabalLauncher portable)
+    liftIO $ copyPermissions cabalBinary (hasteBinDir </> "haste-cabal")
+  where
+    cabalDir = hasteCabalRootDir portable </> "haste-cabal"
+    cabalBinary = cabalDir </> "haste-cabal.bin"
 
 buildHasteCabal :: Bool -> FilePath -> Shell ()
 buildHasteCabal portable dir = do
