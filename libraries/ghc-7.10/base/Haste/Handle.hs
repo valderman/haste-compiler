@@ -29,6 +29,9 @@ jshWrite h s = jsWriteHandle (unsafeCoerce# h) (unsafeCoerce# (toJSStr s))
 jshFlush :: Handle -> IO ()
 jshFlush h = jsFlushHandle (unsafeCoerce# h)
 
+jshEq :: Handle -> Handle -> Bool
+jshEq a b = (unsafeCoerce# a :: JSHandle) == unsafeCoerce# b
+
 stdout, stderr, stdin :: Handle
 {-# NOINLINE stdout #-}
 stdout = unsafePerformIO (jsMkStdout >>= \h -> unsafeCoerce# h)

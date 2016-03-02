@@ -69,7 +69,7 @@ import GHC.Real
 import Data.Maybe
 import Data.Typeable
 
-import Haste.Handle (jshFlush)
+import Haste.Handle (jshFlush, stdin, jshEq)
 
 -- ---------------------------------------------------------------------------
 -- Closing a handle
@@ -148,21 +148,7 @@ hSetFileSize handle size =
 -- the stream to determine whether there is any more data to be read.
 
 hIsEOF :: Handle -> IO Bool
-hIsEOF handle = wantReadableHandle_ "hIsEOF" handle $ \Handle__{..} -> do
-
-  cbuf <- readIORef haCharBuffer
-  if not (isEmptyBuffer cbuf) then return False else do
-
-  bbuf <- readIORef haByteBuffer
-  if not (isEmptyBuffer bbuf) then return False else do
-
-  -- NB. do no decoding, just fill the byte buffer; see #3808
-  (r,bbuf') <- Buffered.fillReadBuffer haDevice bbuf
-  if r == 0
-     then return True
-     else do writeIORef haByteBuffer bbuf'
-             return False
-
+hIsEOF _ = pure False
 -- ---------------------------------------------------------------------------
 -- Looking ahead
 
@@ -202,38 +188,7 @@ hLookAhead handle =
 --    to be changed.
 
 hSetBuffering :: Handle -> BufferMode -> IO ()
-hSetBuffering handle mode =
-  withAllHandles__ "hSetBuffering" handle $ \ handle_@Handle__{..} -> do
-  case haType of
-    ClosedHandle -> ioe_closedHandle
-    _ -> do
-         if mode == haBufferMode then return handle_ else do
-
-         -- See [note Buffer Sizing] in GHC.IO.Handle.Types
-
-          -- check for errors:
-          case mode of
-              BlockBuffering (Just n) | n <= 0    -> ioe_bufsiz n
-              _ -> return ()
-
-          -- for input terminals we need to put the terminal into
-          -- cooked or raw mode depending on the type of buffering.
-          is_tty <- IODevice.isTerminal haDevice
-          when (is_tty && isReadableHandleType haType) $
-                case mode of
-#ifndef mingw32_HOST_OS
-        -- 'raw' mode under win32 is a bit too specialised (and troublesome
-        -- for most common uses), so simply disable its use here.
-                  NoBuffering -> IODevice.setRaw haDevice True
-#else
-                  NoBuffering -> return ()
-#endif
-                  _           -> IODevice.setRaw haDevice False
-
-          -- throw away spare buffers, they might be the wrong size
-          writeIORef haBuffers BufferListNil
-
-          return Handle__{ haBufferMode = mode,.. }
+hSetBuffering _ _ = pure ()
 
 -- -----------------------------------------------------------------------------
 -- hSetEncoding
@@ -311,7 +266,7 @@ hFlush handle = jshFlush handle
 --    seekable.
 
 hFlushAll :: Handle -> IO ()
-hFlushAll handle = withHandle_ "hFlushAll" handle flushBuffer
+hFlushAll handle = jshFlush handle
 
 -- -----------------------------------------------------------------------------
 -- Repositioning Handles
@@ -445,19 +400,10 @@ hTell handle =
 -- the specified property, and `False' otherwise.
 
 hIsOpen :: Handle -> IO Bool
-hIsOpen handle =
-    withHandle_ "hIsOpen" handle $ \ handle_ -> do
-    case haType handle_ of
-      ClosedHandle         -> return False
-      SemiClosedHandle     -> return False
-      _                    -> return True
+hIsOpen _ = pure True
 
 hIsClosed :: Handle -> IO Bool
-hIsClosed handle =
-    withHandle_ "hIsClosed" handle $ \ handle_ -> do
-    case haType handle_ of
-      ClosedHandle         -> return True
-      _                    -> return False
+hIsClosed _ = pure False
 
 {- not defined, nor exported, but mentioned
    here for documentation purposes:
@@ -469,45 +415,24 @@ hIsClosed handle =
        return (not (ho || hc))
 -}
 
+-- only stdin is readable
 hIsReadable :: Handle -> IO Bool
-hIsReadable (DuplexHandle _ _ _) = return True
-hIsReadable handle =
-    withHandle_ "hIsReadable" handle $ \ handle_ -> do
-    case haType handle_ of
-      ClosedHandle         -> ioe_closedHandle
-      SemiClosedHandle     -> ioe_closedHandle
-      htype                -> return (isReadableHandleType htype)
+hIsReadable handle = pure $ handle `jshEq` stdin
 
+-- only stderr and stdout are writable
 hIsWritable :: Handle -> IO Bool
-hIsWritable (DuplexHandle _ _ _) = return True
-hIsWritable handle =
-    withHandle_ "hIsWritable" handle $ \ handle_ -> do
-    case haType handle_ of
-      ClosedHandle         -> ioe_closedHandle
-      SemiClosedHandle     -> ioe_closedHandle
-      htype                -> return (isWritableHandleType htype)
+hIsWritable handle = pure . not $ handle `jshEq` stdin
 
 -- | Computation 'hGetBuffering' @hdl@ returns the current buffering mode
 -- for @hdl@.
+-- Always @LineBuffering@ with Haste.
 
 hGetBuffering :: Handle -> IO BufferMode
-hGetBuffering handle =
-    withHandle_ "hGetBuffering" handle $ \ handle_ -> do
-    case haType handle_ of
-      ClosedHandle         -> ioe_closedHandle
-      _ ->
-           -- We're being non-standard here, and allow the buffering
-           -- of a semi-closed handle to be queried.   -- sof 6/98
-          return (haBufferMode handle_)  -- could be stricter..
+hGetBuffering _ = pure LineBuffering
 
+-- Always non-seekable with Haste.
 hIsSeekable :: Handle -> IO Bool
-hIsSeekable handle =
-    withHandle_ "hIsSeekable" handle $ \ handle_@Handle__{..} -> do
-    case haType of
-      ClosedHandle         -> ioe_closedHandle
-      SemiClosedHandle     -> ioe_closedHandle
-      AppendHandle         -> return False
-      _                    -> IODevice.isSeekable haDevice
+hIsSeekable _ = pure False
 
 -- -----------------------------------------------------------------------------
 -- Changing echo status (Non-standard GHC extensions)
@@ -515,37 +440,17 @@ hIsSeekable handle =
 -- | Set the echoing status of a handle connected to a terminal.
 
 hSetEcho :: Handle -> Bool -> IO ()
-hSetEcho handle on = do
-    isT   <- hIsTerminalDevice handle
-    if not isT
-     then return ()
-     else
-      withHandle_ "hSetEcho" handle $ \ Handle__{..} -> do
-      case haType of
-         ClosedHandle -> ioe_closedHandle
-         _            -> IODevice.setEcho haDevice on
+hSetEcho _ _ = pure ()
 
 -- | Get the echoing status of a handle connected to a terminal.
 
 hGetEcho :: Handle -> IO Bool
-hGetEcho handle = do
-    isT   <- hIsTerminalDevice handle
-    if not isT
-     then return False
-     else
-       withHandle_ "hGetEcho" handle $ \ Handle__{..} -> do
-       case haType of
-         ClosedHandle -> ioe_closedHandle
-         _            -> IODevice.getEcho haDevice
+hGetEcho _ = pure True
 
 -- | Is the handle connected to a terminal?
-
+--   Not in Haste, it isn't!
 hIsTerminalDevice :: Handle -> IO Bool
-hIsTerminalDevice handle = do
-    withHandle_ "hIsTerminalDevice" handle $ \ Handle__{..} -> do
-     case haType of
-       ClosedHandle -> ioe_closedHandle
-       _            -> IODevice.isTerminal haDevice
+hIsTerminalDevice _ = pure False
 
 -- -----------------------------------------------------------------------------
 -- hSetBinaryMode

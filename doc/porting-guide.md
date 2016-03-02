@@ -8,6 +8,9 @@ versions of base/GHC to Haste.
 
   * GHC.HastePrim and Haste.Handle should be included in base.
   
+  * GHC.IO.Handle should be updated to use Haste's definitions for handle
+    functions.
+  
   * Basic Show instances should make use of GHC.HastePrim for performance
     reasons. These are found in GHC.Float and GHC.Show.
 
