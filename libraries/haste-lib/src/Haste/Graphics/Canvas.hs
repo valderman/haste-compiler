@@ -280,8 +280,8 @@ getCanvas e = liftIO $ do
     _    -> return Nothing
 
 -- | Create an off-screen buffer of the specified size.
-createCanvas :: Int -> Int -> IO Canvas
-createCanvas w h = do
+createCanvas :: MonadIO m => Int -> Int -> m Canvas
+createCanvas w h = liftIO $ do
   buf <- newElem "canvas"
   setProp buf "width" (toJSString w)
   setProp buf "height" (toJSString h)
