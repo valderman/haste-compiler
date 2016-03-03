@@ -18,11 +18,13 @@ import Haste.Prim.Any
 #if __GLASGOW_HASKELL__ >= 710
 import GHC.StaticPtr (StaticPtr, deRefStaticPtr)
 #endif
+import Unsafe.Coerce
 
 -- | A JS function.
 type JSFun = JSAny
 
 #ifdef __HASTE__
+foreign import ccall __strict :: JSAny -> JSAny
 foreign import ccall "eval" __eval :: JSString -> JSFun
 foreign import ccall __apply :: JSFun -> Ptr [JSAny] -> IO JSAny
 foreign import ccall __app0  :: JSFun -> IO JSAny
@@ -36,6 +38,8 @@ foreign import ccall __app5  :: JSFun
                              -> IO JSAny
 foreign import ccall __createJSFunc :: Int -> JSAny -> IO JSAny
 #else
+__strict :: JSAny -> JSAny
+__strict x = x
 __eval :: JSString -> JSFun
 __eval _ = undefined
 __apply :: JSFun -> Ptr [JSAny] -> IO JSAny
@@ -152,20 +156,29 @@ instance {-# OVERLAPPABLE #-} (ToAny a, JS a ~ JSAny) => JSFunc a where
   mkJSFunc = toAny
   arity _  = 0
 
+{-# INLINE strictly #-}
+strictly :: a -> a
+strictly x = unsafeCoerce (__strict (unsafeCoerce x))
+
+{-# RULES
+  "strictly" forall x. __strict x
+    = unsafeCoerce x
+  #-}
+
 instance ToAny a => JSFunc (IO a) where
   mkJSFunc = fmap toAny
   arity _  = 1
 
 instance (FromAny a, JSFunc b) => JSFunc (a -> b) where
-  mkJSFunc f = mkJSFunc . f . veryUnsafePerformIO . fromAny
+  mkJSFunc f = mkJSFunc . f . strictly . veryUnsafePerformIO . fromAny
   arity f    = 1 + arity (f undefined)
 
 instance (FromAny a, JSFunc b) => ToAny (a -> b) where
   toAny f =
-    veryUnsafePerformIO . __createJSFunc (arity f) . toAny . toOpaque $ mkJSFunc f
+    strictly . veryUnsafePerformIO . __createJSFunc (arity f) . toAny . toOpaque $ mkJSFunc f
 
 instance ToAny a => ToAny (IO a) where
-  toAny = veryUnsafePerformIO . __createJSFunc 0 . toAny . toOpaque . mkJSFunc
+  toAny = strictly . veryUnsafePerformIO . __createJSFunc 0 . toAny . toOpaque . mkJSFunc
 
 #if __GLASGOW_HASKELL__ < 710
 instance FFI a => FromAny a where

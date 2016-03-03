@@ -246,9 +246,9 @@ instance FromAny Word32 where
 -- differs in semantics if the value in question is a) not a number, and
 -- b) passed verbatim back into JS land
 instance FromAny Float where
-  fromAny x = unsafeCoerce x
+  fromAny x = return (unsafeCoerce x)
 instance FromAny Double where
-  fromAny x = unsafeCoerce x
+  fromAny x = return (unsafeCoerce x)
 
 instance FromAny Char where
   fromAny x = return (unsafeCoerce (jsNumber x))
