@@ -107,17 +107,13 @@ instance Ord TyCon where
 -- TyCon for a derived Typeable instance will end up being statically
 -- allocated.
 
--- Horrid hack to work around GHC giving us a Word# disguised as a Word64#
-w64 :: Word64# -> Word64#
-w64 x = wordToWord64# (unsafeCoerce# x)
-
 #if WORD_SIZE_IN_BITS < 64
 mkTyCon :: Word64# -> Word64# -> String -> String -> String -> TyCon
 #else
 mkTyCon :: Word#   -> Word#   -> String -> String -> String -> TyCon
 #endif
 mkTyCon high# low# pkg modl name
-  = TyCon (Fingerprint (W64# (w64 high#)) (W64# (w64 low#))) pkg modl name
+  = TyCon (Fingerprint (W64# high#) (W64# low#)) pkg modl name
 
 -- | Applies a polymorhic type constructor to a sequence of kinds and types
 mkPolyTyConApp :: TyCon -> [KindRep] -> [TypeRep] -> TypeRep

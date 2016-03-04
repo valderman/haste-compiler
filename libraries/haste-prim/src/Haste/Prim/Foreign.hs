@@ -7,7 +7,7 @@
 -- | High level JavaScript foreign interface.
 module Haste.Prim.Foreign (
     module Haste.Prim.Any,
-    FFI, JSFunc,
+    FFI, JSFunc, JSException (..),
     ffi, constant, export
 #if __GLASGOW_HASKELL__ >= 710
     , safe_ffi, StaticPtr
@@ -19,6 +19,7 @@ import Haste.Prim.Any
 import GHC.StaticPtr (StaticPtr, deRefStaticPtr)
 #endif
 import Unsafe.Coerce
+import Control.Exception
 
 -- | A JS function.
 type JSFun = JSAny
@@ -186,3 +187,9 @@ instance FFI a => FromAny a where
 instance {-# OVERLAPPABLE #-} FFI a => FromAny a where
 #endif
   fromAny f = return $ __ffi f []
+
+data JSException = JSException JSString
+  deriving Show
+
+instance Exception JSException where
+  displayException (JSException e) = "JavaScript exception: " ++ fromJSStr e

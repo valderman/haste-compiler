@@ -5,7 +5,7 @@ module Haste.Foreign (
     ToAny (..), FromAny (..), JSAny,
     Opaque, toOpaque, fromOpaque,
     nullValue, toObject, has, get, index,
-    getMaybe, hasAll, lookupAny,
+    getMaybe, hasAll, lookupAny, JSException (..),
 
     -- * Importing and exporting JavaScript functions
     FFI, JSFunc,
