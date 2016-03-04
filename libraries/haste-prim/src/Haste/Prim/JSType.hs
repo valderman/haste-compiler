@@ -38,7 +38,6 @@ instance JSType JSString where
 foreign import ccall "Number" jsNumber          :: JSString -> Double
 foreign import ccall "String" jsString          :: Double -> JSString
 foreign import ccall jsTrunc                    :: Double -> Int
-foreign import ccall jsTruncW                   :: Double -> Int
 foreign import ccall "I_toInt" jsIToInt         :: ByteArray# -> Int
 foreign import ccall "I_toString" jsIToString   :: ByteArray# -> JSString
 foreign import ccall "I_fromString" jsStringToI :: JSString -> ByteArray#
@@ -47,17 +46,12 @@ foreign import ccall "I_fromNumber" jsNumToI    :: ByteArray# -> ByteArray#
 unsafeToJSString :: a -> JSString
 unsafeToJSString = unsafeCoerce# jsString
 
-unsafeIntFromJSString :: JSString -> Maybe a
+unsafeIntFromJSString :: JSString -> Maybe Int
 unsafeIntFromJSString s =
     case jsNumber s of
       d | isNaN d   -> Nothing
         | otherwise -> Just (unsafeCoerce# (jsTrunc d))
 
-unsafeWordFromJSString :: JSString -> Maybe a
-unsafeWordFromJSString s =
-    case jsNumber s of
-      d | isNaN d   -> Nothing
-        | otherwise -> Just (unsafeCoerce# (jsTruncW d))
 
 -- JSNum instances
 
@@ -124,25 +118,25 @@ instance JSType Int where
   fromJSString = unsafeIntFromJSString
 instance JSType Int8 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeIntFromJSString
+  fromJSString = fmap fromIntegral . unsafeIntFromJSString
 instance JSType Int16 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeIntFromJSString
+  fromJSString = fmap fromIntegral . unsafeIntFromJSString
 instance JSType Int32 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeIntFromJSString
+  fromJSString = unsafeCoerce# unsafeIntFromJSString
 instance JSType Word where
   toJSString = unsafeToJSString
-  fromJSString = unsafeWordFromJSString
+  fromJSString = fmap fromIntegral . unsafeIntFromJSString
 instance JSType Word8 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeWordFromJSString
+  fromJSString = fmap fromIntegral . unsafeIntFromJSString
 instance JSType Word16 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeWordFromJSString
+  fromJSString = fmap fromIntegral . unsafeIntFromJSString
 instance JSType Word32 where
   toJSString = unsafeToJSString
-  fromJSString = unsafeWordFromJSString
+  fromJSString = fmap fromIntegral . unsafeIntFromJSString
 
 instance JSType Float where
   fromJSString s =
