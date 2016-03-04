@@ -188,6 +188,7 @@ instance {-# OVERLAPPABLE #-} FFI a => FromAny a where
 #endif
   fromAny f = return $ __ffi f []
 
+-- | An exception raised from foreign JavaScript code.
 data JSException = JSException JSString
   deriving Show
 
