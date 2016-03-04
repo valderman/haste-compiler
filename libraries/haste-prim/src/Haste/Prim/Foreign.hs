@@ -193,4 +193,6 @@ data JSException = JSException JSString
   deriving Show
 
 instance Exception JSException where
+#if __GLASGOW_HASKELL__ >= 710
   displayException (JSException e) = "JavaScript exception: " ++ fromJSStr e
+#endif
