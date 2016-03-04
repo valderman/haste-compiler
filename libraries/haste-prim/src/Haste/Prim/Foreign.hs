@@ -20,6 +20,7 @@ import GHC.StaticPtr (StaticPtr, deRefStaticPtr)
 #endif
 import Unsafe.Coerce
 import Control.Exception
+import Data.Typeable
 
 -- | A JS function.
 type JSFun = JSAny
@@ -190,7 +191,7 @@ instance {-# OVERLAPPABLE #-} FFI a => FromAny a where
 
 -- | An exception raised from foreign JavaScript code.
 data JSException = JSException JSString
-  deriving Show
+  deriving (Show, Typeable)
 
 instance Exception JSException where
 #if __GLASGOW_HASKELL__ >= 710
