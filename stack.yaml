@@ -1,0 +1,8 @@
+resolver: lts-5.5
+extra-deps:
+- HTTP-4000.2.23
+- base-orphans-0.5.3
+- ghc-simple-0.3
+- shellmate-0.2.3
+- tar-0.5.0.1
+- text-1.2.2.0
