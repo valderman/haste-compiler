@@ -1,5 +1,5 @@
-haste-compiler (0.5.4.1) UNRELEASED; urgency=medium
+haste-compiler (0.5.4.2) UNRELEASED; urgency=medium
 
-  * Minor compatibility fixes.
+  * Fix performance regression + error handling for Haste.Foreign.
 
- -- Anton Ekblad <anton@ekblad.cc>  Wed, 02 Mar 2016 22:11:42 +0100
+ -- Anton Ekblad <anton@ekblad.cc>  Tue, 22 Mar 2016 15:12:50 +0100
