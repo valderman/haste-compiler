@@ -51,6 +51,11 @@ Building from Github source is equally easy. After checking out the source,
     $ cabal install
     $ haste-boot --force --local
 
+Alternatively, you may also build from Github source using Stack:
+
+    $ stack install
+    $ haste-boot --force --local
+
 See `doc/building.md` for more information about build requirements and
 procedures for the various platforms.
 
