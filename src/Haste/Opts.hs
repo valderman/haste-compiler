@@ -191,7 +191,7 @@ helpHeader = unlines [
     "the interpreter. This behavior can be controlled using the --onload, --onexec",
     "and --start options.",
     "",
-    "A summary of the available options are given below."
+    "A summary of the available options is given below."
   ]
 
 -- | Like 'words', except it breaks on commas instead of spaces.
