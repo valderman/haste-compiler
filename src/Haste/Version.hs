@@ -5,6 +5,7 @@ module Haste.Version (
     showBootVersion, parseBootVersion,
     showVersion
   ) where
+import Paths_haste_compiler
 import Data.Version
 import Config (cProjectVersion)
 import Text.ParserCombinators.ReadP
@@ -12,7 +13,7 @@ import Data.Maybe (listToMaybe)
 
 -- | Current Haste version.
 hasteVersion :: Version
-hasteVersion = Version [0,5,4,2] []
+hasteVersion = version
 
 -- | Current Haste version as an Int. The format of this version number is
 --   MAJOR*10 000 + MINOR*100 + MICRO.
