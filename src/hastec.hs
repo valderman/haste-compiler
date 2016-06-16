@@ -164,7 +164,7 @@ linkAndMinify cfg pkgkey infile = do
       Just clopath -> closurize cfg clopath outfile
       _            -> return ()
     when (outputHTML cfg) $ do
-      res <- Sh.shell $ Sh.withCustomTempFile "." $ \tmp h -> do
+      res <- Sh.shell $ Sh.withCustomTempFile Sh.TextMode "." $ \tmp h -> do
         prog <- Sh.input outfile
         Sh.hPutStrLn h (htmlSkeleton outfile prog)
         Sh.liftIO $ hClose h
@@ -192,24 +192,27 @@ closurize cfg cloPath f = do
   logStr cfg $ "Minifying " ++ f ++ "..."
   let cloFile = f `Sh.addExtension` ".clo"
   res <- Sh.shell $ do
-    str <- Sh.run "java"
-      (["-jar", cloPath,
-        "--compilation_level", "ADVANCED_OPTIMIZATIONS",
-        "--jscomp_off", "globalThis", f]
-       ++ arguments) ""
-    Sh.output cloFile str
+    Sh.run "java" (cloArgs arguments) Sh.|> (Sh.stdin >>= Sh.output cloFile)
     Sh.mv cloFile f
   case res of
     Left e  -> fail $ "Couldn't execute Google Closure compiler: " ++
                       Sh.exitString e
     Right _ -> return ()
+  where
+    cloArgs args =
+      [ "-jar"
+      , cloPath
+      , "--compilation_level", "ADVANCED_OPTIMIZATIONS"
+      , "--jscomp_off", "globalThis"
+      , f
+      ] ++ args
+
 
 -- | Call vanilla GHC; used for C files and the like.
 callVanillaGHC :: [String] -> IO ()
 callVanillaGHC args = do
     booting <- maybe False (const True) `fmap` lookupEnv "HASTE_BOOTING"
-    _ <- Sh.shell $ Sh.run_ ghcBinary (pkgargs booting ++ ghcArgs) ""
-    return ()
+    Sh.shell_ $ Sh.run ghcBinary (pkgargs booting ++ ghcArgs)
   where
     Right (_, ghcArgs, _) = parseArgs hasteOpts "" args
     pkgargs booting =
@@ -223,12 +226,11 @@ callVanillaGHC args = do
 -- | Initialize the Haste package database, unless it already exists.
 initUserPkgDB :: IO ()
 initUserPkgDB = do
-  _ <- Sh.shell $ do
+  Sh.shell_ $ do
     pkgDirExists <- Sh.isDirectory pkgUserDir
     when (not pkgDirExists) $ do
       Sh.mkdir True pkgUserLibDir
-      Sh.runInteractive hastePkgBinary ["init", pkgUserDir]
-  return ()
+      Sh.run hastePkgBinary ["init", pkgUserDir]
 
 type Message = String
 data Compiler = Haste | GHC | InstallJSExe | BuildRunner deriving (Show, Eq)

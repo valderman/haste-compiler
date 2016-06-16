@@ -34,11 +34,11 @@ compile cf dir inp = do
       fil <- case inp of
         InFile f   -> return $ if isRelative f then incdir curdir </> f else f
         InString s -> output "Main.hs" s >> return "Main.hs"
-      (f, _, e) <- genericRun hasteBinary (fil : idir curdir : mkFlags cf) ""
-      if f /= 0
-        then do
-          return $ Haste.Compiler.Failure e
-        else do
+      res <- try $ run hasteBinary (fil : idir curdir : mkFlags cf)
+      case res of
+        Left err -> do
+          return $ Haste.Compiler.Failure err
+        _ -> do
           case cfTarget cf of
             TargetFile tgt -> do
               return $ Haste.Compiler.Success $ OutFile tgt

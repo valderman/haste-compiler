@@ -93,7 +93,8 @@ Executable haste-boot
         network,
         network-uri,
         HTTP,
-        shellmate >= 0.2.3 && <0.3,
+        shellmate >= 0.3.2.2 && <0.4,
+        shellmate-extras,
         ghc-paths,
         ghc,
         directory,
@@ -127,7 +128,7 @@ Executable hastec
         ghc-paths,
         random,
         system-fileio,
-        shellmate >= 0.2.3 && <0.3,
+        shellmate >= 0.3.2.2 && <0.4,
         either,
         filepath,
         directory,
@@ -195,7 +196,7 @@ Executable haste-pkg
                    binary,
                    bin-package-db,
                    bytestring,
-                   shellmate  >= 0.2.3 && <0.3,
+                   shellmate  >= 0.3.2.2 && <0.4,
                    ghc
     if !os(windows)
         Build-Depends: unix,
@@ -221,7 +222,7 @@ Executable haste-cat
             GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
         base < 5,
-        shellmate >= 0.2.2 && <0.3,
+        shellmate >= 0.3.2.2 && <0.4,
         ghc-paths,
         ghc,
         binary,
@@ -301,7 +302,7 @@ Library
         bytestring,
         utf8-string,
         -- For Haste.Compiler
-        shellmate >= 0.2.2 && <0.3,
+        shellmate >= 0.3.2.2 && <0.4,
         directory,
         filepath,
         process,

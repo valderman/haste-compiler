@@ -2033,10 +2033,10 @@ absolutePath path = return . normalise . (</> path) =<< getCurrentDirectory
 --   May break horribly for general use, only reliable for Haste base packages.
 relocate :: [String] -> String -> Sh.Shell ()
 relocate packages pkg = do
-    pi <- Sh.run hastePkgBinary (packages ++ ["describe", pkg]) ""
-    Sh.run_ hastePkgBinary (packages ++ ["update", "-", "--force", "--global"])
-                           (reloc pi)
+    pi <- Sh.capture $ Sh.run hastePkgBinary (packages ++ ["describe", pkg])
+    Sh.echo_ (reloc pi) Sh.|> Sh.run hastePkgBinary relocArgs
   where
+    relocArgs = packages ++ ["update", "-", "--force", "--global"]
     reloc = unlines . map fixPath . lines
 
     fixPath s

@@ -160,14 +160,14 @@ main = shell_ $ do
       when (hasteNeedsReboot || forceBoot cfg) $ do
         if useLocalLibs cfg
           then bootHaste cfg "."
-          else withTempDirectory "haste" $ bootHaste cfg
+          else withTempDirectory $ bootHaste cfg
     (cfgs, nopts, errs) -> do
       let errors = errs ++ map (\x -> "unrecognized option `" ++ x ++ "'") nopts
       fail $ unlines errors
 
 bootHaste :: Cfg -> FilePath -> Shell ()
 bootHaste cfg tmpdir =
-  withEnv "nodosfilewarning" (const "1") . inDirectory tmpdir $ do
+  withEnv "nodosfilewarning" "1" . inDirectory tmpdir $ do
     removeBootFile <- isFile bootFile
     when removeBootFile $ rm bootFile
     when (getLibs cfg) $ do
@@ -193,7 +193,7 @@ bootHaste cfg tmpdir =
       when (not portableHaste || initialPortableBoot cfg) $ do
         mkdir True hasteSysDir
         copyGhcSettings hasteSysDir
-        void $ run hastePkgBinary ["init", pkgSysDir] ""
+        void $ capture $ run hastePkgBinary ["init", pkgSysDir]
         buildLibs cfg
 
       when (initialPortableBoot cfg) $ do
@@ -225,7 +225,7 @@ copyHasteCabal portable file = do
 
 buildHasteCabal :: Bool -> FilePath -> Shell ()
 buildHasteCabal portable dir = do
-  inDirectory dir $ run_ "runghc" ["build-haste-cabal.hs"] ""
+  inDirectory dir $ run "runghc" ["build-haste-cabal.hs"]
   copyHasteCabal portable (dir </> "haste-cabal" </> "haste-cabal.bin")
 
 installHasteCabal :: Bool -> FilePath -> Shell ()
@@ -302,11 +302,11 @@ buildLibs cfg = do
       let out    = if os == "mingw32" then "unlit.exe" else "unlit"
           static = if os == "darwin" then [] else ["-static"]
           dash_s = if os == "darwin" then [] else ["-s"]
-      run_ "gcc" (["-o" ++ out, "-O2", "unlit.c"]++static) ""
-      run_ "strip" (dash_s ++ [out]) ""
+      run "gcc" (["-o" ++ out, "-O2", "unlit.c"]++static)
+      run "strip" (dash_s ++ [out])
       cp out (hasteSysDir </> out)
 
-    run_ hastePkgBinary ["update", "--global", "libraries" </> "rts.pkg"] ""
+    run hastePkgBinary ["update", "--global", "libraries" </> "rts.pkg"]
 
     inDirectory "libraries" $ do
       inDirectory libDir $ do
@@ -317,9 +317,9 @@ buildLibs cfg = do
           -- To get the GHC.Prim module in spite of pretending to have
           -- build-type: Simple
           let osxprim = if os == "darwin" then "-osx" else ""
-          run_ hastePkgBinary ["unregister", "--global","ghc-prim"] ""
-          run_ hastePkgBinary ["update", "--global",
-                               "ghc-prim-"++primVersion++osxprim++".conf"] ""
+          run hastePkgBinary ["unregister", "--global","ghc-prim"]
+          run hastePkgBinary ["update", "--global",
+                               "ghc-prim-"++primVersion++osxprim++".conf"]
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do
@@ -346,7 +346,7 @@ buildLibs cfg = do
                          , "./haste-lib"]
 
       -- Export monads-tf; it seems to be hidden by default
-      run_ hastePkgBinary ["expose", "monads-tf"] ""
+      run hastePkgBinary ["expose", "monads-tf"]
   where
     ghcOpts = concat [
         if tracePrimops cfg then ["--hastec-option=-debug"] else [],
@@ -365,19 +365,19 @@ buildLibs cfg = do
 #endif
                  ]
     hasteCabal Configure args =
-      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
+      withEnv "HASTE_BOOTING" "1" $ run hasteCabalBinary as
       where as = "configure" : args ++ ghcOpts ++ configOpts
     hasteCabal Install args =
-      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
+      withEnv "HASTE_BOOTING" "1" $ run hasteCabalBinary as
       where as = "install" : args ++ ghcOpts ++ configOpts
     hasteCabal Build args =
-      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
+      withEnv "HASTE_BOOTING" "1" $ run hasteCabalBinary as
       where as = "build" : args ++ ghcOpts
     hasteCabal Clean args =
-      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
+      withEnv "HASTE_BOOTING" "1" $ run hasteCabalBinary as
       where as = "clean" : args
 
-    vanillaCabal args = run_ "cabal" args ""
+    vanillaCabal args = run "cabal" args
 
 
 -- | Copy GHC settings and utils into the given directory.
@@ -392,4 +392,4 @@ copyGhcSettings dest = do
 #endif
 
 relocate :: String -> Shell ()
-relocate pkg = run_ hastePkgBinary ["relocate", pkg] ""
+relocate pkg = run hastePkgBinary ["relocate", pkg]
