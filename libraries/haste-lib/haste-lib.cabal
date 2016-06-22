@@ -18,8 +18,6 @@ Library
     Exposed-Modules:
         Haste
         Haste.Ajax
-        Haste.App
-        Haste.App.Concurrent
         Haste.Audio
         Haste.Binary
         Haste.Compiler
@@ -39,9 +37,6 @@ Library
         Haste.Serialize
         Haste.WebSockets
     Other-Modules:
-        Haste.App.Client
-        Haste.App.Monad
-        Haste.App.Protocol
         Haste.Audio.Events
         Haste.Binary.Get
         Haste.Binary.Put
