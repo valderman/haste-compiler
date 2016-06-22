@@ -12,9 +12,6 @@ module Haste (
     -- * URL hash handling
     onHashChange, onHashChange', setHash, getHash, setHash', getHash',
 
-    -- * Random number generation (deprecated; use the @random@ package instead)
-    Random (..), Seed, next, mkSeed, newSeed,
-
     -- * Timers
     Timer, Interval (..), setTimer, stopTimer,
 
@@ -23,7 +20,6 @@ module Haste (
   ) where
 import Haste.Prim
 import Haste.Timer
-import Haste.Random
 import Haste.Prim.JSType
 import Haste.Hash
 import Haste.Foreign

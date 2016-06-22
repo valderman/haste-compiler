@@ -48,7 +48,6 @@ Library
         Haste.Events.MouseEvents
         Haste.Events.TouchEvents
         Haste.Hash
-        Haste.Random
         Haste.Timer
     Build-Depends:
         base >= 4.8 && < 5,
