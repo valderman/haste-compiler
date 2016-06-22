@@ -62,20 +62,11 @@ Flag static
         portable.
     Default: False
 
-Flag only-library
-    Description:
-        Only install the Haste server-side libraries; no binaries.
-        This is useful if you installed pre-built binaries but still want
-        to use Haste with vanilla GHC, for Haste.App for instance.
-    Default: False
-
 source-repository head
     type:       git
     location:   https://github.com/valderman/haste-compiler.git
 
 Executable haste-boot
-    if flag(only-library)
-        buildable: False
     Main-Is: haste-boot.hs
     Other-Modules:
         Haste.Version
@@ -103,8 +94,6 @@ Executable haste-boot
     Default-Language: Haskell98
 
 Executable hastec
-    if flag(only-library)
-        buildable: False
     Hs-Source-Dirs: src
     Include-Dirs: include
     GHC-Options: -Wall
@@ -175,9 +164,6 @@ Executable haste-pkg
       src
       utils/haste-pkg
 
-    if flag(only-library)
-        buildable: False
-
     if flag(portable)
         CPP-Options: -DPORTABLE
 
@@ -188,26 +174,26 @@ Executable haste-pkg
           if os(linux)
             GHC-Options: -static -optl-static -optl-pthread
 
-    Build-Depends: base       >= 4   && < 5,
-                   directory  >= 1   && < 1.3,
-                   process    >= 1   && < 1.3,
-                   Cabal,
-                   containers,
-                   filepath,
-                   binary,
-                   bin-package-db,
-                   bytestring,
-                   shellmate  >= 0.3.2.2 && <0.4,
-                   ghc
+    Build-Depends:
+      base       >= 4   && < 5,
+      directory  >= 1   && < 1.3,
+      process    >= 1   && < 1.3,
+      Cabal,
+      containers,
+      filepath,
+      binary,
+      bin-package-db,
+      bytestring,
+      shellmate  >= 0.3.2.2 && <0.4,
+      ghc
     if !os(windows)
-        Build-Depends: unix,
-                       terminfo
+        Build-Depends:
+          unix,
+          terminfo
     if os(windows)
         c-sources: utils/haste-pkg/CRT_noglob.c
 
 Executable haste-cat
-    if flag(only-library)
-        buildable: False
     Main-Is: haste-cat.hs
     Other-Modules:
         Haste.Environment
@@ -236,76 +222,3 @@ Executable haste-cat
         directory,
         utf8-string
     default-language: Haskell98
-
-Library
-    Hs-Source-Dirs: libraries/haste-lib/src, libraries/haste-prim/src, src
-    GHC-Options: -Wall
-    Exposed-Modules:
-        Haste
-        Haste.Ajax
-        Haste.Audio
-        Haste.Binary
-        Haste.Compiler
-        Haste.Concurrent
-        Haste.DOM
-        Haste.DOM.JSString
-        Haste.Events
-        Haste.Foreign
-        Haste.Graphics.AnimationFrame
-        Haste.Graphics.Canvas
-        Haste.JSON
-        Haste.JSString
-        Haste.LocalStorage
-        Haste.Object
-        Haste.Parsing
-        Haste.Performance
-        Haste.Prim
-        Haste.Serialize
-        Haste.WebSockets
-    Other-Modules:
-        Haste.Audio.Events
-        Haste.Binary.Get
-        Haste.Binary.Put
-        Haste.Binary.Types
-        Haste.Compiler.Flags
-        Haste.Concurrent.Monad
-        Haste.Concurrent.Ajax
-        Haste.DOM.Core
-        Haste.Environment
-        Haste.Events.BasicEvents
-        Haste.Events.Core
-        Haste.Events.KeyEvents
-        Haste.Events.MouseEvents
-        Haste.Events.TouchEvents
-        Haste.GHCPaths
-        Haste.Hash
-        Haste.Prim.Any
-        Haste.Prim.Foreign
-        Haste.Prim.JSType
-        Haste.Random
-        Haste.Timer
-        Haste.Version
-        Paths_haste_compiler
-    Build-Depends:
-        transformers,
-        monads-tf,
-        containers,
-        base < 5,
-        ghc-prim,
-        random,
-        binary,
-        data-binary-ieee754,
-        bytestring,
-        utf8-string,
-        -- For Haste.Compiler
-        shellmate >= 0.3.2.2 && <0.4,
-        directory,
-        filepath,
-        process,
-        ghc-paths,
-        ghc,
-        directory,
-        websockets >= 0.9.1.0,
-        network >= 2.6,
-        network-uri >= 2.6
-    Default-Language: Haskell98

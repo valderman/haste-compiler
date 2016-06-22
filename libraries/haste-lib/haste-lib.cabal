@@ -20,7 +20,6 @@ Library
         Haste.Ajax
         Haste.Audio
         Haste.Binary
-        Haste.Compiler
         Haste.Concurrent
         Haste.DOM
         Haste.DOM.JSString
@@ -41,7 +40,6 @@ Library
         Haste.Binary.Get
         Haste.Binary.Put
         Haste.Binary.Types
-        Haste.Compiler.Flags
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
         Haste.DOM.Core
@@ -54,6 +52,7 @@ Library
         Haste.Random
         Haste.Timer
     Build-Depends:
+        base >= 4.8 && < 5,
         integer-gmp,
         transformers,
         monads-tf,
@@ -66,8 +65,7 @@ Library
         if impl(ghc >= 7.10)
             Build-Depends:
               array == 0.5.1.0,
-              hashable >= 1.2 && < 1.3,
-              base >= 4.8 && < 4.9
+              hashable >= 1.2 && < 1.3
         else
             Build-Depends:
               array == 0.4.0.1,
@@ -75,8 +73,9 @@ Library
               base == 4.6.0.1
     else
         Build-Depends:
-            base,
-            array,
-            random,
-            websockets >= 0.8
+          array,
+          random,
+          binary              >= 0.7 && < 0.8,
+          data-binary-ieee754 >= 0.4 && < 0.5,
+          utf8-string         >= 1   && < 2
     Default-Language: Haskell98
