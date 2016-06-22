@@ -16,7 +16,7 @@ module Haste.JSString
   -- * Building JSStrings
   , empty, singleton, pack, cons, snoc, append, replicate
     -- * Deconstructing JSStrings
-  , unpack, head, last, tail, drop, take, init, splitAt
+  , (!), unpack, head, last, tail, drop, take, init, splitAt
     -- * Examining JSStrings
   , null, length, any, all
     -- * Modifying JSStrings
@@ -34,6 +34,7 @@ import Haste.Prim.Foreign
 
 #ifdef __HASTE__
 import GHC.Prim
+import System.IO.Unsafe
 
 {-# INLINE d2c #-}
 d2c :: Double -> Char
@@ -82,11 +83,11 @@ return a ? a : [];})"
 
 {-# INLINE _jss_map #-}
 _jss_map :: (Char -> Char) -> JSString -> JSString
-_jss_map f s = veryUnsafePerformIO $ cmap_js (_jss_singleton . f) s
+_jss_map f s = unsafePerformIO $ cmap_js (_jss_singleton . f) s
 
 {-# INLINE _jss_cmap #-}
 _jss_cmap :: (Char -> JSString) -> JSString -> JSString
-_jss_cmap f s = veryUnsafePerformIO $ cmap_js (return . f) s
+_jss_cmap f s = unsafePerformIO $ cmap_js (return . f) s
 
 cmap_js :: (Char -> IO JSString) -> JSString -> IO JSString
 cmap_js = ffi "(function(f,s){\
@@ -98,7 +99,7 @@ return s2;})"
 
 {-# INLINE _jss_foldl #-}
 _jss_foldl :: (ToAny a, FromAny a) => (a -> Char -> a) -> a -> JSString -> a
-_jss_foldl f x s = fromOpaque . veryUnsafePerformIO $ do
+_jss_foldl f x s = fromOpaque . unsafePerformIO $ do
   foldl_js (\a c ->  toOpaque $ f (fromOpaque a) c) (toOpaque x) s
 
 foldl_js :: (Opaque a -> Char -> Opaque a)
@@ -113,7 +114,7 @@ return x;})"
 
 {-# INLINE _jss_foldr #-}
 _jss_foldr :: (ToAny a, FromAny a) => (Char -> a -> a) -> a -> JSString -> a
-_jss_foldr f x s = fromOpaque . veryUnsafePerformIO $ do
+_jss_foldr f x s = fromOpaque . unsafePerformIO $ do
   foldr_js (\c -> toOpaque . f c . fromOpaque) (toOpaque x) s
 
 foldr_js :: (Char -> Opaque a -> Opaque a)
@@ -195,7 +196,7 @@ newtype RegEx = RegEx JSAny
   deriving (ToAny, FromAny)
 
 instance IsString RegEx where
-  fromString s = veryUnsafePerformIO $ _jss_re_compile (fromString s) ""
+  fromString s = unsafePerformIO $ _jss_re_compile (fromString s) ""
 
 -- | O(1) The empty JSString.
 empty :: JSString
@@ -244,6 +245,18 @@ last s =
   case veryUnsafePerformIO $ _jss_len s of
     0 -> error "Haste.JSString.head: empty JSString"
     n -> d2c (veryUnsafePerformIO $ _jss_index s (n-1))
+
+-- | Get a single character from a JSString.
+(!) :: JSString -> Int -> Char
+s ! n =
+#ifdef __HASTE__
+  case veryUnsafePerformIO $ _jss_index s n of
+    c | isNaN c   -> error "Haste.JSString.(!): index out of bounds"
+      | otherwise -> d2c c -- Double/Int/Char share representation.
+#else
+  fromJSStr s !! n
+#endif
+
 
 -- | O(n) All elements but the first of a JSString. Returns an empty JSString
 --   if the given JSString is empty.
