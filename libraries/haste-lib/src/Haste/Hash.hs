@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances, FlexibleContexts, GADTs, OverloadedStrings #-}
 -- | Hash manipulation and callbacks.
 module Haste.Hash (
-    onHashChange, onHashChange', setHash, getHash, setHash', getHash'
+    onHashChange, setHash, getHash
   ) where
 import Haste.Foreign
 import Control.Monad.IO.Class
@@ -11,20 +11,10 @@ import Haste.Prim
 --   The first and second argument of the callback are the old and new and
 --   hash respectively.
 onHashChange :: MonadIO m
-             => (String -> String -> IO ())
-             -> m ()
-onHashChange f = do
-    firsthash <- getHash'
-    liftIO $ jsOnHashChange firsthash cb
-  where
-    cb = \old new -> f (fromJSStr old) (fromJSStr new)
-
--- | JSString version of @onHashChange@.
-onHashChange' :: MonadIO m
               => (JSString -> JSString -> IO ())
               -> m ()
-onHashChange' f = do
-    firsthash <- getHash'
+onHashChange f = do
+    firsthash <- getHash
     liftIO $ jsOnHashChange firsthash f
 
 jsOnHashChange :: JSString -> (JSString -> JSString -> IO ()) -> IO ()
@@ -40,23 +30,15 @@ jsOnHashChange =
        \})"
 
 -- | Set the hash part of the current URL.
-setHash :: MonadIO m => String -> m ()
-setHash = liftIO . jsSetHash . toJSStr
-
--- | Set the hash part of the current URL - JSString version.
-setHash' :: MonadIO m => JSString -> m ()
-setHash' = liftIO . jsSetHash
+setHash :: MonadIO m => JSString -> m ()
+setHash = liftIO . jsSetHash
 
 jsSetHash :: JSString -> IO ()
 jsSetHash = ffi "(function(h) {location.hash = '#'+h;})"
 
--- | Read the hash part of the currunt URL.
-getHash :: MonadIO m => m String
-getHash = liftIO $ fromJSStr `fmap` jsGetHash
-
--- | Read the hash part of the currunt URL - JSString version.
-getHash' :: MonadIO m => m JSString
-getHash' = liftIO jsGetHash
+-- | Read the hash part of the current URL.
+getHash :: MonadIO m => m JSString
+getHash = liftIO jsGetHash
 
 jsGetHash :: IO JSString
 jsGetHash = ffi "(function() {return location.hash.substring(1);})"

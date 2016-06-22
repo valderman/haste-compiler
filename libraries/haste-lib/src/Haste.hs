@@ -10,7 +10,7 @@ module Haste (
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
 
     -- * URL hash handling
-    onHashChange, onHashChange', setHash, getHash, setHash', getHash',
+    onHashChange, setHash, getHash,
 
     -- * Timers
     Timer, Interval (..), setTimer, stopTimer,
