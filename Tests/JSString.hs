@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Tests.JSString where
-import Haste
+import Haste.JSString (JSString)
 import qualified Haste.JSString as J
 import Data.Char
 
@@ -34,6 +34,7 @@ runTest = do
   let (a, b) = J.splitAt 5 s'
   print $ J.all (> 'g') a
   print (b, a)
+  print $ s' J.! 2
   out $ J.init s
   out $ J.tail s
   out $ J.drop 3 s
