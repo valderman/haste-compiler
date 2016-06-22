@@ -1,5 +1,5 @@
-haste-compiler (0.5.4.2) UNRELEASED; urgency=medium
+haste-compiler (0.6.0.0) UNRELEASED; urgency=medium
 
-  * Fix performance regression + error handling for Haste.Foreign.
+  * 0.6 release
 
- -- Anton Ekblad <anton@ekblad.cc>  Tue, 22 Mar 2016 15:12:50 +0100
+ -- Anton Ekblad <anton@ekblad.cc>  Wed, 22 Jun 2016 15:51:13 +0200
