@@ -34,7 +34,6 @@ import Haste.Prim.Foreign
 
 #ifdef __HASTE__
 import GHC.Prim
-import System.IO.Unsafe
 
 {-# INLINE d2c #-}
 d2c :: Double -> Char
@@ -99,7 +98,7 @@ return s2;})"
 
 {-# INLINE _jss_foldl #-}
 _jss_foldl :: (ToAny a, FromAny a) => (a -> Char -> a) -> a -> JSString -> a
-_jss_foldl f x s = fromOpaque . unsafePerformIO $ do
+_jss_foldl f x s = fromOpaque . veryUnsafePerformIO $ do
   foldl_js (\a c ->  toOpaque $ f (fromOpaque a) c) (toOpaque x) s
 
 foldl_js :: (Opaque a -> Char -> Opaque a)
@@ -114,7 +113,7 @@ return x;})"
 
 {-# INLINE _jss_foldr #-}
 _jss_foldr :: (ToAny a, FromAny a) => (Char -> a -> a) -> a -> JSString -> a
-_jss_foldr f x s = fromOpaque . unsafePerformIO $ do
+_jss_foldr f x s = fromOpaque . veryUnsafePerformIO $ do
   foldr_js (\c -> toOpaque . f c . fromOpaque) (toOpaque x) s
 
 foldr_js :: (Char -> Opaque a -> Opaque a)
