@@ -106,7 +106,7 @@ Executable hastec
           if os(linux)
             GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
-        base < 5,
+        base > 4.8 &&  < 5,
         ghc-prim,
         ghc >= 7.8 && < 7.11,
         mtl,
@@ -175,7 +175,7 @@ Executable haste-pkg
             GHC-Options: -static -optl-static -optl-pthread
 
     Build-Depends:
-      base       >= 4   && < 5,
+      base,
       directory  >= 1   && < 1.3,
       process    >= 1   && < 1.3,
       Cabal,
@@ -184,7 +184,7 @@ Executable haste-pkg
       binary,
       bin-package-db,
       bytestring,
-      shellmate  >= 0.3.2.2 && <0.4,
+      shellmate,
       ghc
     if !os(windows)
         Build-Depends:
@@ -208,8 +208,8 @@ Executable haste-cat
           if os(linux)
             GHC-Options: -static -optl-static -optl-pthread
     Build-Depends:
-        base < 5,
-        shellmate >= 0.3.2.2 && <0.4,
+        base,
+        shellmate,
         ghc-paths,
         ghc,
         binary,
