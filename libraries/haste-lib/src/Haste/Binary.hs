@@ -111,6 +111,15 @@ instance Binary Word32 where
   put = putWord32le
   get = getWord32le
 
+instance Binary Word64 where
+  get = do
+    lo <- get :: Get Word32
+    hi <- get :: Get Word32
+    return $ fromIntegral lo .|. shiftL (fromIntegral hi) 32
+  put x = do
+    put (fromIntegral x :: Word32)
+    put (fromIntegral (shiftR x 32) :: Word32)
+
 instance Binary Int8 where
   put = putInt8
   get = getInt8
@@ -122,6 +131,15 @@ instance Binary Int16 where
 instance Binary Int32 where
   put = putInt32le
   get = getInt32le
+
+instance Binary Int64 where
+  get = do
+    lo <- get :: Get Int32
+    hi <- get :: Get Int32
+    return $ fromIntegral lo .|. shiftL (fromIntegral hi) 32
+  put x = do
+    put (fromIntegral x :: Int32)
+    put (fromIntegral (shiftR x 32) :: Int32)
 
 instance Binary Int where
   put = putInt32le . fromIntegral
