@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, OverloadedStrings, CPP #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, OverloadedStrings #-}
 -- | JSON serialization and de-serialization for Haste.
 module Haste.Serialize (
     Serialize (..), Parser, fromJSON, (.:), (.:?)
@@ -6,8 +6,9 @@ module Haste.Serialize (
 import GHC.Float
 import GHC.Int
 import Haste.JSON
-import Haste.Prim (JSString, toJSStr, fromJSStr)
-import Control.Monad (ap)
+import Haste.JSString (JSString)
+import qualified Haste.JSString as JS
+import Control.Monad (ap, when)
 
 class Serialize a where
   toJSON :: a -> JSON
@@ -89,15 +90,14 @@ instance Serialize () where
   parseJSON _ = return ()
 
 instance Serialize Char where
-  toJSON c = Str $ toJSStr [c]
-  parseJSON (Str s) =
-    case fromJSStr s of
-      [c] -> return c
-      _   -> fail "Tried to deserialize long string to a Char"
+  toJSON c = Str $ JS.pack [c]
+  parseJSON (Str s) = do
+    when (JS.length s > 1) $ fail "Tried to deserialize long string to a Char"
+    return $ JS.head s
   parseJSON _ =
     fail "Tried to deserialize a non-string to a Char"
-  listToJSON = toJSON . toJSStr
-  parseJSONList s = fmap fromJSStr (parseJSON s)
+  listToJSON = toJSON . JS.pack
+  parseJSONList s = fmap JS.unpack (parseJSON s)
 
 instance Serialize JSString where
   toJSON = Str
@@ -135,20 +135,20 @@ instance (Serialize a, Serialize b) => Serialize (Either a b) where
       False -> Left `fmap` (d .: "error")
       _     -> Right `fmap` (d .: "value")
 
-fromJSON :: Serialize a => JSON -> Either String a
+fromJSON :: Serialize a => JSON -> Either JSString a
 fromJSON = runParser parseJSON
 
 -- | Type for JSON parser.
-newtype Parser a = Parser (Either String a)
+newtype Parser a = Parser (Either JSString a)
 
-runParser :: (a -> Parser b) -> a -> Either String b
+runParser :: (a -> Parser b) -> a -> Either JSString b
 runParser p x = case p x of Parser y -> y
 
 instance Monad Parser where
   return = Parser . return
   (Parser (Right x)) >>= f = f x
   (Parser (Left e))  >>= _ = Parser (Left e)
-  fail = Parser . Left
+  fail = Parser . Left . JS.pack
 
 instance Functor Parser where
   fmap f m = m >>= return . f
@@ -162,7 +162,7 @@ instance Applicative Parser where
 Dict o .: key =
   case lookup key o of
     Just x -> parseJSON x
-    _      -> Parser . Left $ "Key not found: " ++ fromJSStr key
+    _      -> Parser . Left $ JS.concat ["Key not found: ", key]
 _ .: _ =
   Parser $ Left "Tried to do lookup on non-object!"
 

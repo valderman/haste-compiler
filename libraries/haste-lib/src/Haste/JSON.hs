@@ -142,7 +142,7 @@ encodeJSON = catJSStr "" . enc []
       | otherwise =
         opencu : closecu : acc
 
-decodeJSON :: JSString -> Either String JSON
+decodeJSON :: JSString -> Either JSString JSON
 #ifdef __HASTE__
 decodeJSON = liftMaybe . fromPtr . jsParseJSON
   where
