@@ -89,6 +89,16 @@ class GBinary f where
     gput :: f t -> Put
     gget :: Get (f t)
 
+instance Binary Bool where
+  put True = putWord8 1
+  put _    = putWord8 0
+  get = do
+    n <- getWord8
+    case n of
+      0 -> pure False
+      1 -> pure True
+      _ -> fail $ "Not a valid Bool: " ++ show n
+
 instance Binary Word8 where
   put = putWord8
   get = getWord8
