@@ -11,17 +11,18 @@
 --   of 'match', 'matches', 'regex' and 'replace', which are wrappers on top of
 --   JavaScript's native regular expressions and thus only supported on the
 --   client.
-module Haste.JSString (
-    -- * Building JSStrings
-    empty, singleton, pack, cons, snoc, append, replicate,
+module Haste.JSString
+  ( JSString
+  -- * Building JSStrings
+  , empty, singleton, pack, cons, snoc, append, replicate
     -- * Deconstructing JSStrings
-    unpack, head, last, tail, drop, take, init, splitAt,
+  , unpack, head, last, tail, drop, take, init, splitAt
     -- * Examining JSStrings
-    null, length, any, all,
+  , null, length, any, all
     -- * Modifying JSStrings
-    map, reverse, intercalate, foldl', foldr, concat, concatMap,
+  , map, reverse, intercalate, foldl', foldr, concat, concatMap
     -- * Regular expressions (client-side only)
-    RegEx, match, matches, regex, replace
+  , RegEx, match, matches, regex, replace
   ) where
 import qualified Data.List
 import Prelude hiding (foldr, concat, concatMap, reverse, map, all, any,
