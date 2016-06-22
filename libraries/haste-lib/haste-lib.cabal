@@ -30,7 +30,6 @@ Library
         Haste.JSON
         Haste.JSString
         Haste.LocalStorage
-        Haste.Object
         Haste.Parsing
         Haste.Performance
         Haste.Serialize
