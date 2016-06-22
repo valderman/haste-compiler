@@ -17,6 +17,7 @@ module Haste.Binary (
 import Data.Int
 import Data.Word
 import Data.Char
+import GHC.Fingerprint.Type
 import qualified Haste.JSString as J (length)
 import Haste.Prim
 import Haste.Concurrent
@@ -152,6 +153,10 @@ instance Binary Float where
 instance Binary Double where
   put = putFloat64le
   get = getFloat64le
+
+instance Binary Fingerprint where
+  get = Fingerprint <$> get <*> get
+  put (Fingerprint a b) = put a >> put b
 
 instance (Binary a, Binary b) => Binary (a, b) where
   put (a, b) = put a >> put b
