@@ -25,13 +25,13 @@ import Haste.Hash
 import Haste.Foreign
 import Control.Monad.IO.Class
 
-jsAlert :: String -> IO ()
+jsAlert :: JSString -> IO ()
 jsAlert = ffi "alert"
 
-jsLog :: String -> IO ()
+jsLog :: JSString -> IO ()
 jsLog = ffi "(function(x){console.log(x);})"
 
-jsPrompt :: String -> IO String
+jsPrompt :: JSString -> IO JSString
 jsPrompt = ffi "(function(s){var x = prompt(s);\
 \return (x === null) ? '' : x.toString();})"
 
@@ -39,18 +39,18 @@ jsEval :: JSString -> IO JSString
 jsEval = ffi "(function(s){var x = eval(s);\
 \return (typeof x === 'undefined') ? 'undefined' : x.toString();})"
 
--- | Javascript alert() function.
-alert :: MonadIO m => String -> m ()
+-- | JavaScript @alert()@ function.
+alert :: MonadIO m => JSString -> m ()
 alert = liftIO . jsAlert
 
--- | Javascript prompt() function.
-prompt :: MonadIO m => String -> m String
+-- | JavaScript @prompt()@ function.
+prompt :: MonadIO m => JSString -> m JSString
 prompt = liftIO . jsPrompt
 
--- | Javascript eval() function.
+-- | JavaScript @eval()@ function.
 eval :: MonadIO m => JSString -> m JSString
 eval = liftIO . jsEval
 
--- | Use console.log to write a message.
-writeLog :: MonadIO m => String -> m ()
+-- | JavaScript @console.log()@.
+writeLog :: MonadIO m => JSString -> m ()
 writeLog = liftIO . jsLog
