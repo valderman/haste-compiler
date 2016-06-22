@@ -311,7 +311,6 @@ genOp cfg op xs =
     PopCnt32Op     -> Right $ callForeign "popCnt" [head xs]
     PopCnt64Op     -> Right $ callForeign "popCnt64" [head xs]
 
-#if __GLASGOW_HASKELL__ >= 710
     ClzOp          -> Right $ callForeign "__clz" [litN 32, head xs]
     Clz8Op         -> Right $ callForeign "__clz" [litN 8,  head xs]
     Clz16Op        -> Right $ callForeign "__clz" [litN 16, head xs]
@@ -321,7 +320,6 @@ genOp cfg op xs =
     Ctz8Op         -> Right $ callForeign "__ctz" [litN 8,  head xs]
     Ctz16Op        -> Right $ callForeign "__ctz" [litN 16, head xs]
     Ctz32Op        -> Right $ callForeign "__ctz" [litN 32, head xs]    
-#endif
 
     -- Concurrency - only relevant in a threaded environment
     NoDuplicateOp  -> Right $ defState

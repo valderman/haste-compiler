@@ -19,14 +19,10 @@ import GHC.Paths (libdir)
 import System.Info (os)
 import System.Directory (copyPermissions)
 
-#if __GLASGOW_HASKELL__ >= 710
+#if __GLASGOW_HASKELL__ < 800
 ghcMajor = "7.10"
 libDir = "ghc-7.10"
 primVersion = "0.4.0.0"
-#else
-ghcMajor = "7.8"
-libDir = "ghc-7.8"
-primVersion = "0.3.0.0"
 #endif
 
 data HasteCabal = Download | Prebuilt FilePath | Source (Maybe FilePath)
@@ -359,10 +355,6 @@ buildLibs cfg = do
                  , "--package-db=clear"
                  , "--package-db=global"
                  , "--hastec-option=-fforce-recomp"
-#if __GLASGOW_HASKELL__ < 709
-                 , "--hastec-option=-DHASTE_HOST_WORD_SIZE_IN_BITS=" ++
-                    show hostWordSize
-#endif
                  ]
     hasteCabal Configure args =
       withEnv "HASTE_BOOTING" "1" $ run hasteCabalBinary as

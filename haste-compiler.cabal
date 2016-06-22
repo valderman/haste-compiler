@@ -108,7 +108,7 @@ Executable hastec
     Build-Depends:
         base > 4.8 &&  < 5,
         ghc-prim,
-        ghc >= 7.8 && < 7.11,
+        ghc >= 7.10 && < 8,
         mtl,
         binary,
         containers,
@@ -159,7 +159,6 @@ Executable haste-pkg
     Other-Extensions: CPP
     Other-Modules:
       HastePkg710
-      HastePkg708
     Hs-Source-Dirs:
       src
       utils/haste-pkg

@@ -3,11 +3,7 @@
 -- | Abstract syntax of Haste's intermediate format.
 module Haste.AST.Syntax where
 import qualified Data.Set as S
-#if __GLASGOW_HASKELL__ >= 708
 import qualified Data.Map.Strict as M
-#else
-import qualified Data.Map as M
-#endif
 import Haste.AST.Op
 import qualified Data.ByteString.Char8 as BS
 

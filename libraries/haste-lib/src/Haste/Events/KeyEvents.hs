@@ -3,9 +3,6 @@
 module Haste.Events.KeyEvents (KeyEvent (..), KeyData (..), mkKeyData) where
 import Haste.Prim.Any
 import Haste.Events.Core
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 
 -- | Event data for keyboard events.
 data KeyData = KeyData {

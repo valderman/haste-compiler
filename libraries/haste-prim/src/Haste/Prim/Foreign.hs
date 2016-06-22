@@ -2,23 +2,16 @@
 {-# LANGUAGE TypeFamilies, FlexibleInstances, UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-#if __GLASGOW_HASKELL__ < 710
-{-# LANGUAGE OverlappingInstances #-}
-#endif
 -- | High level JavaScript foreign interface.
-module Haste.Prim.Foreign (
-    module Haste.Prim.Any,
-    FFI, JSFunc, JSException (..),
-    ffi, constant, export
-#if __GLASGOW_HASKELL__ >= 710
-    , safe_ffi, StaticPtr
-#endif
+module Haste.Prim.Foreign
+  ( module Haste.Prim.Any
+  , FFI, JSFunc, JSException (..)
+  , ffi, constant, export
+  , safe_ffi, StaticPtr
   ) where
 import Haste.Prim
 import Haste.Prim.Any
-#if __GLASGOW_HASKELL__ >= 710
 import GHC.StaticPtr (StaticPtr, deRefStaticPtr)
-#endif
 import Unsafe.Coerce
 import Control.Exception
 import Data.Typeable
@@ -112,10 +105,8 @@ ffi s = __ffi f []
     {-# NOINLINE f #-}
     f = __eval s
 
-#if __GLASGOW_HASKELL__ >= 710
 safe_ffi :: FFI a => StaticPtr JSString -> a
 safe_ffi = ffi . deRefStaticPtr
-#endif
 
 -- | Create a Haskell value from a constant JS expression.
 constant :: FromAny a => JSString -> a
@@ -151,11 +142,7 @@ class JSFunc a where
   mkJSFunc :: a -> JS a
   arity    :: a -> Int
 
-#if __GLASGOW_HASKELL__ < 710
-instance (ToAny a, JS a ~ JSAny) => JSFunc a where
-#else
 instance {-# OVERLAPPABLE #-} (ToAny a, JS a ~ JSAny) => JSFunc a where
-#endif
   mkJSFunc = toAny
   arity _  = 0
 
@@ -183,11 +170,7 @@ instance (FromAny a, JSFunc b) => ToAny (a -> b) where
 instance ToAny a => ToAny (IO a) where
   toAny = strictly . veryUnsafePerformIO . __createJSFunc 0 . toAny . toOpaque . mkJSFunc
 
-#if __GLASGOW_HASKELL__ < 710
-instance FFI a => FromAny a where
-#else
 instance {-# OVERLAPPABLE #-} FFI a => FromAny a where
-#endif
   fromAny f = return $ __ffi f []
 
 -- | An exception raised from foreign JavaScript code.
@@ -195,6 +178,4 @@ data JSException = JSException JSString
   deriving (Show, Typeable)
 
 instance Exception JSException where
-#if __GLASGOW_HASKELL__ >= 710
   displayException (JSException e) = "JavaScript exception: " ++ fromJSStr e
-#endif

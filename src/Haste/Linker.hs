@@ -19,11 +19,7 @@ import System.IO (hPutStrLn, stderr)
 --   This will need to change when we start supporting building "binaries"
 --   using cabal, since we'll have all sorts of funny package names then.
 mainSym :: Name
-#if __GLASGOW_HASKELL__ < 709
-mainSym = name "main" (Just ("main", ":Main"))
-#else
 mainSym = name "main" (Just ("main", "Main"))
-#endif
 
 -- | Link a program using the given config and input file name.
 link :: Config -> BS.ByteString -> FilePath -> IO ()

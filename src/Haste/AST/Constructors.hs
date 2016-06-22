@@ -1,7 +1,4 @@
 {-# LANGUAGE FlexibleInstances, TupleSections, CPP, OverloadedStrings #-}
-#if __GLASGOW_HASKELL__ < 710
-{-# LANGUAGE OverlappingInstances #-}
-#endif
 -- | Smart constructors for Haste's AST.
 module Haste.AST.Constructors where
 import Haste.AST.Syntax
@@ -31,11 +28,7 @@ instance Literal BS.ByteString where
 instance Literal [Char] where
   lit = lit . BS.fromString
 
-#if __GLASGOW_HASKELL__ < 710
-instance Literal a => Literal [a] where
-#else
 instance {-# OVERLAPPABLE #-} Literal a => Literal [a] where
-#endif
   lit = Arr . map lit
 
 instance Literal Exp where

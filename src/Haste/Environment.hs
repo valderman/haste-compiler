@@ -10,9 +10,6 @@ module Haste.Environment (
     closureCompiler, bootFile,
     portableHaste, hasteNeedsReboot
   ) where
-#if __GLASGOW_HASKELL__ <= 708
-import Control.Applicative
-#endif
 import Control.Shell
 import Data.Bits
 import Foreign.C.Types (CIntPtr)
@@ -112,11 +109,7 @@ pkgUserDir = hasteUserDir </> "package.conf.d"
 
 -- | Host word size in bits.
 hostWordSize :: Int
-#if __GLASGOW_HASKELL__ >= 708
 hostWordSize = finiteBitSize (undefined :: CIntPtr)
-#else
-hostWordSize = bitSize (undefined :: CIntPtr)
-#endif
 
 -- | File extension of binaries on this system.
 binaryExt :: String

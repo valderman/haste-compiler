@@ -5,10 +5,6 @@
 {-# LANGUAGE TypeOperators, ScopedTypeVariables, FlexibleInstances,
              FlexibleContexts, OverloadedStrings, DefaultSignatures #-}
 
-#if __GLASGOW_HASKELL__ < 710
-{-# LANGUAGE OverlappingInstances #-}
-#endif
-
 -- For less annoying instances
 {-# LANGUAGE TupleSections #-}
 
@@ -26,9 +22,6 @@ import Data.Int
 import Data.Word
 import Unsafe.Coerce
 import System.IO.Unsafe -- for toObject
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 
 #ifdef __HASTE__
 foreign import ccall __lst2arr :: Ptr [a] -> JSAny
@@ -337,12 +330,8 @@ instance Constructor c => GToAny (M1 C c U1) where
   gToAny _ _ = One (toAny $ conName (undefined :: M1 C c U1 ()))
   isEnum _ = True
 
-#if __GLASGOW_HASKELL__ < 710
-instance (Constructor c, GToAny a) => GToAny (M1 C c a) where
-#else
 instance {-# OVERLAPPABLE #-} (Constructor c, GToAny a) =>
                                GToAny (M1 C c a) where
-#endif
   gToAny many_constrs (M1 x)
     | many_constrs =
       case args of
@@ -425,12 +414,8 @@ instance Constructor c => GFromAny (M1 C c U1) where
       cn = conName (undefined :: M1 C c U1 ())
   isRecord _ = False
 
-#if __GLASGOW_HASKELL__ < 710
-instance (Constructor c, GFromAny a) => GFromAny (M1 C c a) where
-#else
 instance {-# OVERLAPPABLE #-} (Constructor c, GFromAny a) =>
                                GFromAny (M1 C c a) where
-#endif
   gFromAny many_constrs x
     | many_constrs = do
         t <- x `get` "$tag"

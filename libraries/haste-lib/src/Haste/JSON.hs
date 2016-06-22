@@ -14,9 +14,6 @@ import Haste
 import Haste.Prim
 import Data.String as S
 #ifndef __HASTE__
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 import Haste.Parsing
 #endif
 import Haste.Foreign hiding (toObject)

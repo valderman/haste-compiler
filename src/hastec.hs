@@ -2,11 +2,8 @@
 -- | Haste's main compiler driver.
 module Main where
 import Language.Haskell.GHC.Simple as GHC
-#if __GLASGOW_HASKELL__ >= 710
 import Language.Haskell.GHC.Simple.PrimIface
 import Packages
-import PackageConfig
-#endif
 import GHC
 import Outputable (showPpr)
 import Platform
@@ -64,11 +61,7 @@ main = do
                 then buildJSLib prof cfg (fst $ head targets) mods
                 else mapM_ (uncurry $ linkAndMinify cfg) targets
   where
-#if __GLASGOW_HASKELL__ >= 710
     getExtraLibDirs = fmap (concatMap libraryDirs) . readPackageConfigs
-#else
-    getExtraLibDirs = const (return [])
-#endif
 
     pkgs booting =
       ["-no-global-package-db",
@@ -122,9 +115,7 @@ main = do
                   }
              }
           }
-#if __GLASGOW_HASKELL__ >= 710
         , cfgCustomPrimIface = Just (primOpInfo, primOpStrictness)
-#endif
       }
     mkLinkerCfg dfs extralibdirs cfg = cfg {
         mainMod = Just (pkgKeyString $ modulePkgKey (mainModIs dfs),
@@ -133,15 +124,14 @@ main = do
       }
     setShowOutputable dfs cfg = cfg {showOutputable = showPpr dfs}
 
-#if __GLASGOW_HASKELL__ >= 710
 -- | Primop info for custom GHC.Prim interface.
 primOpInfo :: PrimOp -> PrimOpInfo
 #include "primop-info-710.hs"
+primOpInfo _ = error "Nonexistent primop!"
 
 -- | Strictness info for custom GHC.Prim interface.
 primOpStrictness :: PrimOp -> Arity -> StrictSig
 #include "primop-stricts-710.hs"
-#endif
 
 -- | Compile an STG module into a JS module and write it to its appropriate
 --   location according to the given config.

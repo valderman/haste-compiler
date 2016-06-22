@@ -7,9 +7,6 @@ import GHC.Float
 import GHC.Int
 import Haste.JSON
 import Haste.Prim (JSString, toJSStr, fromJSStr)
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 import Control.Monad (ap)
 
 class Serialize a where

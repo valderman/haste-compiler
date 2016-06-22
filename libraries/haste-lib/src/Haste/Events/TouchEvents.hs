@@ -7,9 +7,6 @@ import Haste.Prim.Any
 import Haste.Foreign
 import Haste.Events.Core
 import Haste.DOM.Core
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 
 data TouchEvent
   = TouchStart

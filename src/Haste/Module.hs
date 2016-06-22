@@ -4,7 +4,6 @@ module Haste.Module (moduleFilePath, writeModule, readModule) where
 import Module (moduleNameSlashes, mkModuleName)
 import qualified Data.ByteString.Lazy as B
 import Control.Shell
-import Control.Applicative
 import Haste.AST
 import Data.Binary
 import Data.List (isSuffixOf)
@@ -85,9 +84,6 @@ jslibFileName basepath pkgid
         _ -> do
           return stdname
   | otherwise = do
-#if __GLASGOW_HASKELL__ < 709
-      return stdname
-#else
       mfile <- findLibFile [basepath]
       case mfile of
         Just f -> do
@@ -101,7 +97,6 @@ jslibFileName basepath pkgid
           case dirs' of
             ds | not (null ds) -> maybe stdname id <$> findLibFile ds
                | otherwise     -> return stdname
-#endif
   where
     findLibFile (d:ds) = do
       fs <- map (d </>) . filter (libfilesuffix `isSuffixOf`) <$> ls d

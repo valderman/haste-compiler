@@ -1,7 +1,6 @@
 {-# LANGUAGE TupleSections, PatternGuards, CPP, OverloadedStrings #-}
 module Haste.CodeGen (generate) where
 -- Misc. stuff
-import Control.Applicative
 import Control.Monad
 import Data.Int
 import Data.Bits
@@ -153,15 +152,7 @@ genEx (StgLetNoEscape _ _ bind ex) = do
   genEx ex
 genEx (StgCase ex _ _ bndr _ t alts) = do
   genCase t ex bndr alts
-  
-#if __GLASGOW_HASKELL__ < 710
--- StgSCC is gone in 7.10, and StgTick has an argument less.
-genEx (StgSCC _ _ _ ex) = do
-  genEx ex
-genEx (StgTick _ _ ex) = do
-#else
 genEx (StgTick _ ex) = do
-#endif
   genEx ex
 
 genEx (StgLam _ _) = do

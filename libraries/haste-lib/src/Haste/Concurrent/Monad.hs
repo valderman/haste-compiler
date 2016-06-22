@@ -8,9 +8,6 @@ module Haste.Concurrent.Monad (
 import Control.Monad.IO.Class
 import Control.Monad.Cont.Class
 import Control.Monad
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 import Data.IORef
 import Haste.Events.Core (MonadEvent (..))
 

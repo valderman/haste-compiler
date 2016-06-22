@@ -1,26 +1,21 @@
 {-# LANGUAGE CPP, OverloadedStrings #-}
 -- | High level JavaScript foreign interface.
-module Haste.Foreign (
-    -- * Conversion to/from JSAny
-    ToAny (..), FromAny (..), JSAny,
-    Opaque, toOpaque, fromOpaque,
-    nullValue, toObject, has, get, index,
-    getMaybe, hasAll, lookupAny, JSException (..),
+module Haste.Foreign
+  ( -- * Conversion to/from JSAny
+    ToAny (..), FromAny (..), JSAny
+  , Opaque, toOpaque, fromOpaque
+  , nullValue, toObject, has, get, index
+  , getMaybe, hasAll, lookupAny, JSException (..)
 
     -- * Importing and exporting JavaScript functions
-    FFI, JSFunc,
-    ffi, constant, export
-#if __GLASGOW_HASKELL__ >= 710
-    , safe_ffi, StaticPtr
-#endif
+  , FFI, JSFunc
+  , ffi, constant, export
+  , safe_ffi, StaticPtr
   ) where
 import Haste.Prim.Foreign
 import Haste.Prim (JSString)
 import qualified Haste.JSString as J
 import Control.Monad (foldM)
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative ((<$>), pure)
-#endif
 
 -- | Read a member from a JS object. Succeeds if the member exists.
 getMaybe :: (FromAny a) => JSAny -> JSString -> IO (Maybe a)

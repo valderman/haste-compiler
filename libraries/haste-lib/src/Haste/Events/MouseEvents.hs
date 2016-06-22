@@ -5,9 +5,6 @@ module Haste.Events.MouseEvents (
   ) where
 import Haste.Events.Core
 import Haste.Foreign
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 
 data MouseButton = MouseLeft | MouseMiddle | MouseRight
   deriving (Show, Eq, Enum)

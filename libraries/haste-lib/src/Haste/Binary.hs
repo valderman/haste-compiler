@@ -25,9 +25,6 @@ import Haste.Foreign hiding (get)
 import Haste.Binary.Types
 import Haste.Binary.Put
 import Haste.Binary.Get
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 import GHC.Generics
 import Data.Bits
 #ifndef __HASTE__

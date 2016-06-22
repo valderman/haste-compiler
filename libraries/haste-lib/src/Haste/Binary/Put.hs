@@ -11,9 +11,6 @@ import Data.Int
 import Data.Word
 import Haste.Prim
 import Haste.Binary.Types
-#if __GLASGOW_HASKELL__ < 710
-import Control.Applicative
-#endif
 #ifdef __HASTE__
 import Control.Monad
 import Haste.Foreign
