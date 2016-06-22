@@ -25,9 +25,9 @@ runTest = do
   print $ J.foldr (\x a -> a + ord x) 0 $ J.concat [s,s',"hi"]
   print $ J.length s'
   out $ J.tail $ J.replicate 10 'x'
-  out $ 'x' `J.cons` s
-  out $ s `J.snoc` 'ö'
-  out $ J.concatMap (J.cons 'x' . J.singleton) "abc"
+  J.putStrLn $ 'x' `J.cons` s
+  J.putStrLn $ s `J.snoc` 'ö'
+  J.putStrLn $ J.concatMap (J.cons 'x' . J.singleton) "abc"
   print $ J.any (== 'g') s
   print $ J.any (== 'g') s'
   print $ J.all (> 'g') s

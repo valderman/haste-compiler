@@ -23,18 +23,22 @@ module Haste.JSString
   , map, reverse, intercalate, foldl', foldr, concat, concatMap
     -- * Regular expressions (client-side only)
   , RegEx, match, matches, regex, replace
+    -- * JSString I/O
+  , putStrLn, putStr
   ) where
 import qualified Data.List
 import Prelude hiding (foldr, concat, concatMap, reverse, map, all, any,
                        length, null, splitAt, init, take, drop, tail, head,
-                       last, replicate)
+                       last, replicate, putStrLn, putStr)
+import qualified Prelude
 import Data.String
 import Haste.Prim
 import Haste.Prim.Foreign
+import Control.Monad.IO.Class
+import System.IO.Unsafe
 
 #ifdef __HASTE__
 import GHC.Prim
-import System.IO.Unsafe
 
 {-# INLINE d2c #-}
 d2c :: Double -> Char
@@ -331,6 +335,14 @@ replicate n c = Haste.JSString.pack $ Data.List.replicate n c
 -- | O(n) Equivalent to (take n xs, drop n xs).
 splitAt :: Int -> JSString -> (JSString, JSString)
 splitAt n s = (Haste.JSString.take n s, Haste.JSString.drop n s)
+
+-- | As 'Prelude.putStrLn'.
+putStrLn :: MonadIO m => JSString -> m ()
+putStrLn = liftIO . Prelude.putStrLn . unpack
+
+-- | As 'Prelude.putStr'.
+putStr :: MonadIO m => JSString -> m ()
+putStr = liftIO . Prelude.putStr . unpack
 
 -- | O(n) Determines whether the given JSString matches the given regular
 --   expression or not.
