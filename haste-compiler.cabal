@@ -20,6 +20,7 @@ Maintainer:     anton@ekblad.cc
 Homepage:       http://haste-lang.org/
 Bug-reports:    http://github.com/valderman/haste-compiler/issues
 Stability:      Experimental
+Tested-With:    GHC == 7.10.3
 
 Data-Dir:
     lib
@@ -106,7 +107,7 @@ Executable hastec
         buildable: False
     Hs-Source-Dirs: src
     Include-Dirs: include
-    GHC-Options: -Wall -O2
+    GHC-Options: -Wall
     if flag(portable)
         CPP-Options: -DPORTABLE
     if flag(static)
@@ -238,7 +239,7 @@ Executable haste-cat
 
 Library
     Hs-Source-Dirs: libraries/haste-lib/src, libraries/haste-prim/src, src
-    GHC-Options: -Wall -O2
+    GHC-Options: -Wall
     Exposed-Modules:
         Haste
         Haste.Ajax
