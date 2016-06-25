@@ -63,7 +63,7 @@ instance Num JSON where
   negate _          = numFail
   abs (Num a)       = Num (abs a)
   abs _             = numFail
-  signum (Num a)    = signum (Num a)
+  signum (Num a)    = Num (signum a)
   signum _          = numFail
   fromInteger n     = Num (fromInteger n)
 
