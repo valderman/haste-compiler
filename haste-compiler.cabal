@@ -96,7 +96,7 @@ Executable haste-boot
 Executable hastec
     Hs-Source-Dirs: src
     Include-Dirs: include
-    GHC-Options: -Wall
+    GHC-Options: -Wall -threaded
     if flag(portable)
         CPP-Options: -DPORTABLE
     if flag(static)
