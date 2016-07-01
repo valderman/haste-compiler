@@ -233,10 +233,12 @@ genOp cfg op xs =
     WriteOffAddrOp_Int8    -> writeOffAddr xs "i8"  1
     WriteOffAddrOp_Int16   -> writeOffAddr xs "i16" 2
     WriteOffAddrOp_Int32   -> writeOffAddr xs "i32" 4
+    WriteOffAddrOp_Int64   -> writeOffAddr64 xs
     WriteOffAddrOp_Word    -> writeOffAddr xs "w32" 4
     WriteOffAddrOp_Word8   -> writeOffAddr xs "w8"  1
     WriteOffAddrOp_Word16  -> writeOffAddr xs "w16" 2
     WriteOffAddrOp_Word32  -> writeOffAddr xs "w32" 4
+    WriteOffAddrOp_Word64  -> writeOffAddr64 xs
     WriteOffAddrOp_WideChar-> writeOffAddr xs "w32" 4
     WriteOffAddrOp_Float   -> writeOffAddr xs "f32" 4
     WriteOffAddrOp_Double  -> writeOffAddr xs "f64" 8
@@ -245,10 +247,12 @@ genOp cfg op xs =
     ReadOffAddrOp_Int8     -> readOffAddr xs "i8"   1
     ReadOffAddrOp_Int16    -> readOffAddr xs "i16"  2
     ReadOffAddrOp_Int32    -> readOffAddr xs "i32"  4
+    ReadOffAddrOp_Int64    -> readOffAddr64 xs True
     ReadOffAddrOp_Word     -> readOffAddr xs "w32"  4
     ReadOffAddrOp_Word8    -> readOffAddr xs "w8"   1
     ReadOffAddrOp_Word16   -> readOffAddr xs "w16"  2
     ReadOffAddrOp_Word32   -> readOffAddr xs "w32"  4
+    ReadOffAddrOp_Word64   -> readOffAddr64 xs False
     ReadOffAddrOp_WideChar -> readOffAddr xs "w32"  4
     ReadOffAddrOp_Float    -> readOffAddr xs "f32"  4
     ReadOffAddrOp_Double   -> readOffAddr xs "f64"  8
@@ -355,11 +359,15 @@ genOp cfg op xs =
       Right $ callForeign "writeOffAddr" [litS etype,litN esize,addr,off,rhs]
     writeOffAddr _ _ _ =
       error "writeOffAddr primop with too few arguments!"
+    writeOffAddr64 (addr:off:rhs:_) =
+      Right $ callForeign "writeOffAddr64" [addr, off, rhs]
     
     readOffAddr (addr:off:_) etype esize =
       Right $ callForeign "readOffAddr" [litS etype,litN esize,addr,off]
     readOffAddr _ _ _ =
       error "readOffAddr primop with too few arguments!"
+    readOffAddr64 (addr:off:_) esigned =
+      Right $ callForeign "readOffAddr64" [lit esigned, addr, off]
 
     callF f = Right $ callForeign f xs
     
