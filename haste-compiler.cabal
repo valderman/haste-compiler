@@ -175,9 +175,9 @@ Executable haste-pkg
 
     Build-Depends:
       base,
-      directory  >= 1   && < 1.3,
-      process    >= 1   && < 1.3,
-      Cabal,
+      directory  >= 1    && < 1.3,
+      process    >= 1    && < 1.3,
+      Cabal      >= 1.22 && < 1.24,
       containers,
       filepath,
       binary,
