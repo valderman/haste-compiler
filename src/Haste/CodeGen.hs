@@ -61,7 +61,7 @@ genAST cfg modname binds =
       map (depsAndCode . genJS cfg modname . uncurry (genBind True))
       $ concatMap unRec
       $ binds
-    depsAndCode (_, ds, locs, stm) = (ds S.\\ locs, stm stop)
+    depsAndCode (_, ds, locs, _spt, stm) = (ds S.\\ locs, stm stop)
 
 -- | Check for builtins that should generate inlined code. At this point only
 --   w2i and i2w.
