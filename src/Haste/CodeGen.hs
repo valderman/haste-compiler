@@ -16,6 +16,7 @@ import qualified Data.Map as M
 -- STG/GHC stuff
 import Language.Haskell.GHC.Simple as GHC
 import FastString (unpackFS)
+import PrelNames (staticPtrTyConKey)
 
 -- AST stuff
 import Haste.AST as AST hiding ((.&.))
@@ -184,8 +185,9 @@ genBind :: Bool -> Maybe Int -> StgBinding -> JSGen Config ()
 genBind onTopLevel funsInRecGroup (StgNonRec v rhs) = do
     v' <- genVar v
     pushBind v'
-    when (not onTopLevel) $ do
-      addLocal v'
+    if onTopLevel
+      then when (isStaticPtr v) $ addStaticPtr v'
+      else addLocal v'
     expr <- genRhs isRecursive rhs
     popBind
     continue $ newVar (not isRecursive) v' expr
@@ -523,6 +525,13 @@ isNewtypeLike v = maybe False id $ do
       [t] -> return (isUnLiftedType t)
       _   -> return False
     _   -> return False
+
+-- | Is the given var a static pointer?
+isStaticPtr :: GHC.Var -> Bool
+isStaticPtr v =
+  case splitTyConApp_maybe (varType v) of
+    Just (tycon, _) -> tyConUnique tycon == staticPtrTyConKey
+    _               -> False
 
 -- | Returns True if the given Var is an unboxed tuple with a single element
 --   after any represenationless elements are discarded.

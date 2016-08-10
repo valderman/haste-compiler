@@ -2,8 +2,9 @@
              MultiParamTypeClasses #-}
 module Haste.Monad (
     JSGen, LocalSymbol, Dep, StaticPtr,
-    genJS, dependOn, getModName, addLocal, getCfg, continue, isolate,
-    pushBind, popBind, getCurrentBinding, whenCfg, rename, getActualName
+    genJS, dependOn, addLocal, addStaticPtr, getModName, getCfg, continue,
+    isolate, pushBind, popBind, getCurrentBinding, whenCfg, rename,
+    getActualName
   ) where
 import Control.Monad.State.Strict
 import Haste.AST as AST hiding (modName)
