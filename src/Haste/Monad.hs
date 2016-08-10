@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances,
              MultiParamTypeClasses #-}
 module Haste.Monad (
-    JSGen, genJS, dependOn, getModName, addLocal, getCfg, continue, isolate,
+    JSGen, LocalSymbol, Dep, StaticPtr,
+    genJS, dependOn, getModName, addLocal, getCfg, continue, isolate,
     pushBind, popBind, getCurrentBinding, whenCfg, rename, getActualName
   ) where
 import Control.Monad.State.Strict
@@ -97,11 +98,11 @@ instance Dependency a => Dependency (S.Set a) where
 genJS :: cfg         -- ^ Config to use for code generation.
       -> String      -- ^ Name of the module being compiled.
       -> JSGen cfg a -- ^ The code generation computation.
-      -> (a, S.Set Dep, S.Set LocalSymbol, S.Set StaticPtr, Stm -> Stm)
+      -> (a, S.Set Dep, S.Set LocalSymbol, [StaticPtr], Stm -> Stm)
 genJS cfg myModName (JSGen gen) =
   case runState gen (initialState cfg) {modName = myModName} of
     (a, GenState dependencies loc spt cont _ _ _ _) ->
-      (a, S.fromList dependencies, S.fromList loc, S.fromList spt, cont)
+      (a, S.fromList dependencies, S.fromList loc, spt, cont)
 
 getModName :: JSGen cfg String
 getModName = JSGen $ modName <$> get

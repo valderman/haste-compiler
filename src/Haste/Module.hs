@@ -33,7 +33,7 @@ moduleFilePath basepath modname boot =
 --
 --   Boot modules and "normal" modules get merged at this stage.
 writeModule :: FilePath -> Module -> Bool -> IO ()
-writeModule basepath m@(Module _ modname _ _) boot =
+writeModule basepath m@(Module _ modname _ _ _) boot =
   fromRight "writeModule" . shell $ do
     mkdir True (takeDirectory path)
     mcompanion <- readMod basepath modstr (not boot)

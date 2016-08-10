@@ -35,25 +35,26 @@ generate cfg meta stg =
       modPackageId   = BS.fromString $ GHC.mmPackageKey meta,
       AST.modName    = BS.fromString $ GHC.mmName meta,
       modDeps        = foldl' insDep M.empty theMod,
-      modDefs        = foldl' insFun M.empty theMod
+      modDefs        = foldl' insFun M.empty theMod,
+      modSPT         = concat [spt | (_, spt, _) <- theMod]
     }
   where
     opt = if optimize cfg then optimizeFun cfg else const id
     theMod = genAST cfg (GHC.mmName meta) stg
 
-    insFun m (_, Assign (NewVar _ v@(Internal n _ _)) body _) =
+    insFun m (_, _, Assign (NewVar _ v@(Internal n _ _)) body _) =
       M.insert n (opt v body) m
     insFun m _ =
       m
 
     -- TODO: perhaps do dependency-based linking for externals as well?
-    insDep m (ds, Assign (NewVar _ (Internal v _ _)) _ _) =
+    insDep m (ds, _, Assign (NewVar _ (Internal v _ _)) _ _) =
       M.insert v (S.delete v ds) m
     insDep m _ =
       m
 
 -- | Generate JS AST for bindings.
-genAST :: Config -> String -> [StgBinding] -> [(S.Set AST.Name, Stm)]
+genAST :: Config -> String -> [StgBinding] -> [(S.Set Dep, [StaticPtr], Stm)]
 genAST cfg modname binds =
     binds'
   where
@@ -61,7 +62,7 @@ genAST cfg modname binds =
       map (depsAndCode . genJS cfg modname . uncurry (genBind True))
       $ concatMap unRec
       $ binds
-    depsAndCode (_, ds, locs, _spt, stm) = (ds S.\\ locs, stm stop)
+    depsAndCode (_, ds, locs, spt, stm) = (ds S.\\ locs, spt, stm stop)
 
 -- | Check for builtins that should generate inlined code. At this point only
 --   w2i and i2w.

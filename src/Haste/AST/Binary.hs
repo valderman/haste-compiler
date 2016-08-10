@@ -9,9 +9,9 @@ import Haste.AST.Syntax
 import Haste.AST.Op
 
 instance Binary Module where
-  put (Module pkgid name deps defs) =
-    put pkgid >> put name >> put deps >> put defs
-  get = Module <$> get <*> get <*> get <*> get
+  put (Module pkgid name deps spt defs) =
+    put pkgid >> put name >> put deps >> put spt >> put defs
+  get = Module <$> get <*> get <*> get <*> get <*> get
 
 instance Binary Var where
   put (Foreign str) =

@@ -150,7 +150,8 @@ data Module = Module {
     modPackageId   :: !BS.ByteString,
     modName        :: !BS.ByteString,
     modDeps        :: M.Map Name (S.Set Name),
-    modDefs        :: M.Map Name Exp
+    modDefs        :: M.Map Name Exp,
+    modSPT         :: [Name]
   }
 
 -- | Merge two modules. The module and package IDs of the second argument are
@@ -161,7 +162,8 @@ merge m1 m2 = Module {
     modPackageId = modPackageId m2,
     modName = modName m2,
     modDeps = M.union (modDeps m1) (modDeps m2),
-    modDefs = M.union (modDefs m1) (modDefs m2)
+    modDefs = M.union (modDefs m1) (modDefs m2),
+    modSPT  = modSPT m1 ++ modSPT m2
   }
 
 -- | Imaginary module for foreign code that may need one.
@@ -170,7 +172,8 @@ foreignModule = Module {
     modPackageId   = "",
     modName        = "",
     modDeps        = M.empty,
-    modDefs        = M.empty
+    modDefs        = M.empty,
+    modSPT         = []
   }
 
 -- | An LHS that's guaranteed to not ever be read, enabling the pretty
