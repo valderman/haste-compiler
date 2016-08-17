@@ -20,7 +20,7 @@ stdJSLibs = map (jsDir </>)  [
     "rts.js", "floatdecode.js", "stdlib.js", "endian.js", "bn.js",
     "MVar.js", "StableName.js", "Integer.js", "long.js", "md5.js", "array.js",
     "pointers.js", "cheap-unicode.js", "Handle.js", "Weak.js",
-    "Foreign.js"
+    "Foreign.js", "spt.js"
   ]
 
 debugLib :: FilePath

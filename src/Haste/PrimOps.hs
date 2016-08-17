@@ -276,6 +276,7 @@ genOp cfg op xs =
         Right $ index x (litS "off")
       where
         (x:_) = xs
+    AddrToAnyOp            -> Right $ head xs
 
     -- MVars
     NewMVarOp     -> callF "newMVar"

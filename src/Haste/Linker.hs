@@ -13,6 +13,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.UTF8 (toString, fromString)
 import Data.ByteString.Builder
 import Data.Monoid
+import Data.List (sort, group)
 import System.IO (hPutStrLn, stderr)
 
 -- | The program entry point.
@@ -28,11 +29,11 @@ link cfg pkgid target = do
         case mainMod cfg of
          Just (m, p) -> (fromString m, fromString p)
          _           -> error "Haste.Linker.link called without main sym!"
-  ds <- getAllDefs cfg (targetLibPath cfg : libPaths cfg) mainmod pkgid mainSym
+  (spt, ds) <- getAllDefs cfg (targetLibPath cfg : libPaths cfg) mainmod pkgid mainSym
   let myDefs = if wholeProgramOpts cfg
                  then topLevelInline cfg ds
                  else ds
-      (progText, myMain') = prettyProg cfg mainSym myDefs
+      (progText, (spt', myMain')) = prettyProg cfg mainSym spt myDefs
       callMain = stringUtf8 "B(A(" <> myMain' <> stringUtf8 ", [0]));"
       launchApp = appStart cfg (stringUtf8 "hasteMain")
   
@@ -40,25 +41,33 @@ link cfg pkgid target = do
   extlibs <- mapM readFile $ jsExternals cfg
   B.writeFile (outFile cfg cfg target)
     $ toLazyByteString
-    $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp
+    $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp spt'
   where
-    assembleProg True extlibs rtslibs progText callMain launchApp =
+    assembleProg True extlibs rtslibs progText callMain launchApp spt =
       stringUtf8 (unlines extlibs)
       <> stringUtf8 "var hasteMain = function() {"
       <> (if useStrict cfg then stringUtf8 "\n\"use strict\";\n" else mempty)
       <> stringUtf8 (unlines rtslibs)
       <> progText
+      <> mconcat (map addSPT spt)
       <> callMain
       <> stringUtf8 "};\n"
       <> launchApp
-    assembleProg _ extlibs rtslibs progText callMain launchApp =
+    assembleProg _ extlibs rtslibs progText callMain launchApp spt =
       (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
       <> stringUtf8 (unlines extlibs)
       <> stringUtf8 (unlines rtslibs)
       <> progText
+      <> mconcat (map addSPT spt)
       <> stringUtf8 "\nvar hasteMain = function() {" <> callMain
                                                      <> stringUtf8 "};"
       <> launchApp
+
+    addSPT ptr = mconcat
+      [ stringUtf8 "__spt_insert("
+      , ptr
+      , stringUtf8 ");\n"
+      ]
 
 -- | Produce an info message if verbose reporting is enabled.
 info' :: Config -> String -> IO ()
@@ -70,7 +79,7 @@ getAllDefs :: Config
            -> (BS.ByteString, BS.ByteString)
            -> BS.ByteString
            -> Name
-           -> IO Stm
+           -> IO ([Name], Stm)
 getAllDefs cfg libpaths mainmod pkgid mainsym =
   runDep cfg mainmod $ addDef libpaths pkgid mainsym
 
@@ -79,7 +88,8 @@ data DepState = DepState {
     defs        :: !(Stm -> Stm),
     alreadySeen :: !(S.Set Name),
     modules     :: !(M.Map BS.ByteString Module),
-    infoLogger  :: String -> IO ()
+    infoLogger  :: String -> IO (),
+    staticPtrs  :: ![[Name]]
   }
 
 type DepM a = EitherT Name (StateT DepState IO) a
@@ -90,7 +100,8 @@ initState cfg m = DepState {
     defs        = id,
     alreadySeen = S.empty,
     modules     = M.empty,
-    infoLogger  = info' cfg
+    infoLogger  = info' cfg,
+    staticPtrs  = []
   }
 
 -- | Log a message to stdout if verbose reporting is on.
@@ -100,12 +111,12 @@ info s = do
   liftIO $ infoLogger st s
 
 -- | Run a dependency resolution computation.
-runDep :: Show a => Config -> (BS.ByteString,BS.ByteString) -> DepM a -> IO Stm
+runDep :: Show a => Config -> (BS.ByteString,BS.ByteString) -> DepM a -> IO ([Name], Stm)
 runDep cfg mainmod m = do
     res <- runStateT (runEitherT m) (initState cfg mainmod)
     case res of
       (Right _, st) ->
-        return $ defs st stop
+        return (snubcat $ staticPtrs st, defs st stop)
       (Left (Name f (Just (_, modul))), _) -> do
         error $ msg (toString modul) (toString f)
       (r, _) -> do
@@ -120,6 +131,9 @@ runDep cfg mainmod m = do
       " please use `--dont-link' to avoid this error."
     msg s f =
       "Unable to locate function `" ++ f ++ "' in module `" ++ s ++ "'!"
+
+    -- snubcat: sort + nub + concat in O(n log n) instead of O(n²)
+    snubcat = map head . group . sort . concat
 
 -- | Return the module the given variable resides in.
 getModuleOf :: [FilePath] -> Name -> DepM Module
@@ -154,7 +168,11 @@ getModule libpaths pkgid modname = do
       case mm of
         Just m -> do
           st <- get
-          put st {modules = M.insert modname m (modules st)}
+          put st
+            { modules = M.insert modname m (modules st)
+            , staticPtrs = modSPT m : staticPtrs st
+            }
+          mapM_ (addDef libpaths pkgid) (modSPT m)
           return (Just m)
         _ -> do
           go lps

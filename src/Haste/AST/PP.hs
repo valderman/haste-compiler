@@ -81,20 +81,29 @@ pretty cfg ast =
   case runPP cfg (pp ast) of
     (b, _) -> toLazyByteString b
 
--- | Run a pretty printer.
-runPP :: Config -> PP a -> (Builder, a)
-runPP cfg p =
-  case unPP p cfg 0 emptyNS mempty of
+-- | Run a pretty printer with the given name supply.
+runPPWith :: Config -> NameSupply -> PP a -> (Builder, a)
+runPPWith cfg ns p =
+  case unPP p cfg 0 ns mempty of
     (_, b, x) -> (b, x)
 
--- | Pretty-print a program and return the final name for its entry point.
-prettyProg :: Pretty a => Config -> Name -> a -> (Builder, Builder)
-prettyProg cfg mainSym ast = runPP cfg $ do
+-- | Run a pretty printer with an empty name supply.
+runPP :: Config -> PP a -> (Builder, a)
+runPP cfg = runPPWith cfg emptyNS
+
+-- | Takes a config, a program entry point, and a pretty-printable program.
+--   Returns the pretty-printed program, the final names for all static
+--   pointers in the program, and the final name of the main symbol, in that
+--   order.
+prettyProg :: Pretty a => Config -> Name -> [Name] -> a -> (Builder, ([Builder], Builder))
+prettyProg cfg mainSym spt ast = runPP cfg $ do
   pp ast
   hsnames <- getOpt preserveNames
-  if hsnames
-    then return $ buildStgName mainSym
-    else buildFinalName <$> finalNameFor mainSym
+  main <- if hsnames
+            then return $ buildStgName mainSym
+            else buildFinalName <$> finalNameFor mainSym
+  spt' <- mapM (fmap buildFinalName . finalNameFor) spt
+  return (spt', main)
 
 -- | JS-mangled version of an internal name.
 buildStgName :: Name -> Builder

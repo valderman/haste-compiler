@@ -45,6 +45,7 @@ Data-Files:
     floatdecode.js
     jsflow.js
     Foreign.js
+    spt.js
 
 extra-source-files:
     include/primop-info-710.hs,
