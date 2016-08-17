@@ -31,7 +31,7 @@ link cfg pkgid target = do
          _           -> error "Haste.Linker.link called without main sym!"
   (spt, ds) <- getAllDefs cfg (targetLibPath cfg : libPaths cfg) mainmod pkgid mainSym
   let myDefs = if wholeProgramOpts cfg
-                 then topLevelInline cfg ds
+                 then topLevelInline cfg spt ds
                  else ds
       (progText, (spt', myMain')) = prettyProg cfg mainSym spt myDefs
       callMain = stringUtf8 "B(A(" <> myMain' <> stringUtf8 ", [0]));"

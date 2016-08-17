@@ -37,7 +37,7 @@ optimizeFun :: Config -> Var -> Exp -> Exp
 optimizeFun c f ast =
   runTravM $ do
     shrinkCase ast
-    >>= inlineAssigns
+    >>= inlineAssigns []
     >>= optimizeArrays
     >>= inlineReturns
     >>= zapJSStringConversions
@@ -51,13 +51,13 @@ optimizeFun c f ast =
     >>= optWhen (inlineJSPrim c) inlineJSPrimitives
     >>= mapJS (const True) pure (pure . removeNonsenseAssigns)
 
-topLevelInline :: Config -> Stm -> Stm
-topLevelInline c ast =
+topLevelInline :: Config -> [Name] -> Stm -> Stm
+topLevelInline c spt ast =
   runTravM $ do
     pure ast
     >>= unevalLits
     >>= inlineIntoEval
-    >>= inlineAssigns
+    >>= inlineAssigns spt'
     >>= optimizeArrays
     >>= optimizeThunks
     >>= smallStepInline
@@ -65,13 +65,15 @@ topLevelInline c ast =
     >>= zapJSStringConversions
     >>= optWhen (inlineJSPrim c) inlineJSPrimitives
     >>= removeUselessEvals
-    >>= inlineAssigns
+    >>= inlineAssigns spt'
     >>= smallStepInline
-    >>= inlineAssigns
+    >>= inlineAssigns spt'
     >>= optWhen (detrampolineThreshold c > 0)
                 (unTrampoline $ detrampolineThreshold c)
     >>= inlineLiteralFunCalls
     >>= optWhen (flowAnalysisOpts c) flowOpts
+  where
+    spt' = map (\n -> Internal n "" False) spt
 
 
 -- | Attempt to turn two case branches into a ternary operator expression.
@@ -92,8 +94,8 @@ tryTernary self scrut retEx def [(m, alt)] =
       -- Make sure the return expression is used somewhere, then cut away all
       -- useless assignments. If what's left is a single Return statement,
       -- we have a pure expression suitable for use with ?:.
-      def'' <- inlineAssigns def'
-      alt'' <- inlineAssigns alt'
+      def'' <- inlineAssigns [] def'
+      alt'' <- inlineAssigns [] alt'
       -- If self occurs in either branch, we can't inline or we risk ruining
       -- tail call elimination.
       selfInDef <- occurrences (const True) selfOccurs def''
@@ -130,17 +132,22 @@ occurrences tr p ast =
 
 -- | Inline assignments where the assignee is only ever used once.
 --   Does not inline anything into a shared code path, as that would break
---   things horribly.
+--   things horribly. Also doesn't inline anything from the SPT.
+--   The SPT is only necessary when performing top-level inlining. For anything
+--   else an empty list should be used, as any SPT entries are inevitably going.
+--   to be free vars and thus not inlineable.
+--
 --   Ignores LhsExp assignments, since we only introduce those when we actually
 --   care about the assignment side effect.
-inlineAssigns :: JSTrav ast => ast -> TravM ast
-inlineAssigns ast = do
+inlineAssigns :: JSTrav ast => [Var] -> ast -> TravM ast
+inlineAssigns spt ast = do
     inlinable <- countVarOccs ast
     mapJS (const True) return (inl inlinable) ast
   where
     -- Assume that an assignment that is never used is actually there for a
     -- good reason and thus not inlinable.
     isSafe i v
+      | v `elem` spt              = False
       | Just Once <- M.lookup v i = True
       | otherwise                 = False
 
