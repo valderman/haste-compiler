@@ -57,7 +57,7 @@ jsQuerySelectorAll = ffi "(function(e,q){\
 
 jsElemsByClassName :: JSString -> IO [Elem]
 jsElemsByClassName = ffi "(function(c){\
-\return document.getElementsByClassName(e);})"
+\return document.getElementsByClassName(c);})"
 
 jsCreateElem :: JSString -> IO Elem
 jsCreateElem = ffi "(function(t){return document.createElement(t);})"
