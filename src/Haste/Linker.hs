@@ -15,6 +15,7 @@ import Data.ByteString.Builder
 import Data.Monoid
 import Data.List (sort, group)
 import System.IO (hPutStrLn, stderr)
+import Crypto.Hash
 
 -- | The program entry point.
 --   This will need to change when we start supporting building "binaries"
@@ -39,12 +40,23 @@ link cfg pkgid target = do
   
   rtslibs <- mapM readFile $ rtsLibs cfg
   extlibs <- mapM readFile $ jsExternals cfg
-  B.writeFile (outFile cfg cfg target)
-    $ toLazyByteString
-    $ assembleProg (wrapProg cfg) extlibs rtslibs progText callMain launchApp spt'
+  let finalProgram = toLazyByteString $ assembleProg (wrapProg cfg)
+                                                     extlibs
+                                                     rtslibs
+                                                     progText
+                                                     callMain
+                                                     launchApp
+                                                     spt'
+  B.writeFile (outFile cfg cfg target) finalProgram
   where
+    addHashLine p = concat
+      [ "var __haste_prog_id = '"
+      , show (hash (B.toStrict p) :: Digest SHA3_256)
+      , "';\n"
+      ]
     assembleProg True extlibs rtslibs progText callMain launchApp spt =
-      stringUtf8 (unlines extlibs)
+      stringUtf8 (addHashLine (toLazyByteString progText))
+      <> stringUtf8 (unlines extlibs)
       <> stringUtf8 "var hasteMain = function() {"
       <> (if useStrict cfg then stringUtf8 "\n\"use strict\";\n" else mempty)
       <> stringUtf8 (unlines rtslibs)
@@ -55,6 +67,7 @@ link cfg pkgid target = do
       <> launchApp
     assembleProg _ extlibs rtslibs progText callMain launchApp spt =
       (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
+      <> stringUtf8 (addHashLine (toLazyByteString progText))
       <> stringUtf8 (unlines extlibs)
       <> stringUtf8 (unlines rtslibs)
       <> progText
