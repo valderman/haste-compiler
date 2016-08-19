@@ -14,7 +14,7 @@ import Haste.Binary.Types
 import Control.Monad
 import System.IO.Unsafe
 #ifdef __HASTE__
-import Haste.Foreign hiding (get)
+import Haste.Prim.Foreign hiding (get)
 #else
 import qualified Control.Exception as Ex
 import Data.Char (chr)

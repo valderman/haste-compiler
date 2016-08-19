@@ -13,7 +13,7 @@ import Haste.Prim
 import Haste.Binary.Types
 #ifdef __HASTE__
 import Control.Monad
-import Haste.Foreign
+import Haste.Prim.Foreign
 import System.IO.Unsafe
 #else
 import Data.Char (ord)

@@ -6,7 +6,7 @@ module Haste.Graphics.AnimationFrame (
     requestAnimationFrame,
     cancelAnimationFrame
   ) where
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Performance
 
 -- | Handle to a previously issued request for an animation frame.

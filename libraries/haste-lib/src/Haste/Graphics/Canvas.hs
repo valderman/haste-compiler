@@ -35,7 +35,7 @@ import Haste
 import Haste.DOM.JSString
 import Haste.DOM.Core
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
-import Haste.Foreign (ToAny (..), FromAny (..), ffi)
+import Haste.Prim.Foreign (ToAny (..), FromAny (..), ffi)
 
 jsHasCtx2D :: Elem -> IO Bool
 jsHasCtx2D = ffi "(function(e){return !!e.getContext;})"

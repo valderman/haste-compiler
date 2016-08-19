@@ -15,7 +15,7 @@ module Haste.Audio (
   ) where
 import Haste.Audio.Events as Events
 import Haste.DOM.JSString
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Prim.JSType
 import Haste.Prim
 import Control.Monad

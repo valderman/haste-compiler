@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | (Very incomplete) Haste bindings to the @Performance@ DOM interface.
 module Haste.Performance (HRTimeStamp, now, navigationStart) where
-import Haste.Foreign
+import Haste.Prim.Foreign
 
 type HRTimeStamp = Double
 

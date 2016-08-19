@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, CPP #-}
 module Haste.Timer (Timer, Interval (..), setTimer, stopTimer) where
 import Control.Monad.IO.Class
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Events.Core
 
 type Identifier = Int

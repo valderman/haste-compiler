@@ -2,7 +2,7 @@
 -- | Basic bindings to HTML5 WebStorage.
 module Haste.LocalStorage (setItem, getItem, removeItem) where
 import Haste
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Serialize
 import Haste.JSON
 

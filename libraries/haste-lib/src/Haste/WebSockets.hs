@@ -6,7 +6,7 @@ module Haste.WebSockets (
     withWebSocket, withBinaryWebSocket, wsSend, wsSendBlob
   ) where
 import Haste
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Concurrent
 import Haste.Binary (Blob)
 

@@ -7,7 +7,7 @@ module Haste.Events.Core (
   ) where
 import Haste.Prim
 import Haste.DOM.Core
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Control.Monad.IO.Class
 import Data.IORef
 import System.IO.Unsafe

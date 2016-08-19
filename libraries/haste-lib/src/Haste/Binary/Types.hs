@@ -4,7 +4,7 @@ module Haste.Binary.Types (
     blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob
   ) where
 import Haste.Prim
-import Haste.Foreign
+import Haste.Prim.Foreign
 import qualified Data.ByteString.Lazy as BS
 #ifndef __HASTE__
 import qualified Data.ByteString.UTF8 as BU

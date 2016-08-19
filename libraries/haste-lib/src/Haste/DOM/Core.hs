@@ -16,7 +16,7 @@ module Haste.DOM.Core (
   ) where
 import Haste.Prim
 import Control.Monad.IO.Class
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Data.String
 
 jsSet :: Elem -> JSString -> JSString -> IO ()

@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- | DOM manipulation functions using 'JSString' for string representation.
 module Haste.DOM.JSString (
     -- From Haste.DOM.Core
@@ -23,7 +23,7 @@ import Haste.Prim.JSType
 import Haste.DOM.Core
 import Data.Maybe (isNothing, fromJust)
 import Control.Monad.IO.Class
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Binary.Types
 
 type PropID = JSString

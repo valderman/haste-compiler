@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | Low level XMLHttpRequest support. IE6 and older are not supported.
 module Haste.Ajax (Method (..), URL, ajaxRequest, noParams) where
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Prim
 import Haste.Prim.JSType
 import Control.Monad.IO.Class

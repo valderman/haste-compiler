@@ -16,7 +16,7 @@ import Data.String as S
 #ifndef __HASTE__
 import Haste.Parsing
 #endif
-import Haste.Foreign hiding (toObject)
+import Haste.Prim.Foreign hiding (toObject)
 
 -- | Create a JavaScript object from a JSON object. Only makes sense in a
 --   browser context, obviously.

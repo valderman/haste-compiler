@@ -4,7 +4,7 @@ module Haste.Events.MouseEvents (
     MouseEvent (..), MouseData (..), MouseButton (..)
   ) where
 import Haste.Events.Core
-import Haste.Foreign
+import Haste.Prim.Foreign
 
 data MouseButton = MouseLeft | MouseMiddle | MouseRight
   deriving (Show, Eq, Enum)

@@ -4,7 +4,7 @@ module Haste.Events.TouchEvents (
     TouchEvent (..), TouchData (..), Touch (..)
   ) where
 import Haste.Prim.Any
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Haste.Events.Core
 import Haste.DOM.Core
 

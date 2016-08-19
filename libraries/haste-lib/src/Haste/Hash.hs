@@ -3,7 +3,7 @@
 module Haste.Hash (
     onHashChange, setHash, getHash
   ) where
-import Haste.Foreign
+import Haste.Prim.Foreign
 import Control.Monad.IO.Class
 import Haste.Prim
 

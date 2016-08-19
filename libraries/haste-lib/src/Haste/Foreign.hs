@@ -11,11 +11,17 @@ module Haste.Foreign
   , FFI, JSFunc
   , ffi, constant, export
   , safe_ffi, StaticPtr
+  , withLibraries
   ) where
 import Haste.Prim.Foreign
 import Haste.Prim (JSString)
 import qualified Haste.JSString as J
 import Control.Monad (foldM)
+
+-- For withLibraries
+import Haste.Concurrent
+import Haste.DOM.JSString
+import Haste.Events
 
 -- | Read a member from a JS object. Succeeds if the member exists.
 getMaybe :: (FromAny a) => JSAny -> JSString -> IO (Maybe a)
@@ -47,3 +53,18 @@ lookupAny root i = foldM hasGet (Just root) $ J.match dotsplit i
                                         if h then Just <$> get parent ident
                                           else pure Nothing
         dotsplit = J.regex "[^.]+" "g"
+
+-- | Wait for the given libraries to load before executing the given
+--   computation. Note that this function returns immediately, BEFORE the given
+--   libraries are loaded.
+withLibraries :: [JSString] -> IO () -> IO ()
+withLibraries libs m = concurrent $ do
+    vars <- mapM (const newEmptyMVar) libs
+    liftIO . sequence_ $ zipWith addLib libs vars
+    mapM_ takeMVar vars
+    liftIO m
+  where
+    addLib lib var = do
+      s <- newElem "SCRIPT" `with` ["src" =: lib]
+      s `onEvent` Load $ \_ -> concurrent $ putMVar var ()
+      appendChild documentBody s
