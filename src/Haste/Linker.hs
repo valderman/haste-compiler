@@ -49,26 +49,28 @@ link cfg pkgid target = do
                                                      spt'
   B.writeFile (outFile cfg cfg target) finalProgram
   where
-    addHashLine p = concat
-      [ "var __haste_prog_id = '"
+    addHashLine target p = concat
+      [ target, " = '"
       , show (hash (B.toStrict p) :: Digest SHA3_256)
       , "';\n"
       ]
     assembleProg True extlibs rtslibs progText callMain launchApp spt =
-      stringUtf8 (addHashLine (toLazyByteString progText))
-      <> stringUtf8 "var __haste_script_elem = document.currentScript;\n"
-      <> stringUtf8 (unlines extlibs)
-      <> stringUtf8 "var hasteMain = function() {"
-      <> (if useStrict cfg then stringUtf8 "\n\"use strict\";\n" else mempty)
+      stringUtf8 (unlines extlibs)
+      <> stringUtf8 "function hasteMain() {\n"
+      <> (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
+      <> stringUtf8 "var __haste_prog_id = hasteMain.progId;\n"
+      <> stringUtf8 "var __haste_script_elem = hasteMain.scriptElem;\n"
       <> stringUtf8 (unlines rtslibs)
       <> progText
       <> mconcat (map addSPT spt)
       <> callMain
       <> stringUtf8 "};\n"
+      <> stringUtf8 "hasteMain.scriptElem = document.currentScript;\n"
+      <> stringUtf8 (addHashLine "hasteMain.progId" (toLazyByteString progText))
       <> launchApp
     assembleProg _ extlibs rtslibs progText callMain launchApp spt =
       (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
-      <> stringUtf8 (addHashLine (toLazyByteString progText))
+      <> stringUtf8 (addHashLine "var __haste_prog_id" (toLazyByteString progText))
       <> stringUtf8 "var __haste_script_elem = document.currentScript;\n"
       <> stringUtf8 (unlines extlibs)
       <> stringUtf8 (unlines rtslibs)
