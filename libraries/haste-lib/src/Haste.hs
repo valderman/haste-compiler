@@ -85,18 +85,19 @@ getCurrentScript = ffi "(function(){\
 \        }\
 \    } else {\
 \        var es = document.getElementsByTagName('SCRIPT');\
-\        var re = new RegExp('\\(hasteMain.progId\\|var __haste_prog_id\\) = \\'[0-9a-f]{64}\\';');\
+\        var re = new RegExp('var __haste_prog_id = \\'\\([0-9a-f]{64}\\)\\';');\
 \        for(var i in es) {\
 \            if(es[i].innerHTML) {\
 \                var match = es[i].innerHTML.match(re);\
-\                if(match && match[0].match(/[0-9a-f]{64}/)[0] == __haste_prog_id) {\
+\                if(match && match[1] == __haste_prog_id) {\
 \                    return [null, es[i].innerHTML];\
 \                }\
-\            } else {\
+\            } else if(es[i].src) {\
 \                var xhr = new XMLHttpRequest();\
 \                xhr.open('GET', es[i].src, false);\
 \                xhr.send();\
-\                if(xhr.responseText.match(re)) {\
+\                var match = xhr.responseText.match(re);\
+\                if(match && match[1] == __haste_prog_id) {\
 \                    return [es[i].src, null];\
 \                }\
 \            }\
