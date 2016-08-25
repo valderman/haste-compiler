@@ -16,7 +16,10 @@ module Haste (
     Timer, Interval (..), setTimer, stopTimer,
 
     -- * Fast conversions for JS-native types
-    JSType (..), JSNum (..), toString, fromString, convert
+    JSType (..), JSNum (..), toString, fromString, convert,
+
+    -- * Reflection
+    getProgramId, getProgramJS
   ) where
 import Haste.Prim
 import Haste.Timer
@@ -54,3 +57,47 @@ eval = liftIO . jsEval
 -- | JavaScript @console.log()@.
 writeLog :: MonadIO m => JSString -> m ()
 writeLog = liftIO . jsLog
+
+-- | Get the value of the @__haste_prog_id@ variable. Unless programmatically
+--   changed, this variable contains the SHA3-256 hash of the currently
+--   executing Haste program.
+getProgramId :: IO JSString
+getProgramId = ffi "(function(){return __haste_prog_id;})"
+
+-- | Get the complete JavaScript source code of the currently executing Haste
+--   program. On IE, this requires that the program's identifier, as returned
+--   by 'getProgramId', has not been tampered with.
+getProgramJS :: IO (Either URL JSString)
+getProgramJS = do
+  (murl, msrc) <- getCurrentScript
+  return $ maybe (maybe impossible Right msrc) Left murl
+  where
+    impossible = error "impossible!"
+
+-- | JS worker for 'getProgramJS'.
+getCurrentScript :: IO (Maybe URL, Maybe JSString)
+getCurrentScript = ffi "(function(){\
+\    if(__haste_script_elem) {\
+\        if(__haste_script_elem.innerHTML) {\
+\            return [null, __haste_script_elem.innerHTML];\
+\        } else {\
+\            return [__haste_script_elem.src, null];\
+\        }\
+\    } else {\
+\        var es = document.getElementsByTagName('SCRIPT');\
+\        var re = new RegExp('var window[\"__haste_prog_id\"] = \"[0-9a-f]{64}\";');\
+\        for(var i in es) {\
+\            if(es[i].innerHTML && es[i].innerHTML.match(re)) {\
+\                return [null, es[i].innerHTML];\
+\            } else {\
+\                var xhr = new XMLHttpRequest();\
+\                xhr.open('GET', es[i].src, false);\
+\                xhr.send();\
+\                if(xhr.responseText.match(re)) {\
+\                    return [es[i].src, null];\
+\                }\
+\            }\
+\        }\
+\    }\
+\    throw 'source of current program not found';\
+\})"

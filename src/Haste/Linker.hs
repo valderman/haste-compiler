@@ -56,6 +56,7 @@ link cfg pkgid target = do
       ]
     assembleProg True extlibs rtslibs progText callMain launchApp spt =
       stringUtf8 (addHashLine (toLazyByteString progText))
+      <> stringUtf8 "var __haste_script_elem = document.currentScript;\n"
       <> stringUtf8 (unlines extlibs)
       <> stringUtf8 "var hasteMain = function() {"
       <> (if useStrict cfg then stringUtf8 "\n\"use strict\";\n" else mempty)
@@ -68,6 +69,7 @@ link cfg pkgid target = do
     assembleProg _ extlibs rtslibs progText callMain launchApp spt =
       (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
       <> stringUtf8 (addHashLine (toLazyByteString progText))
+      <> stringUtf8 "var __haste_script_elem = document.currentScript;\n"
       <> stringUtf8 (unlines extlibs)
       <> stringUtf8 (unlines rtslibs)
       <> progText
