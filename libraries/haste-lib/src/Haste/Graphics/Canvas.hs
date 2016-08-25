@@ -105,7 +105,7 @@ jsArc :: Ctx -> Double -> Double
 jsArc = ffi "(function(ctx, x, y, radius, fromAngle, toAngle){\
 ctx.arc(x, y, radius, fromAngle, toAngle);})"
 
-jsCanvasToDataURL :: Elem -> IO JSString
+jsCanvasToDataURL :: Elem -> IO URL
 jsCanvasToDataURL = ffi "(function(e){return e.toDataURL('image/png');})"
 
 -- | A bitmap, backed by an IMG element.
@@ -145,7 +145,7 @@ class BitmapSource src where
 instance BitmapSource URL where
   loadBitmap url = liftIO $ do
     img <- newElem "img"
-    setProp img "src" (toJSString url)
+    setProp img "src" url
     loadBitmap img
 
 instance BitmapSource Elem where
@@ -300,8 +300,7 @@ renderOnTop (Canvas ctx _) (Picture p) = liftIO $ p ctx
 
 -- | Generate a data URL from the contents of a canvas.
 toDataURL :: MonadIO m => Canvas -> m URL
-toDataURL (Canvas _ el) = liftIO $ do
-  fromJSStr <$> jsCanvasToDataURL el
+toDataURL (Canvas _ el) = liftIO $ jsCanvasToDataURL el
 
 -- | Create a new off-screen buffer and store the given picture in it.
 buffer :: MonadIO m => Int -> Int -> Picture () -> m Bitmap

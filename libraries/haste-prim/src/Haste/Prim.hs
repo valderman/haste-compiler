@@ -16,7 +16,7 @@ import Data.List (intercalate)
 import GHC.Prim
 import GHC.Types (IO (..))
 
-type URL = String
+type URL = JSString
 
 -- | Any JS value, with one layer of indirection.
 newtype JSAny = JSAny (Ptr Any)
