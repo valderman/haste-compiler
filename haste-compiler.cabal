@@ -123,6 +123,7 @@ Executable hastec
         either,
         filepath,
         directory,
+        cryptonite >= 0.10 && < 0.20,
         ghc-simple >= 0.3 && < 0.4
     Main-Is:
         hastec.hs
