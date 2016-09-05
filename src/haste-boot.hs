@@ -347,10 +347,14 @@ buildLibs cfg = do
                          ]
 
       -- Install QuickCheck
-      patch <- liftIO $ readFile "quickcheck-2.6-amp.patch"
+      libdir <- pwd
       inTempDirectory $ do
         hasteCabal (Do "unpack") ["QuickCheck-2.6"]
-        inDirectory "QuickCheck-2.6" $ run_ "patch" ["-p1"] patch
+        inDirectory "QuickCheck-2.6" $ do
+          run_ "patch" [ "-p1"
+                       , "-i"
+                       , libdir </> "quickcheck-2.6-amp.patch"
+                       ] ""
         hasteCabal Install [ "-f-templatehaskell"
                            , "--allow-newer=base"
                            , "./QuickCheck-2.6"
