@@ -1,0 +1,46 @@
+diff -ur a/Test/QuickCheck/Monadic.hs b/Test/QuickCheck/Monadic.hs
+--- a/Test/QuickCheck/Monadic.hs	2013-03-07 16:07:41.000000000 +0100
++++ b/Test/QuickCheck/Monadic.hs	2016-09-05 12:59:06.053224436 +0200
+@@ -13,6 +13,8 @@
+ import Test.QuickCheck.Gen
+ import Test.QuickCheck.Property
+ 
++import Control.Monad (ap)
++
+ import Control.Monad
+   ( liftM
+   )
+@@ -35,6 +37,10 @@
+   MkPropertyM m >>= f = MkPropertyM (\k -> m (\a -> unPropertyM (f a) k))
+   fail s              = stop (failed { reason = s })
+ 
++instance Monad m => Applicative (PropertyM m) where
++  pure = return
++  (<*>) = ap
++
+ stop :: (Testable prop, Monad m) => prop -> PropertyM m a
+ stop p = MkPropertyM (\_k -> return (return (property p)))
+ 
+diff -ur a/Test/QuickCheck/Property.hs b/Test/QuickCheck/Property.hs
+--- a/Test/QuickCheck/Property.hs	2013-03-07 16:07:41.000000000 +0100
++++ b/Test/QuickCheck/Property.hs	2016-09-05 12:57:50.101111101 +0200
+@@ -10,6 +10,8 @@
+ import Test.QuickCheck.Exception
+ import Test.QuickCheck.State
+ 
++import Control.Monad (ap)
++
+ #ifndef NO_TIMEOUT
+ import System.Timeout(timeout)
+ #endif
+@@ -122,6 +124,10 @@
+   -- k must be total
+   m >>= k  = joinRose (fmap k m)
+ 
++instance Applicative Rose where
++  pure = return
++  (<*>) = ap
++
+ -- Execute the "IORose" bits of a rose tree, returning a tree
+ -- constructed by MkRose.
+ reduceRose :: Rose Result -> IO (Rose Result)

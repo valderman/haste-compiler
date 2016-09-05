@@ -146,7 +146,7 @@ specs = [
 hdr :: String
 hdr = "Fetch, build and install all libraries necessary to use Haste.\n"
 
-data CabalOp = Configure | Build | Install | Clean
+data CabalOp = Configure | Build | Install | Clean | Do String
 
 main :: IO ()
 main = shell_ $ do
@@ -343,7 +343,18 @@ buildLibs cfg = do
                          , "-f-integer-gmp"
                          , "-f-sse2"
                          , "-f-sse41"
-                         , "./haste-lib"]
+                         , "./haste-lib"
+                         ]
+
+      -- Install QuickCheck
+      patch <- liftIO $ readFile "quickcheck-2.6-amp.patch"
+      inTempDirectory $ do
+        hasteCabal (Do "unpack") ["QuickCheck-2.6"]
+        inDirectory "QuickCheck-2.6" $ run_ "patch" ["-p1"] patch
+        hasteCabal Install [ "-f-templatehaskell"
+                           , "--allow-newer=base"
+                           , "./QuickCheck-2.6"
+                           ]
 
       -- Export monads-tf; it seems to be hidden by default
       run_ hastePkgBinary ["expose", "monads-tf"] ""
@@ -376,6 +387,9 @@ buildLibs cfg = do
     hasteCabal Clean args =
       withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
       where as = "clean" : args
+    hasteCabal (Do what) args =
+      withEnv "HASTE_BOOTING" (const "1") $ run_ hasteCabalBinary as ""
+      where as = what : args
 
     vanillaCabal args = run_ "cabal" args ""
 
