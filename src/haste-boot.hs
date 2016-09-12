@@ -198,9 +198,9 @@ bootHaste cfg tmpdir =
 
       when (initialPortableBoot cfg) $ do
         mapM_ relocate ["array", "bytestring", "containers", "base",
-                        "deepseq", "dlist", "haste-prim", "time", "haste-lib",
+                        "deepseq", "haste-prim", "time", "haste-lib",
                         "monads-tf", "old-locale", "transformers", "integer-gmp",
-                        "hashable", "text", "binary"]
+                        "hashable", "text", "binary", "random", "QuickCheck", "text"]
 
       -- Wait for closure download to finish.
       await closure
