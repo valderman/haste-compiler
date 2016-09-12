@@ -1,5 +1,5 @@
 Name:           haste-compiler
-Version:        0.5.5.0
+Version:        0.5.5.1
 License:        BSD3
 License-File:   LICENSE
 Synopsis:       Haskell To ECMAScript compiler
