@@ -349,7 +349,7 @@ buildLibs cfg = do
       -- Install QuickCheck
       libdir <- pwd
       inTempDirectory $ do
-        hasteCabal (Do "unpack") ["QuickCheck-2.6"]
+        run_ "cabal" ["unpack", "QuickCheck-2.6"] ""
         inDirectory "QuickCheck-2.6" $ do
           run_ "patch" [ "-p1"
                        , "-i"
