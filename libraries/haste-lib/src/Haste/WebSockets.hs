@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving#-}
 -- | WebSockets API for Haste.
 module Haste.WebSockets (
-    module Haste.Concurrent,
-    WebSocket,
-    withWebSocket, withBinaryWebSocket, wsSend, wsSendBlob
+    module Haste.Concurrent
+    , WebSocket
+    , withWebSocket, withBinaryWebSocket
+    , wsSend, wsSendBlob, wsClose
   ) where
 import Haste
 import Haste.Prim.Foreign
@@ -12,8 +13,9 @@ import Haste.Binary (Blob)
 
 newtype WebSocket = WebSocket JSAny deriving (ToAny, FromAny)
 
--- | Run a computation with a web socket. The computation will not be executed
+-- | Run a computation with a WebSocket. The computation will not be executed
 --   until a connection to the server has been established.
+--   The WebSocket will not be closed after the computation finishes.
 withWebSocket :: URL
               -- ^ URL to bind the WebSocket to
               -> (WebSocket -> JSString -> CIO ())
@@ -31,8 +33,9 @@ withWebSocket url cb err f = do
   where
     cb' = \ws msg -> concurrent $ cb ws msg
 
--- | Run a computation with a web socket. The computation will not be executed
+-- | Run a computation with a WebSocket. The computation will not be executed
 --   until a connection to the server has been established.
+--   The WebSocket will not be closed after the computation finishes.
 withBinaryWebSocket :: URL
               -- ^ URL to bind the WebSocket to
               -> (WebSocket -> Blob -> CIO ())
@@ -59,7 +62,7 @@ new = ffi "(function(url, cb, f, err) {\
              \var ws = new WebSocket(url);\
              \ws.onmessage = function(e) {cb(ws,e.data);};\
              \ws.onopen = function(e) {f(ws);};\
-             \ws.onerror = function(e) {err());};\
+             \ws.onclose = ws.onerror = function(e) {err());};\
              \return ws;\
            \})" 
 
@@ -73,20 +76,28 @@ newBin = ffi "(function(url, cb, f, err) {\
                 \ws.binaryType = 'blob';\
                 \ws.onmessage = function(e) {cb(ws,e.data);};\
                 \ws.onopen = function(e) {f(ws);};\
-                \ws.onerror = function(e) {err();};\
+                \ws.onclose = ws.onerror = function(e) {err();};\
                 \return ws;\
               \})" 
 
 -- | Send a string over a WebSocket.
-wsSend :: WebSocket -> JSString -> CIO ()
+wsSend :: WebSocket -> JSString -> CIO Bool
 wsSend ws str = liftIO $ sendS ws str
 
 -- | Send a Blob over a WebSocket.
-wsSendBlob :: WebSocket -> Blob -> CIO ()
+wsSendBlob :: WebSocket -> Blob -> CIO Bool
 wsSendBlob ws b = liftIO $ sendB ws b
 
-sendS :: WebSocket -> JSString -> IO ()
-sendS = ffi "(function(s, msg) {s.send(msg);})"
+-- | Close an WebSocket. Closing a WebSocket which has been previously closed
+--   is a no-op.
+wsClose :: WebSocket -> CIO ()
+wsClose ws = liftIO $ close ws
 
-sendB :: WebSocket -> Blob -> IO ()
-sendB = ffi "(function(s, msg) {s.send(msg);})"
+sendS :: WebSocket -> JSString -> IO Bool
+sendS = ffi "(function(s, msg) {if(s.readyState != 1) {return false;} else {s.send(msg); return true;}})"
+
+sendB :: WebSocket -> Blob -> IO Bool
+sendB = ffi "(function(s, msg) {if(s.readyState != 1) {return false;} else {s.send(msg); return true;}})"
+
+close :: WebSocket -> IO ()
+close = ffi "(function(ws){ws.onclose = ws.onerror = function(){}; ws.close();})"
