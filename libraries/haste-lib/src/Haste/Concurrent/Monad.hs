@@ -3,7 +3,8 @@
 module Haste.Concurrent.Monad (
     MVar, CIO, ToConcurrent (..), MonadConc (..),
     forkIO, forkMany, newMVar, newEmptyMVar, takeMVar, putMVar, withMVarIO,
-    peekMVar, modifyMVarIO, readMVar, concurrent, liftIO
+    peekMVar, modifyMVarIO, readMVar, concurrent, liftIO,
+    tryTakeMVar, tryPutMVar
   ) where
 import Control.Monad.IO.Class
 import Control.Monad.Cont.Class
@@ -106,6 +107,21 @@ takeMVar (MVar ref) =
         writeIORef ref (Empty (rs ++ [next]))
         return $ C (const Stop)
 
+-- | Try to take a value from an MVar, but return @Nothing@ if it is empty.
+tryTakeMVar :: MVar a -> CIO (Maybe a)
+tryTakeMVar (MVar ref) =
+  join $ liftIO $ do
+    v <- readIORef ref
+    case v of
+      Full x ((x',w):ws) -> do
+        writeIORef ref (Full x' ws)
+        return $ forkIO w >> return (Just x)
+      Full x _ -> do
+        writeIORef ref (Empty [])
+        return $ return (Just x)
+      Empty rs -> do
+        return $ return Nothing
+
 -- | Peek at the value inside a given MVar, if any, without removing it.
 peekMVar :: MonadIO m => MVar a -> m (Maybe a)
 peekMVar (MVar ref) = liftIO $ do
@@ -138,7 +154,23 @@ putMVar (MVar ref) x =
         return $ forkIO (r x)
       Empty _ -> do
         writeIORef ref (Full x [])
-        return $ next ()
+        return $ return ()
+
+-- | Try to put a value into an MVar, returning @False@ if the MVar is already
+--   full.
+tryPutMVar :: MVar a -> a -> CIO Bool
+tryPutMVar (MVar ref) x =
+  join $ liftIO $ do
+    v <- readIORef ref
+    case v of
+      Full oldx ws -> do
+        return $ return False
+      Empty (r:rs) -> do
+        writeIORef ref (Empty rs)
+        return $ forkIO (r x) >> return True
+      Empty _ -> do
+        writeIORef ref (Full x [])
+        return $ return True
 
 -- | Perform an IO action over an MVar.
 withMVarIO :: MVar a -> (a -> IO b) -> CIO b
