@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, FlexibleInstances #-}
 -- | WebSockets API for Haste.
 module Haste.WebSockets
   ( module Haste.Concurrent
@@ -17,6 +17,9 @@ import Haste.Binary (Blob)
 -- | A WebSocket, parameterized over the type of data that can be sent and
 --   received over it.
 newtype WebSocket a = WebSocket JSAny deriving (ToAny, FromAny)
+
+instance Eq (WebSocket a) where
+  (WebSocket a) == (WebSocket b) = a == b
 
 -- | Some data that can be sent and received over a WebSocket.
 class WebSocketData a where
