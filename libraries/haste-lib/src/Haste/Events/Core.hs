@@ -3,7 +3,7 @@
 module Haste.Events.Core (
     Event (..), MonadEvent (..),
     HandlerInfo,
-    unregisterHandler, onEvent, preventDefault
+    unregisterHandler, onEvent, preventDefault, stopPropagation
   ) where
 import Haste.Prim
 import Haste.DOM.Core
@@ -60,6 +60,14 @@ preventDefault = liftIO $ readIORef evtRef >>= preventDefault'
 
 preventDefault' :: Maybe JSAny -> IO ()
 preventDefault' = ffi "(function(e){if(e){e.preventDefault();}})"
+
+-- | Stop the event being handled from propagating.
+--   Does nothing if called outside an event handler.
+stopPropagation :: MonadIO m => m ()
+stopPropagation = liftIO $ readIORef evtRef >>= stopPropagation'
+
+stopPropagation' :: Maybe JSAny -> IO ()
+stopPropagation' = ffi "(function(e){if(e){e.preventDefault();}})"
 
 -- | Set an event handler on a DOM element.
 onEvent :: (MonadEvent m, IsElem el, Event evt)
