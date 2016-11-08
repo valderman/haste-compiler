@@ -55,11 +55,11 @@ setEvtRef = writeIORef evtRef . Just
 
 -- | Prevent the event being handled from resolving normally.
 --   Does nothing if called outside an event handler.
-preventDefault :: IO ()
-preventDefault = readIORef evtRef >>= go
-  where
-    go :: Maybe JSAny -> IO ()
-    go = ffi "(function(e){if(e){e.preventDefault();}})"
+preventDefault :: MonadIO m => m ()
+preventDefault = liftIO $ readIORef evtRef >>= preventDefault'
+
+preventDefault' :: Maybe JSAny -> IO ()
+preventDefault' = ffi "(function(e){if(e){e.preventDefault();}})"
 
 -- | Set an event handler on a DOM element.
 onEvent :: (MonadEvent m, IsElem el, Event evt)
