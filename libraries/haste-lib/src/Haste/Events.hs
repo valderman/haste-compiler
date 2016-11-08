@@ -3,7 +3,7 @@ module Haste.Events (
     -- * Core event functionality
     Event (..), MonadEvent (..),
     HandlerInfo,
-    unregisterHandler, onEvent, preventDefault,
+    unregisterHandler, onEvent, preventDefault, stopPropagation,
 
     -- * Basic events with no arguments
     BasicEvent (..),
