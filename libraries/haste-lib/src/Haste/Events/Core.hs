@@ -67,7 +67,7 @@ stopPropagation :: MonadIO m => m ()
 stopPropagation = liftIO $ readIORef evtRef >>= stopPropagation'
 
 stopPropagation' :: Maybe JSAny -> IO ()
-stopPropagation' = ffi "(function(e){if(e){e.preventDefault();}})"
+stopPropagation' = ffi "(function(e){if(e){e.stopPropagation();}})"
 
 -- | Set an event handler on a DOM element.
 onEvent :: (MonadEvent m, IsElem el, Event evt)
