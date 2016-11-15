@@ -4,7 +4,7 @@ module Haste.Foreign
   ( -- * Conversion to/from JSAny
     ToAny (..), FromAny (..), JSAny
   , Opaque, toOpaque, fromOpaque
-  , nullValue, toObject, has, get, index
+  , nullValue, toObject, has, get, index, isUndefined
   , getMaybe, hasAll, lookupAny, JSException (..)
 
     -- * Importing and exporting JavaScript functions

@@ -12,7 +12,7 @@
 module Haste.Prim.Any (
     ToAny (..), FromAny (..), Generic, JSAny (..),
     Opaque, toOpaque, fromOpaque,
-    nullValue, toObject, has, get, index
+    nullValue, toObject, has, get, index, isUndefined
   ) where
 import GHC.Generics
 import Control.Exception
@@ -28,6 +28,7 @@ foreign import ccall __lst2arr :: Ptr [a] -> JSAny
 foreign import ccall __arr2lst :: Int -> JSAny -> Ptr [a]
 foreign import ccall "String" jsString :: JSAny -> JSString
 foreign import ccall "Number" jsNumber :: JSAny -> Double
+foreign import ccall "__isUndef" isUndefined :: JSAny -> Bool
 foreign import ccall __jsNull :: IO JSAny
 foreign import ccall __new :: IO JSAny
 foreign import ccall __set :: JSAny -> JSString -> JSAny -> IO ()
@@ -52,6 +53,8 @@ jsNumber :: JSAny -> Double
 jsNumber _ = undefined
 __jsNull :: IO JSAny
 __jsNull = undefined
+isUndefined :: JSAny -> Bool
+isUndefined = undefined
 #endif
 
 {-# NOINLINE jsNull #-}
@@ -257,8 +260,8 @@ instance FromAny a => FromAny [a] where
   fromAny = listFromAny
 
 instance FromAny a => FromAny (Maybe a) where
-  fromAny x | x == jsNull = return Nothing
-            | otherwise   = Just <$> fromAny x
+  fromAny x | x == jsNull || isUndefined x = return Nothing
+            | otherwise                    = Just <$> fromAny x
 
 instance (FromAny a, FromAny b) => FromAny (a, b) where
   fromAny x = do
