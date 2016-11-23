@@ -1,11 +1,14 @@
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Haste.Binary.Types (
     Blob (..), BlobData (..),
-    blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob
+    blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob,
+    toUArray, fromUArray
   ) where
 import Haste.Prim
 import Haste.Prim.Foreign
+import Haste.Foreign.Array
 import qualified Data.ByteString.Lazy as BS
+import Data.Array.Unboxed
 #ifndef __HASTE__
 import qualified Data.ByteString.UTF8 as BU
 #else
@@ -28,6 +31,20 @@ blobSize = unsafePerformIO . ffi "(function(b){return b.size;})"
 -- | The size, in bytes, of the contents of the given blob data.
 blobDataSize :: BlobData -> Int
 blobDataSize (BlobData _ len _) = len
+
+-- | Convert a 'BlobData' to an unboxed array; client-side only.
+toUArray :: (Ix i, ArrView e) => BlobData -> UArray i e
+toUArray (BlobData _ _ buf) = unsafePerformIO $ toUArray' buf
+
+-- | Convert a an unboxed array into a 'Blob'; client-side only.
+fromUArray :: (Ix i, ArrView e) => UArray i e -> Blob
+fromUArray = unsafePerformIO . fromUArray'
+
+fromUArray' :: (Ix i, ArrView e) => UArray i e -> IO Blob
+fromUArray' = ffi "(function(arr){return new Blob([arr]);})"
+
+toUArray' :: (Ix i, ArrView e) => JSAny -> IO (UArray i e)
+toUArray' = ffi "(function(buf){return new Uint8Array(buf.buffer);})"
 
 -- | Convert a BlobData to a ByteString. Only usable server-side.
 toByteString :: BlobData -> BS.ByteString
@@ -81,6 +98,14 @@ instance ToAny BlobData where toAny = clientOnly
 instance FromAny BlobData where fromAny = clientOnly
 instance ToAny Blob where toAny = clientOnly
 instance FromAny Blob where fromAny = clientOnly
+
+-- | Convert a 'BlobData' to an unboxed array; client-side only.
+toUArray :: (Ix i, ArrView e) => BlobData -> UArray i e
+toUArray _ = error "toUArray only usable client-side!"
+
+-- | Convert a an unboxed array into a 'Blob'; client-side only.
+fromUArray :: (Ix i, ArrView e) => UArray i e -> Blob
+fromUArray = error "fromUArray only usable client-side!"
 
 -- | The size, in bytes, of the contents of the given blob.
 blobSize :: Blob -> Int

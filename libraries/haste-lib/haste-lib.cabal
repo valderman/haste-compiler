@@ -47,6 +47,7 @@ Library
         Haste.Events.KeyEvents
         Haste.Events.MouseEvents
         Haste.Events.TouchEvents
+        Haste.Foreign.Array
         Haste.Hash
         Haste.Timer
     Build-Depends:
