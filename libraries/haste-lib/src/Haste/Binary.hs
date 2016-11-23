@@ -228,13 +228,13 @@ encode :: Binary a => a -> Blob
 encode x = runPut (put x)
 
 -- | Decode any deserializable data from a 'BlobData'.
-decode :: Binary a => BlobData -> Either String a
+decode :: Binary a => BlobData -> Either JSString a
 decode = runGet get
 
 -- | Decode a 'Blob' into some deserializable value, inconveniently locked up
 --   inside the 'CIO' monad (or any other concurrent monad) due to the somewhat
 --   special way JavaScript uses to deal with binary data.
-decodeBlob :: (MonadBlob m, Binary a) => Blob -> m (Either String a)
+decodeBlob :: (MonadBlob m, Binary a) => Blob -> m (Either JSString a)
 decodeBlob b = getBlobData b >>= return . decode
 
 -- Type without constructors

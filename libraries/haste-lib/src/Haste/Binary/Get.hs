@@ -13,10 +13,10 @@ import Haste.Prim
 import Haste.Binary.Types
 import Control.Monad
 import System.IO.Unsafe
+import qualified Control.Exception as Ex
 #ifdef __HASTE__
 import Haste.Prim.Foreign hiding (get)
 #else
-import qualified Control.Exception as Ex
 import Data.Char (chr)
 import qualified Data.Binary as B
 import qualified Data.Binary.IEEE754 as BI
@@ -24,7 +24,7 @@ import qualified Data.Binary.Get as BG
 #endif
 
 #ifdef __HASTE__
-data Result a = Ok !Int !a | Fail !String
+data Result a = Ok !Int !a | Fail !JSString
 data Get a = Get {unG :: JSAny -> Int -> Result a}
 
 instance Functor Get where
@@ -43,7 +43,7 @@ instance Monad Get where
     case m buf next of
       Ok next' x -> unG (f x) buf next'
       Fail e     -> Fail e
-  fail s = Get $ \_ _ -> Fail s
+  fail s = Get $ \_ _ -> Fail (toJSStr s)
 
 getW8 :: JSAny -> Int -> IO Word8
 getW8 = ffi "(function(b,i){return b.getUint8(i);})"
@@ -117,9 +117,12 @@ skip :: Int -> Get ()
 skip len = Get $ \_buf next -> Ok (next+len) ()
 
 -- | Run a Get computation.
-runGet :: Get a -> BlobData -> Either String a
+runGet :: Get a -> BlobData -> Either JSString a
 runGet (Get p) (BlobData off len bd) = do
-  case p bd off of
+  let res = unsafePerformIO $ do
+        Ex.catch (pure $! p bd off)
+                 (\(JSException e) -> pure (Fail e))
+  case res of
     Ok consumed x
       | consumed <= len -> Right x
       | otherwise       -> Left "Not enough data!"
@@ -129,12 +132,12 @@ runGet (Get p) (BlobData off len bd) = do
 
 newtype Get a = Get (BG.Get a) deriving (Functor, Applicative, Monad)
 
-runGet :: Get a -> BlobData -> Either String a
+runGet :: Get a -> BlobData -> Either JSString a
 runGet (Get g) (BlobData bd) = unsafePerformIO $ do
   Ex.catch (Right <$> (return $! BG.runGet g bd)) mEx
 
-mEx :: Ex.SomeException -> IO (Either String a)
-mEx ex = return . Left $ show ex
+mEx :: Ex.SomeException -> IO (Either JSString a)
+mEx ex = return . Left $ toJSStr $ show ex
 
 getWord8 :: Get Word8
 getWord8 = Get BG.getWord8
