@@ -10,7 +10,7 @@ module Haste.Binary (
     module Haste.Binary.Put,
     module Haste.Binary.Get,
     MonadBlob (..), Binary (..), getBlobText,
-    Blob, BlobData,
+    Ix, ArrView, Blob, BlobData,
     blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob,
     toUArray, fromUArray,
     encode, decode, decodeBlob

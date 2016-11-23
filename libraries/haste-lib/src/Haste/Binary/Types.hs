@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP, GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Haste.Binary.Types (
-    Blob (..), BlobData (..),
+    Ix, ArrView, Blob (..), BlobData (..),
     blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob,
     toUArray, fromUArray
   ) where
