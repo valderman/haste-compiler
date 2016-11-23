@@ -34,7 +34,7 @@ blobDataSize (BlobData _ len _) = len
 
 -- | Convert a 'BlobData' to an unboxed array; client-side only.
 toUArray :: (Ix i, ArrView e) => BlobData -> UArray i e
-toUArray (BlobData _ _ buf) = unsafePerformIO $ toUArray' buf
+toUArray (BlobData from to buf) = unsafePerformIO $ toUArray' from to buf
 
 -- | Convert a an unboxed array into a 'Blob'; client-side only.
 fromUArray :: (Ix i, ArrView e) => UArray i e -> Blob
@@ -43,8 +43,8 @@ fromUArray = unsafePerformIO . fromUArray'
 fromUArray' :: (Ix i, ArrView e) => UArray i e -> IO Blob
 fromUArray' = ffi "(function(arr){return new Blob([arr]);})"
 
-toUArray' :: (Ix i, ArrView e) => JSAny -> IO (UArray i e)
-toUArray' = ffi "(function(buf){return new Uint8Array(buf.buffer);})"
+toUArray' :: (Ix i, ArrView e) => Int -> Int -> JSAny -> IO (UArray i e)
+toUArray' = ffi "(function(from, to, buf){return new Uint8Array(buf.buffer.slice(from, to+from));})"
 
 -- | Convert a BlobData to a ByteString. Only usable server-side.
 toByteString :: BlobData -> BS.ByteString
