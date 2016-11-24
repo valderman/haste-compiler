@@ -21,6 +21,7 @@ Library
         Haste.Audio
         Haste.Binary
         Haste.Concurrent
+        Haste.Crypto
         Haste.DOM
         Haste.DOM.JSString
         Haste.Events
@@ -41,6 +42,8 @@ Library
         Haste.Binary.Types
         Haste.Concurrent.Monad
         Haste.Concurrent.Ajax
+        Haste.Crypto.Prim
+        Haste.Crypto.Types
         Haste.DOM.Core
         Haste.Events.BasicEvents
         Haste.Events.Core
