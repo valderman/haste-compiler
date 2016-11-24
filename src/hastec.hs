@@ -172,6 +172,7 @@ htmlSkeleton filename prog = concat [
   "<html><head>",
   "<title>", filename , "</title>",
   "<meta charset=\"UTF-8\">",
+  "<meta http-equiv=\"x-ua-compatible\" content=\"ie=edge, chrome=1\">",
   "<script type=\"text/javascript\">", prog, "</script>",
   "</head><body></body></html>"]
 
