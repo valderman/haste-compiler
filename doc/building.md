@@ -16,7 +16,7 @@ bootstrap Haste.
   * libbz2
   * zlib
   * git
-  * GHC >= 7.8 && < 7.11
+  * GHC 7.10
   * libgmp
   * libffi
   * pandoc (to build man pages)
@@ -115,8 +115,9 @@ repository, indicating that you want to use the libraries already present
 in that directory instead of downloading some other version.
 
 If you built and installed your own `haste-cabal` binary, you will want to
-tell `haste-boot` to avoid downloading a pre-built `haste-cabal` binary
-using the `--no-haste-cabal` flag.
+tell `haste-boot` to avoid downloading a pre-built `haste-cabal` binary and
+instead use your pre-built binary using the `--with-haste-cabal=$YOUR_BINARY`
+flag.
 
 See `haste-boot --help` for more bootstrapping options.
 
@@ -130,9 +131,9 @@ on your search path):
 
 Haste will be bootstrapped into said directory rather than into `~/.haste`.
 
-If you built your own `haste-cabal` binary, you will want to copy that binary
-into this directory as well, and pass the `--no-haste-cabal` flag to ensure
-that `haste-boot` does not overwrite your binary with a pre-built one.
+If you built your own `haste-cabal` binary, you will want to use the
+`--with-haste-cabal=$YOUR_BINARY` flag to ensure `$YOUR_BINARY` is used instead
+of the one `haste-boot` would otherwise download.
 
 
 Building a complete portable package
@@ -143,8 +144,7 @@ packing up the result into a redistributable binary package is automated using
 the `build-release.hs` script.
 In order to build a portable Debian package, for instance, simply run
 `runghc build-release deb` and a Debian package will appear in the
-`ghc-7.(8|10)` directory in the root of Haste's source tree, depending on
-which version of GHC you used.
+`ghc-7.10` directory in the root of Haste's source tree.
 
 The build-release script can build multiple file formats in one go; simple
 pass all formats you wish to build as command line arguments.
