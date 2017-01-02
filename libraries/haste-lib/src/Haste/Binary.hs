@@ -6,15 +6,18 @@
 -- | Handling of Javascript-native binary blobs.
 --
 -- Generics borrowed from the binary package by Lennart Kolmodin (released under BSD3)
-module Haste.Binary (
-    module Haste.Binary.Put,
-    module Haste.Binary.Get,
-    MonadBlob (..), Binary (..), getBlobText,
-    Ix, ArrView, Blob, BlobData,
-    blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob,
-    toUArray, fromUArray,
-    encode, decode, decodeBlob
-  )where
+module Haste.Binary
+  ( -- * High level binary API
+    Binary (..), Blob, BlobData, encode, decode, decodeBlob
+  , module Haste.Binary.Put
+  , module Haste.Binary.Get
+
+    -- * Working with raw blobs
+  , Ix, ArrView
+  , getBlobData, getBlobText', getBlobText
+  , blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob
+  , toUArray, fromUArray
+  ) where
 import Data.Int
 import Data.Word
 import Data.Char
@@ -32,42 +35,39 @@ import Data.Bits
 import qualified Data.ByteString.Lazy.Char8 as BS (unpack)
 #endif
 
-class Monad m => MonadBlob m where
-  -- | Retrieve the raw data from a blob.
-  getBlobData :: Blob -> m BlobData
-  -- | Interpret a blob as UTF-8 text, as a JSString.
-  getBlobText' :: Blob -> m JSString
+-- | Retrieve the raw data from a blob.
+getBlobData  :: MonadConc m => Blob -> m BlobData
+-- | Interpret a blob as UTF-8 text, as a JSString.
+getBlobText' :: MonadConc m => Blob -> m JSString
+
+#ifdef __HASTE__
+getBlobData b = liftConc $ do
+    res <- newEmptyMVar
+    liftIO $ convertBlob b (mkBlobData res (blobSize b))
+    takeMVar res
+  where
+    mkBlobData res len x = concurrent $ do
+      putMVar res (BlobData 0 len x)
+
+    convertBlob :: Blob -> (JSAny -> IO ()) -> IO ()
+    convertBlob = ffi "(function(b,cb){var r=new FileReader();r.onload=function(){cb(new DataView(r.result));};r.readAsArrayBuffer(b);})"
+
+getBlobText' b = liftConc $ do
+    res <- newEmptyMVar
+    liftIO $ convertBlob b (concurrent . putMVar res)
+    takeMVar res
+  where
+    convertBlob :: Blob -> (JSString -> IO ()) -> IO ()
+    convertBlob = ffi "(function(b,cb){var r=new FileReader();r.onload=function(){cb(r.result);};r.readAsText(b);})"
+#else
+getBlobData (Blob b) = return (BlobData b)
+getBlobText' (Blob b) = return . toJSStr $ BS.unpack b
+#endif
+
 
 -- | Interpret a blob as UTF-8 text.
-getBlobText :: MonadBlob m => Blob -> m String
+getBlobText :: MonadConc m => Blob -> m String
 getBlobText b = getBlobText' b >>= return . fromJSStr
-
-instance MonadBlob CIO where
-#ifdef __HASTE__
-  getBlobData b = do
-      res <- newEmptyMVar
-      liftIO $ convertBlob b (mkBlobData res (blobSize b))
-      takeMVar res
-    where
-      mkBlobData res len x = concurrent $ do
-        putMVar res (BlobData 0 len x)
-
-      convertBlob :: Blob -> (JSAny -> IO ()) -> IO ()
-      convertBlob = ffi
-        "(function(b,cb){var r=new FileReader();r.onload=function(){cb(new DataView(r.result));};r.readAsArrayBuffer(b);})"
-
-  getBlobText' b = do
-      res <- newEmptyMVar
-      liftIO $ convertBlob b (concurrent . putMVar res)
-      takeMVar res
-    where
-      convertBlob :: Blob -> (JSString -> IO ()) -> IO ()
-      convertBlob = ffi
-        "(function(b,cb){var r=new FileReader();r.onload=function(){cb(r.result);};r.readAsText(b);})"
-#else
-  getBlobData (Blob b) = return (BlobData b)
-  getBlobText' (Blob b) = return . toJSStr $ BS.unpack b
-#endif
 
 -- | Somewhat efficient serialization/deserialization to/from binary Blobs.
 --   The layout of the binaries produced/read by get/put and encode/decode may
@@ -234,7 +234,7 @@ decode = runGet get
 -- | Decode a 'Blob' into some deserializable value, inconveniently locked up
 --   inside the 'CIO' monad (or any other concurrent monad) due to the somewhat
 --   special way JavaScript uses to deal with binary data.
-decodeBlob :: (MonadBlob m, Binary a) => Blob -> m (Either JSString a)
+decodeBlob :: (MonadConc m, Binary a) => Blob -> m (Either JSString a)
 decodeBlob b = getBlobData b >>= return . decode
 
 -- Type without constructors
