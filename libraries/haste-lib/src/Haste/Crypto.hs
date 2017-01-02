@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 module Haste.Crypto
   ( MonadConc (..), MonadIO (..), Binary (..), ArrView (..)
+  , Word8, Word16, Word32, Word64
     -- * Crypto-strength random number generation
   , CryptoRandom (..)
   , cryptoRandomSalt

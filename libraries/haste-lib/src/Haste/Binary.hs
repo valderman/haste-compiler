@@ -11,6 +11,8 @@ module Haste.Binary
     MonadConc, Binary (..), Blob, BlobData, encode, decode, decodeBlob
   , module Haste.Binary.Put
   , module Haste.Binary.Get
+  , Word8, Word16, Word32, Word64
+  , Int8, Int16, Int32, Int64
 
     -- * Working with raw blobs
   , Ix, ArrView
