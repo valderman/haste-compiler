@@ -183,6 +183,9 @@ bootHaste cfg tmpdir =
       dir <- pwd -- use absolute path for closure to avoid dir changing race
       closure <- future $ when (getClosure cfg) (installClosure dir)
 
+      -- Do a haste-cabal update before trying anything cabal related
+      run hasteCabalBinary ["update"]
+
       when (not $ useLocalLibs cfg) $ do
         fetchLibs tmpdir
 
