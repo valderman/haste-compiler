@@ -70,9 +70,10 @@ source-repository head
 Executable haste-boot
     Main-Is: haste-boot.hs
     Other-Modules:
-        Haste.Version
+        Haste.Args
         Haste.Environment
         Haste.GHCPaths
+        Haste.Version
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
@@ -160,7 +161,10 @@ Executable haste-pkg
     Main-Is: haste-pkg.hs
     Other-Extensions: CPP
     Other-Modules:
-      HastePkg710
+        HastePkg710
+        Haste.Environment
+        Haste.GHCPaths
+        Haste.Version
     Hs-Source-Dirs:
       src
       utils/haste-pkg
@@ -199,6 +203,21 @@ Executable haste-cat
     Other-Modules:
         Haste.Environment
         Haste.GHCPaths
+        Haste.AST
+        Haste.AST.Binary
+        Haste.AST.Constructors
+        Haste.AST.FlowAnalysis
+        Haste.AST.Op
+        Haste.AST.Optimize
+        Haste.AST.PP
+        Haste.AST.PP.Opts
+        Haste.AST.Print
+        Haste.AST.Syntax
+        Haste.AST.Traversal
+        Haste.Config
+        Haste.JSLib
+        Haste.Module
+        Haste.Version
     Hs-Source-Dirs: src
     if flag(portable)
         CPP-Options: -DPORTABLE
