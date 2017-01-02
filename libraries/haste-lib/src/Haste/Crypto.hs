@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 module Haste.Crypto
-  ( -- * Crypto-strength random number generation
-    CryptoRandom (..)
+  ( MonadConc (..), MonadIO (..), MonadBlob (..), Binary (..), ArrView (..)
+    -- * Crypto-strength random number generation
+  , CryptoRandom (..)
   , cryptoRandomSalt
   , cryptoRandomUArray
   , cryptoRandomIOUArray
