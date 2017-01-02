@@ -152,7 +152,6 @@ encrypt :: (Binary a, MonadIO m, MonadBlob m, MonadConc m)
         -> m Blob
 encrypt k msg = do
   iv <- generateIV (keyCipher k)
-  liftIO $ putStrLn $ "IV-enc: " ++ show (ivBytes iv)
   msg' <- encryptWithIV iv k msg
   let derp = runPut (putBlob (fromUArray (ivBytes iv)) >> putBlob msg')
   return derp
@@ -171,8 +170,6 @@ decrypt k blob = do
     (Left e, _)           -> return $ Left $ catJSStr "" ["couldn't read IV: ", e]
     (_, Left e)           -> return $ Left $ catJSStr "" ["couldn't read data: ", e]
     (Right iv, Right msg) -> do
-      liftIO $ putStrLn $ "IV-dec: " ++ show (ivBytes $ IV $ toUArray iv)
-      liftIO $ putStrLn $ "msg: " ++ show (ivBytes $ IV $ toUArray msg)
       emsg' <- decryptUArray k (IV $ toUArray iv) (toUArray msg :: UArray Word Word8)
       case emsg' of
         Left err   -> return $ Left $ catJSStr "" ["decryption failed: ", err]
