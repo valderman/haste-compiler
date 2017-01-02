@@ -10,7 +10,7 @@ import Haste.Concurrent
 
 -- | Fill the given array with random bits, using the browser's @window.crypto@
 --   object.
-randomBits :: ArrView e => IOUArray Word e -> IO ()
+randomBits :: ArrView e => IOUArray Word32 e -> IO ()
 randomBits = ffi "(function(arr){window['__haste_crypto'].getRandomValues(arr);})"
 
 -- | Wait for a promise to either complete or get rejected. Promises used with
@@ -44,7 +44,7 @@ generateKey' = ffi "(function(c, yay, nay) {\
 
 encrypt' :: (Ix i, ArrView e)
          => SymmetricKey -> IV -> UArray i e
-         -> (UArray Word Word8 -> IO ())
+         -> (UArray Word32 Word8 -> IO ())
          -> (JSString -> IO ())
          -> IO ()
 encrypt' = ffi "(function(k, iv, data, yay, nay) {\
@@ -56,7 +56,7 @@ encrypt' = ffi "(function(k, iv, data, yay, nay) {\
 
 decrypt' :: (Ix i, ArrView e)
          => SymmetricKey -> IV -> UArray i e
-         -> (UArray Word Word8 -> IO ())
+         -> (UArray Word32 Word8 -> IO ())
          -> (JSString -> IO ())
          -> IO ()
 decrypt' = ffi "(function(k, iv, data, yay, nay) {\
@@ -67,7 +67,7 @@ decrypt' = ffi "(function(k, iv, data, yay, nay) {\
   \})"
 
 keyBytes' :: SymmetricKey
-          -> (UArray Word Word8 -> IO ())
+          -> (UArray Word32 Word8 -> IO ())
           -> (JSString -> IO ())
           -> IO ()
 keyBytes' = ffi "(function(k, yay, nay){\
@@ -77,7 +77,7 @@ keyBytes' = ffi "(function(k, yay, nay){\
   \})"
 
 keyFromBytes' :: Cipher
-              -> UArray Word Word8
+              -> UArray Word32 Word8
               -> (SymmetricKey -> IO ())
               -> (JSString -> IO ())
               -> IO ()
@@ -87,13 +87,13 @@ keyFromBytes' = ffi "(function(alg, k, yay, nay){\
   \.catch(nay);\
   \})"
 
-deriveKey' :: Cipher -> Salt -> Int -> UArray Word Word8 -> (SymmetricKey -> IO ()) -> (JSString -> IO ()) -> IO ()
+deriveKey' :: Cipher -> Salt -> Int -> UArray Word32 Word8 -> (SymmetricKey -> IO ()) -> (JSString -> IO ()) -> IO ()
 deriveKey' = ffi "(function(alg, s, n, k, yay, nay){\
   \window['__haste_crypto'].subtle.importKey('raw', k, {name:'PBKDF2'}, false, ['deriveKey']).then(function(mk) {\
   \window['__haste_crypto'].subtle.deriveKey({name:'PBKDF2',salt:s,iterations:n,hash:'SHA-256'}, mk, alg, true, ['encrypt', 'decrypt']).then(function(k){yay({key: k, cipher: alg});}).catch(nay);\
   \});})"
 
-encodeUtf8' :: JSString -> IO (UArray Word Word8)
+encodeUtf8' :: JSString -> IO (UArray Word32 Word8)
 encodeUtf8' = ffi "(function(s){\
   \s = unescape(encodeURIComponent(s));\
   \var arr = new Uint8Array(s.length);\

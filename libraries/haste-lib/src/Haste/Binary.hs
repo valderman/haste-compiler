@@ -18,10 +18,13 @@ module Haste.Binary
   , blobSize, blobDataSize, toByteString, fromByteString, toBlob, strToBlob
   , toUArray, fromUArray
   ) where
+import Data.Array.Unboxed
+import Data.Bits
+import Data.Char
 import Data.Int
 import Data.Word
-import Data.Char
 import GHC.Fingerprint.Type
+import GHC.Generics
 import qualified Haste.JSString as J (length)
 import Haste.Prim
 import Haste.Concurrent
@@ -29,8 +32,6 @@ import Haste.Prim.Foreign hiding (get)
 import Haste.Binary.Types
 import Haste.Binary.Put
 import Haste.Binary.Get
-import GHC.Generics
-import Data.Bits
 #ifndef __HASTE__
 import qualified Data.ByteString.Lazy.Char8 as BS (unpack)
 #endif
@@ -191,12 +192,7 @@ instance Binary a => Binary [a] where
   put xs = do
     putWord32le (fromIntegral $ length xs)
     mapM_ put xs
-  get = do
-      len <- getWord32le
-      getList len []
-    where
-      getList 0 xs = return $ reverse xs
-      getList n xs = get >>= \x -> getList (n-1) (x:xs)
+  get = getWord32le >>= getMany
 
 instance Binary JSString where
   {-# NOINLINE put #-}
@@ -222,6 +218,29 @@ instance Binary Char where
   get = get >>= \x ->
     case chr x of
       !x' -> return x'
+
+-- Borrowed from the @binary@ package.
+instance (Binary i, Ix i, Binary e, IArray UArray e) => Binary (UArray i e) where
+  put a = do
+    put (bounds a)
+    put (rangeSize $ bounds a)
+    mapM_ put (elems a)
+  get = do
+    bs <- get
+    n  <- get
+    xs <- getMany n
+    return (listArray bs xs)
+
+-- | 'getMany n' get 'n' elements in order, without blowing the stack.
+{-# INLINE getMany #-}
+getMany :: Binary a => Word32 -> Get [a]
+getMany n = go [] n
+ where
+    go xs 0 = return $! reverse xs
+    go xs i = do x <- get
+                 -- we must seq x to avoid stack overflows due to laziness in
+                 -- (>>=)
+                 x `seq` go (x:xs) (i-1)
 
 -- | Encode any serializable data into a 'Blob'.
 encode :: Binary a => a -> Blob

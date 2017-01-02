@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings #-}
 module Haste.Crypto.Types where
 import Haste (JSString, JSType (..))
-import Haste.Foreign
+import Haste.Binary as B
+import Haste.Foreign as F
 import Data.Array.Unboxed
 import Data.Word
 
@@ -27,15 +28,43 @@ instance ToAny SymmetricKey where
   toAny (SymmetricKey k c) = toObject [("key", k), ("cipher", toAny c)]
 
 instance FromAny SymmetricKey where
-  fromAny x = SymmetricKey <$> get x "key" <*> get x "cipher"
+  fromAny x = SymmetricKey <$> F.get x "key" <*> F.get x "cipher"
 
-newtype IV = IV {ivBytes :: UArray Word Word8}
-  deriving (ToAny, FromAny)
+newtype IV = IV {ivBytes :: UArray Word32 Word8}
+  deriving (ToAny, FromAny, Binary)
 
-newtype Salt = Salt {saltBytes :: UArray Word Word8}
-  deriving (ToAny, FromAny)
+newtype Salt = Salt {saltBytes :: UArray Word32 Word8}
+  deriving (ToAny, FromAny, Binary)
 
 type Password = JSString
+
+instance Binary CipherMode where
+  put CBC = putWord8 0
+  put GCM = putWord8 1
+  get = do
+    n <- getWord8
+    case n of
+      0 -> pure CBC
+      1 -> pure GCM
+      _ -> fail "Cipher mode was neither CBC nor GCM"
+
+instance Binary KeyLength where
+  put Bits128 = putWord8 0
+  put Bits256 = putWord8 1
+  get = do
+    n <- getWord8
+    case n of
+      0 -> pure Bits128
+      1 -> pure Bits256
+      _ -> fail "Key length was neither 128 nor 256 bits"
+
+instance Binary Cipher where
+  put (AES mode len) = putWord8 0 >> put mode >> put len
+  get = do
+    n <- getWord8
+    case n of
+      0 -> AES <$> B.get <*> B.get
+      _ -> fail "Invalid cipher"
 
 instance ToAny CipherMode where
   toAny = toAny . toJSString
@@ -67,7 +96,7 @@ instance ToAny Cipher where
     ]
 
 instance FromAny Cipher where
-  fromAny x = AES <$> get x "name" <*> get x "length"
+  fromAny x = AES <$> F.get x "name" <*> F.get x "length"
 
 instance JSType CipherMode where
   toJSString CBC = "AES-CBC"
@@ -76,4 +105,3 @@ instance JSType CipherMode where
   fromJSString "AES-CBC" = Just CBC
   fromJSString "AES-GCM" = Just GCM
   fromJSString _         = Nothing
-

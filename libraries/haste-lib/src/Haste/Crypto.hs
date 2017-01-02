@@ -40,7 +40,7 @@ class CryptoRandom a where
   cryptoRandom :: MonadIO m => m a
 
   -- | Generate @n@ random elements of type @a@.
-  cryptoRandoms :: MonadIO m => Word -> m [a]
+  cryptoRandoms :: MonadIO m => Word32 -> m [a]
   cryptoRandoms n = mapM (const cryptoRandom) [1..n]
 
 instance ArrView a => CryptoRandom a where
@@ -48,11 +48,11 @@ instance ArrView a => CryptoRandom a where
   cryptoRandoms = cryptoRandomIOUArray >=> liftIO . getElems
 
 -- | Generate a random immutable array of @n@ elements.
-cryptoRandomUArray :: (MonadIO m, ArrView a) => Word -> m (UArray Word a)
+cryptoRandomUArray :: (MonadIO m, ArrView a) => Word32 -> m (UArray Word32 a)
 cryptoRandomUArray = cryptoRandomIOUArray >=> liftIO . unsafeFreeze
 
 -- | Generate a random mutable array of @n@ elements.
-cryptoRandomIOUArray :: (MonadIO m, ArrView a) => Word -> m (IOUArray Word a)
+cryptoRandomIOUArray :: (MonadIO m, ArrView a) => Word32 -> m (IOUArray Word32 a)
 cryptoRandomIOUArray n = liftIO $ do
   a <- newArray_ (0, n-1)
   randomBits a
@@ -60,7 +60,7 @@ cryptoRandomIOUArray n = liftIO $ do
 
 -- | Generate a random salt of the given length.
 {-# INLINE cryptoRandomSalt #-}
-cryptoRandomSalt :: MonadIO m => Word -> m Salt
+cryptoRandomSalt :: MonadIO m => Word32 -> m Salt
 cryptoRandomSalt = fmap Salt . cryptoRandomUArray
 
 -- | Generate a random primitive using @window.crypto@.
@@ -83,21 +83,21 @@ generateKey = promise . generateKey'
 -- | Get the specified key as an unboxed byte array.
 --   Only the bytes of the key itself are returned; exported keys do not
 --   include information about which cipher they are for.
-getKeyBytes :: MonadConc m => SymmetricKey -> m (UArray Word Word8)
+getKeyBytes :: MonadConc m => SymmetricKey -> m (UArray Word32 Word8)
 getKeyBytes = promise . keyBytes'
 
 -- | Import a key from an unboxed byte array.
-keyFromBytes :: MonadConc m => Cipher -> UArray Word Word8 -> m (Either JSString SymmetricKey)
+keyFromBytes :: MonadConc m => Cipher -> UArray Word32 Word8 -> m (Either JSString SymmetricKey)
 keyFromBytes c k = promiseE $ keyFromBytes' c k
 
 -- | Encrypt a message using the given cipher, key and initialization vector.
 encryptUArray :: (Ix i, ArrView e, MonadConc m)
-        => SymmetricKey -> IV -> UArray i e -> m (UArray Word Word8)
+        => SymmetricKey -> IV -> UArray i e -> m (UArray Word32 Word8)
 encryptUArray k iv msg = promise (encrypt' k iv msg)
 
 -- | Encrypt a message using the given cipher, key and initialization vector.
 decryptUArray :: (Ix i, ArrView e, MonadConc m)
-        => SymmetricKey -> IV -> UArray i e -> m (Either JSString (UArray Word Word8))
+        => SymmetricKey -> IV -> UArray i e -> m (Either JSString (UArray Word32 Word8))
 decryptUArray k iv msg = promiseE $ decrypt' k iv msg
 
 -- | Encrypt a message using a custom initialization vector. The IV will
@@ -109,7 +109,7 @@ encryptWithIV :: (Binary a, MonadConc m)
               -> m Blob
 encryptWithIV iv k val = do
   msg <- getBlobData $ encode val
-  fromUArray <$> encryptUArray k iv (toUArray msg :: UArray Word Word8)
+  fromUArray <$> encryptUArray k iv (toUArray msg :: UArray Word32 Word8)
 
 -- | Decrypt a message using a custom initialization vector.
 decryptWithIV :: (Binary a, MonadConc m)
@@ -119,7 +119,7 @@ decryptWithIV :: (Binary a, MonadConc m)
               -> m (Either JSString a)
 decryptWithIV iv k blob = do
   msg <- getBlobData blob
-  emsg' <- decryptUArray k iv (toUArray msg :: UArray Word Word8)
+  emsg' <- decryptUArray k iv (toUArray msg :: UArray Word32 Word8)
   case emsg' of
     Left err   -> return $ Left err
     Right msg' -> do
@@ -134,7 +134,7 @@ generateIV :: MonadIO m => Cipher -> m IV
 generateIV = fmap IV . cryptoRandomUArray . ivLength
 
 -- | The default initialization vector length for the available ciphers.
-ivLength :: Cipher -> Word
+ivLength :: Cipher -> Word32
 ivLength (AES CBC Bits128) = 16
 ivLength (AES CBC Bits256) = 32
 ivLength (AES GCM _)       = 12
@@ -171,7 +171,7 @@ decrypt k blob = do
     (Left e, _)           -> return $ Left $ catJSStr "" ["couldn't read IV: ", e]
     (_, Left e)           -> return $ Left $ catJSStr "" ["couldn't read data: ", e]
     (Right iv, Right msg) -> do
-      emsg' <- decryptUArray k (IV $ toUArray iv) (toUArray msg :: UArray Word Word8)
+      emsg' <- decryptUArray k (IV $ toUArray iv) (toUArray msg :: UArray Word32 Word8)
       case emsg' of
         Left err   -> return $ Left $ catJSStr "" ["decryption failed: ", err]
         Right msg' -> do
@@ -192,5 +192,5 @@ decrypt k blob = do
 deriveKey :: MonadConc m => Cipher -> Int -> Salt -> Password -> m SymmetricKey
 deriveKey c n s pass = promise $ deriveKey' c s n (encodeUtf8 pass)
 
-encodeUtf8 :: JSString -> UArray Word Word8
+encodeUtf8 :: JSString -> UArray Word32 Word8
 encodeUtf8 = unsafePerformIO . encodeUtf8'
