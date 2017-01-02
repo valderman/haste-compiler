@@ -102,7 +102,7 @@ decryptUArray k iv msg = promiseE $ decrypt' k iv msg
 
 -- | Encrypt a message using a custom initialization vector. The IV will
 --   not be prepended to the output.
-encryptWithIV :: (Binary a, MonadIO m, MonadBlob m, MonadConc m)
+encryptWithIV :: (Binary a, MonadBlob m, MonadConc m)
               => IV
               -> SymmetricKey
               -> a
@@ -112,7 +112,7 @@ encryptWithIV iv k val = do
   fromUArray <$> encryptUArray k iv (toUArray msg :: UArray Word Word8)
 
 -- | Decrypt a message using a custom initialization vector.
-decryptWithIV :: (Binary a, MonadIO m, MonadBlob m, MonadConc m)
+decryptWithIV :: (Binary a, MonadBlob m, MonadConc m)
               => IV
               -> SymmetricKey
               -> Blob
@@ -147,7 +147,7 @@ ivLength (AES GCM _)       = 12
 --   resulting 'Blob':
 --
 --       toUArray <$> getBlobData blob
-encrypt :: (Binary a, MonadIO m, MonadBlob m, MonadConc m)
+encrypt :: (Binary a, MonadBlob m, MonadConc m)
         => SymmetricKey
         -> a
         -> m Blob
@@ -161,7 +161,7 @@ encrypt k msg = do
 --   vector will be read from the beginning of the message; see 'encrypt' for
 --   information about IV lengths.
 --   A blob can be obtained from an unboxed array using 'fromUArray'.
-decrypt :: (Binary a, MonadIO m, MonadBlob m, MonadConc m)
+decrypt :: (Binary a, MonadBlob m, MonadConc m)
         => SymmetricKey
         -> Blob
        -> m (Either JSString a)

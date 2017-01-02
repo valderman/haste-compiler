@@ -13,7 +13,7 @@ import Data.IORef
 import Haste.Events.Core (MonadEvent (..))
 
 -- | Any monad which supports concurrency.
-class Monad m => MonadConc m where
+class MonadIO m => MonadConc m where
   liftConc :: CIO a -> m a
   fork     :: m () -> m ()
 
