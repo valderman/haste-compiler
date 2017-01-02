@@ -8,7 +8,7 @@
 -- Generics borrowed from the binary package by Lennart Kolmodin (released under BSD3)
 module Haste.Binary
   ( -- * High level binary API
-    Binary (..), Blob, BlobData, encode, decode, decodeBlob
+    MonadConc, Binary (..), Blob, BlobData, encode, decode, decodeBlob
   , module Haste.Binary.Put
   , module Haste.Binary.Get
 
