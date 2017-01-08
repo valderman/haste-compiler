@@ -4,7 +4,7 @@
 name:                haste-prim
 version:             0.6.0.0
 synopsis:            Low level primitives for the Haste compiler.
--- description:         
+description:         FFI and low-level hackery for haste-lib to build on.
 homepage:            http://haste-lang.org
 license:             BSD3
 license-file:        LICENSE
@@ -15,6 +15,10 @@ category:            Web
 build-type:          Simple
 -- extra-source-files:  
 cabal-version:       >=1.10
+
+flag haste
+     description: Is haste-prim being installed for Haste?
+     default: False
 
 library
   exposed-modules:
@@ -46,7 +50,7 @@ library
   build-depends:
     base           >=4.6 && <4.9,
     ghc-prim       >=0.3 && <0.5
-  if !impl(haste)
+  if !flag(haste)
     build-depends: integer-gmp >=0.5 && <2
   else
     build-depends: integer-gmp >=0.5 && <0.6
