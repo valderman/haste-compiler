@@ -46,7 +46,7 @@ foo = Foo {
 fooStr :: JSString
 fooStr = encodeJSON $ toJSON foo
 
-fooAgain :: Either String Foo
+fooAgain :: Either JSString Foo
 fooAgain = decodeJSON fooStr >>= fromJSON
 
 runTest :: IO ()

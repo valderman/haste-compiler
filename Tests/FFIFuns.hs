@@ -18,11 +18,11 @@ testNothing :: IO () -> IO (Maybe Int, Maybe Int)
 testNothing = ffi "(function(f) {return [17, null];})"
 
 runTest = do
-  test0 (return 42) >>= writeLog . show
+  test0 (return 42) >>= putStrLn . show
   res <- test3 (\a b c -> return $ show a ++ show (fmap reverse b) ++ show c)
-  writeLog res
-  test1 (\x -> writeLog ("Got: " ++ show x) >> return 9)
-  testNothing (writeLog "this should never happen") >>= writeLog . show
+  putStrLn res
+  test1 (\x -> putStrLn ("Got: " ++ show x) >> return 9)
+  testNothing (putStrLn "this should never happen") >>= putStrLn . show
 
 #else
 

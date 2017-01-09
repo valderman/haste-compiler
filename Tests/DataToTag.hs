@@ -1,20 +1,11 @@
 -- Test case constributed by Till Theis
-
-{-# LANGUAGE CPP #-}
 module Tests.DataToTag where
 import Control.Monad
 import System.IO.Unsafe
 import Control.Applicative (Applicative (..))
 
-#ifdef __HASTE__
-import Haste
-output = alert
-#else
-output = putStrLn
-#endif
-
 trace :: Show a => a -> b -> b
-trace msg = seq $ unsafePerformIO (output $ show msg)
+trace msg = seq $! unsafePerformIO (putStrLn $ show msg)
 
 runTest :: IO String
 runTest = return . show $ parse "a"
