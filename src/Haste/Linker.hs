@@ -65,12 +65,12 @@ link cfg pkgid target = do
       <> mconcat (map addSPT spt)
       <> callMain
       <> stringUtf8 "};\n"
-      <> stringUtf8 "hasteMain.scriptElem = document.currentScript;\n"
+      <> stringUtf8 "hasteMain.scriptElem = typeof document == 'object' ? document.currentScript : null;\n"
       <> launchApp
     assembleProg _ extlibs rtslibs progText callMain launchApp spt =
       (if useStrict cfg then stringUtf8 "\"use strict\";\n" else mempty)
       <> stringUtf8 (addHashLine (toLazyByteString progText))
-      <> stringUtf8 "var __haste_script_elem = document.currentScript;\n"
+      <> stringUtf8 "var __haste_script_elem = typeof document == 'object' ? document.currentScript : null;\n"
       <> stringUtf8 (unlines extlibs)
       <> stringUtf8 (unlines rtslibs)
       <> progText
