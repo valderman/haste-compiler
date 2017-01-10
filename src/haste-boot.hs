@@ -261,12 +261,22 @@ hasteCabalLauncher True = unlines
   , "HASTEC=\"$(dirname $0)/hastec\""
   , "DIR=\"$($HASTEC --print-libdir)/../haste-cabal\""
   , "export LD_LIBRARY_PATH=$DIR"
-  , "exec $DIR/haste-cabal.bin $@" ]
+  , "args=\"\""
+  , "for arg in \"$@\" ; do"
+  , "  args=\"$args \\\"$arg\\\"\""
+  , "done"
+  , "echo $args | xargs $DIR/haste-cabal.bin"
+  ]
 hasteCabalLauncher False = unlines
   [ "#!/bin/bash"
   , "DIR=\"" ++ hasteCabalRootDir False </> "haste-cabal" ++ "\""
   , "export LD_LIBRARY_PATH=$DIR"
-  , "exec $DIR/haste-cabal.bin $@" ]
+  , "args=\"\""
+  , "for arg in \"$@\" ; do"
+  , "  args=\"$args \\\"$arg\\\"\""
+  , "done"
+  , "echo $args | xargs $DIR/haste-cabal.bin"
+  ]
 
 -- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> Shell ()
