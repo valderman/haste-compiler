@@ -24,7 +24,7 @@ promise f = liftConc $ do
   res <- promiseE f
   case res of
     Right x -> return x
-    Left e    -> error ("promise rejected: " ++ fromJSStr e)
+    Left e  -> error ("promise rejected: " ++ fromJSStr e)
 
 -- | A promise that might fail.
 promiseE :: MonadConc m
@@ -87,10 +87,10 @@ keyFromBytes' = ffi "(function(alg, k, yay, nay){\
   \.catch(nay);\
   \})"
 
-deriveKey' :: Cipher -> Salt -> Int -> UArray Word32 Word8 -> (SymmetricKey -> IO ()) -> (JSString -> IO ()) -> IO ()
+deriveKey' :: Cipher -> Salt -> Int -> UArray Word32 Word8 -> (Maybe SymmetricKey -> IO ()) -> (JSString -> IO ()) -> IO ()
 deriveKey' = ffi "(function(alg, s, n, k, yay, nay){\
   \window['__haste_crypto'].subtle.importKey('raw', k, {name:'PBKDF2'}, false, ['deriveKey']).then(function(mk) {\
-  \window['__haste_crypto'].subtle.deriveKey({name:'PBKDF2',salt:s,iterations:n,hash:'SHA-256'}, mk, alg, true, ['encrypt', 'decrypt']).then(function(k){yay({key: k, cipher: alg});}).catch(nay);\
+  \window['__haste_crypto'].subtle.deriveKey({name:'PBKDF2',salt:s,iterations:n,hash:'SHA-256'}, mk, alg, true, ['encrypt', 'decrypt']).then(function(k){yay({key: k, cipher: alg});}).catch(function(_){yay(null);});\
   \});})"
 
 encodeUtf8' :: JSString -> IO (UArray Word32 Word8)

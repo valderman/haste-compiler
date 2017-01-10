@@ -189,8 +189,9 @@ decrypt k blob = do
 --   derivation over SHA-256, with the given number of iterations.
 --
 --   One million iterations take roughly half a second on a modern laptop.
+--   Returns @Nothing@ on browsers where the operation is not supported.
 --   Presently not supported by IE/Edge.
-deriveKey :: MonadConc m => Cipher -> Int -> Salt -> Password -> m SymmetricKey
+deriveKey :: MonadConc m => Cipher -> Int -> Salt -> Password -> m (Maybe SymmetricKey)
 deriveKey c n s pass = promise $ deriveKey' c s n (encodeUtf8 pass)
 
 encodeUtf8 :: JSString -> UArray Word32 Word8
