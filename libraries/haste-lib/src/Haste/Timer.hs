@@ -27,10 +27,10 @@ setTimer i f = do
         Repeat n -> interval n (f' ())
 
 timeout :: Int -> IO () -> IO Int
-timeout = ffi "(function(t,f){window.setTimeout(f,t);})"
+timeout = ffi "(function(t,f){return window.setTimeout(f,t);})"
 
 interval :: Int -> IO () -> IO Int
-interval = ffi "(function(t,f){window.setInterval(f,t);})"
+interval = ffi "(function(t,f){return window.setInterval(f,t);})"
 
 -- | Stop a timer.
 stopTimer :: MonadIO m => Timer -> m ()
