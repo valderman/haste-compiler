@@ -169,7 +169,7 @@ instance ToAny Word32 where toAny = unsafeCoerce
 instance ToAny Float where toAny = unsafeCoerce
 instance ToAny Double where toAny = unsafeCoerce
 instance ToAny Char where
-  toAny = unsafeCoerce
+  toAny c = toAny [c]
   listToAny = toAny . toJSStr
 instance ToAny () where
   toAny _ = jsNull
@@ -247,7 +247,7 @@ instance FromAny Double where
   fromAny x = return (unsafeCoerce x)
 
 instance FromAny Char where
-  fromAny x = return (unsafeCoerce (jsNumber x))
+  fromAny x = head <$> fromAny x
   listFromAny x = fromJSStr <$> fromAny x
 instance FromAny () where
   fromAny _ = return ()
