@@ -92,8 +92,8 @@ newEmptyMVar = liftIO $ MVar `fmap` newIORef (Empty [])
 
 -- | Read an MVar. Blocks if the MVar is empty.
 --   Only the first writer in the write queue, if any, is woken.
-takeMVar :: MVar a -> CIO a
-takeMVar (MVar ref) =
+takeMVar :: MonadConc m => MVar a -> m a
+takeMVar (MVar ref) = liftConc $ do
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -108,8 +108,8 @@ takeMVar (MVar ref) =
         return $ C (const Stop)
 
 -- | Try to take a value from an MVar, but return @Nothing@ if it is empty.
-tryTakeMVar :: MVar a -> CIO (Maybe a)
-tryTakeMVar (MVar ref) =
+tryTakeMVar :: MonadConc m => MVar a -> m (Maybe a)
+tryTakeMVar (MVar ref) = liftConc $ do
   join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -133,7 +133,7 @@ peekMVar (MVar ref) = liftIO $ do
 -- | Read an MVar then put it back. As Javascript is single threaded, this
 --   function is atomic. If this ever changes, this function will only be
 --   atomic as long as no other thread attempts to write to the MVar.
-readMVar :: MVar a -> CIO a
+readMVar :: MonadConc m => MVar a -> m a
 readMVar m = do
   x <- takeMVar m
   putMVar m x
@@ -141,8 +141,8 @@ readMVar m = do
 
 -- | Write an MVar. Blocks if the MVar is already full.
 --   Only the first reader in the read queue, if any, is woken.
-putMVar :: MVar a -> a -> CIO ()
-putMVar (MVar ref) x =
+putMVar :: MonadConc m => MVar a -> a -> m ()
+putMVar (MVar ref) x = liftConc $ do
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -158,8 +158,8 @@ putMVar (MVar ref) x =
 
 -- | Try to put a value into an MVar, returning @False@ if the MVar is already
 --   full.
-tryPutMVar :: MVar a -> a -> CIO Bool
-tryPutMVar (MVar ref) x =
+tryPutMVar :: MonadConc m => MVar a -> a -> m Bool
+tryPutMVar (MVar ref) x = liftConc $ do
   join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -173,11 +173,11 @@ tryPutMVar (MVar ref) x =
         return $ return True
 
 -- | Perform an IO action over an MVar.
-withMVarIO :: MVar a -> (a -> IO b) -> CIO b
+withMVarIO :: MonadConc m => MVar a -> (a -> IO b) -> m b
 withMVarIO v m = takeMVar v >>= liftIO . m
 
 -- | Perform an IO action over an MVar, then write the MVar back.
-modifyMVarIO :: MVar a -> (a -> IO (a, b)) -> CIO b
+modifyMVarIO :: MonadConc m => MVar a -> (a -> IO (a, b)) -> m b
 modifyMVarIO v m = do
   (x, res) <- withMVarIO v m
   putMVar v x
