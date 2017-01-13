@@ -46,7 +46,6 @@ Library
         Haste.Binary.Put
         Haste.Binary.Types
         Haste.Concurrent.Monad
-        Haste.Concurrent.Ajax
         Haste.Crypto.Prim
         Haste.Crypto.Types
         Haste.DOM.Core
