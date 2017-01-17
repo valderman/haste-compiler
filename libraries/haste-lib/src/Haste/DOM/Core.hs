@@ -10,7 +10,7 @@ module Haste.DOM.Core (
     getLastChild, getFirstChild, getChildBefore,
     insertChildBefore, appendChild,
     -- Low level stuff
-    jsSet, jsSetAttr, jsSetStyle,
+    jsSet, jsSetAttr, jsSetStyle, jsUnset, jsUnsetAttr,
     -- Deprecated
     removeChild, addChild, addChildBefore
   ) where
@@ -22,8 +22,14 @@ import Data.String
 jsSet :: Elem -> JSString -> JSString -> IO ()
 jsSet = ffi "(function(e,p,v){e[p] = v;})"
 
+jsUnset :: Elem -> JSString -> IO ()
+jsUnset = ffi "(function(e,p){delete e[p];})"
+
 jsSetAttr :: Elem -> JSString -> JSString -> IO ()
 jsSetAttr = ffi "(function(e,p,v){e.setAttribute(p, v);})"
+
+jsUnsetAttr :: Elem -> JSString -> IO ()
+jsUnsetAttr = ffi "(function(e,p){e.removeAttribute(p);})"
 
 jsSetStyle :: Elem -> JSString -> JSString -> IO ()
 jsSetStyle = ffi "(function(e,p,v){e.style[p] = v;})"

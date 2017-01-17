@@ -12,8 +12,8 @@ module Haste.DOM (
     prop, style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
-    setProp, getProp, setAttr, getAttr, J.getValue,
-    withElem , withElems, withElemsQS, mapQS, mapQS_,
+    setProp, unsetProp, getProp, setAttr, unsetAttr, getAttr, J.getValue,
+    withElem, withElems, withElemsQS, mapQS, mapQS_,
     getStyle, setStyle,
     J.getFileData, getFileName,
     setClass, toggleClass, hasClass
@@ -58,9 +58,19 @@ newTextElem = J.newTextElem . toJSStr
 setProp :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
 setProp e property val = J.setProp e (toJSStr property) (toJSStr val)
 
+-- | Unset a property of the given element. Primarily useful with boolean
+--   properties.
+unsetProp :: (IsElem e, MonadIO m) => e -> PropID -> m ()
+unsetProp e property = J.unsetProp e (toJSStr property)
+
 -- | Set an attribute of the given element.
 setAttr :: (IsElem e, MonadIO m) => e -> PropID -> String -> m ()
 setAttr e property val = J.setAttr e (toJSStr property) (toJSStr val)
+
+-- | Unset an attribute of the given element. Primarily useful with boolean
+--   attributes.
+unsetAttr :: (IsElem e, MonadIO m) => e -> PropID -> m ()
+unsetAttr e property = J.unsetAttr e (toJSStr property)
 
 -- | Get a property of an element.
 getProp :: (IsElem e, MonadIO m) => e -> PropID -> m String

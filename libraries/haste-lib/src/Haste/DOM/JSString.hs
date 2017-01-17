@@ -12,7 +12,7 @@ module Haste.DOM.JSString (
     prop, style, attr, (=:),
     newElem, newTextElem,
     elemById, elemsByQS, elemsByClass,
-    setProp, getProp, setAttr, getAttr, getValue,
+    setProp, unsetProp, getProp, setAttr, unsetAttr, getAttr, getValue,
     withElem , withElems, withElemsQS, mapQS, mapQS_,
     getStyle, setStyle,
     getFileData, getFileName,
@@ -95,9 +95,19 @@ newTextElem = liftIO . jsCreateTextNode
 setProp :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
 setProp e property val = liftIO $ jsSet (elemOf e) property val
 
+-- | Unset a property of the given element. Primarily useful with boolean
+--   properties.
+unsetProp :: (IsElem e, MonadIO m) => e -> PropID -> m ()
+unsetProp e property = liftIO $ jsUnset (elemOf e) property
+
 -- | Set an attribute of the given element.
 setAttr :: (IsElem e, MonadIO m) => e -> PropID -> JSString -> m ()
 setAttr e property val = liftIO $ jsSetAttr (elemOf e) property val
+
+-- | Unset an attribute of the given element. Primarily useful with boolean
+--   attributes.
+unsetAttr :: (IsElem e, MonadIO m) => e -> PropID -> m ()
+unsetAttr e property = liftIO $ jsUnsetAttr (elemOf e) property
 
 -- | Get the value property of an element; a handy shortcut.
 getValue :: (IsElem e, MonadIO m, JSType a) => e -> m (Maybe a)
