@@ -2,7 +2,8 @@
              TypeSynonymInstances , FlexibleInstances,
              GeneralizedNewtypeDeriving, BangPatterns, TypeOperators,
              KindSignatures, DefaultSignatures, FlexibleInstances,
-             TypeSynonymInstances, FlexibleContexts, ScopedTypeVariables #-}
+             TypeSynonymInstances, FlexibleContexts, ScopedTypeVariables,
+             TupleSections #-}
 -- | Handling of Javascript-native binary blobs.
 --
 -- Generics borrowed from the binary package by Lennart Kolmodin (released under BSD3)
@@ -161,10 +162,25 @@ instance Binary Fingerprint where
 
 instance (Binary a, Binary b) => Binary (a, b) where
   put (a, b) = put a >> put b
-  get = do
-    a <- get
-    b <- get
-    return (a, b)
+  get = (,) <$> get <*> get
+instance (Binary a, Binary b, Binary c) => Binary (a, b, c) where
+  put (a, b, c) = put a >> put b >> put c
+  get = (,,) <$> get <*> get <*> get
+instance (Binary a, Binary b, Binary c, Binary d) => Binary (a, b, c, d) where
+  put (a, b, c, d) = put a >> put b >> put c >> put d
+  get = (,,,) <$> get <*> get <*> get <*> get
+instance (Binary a, Binary b, Binary c, Binary d, Binary e)
+         => Binary (a, b, c, d, e) where
+  put (a, b, c, d, e) = put a >> put b >> put c >> put d >> put e
+  get = (,,,,) <$> get <*> get <*> get <*> get <*> get
+instance (Binary a, Binary b, Binary c, Binary d, Binary e, Binary f)
+         => Binary (a, b, c, d, e, f) where
+  put (a, b, c, d, e, f) = put a >> put b >> put c >> put d >> put e >> put f
+  get = (,,,,,) <$> get <*> get <*> get <*> get <*> get <*> get
+instance (Binary a, Binary b, Binary c, Binary d, Binary e, Binary f, Binary g)
+         => Binary (a, b, c, d, e, f, g) where
+  put (a, b, c, d, e, f, g) = put a>>put b>>put c>>put d>>put e>>put f>>put g
+  get = (,,,,,,) <$> get <*> get <*> get <*> get <*> get <*> get <*> get
 
 instance Binary a => Binary (Maybe a) where
   put (Just x) = putWord8 1 >> put x
