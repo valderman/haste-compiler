@@ -70,6 +70,8 @@ ajaxWithMime mime method url = do
     (postdata, methodStr) = case method of
       GET    -> (Nothing, "GET")
       POST d -> (Just $ toAny d, "POST")
+      PUT d  -> (Just $ toAny d, "PUT")
+      DELETE -> (Nothing, "DELETE")
 
 -- | An error which occurred during an AJAX request.
 --   Might be either a network error (denied by CSP, host unreachable etc.)
@@ -90,8 +92,10 @@ instance FromAny AjaxError where
 -- | HTTP method to use for request. POST requests take an (optionally empty)
 --   JSString representing data to POST.
 data Method a where
-  GET  :: Method ()
-  POST :: a -> Method a
+  GET    :: Method ()
+  DELETE :: Method ()
+  POST   :: a -> Method a
+  PUT    :: a -> Method a
 
 ajaxReq :: JSString -- ^ method (GET/POST)
         -> JSString -- ^ URI
