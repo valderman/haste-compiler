@@ -169,7 +169,7 @@ new = ffi "(function(url, cb, f, close, err) {\
              \var ws = new WebSocket(url);\
              \ws.onmessage = function(e) {cb(ws,e.data);};\
              \ws.onopen = function(e) {f(ws);};\
-             \ws.onclose = function(e) {close(e.data));};\
+             \ws.onclose = function(e) {close(e.data);};\
              \ws.error = function(e) {err();};\
              \return ws;\
            \})" 
