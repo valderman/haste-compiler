@@ -30,6 +30,7 @@ module Haste.DOM (
 
     -- * Style sheets and classes
     ElemClass, getStyle, setStyle, setClass, toggleClass, hasClass,
+    addStylesheet,
 
     -- * Triggering events
     click, focus, blur,
@@ -170,3 +171,7 @@ toggleClass e = J.toggleClass e . toJSStr
 -- | Does the given element have a particular class?
 hasClass :: (IsElem e, MonadIO m) => e -> String -> m Bool
 hasClass e = J.hasClass e . toJSStr
+
+-- | Append the stylesheet at the given URL to @document.head@.
+addStylesheet :: MonadIO m => String -> m ()
+addStylesheet = J.addStylesheet . toJSStr

@@ -30,6 +30,7 @@ module Haste.DOM.JSString (
 
     -- * Style sheets and classes
     ElemClass, getStyle, setStyle, setClass, toggleClass, hasClass,
+    addStylesheet,
 
     -- * Triggering events
     click, focus, blur,
@@ -245,3 +246,9 @@ hasClass e c = liftIO $ getc (elemOf e) c
 
 getc :: Elem -> JSString -> IO Bool
 getc = ffi "(function(e,c) {return e.classList.contains(c);})"
+
+-- | Append the stylesheet at the given URL to @document.head@.
+addStylesheet :: MonadIO m => JSString -> m ()
+addStylesheet url = do
+  e <- newElem "link" `with` [ "rel" =: "stylesheet", "href" =: url]
+  appendChild documentHead e
