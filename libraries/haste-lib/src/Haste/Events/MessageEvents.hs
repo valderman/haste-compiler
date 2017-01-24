@@ -16,7 +16,7 @@ newtype Window = Window JSAny
 
 instance IsElem Window where
   elemOf (Window e) = Elem e
-  fromElem = getContentWindow'
+  fromElem = getContentWindow
 
 -- | The window in which the program is executing.
 window :: Window

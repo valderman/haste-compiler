@@ -86,7 +86,7 @@ class IsElem a where
 
   -- | Attempt to create a DOM element backed object from an 'Elem'.
   --   The default instance always returns @Nothing@.
-  fromElem :: Elem -> IO (Maybe a)
+  fromElem :: MonadIO m => Elem -> m (Maybe a)
   fromElem = const $ return Nothing
 
 instance IsElem Elem where
