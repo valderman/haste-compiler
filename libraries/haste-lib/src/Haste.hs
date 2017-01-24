@@ -9,8 +9,9 @@ module Haste (
     JSString, JSAny, URL,
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
 
-    -- * URL hash handling
+    -- * Location handling
     onHashChange, setHash, getHash,
+    getLocationHref, setLocationHref, getLocationHostName, getLocationPort,
 
     -- * Timers
     Timer, Interval (..), setTimer, stopTimer,
@@ -105,3 +106,31 @@ getCurrentScript = ffi "(function(){\
 \    }\
 \    throw 'source of current program not found';\
 \})"
+
+-- | Get the current complete location URL.
+getLocationHref :: MonadIO m => m URL
+getLocationHref = liftIO getLocationHref'
+
+getLocationHref' :: IO URL
+getLocationHref' = ffi "(function(){return location.href;})"
+
+-- | Set the location URL.
+setLocationHref :: MonadIO m => URL -> m ()
+setLocationHref href = liftIO (setLocationHref' href)
+
+setLocationHref' :: URL -> IO ()
+setLocationHref' = ffi "(function(href){location.href = href;})"
+
+-- | Get the current location host name.
+getLocationHostName :: MonadIO m => m JSString
+getLocationHostName = liftIO getLocationHostName
+
+getLocationHostName' :: IO JSString
+getLocationHostName' = ffi "(function(){return location.hostname;})"
+
+-- | Get the current location port.
+getLocationPort :: MonadIO m => m Int
+getLocationPort = liftIO getLocationPort
+
+getLocationPort' :: IO Int
+getLocationPort' = ffi "(function(){return location.port;})"
