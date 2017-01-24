@@ -18,7 +18,8 @@ module Haste.Events (
     TouchEvent (..), TouchData (..), Touch (..),
 
     -- * Messaging events and @postMessage@ API.
-    MessageEvent (..), MessageData (..), Window, postMessage, fromAny
+    MessageEvent (..), MessageData (..), Window,
+    postMessage, getContentWindow, fromAny
   ) where
 import Haste.Events.Core as Core
 import Haste.Events.BasicEvents as BasicEvents
