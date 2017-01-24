@@ -4,9 +4,9 @@ module Haste.DOM (
     -- From Haste.DOM.Core
     AttrName (..), Attribute, IsElem (..), Elem (..),
     attribute, set, with, children,
-    click, focus, blur, document, documentBody, documentHead, appendChild, addChild,
-    addChildBefore, insertChildBefore, getFirstChild, getLastChild, getChildren,
-    setChildren, clearChildren, deleteChild, removeChild,
+    click, focus, blur, document, documentBody, documentHead, appendChild,
+    insertChildBefore, getFirstChild, getLastChild, getChildren,
+    setChildren, clearChildren, deleteChild,
     -- Own exports
     PropID, ElemID, QuerySelector, ElemClass, AttrValue,
     prop, style, attr, (=:),
