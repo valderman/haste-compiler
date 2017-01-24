@@ -2,16 +2,25 @@
 -- | Events relating to mouse keyboard input.
 module Haste.Events.MessageEvents
   ( MessageEvent (..) , MessageData (..), Window
-  , postMessage, getContentWindow, fromAny
+  , postMessage, getContentWindow, window, fromAny
   ) where
 import Control.Monad.IO.Class
 import Haste.JSString (JSString)
 import Haste.Prim.Foreign
 import Haste.Events.Core
-import Haste.DOM.Core (Elem)
+import Haste.DOM.Core (IsElem (..), Elem (..))
 
+-- | A DOM window.
 newtype Window = Window JSAny
   deriving (ToAny, FromAny, Eq)
+
+instance IsElem Window where
+  elemOf (Window e) = Elem e
+  fromElem = getContentWindow'
+
+-- | The window in which the program is executing.
+window :: Window
+window = constant "window"
 
 -- | Event data for keyboard events.
 data MessageData = MessageData

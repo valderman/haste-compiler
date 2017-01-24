@@ -19,7 +19,7 @@ module Haste.Events (
 
     -- * Messaging events and @postMessage@ API.
     MessageEvent (..), MessageData (..), Window,
-    postMessage, getContentWindow, fromAny
+    postMessage, window, getContentWindow, fromAny
   ) where
 import Haste.Events.Core as Core
 import Haste.Events.BasicEvents as BasicEvents
