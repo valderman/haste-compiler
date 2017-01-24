@@ -1,22 +1,41 @@
 {-# LANGUAGE GADTs #-}
 -- | DOM manipulation functions using 'String' for string representation.
 module Haste.DOM (
-    -- From Haste.DOM.Core
-    AttrName (..), Attribute, IsElem (..), Elem (..),
-    attribute, set, with, children,
-    click, focus, blur, document, documentBody, documentHead, appendChild,
-    insertChildBefore, getFirstChild, getLastChild, getChildren,
-    setChildren, clearChildren, deleteChild,
-    -- Own exports
-    PropID, ElemID, QuerySelector, ElemClass, AttrValue,
-    prop, style, attr, (=:),
+    -- * Basic types and elements
+    IsElem (..), Elem (..),
+    document, documentBody, documentHead,
+
+    -- * Adding and removing child elements
+    appendChild, insertChildBefore,  setChildren, clearChildren, deleteChild,
+
+    -- * Selecting child elements
+    getFirstChild, getLastChild, getChildren,
+
+    -- * Creating elements
     newElem, newTextElem,
+
+    -- * Setting attributes on elements
+    Attribute, AttrValue, AttrName (..),
+    attribute, set, with, children,
+    prop, style, attr, (=:),
+
+    -- * Selecting elements
+    QuerySelector, ElemID,
     elemById, elemsByQS, elemsByClass,
+    withElem , withElems, withElemsQS, mapQS, mapQS_,
+
+    -- * Properties and attributes
+    PropID,
     setProp, unsetProp, getProp, setAttr, unsetAttr, getAttr, J.getValue,
-    withElem, withElems, withElemsQS, mapQS, mapQS_,
-    getStyle, setStyle,
+
+    -- * Style sheets and classes
+    ElemClass, getStyle, setStyle, setClass, toggleClass, hasClass,
+
+    -- * Triggering events
+    click, focus, blur,
+
+    -- * File elements
     J.getFileData, getFileName,
-    setClass, toggleClass, hasClass
   ) where
 import qualified Haste.DOM.JSString as J
 import Haste.DOM.Core
