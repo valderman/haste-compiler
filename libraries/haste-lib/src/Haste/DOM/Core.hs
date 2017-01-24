@@ -4,7 +4,7 @@ module Haste.DOM.Core (
     Elem (..), IsElem (..), Attribute, AttrName (..),
     set, with, attribute, children,
     click, focus, blur,
-    document, documentBody,
+    document, documentBody, documentHead,
     deleteChild, clearChildren,
     setChildren, getChildren,
     getLastChild, getFirstChild, getChildBefore,
@@ -167,13 +167,17 @@ blur = liftIO . blur' . elemOf
 blur' :: Elem -> IO ()
 blur' = ffi "(function(e) {e.blur();})"
 
--- | The DOM node corresponding to document.
+-- | The DOM node corresponding to @document@.
 document :: Elem
 document = constant "document"
 
--- | The DOM node corresponding to document.body.
+-- | The DOM node corresponding to @document.body@.
 documentBody :: Elem
 documentBody = constant "document.body"
+
+-- | The DOM node corresponding to @document.head@.
+documentHead :: Elem
+documentHead = constant "document.body"
 
 -- | Append the second element as a child of the first.
 appendChild :: (IsElem parent, IsElem child, MonadIO m) => parent -> child -> m ()
