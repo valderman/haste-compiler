@@ -62,14 +62,17 @@ writeLog = liftIO . jsLog
 -- | Get the value of the @__haste_prog_id@ variable. Unless programmatically
 --   changed, this variable contains the SHA3-256 hash of the currently
 --   executing Haste program.
-getProgramId :: IO JSString
-getProgramId = ffi "(function(){return __haste_prog_id;})"
+getProgramId :: MonadIO m => m JSString
+getProgramId = liftIO getProgramId'
+
+getProgramId' :: IO JSString
+getProgramId' = ffi "(function(){return __haste_prog_id;})"
 
 -- | Get the complete JavaScript source code of the currently executing Haste
 --   program. On IE, this requires that the program's identifier, as returned
 --   by 'getProgramId', has not been tampered with.
-getProgramJS :: IO (Either URL JSString)
-getProgramJS = do
+getProgramJS :: MonadIO m => m (Either URL JSString)
+getProgramJS = liftIO $ do
   (murl, msrc) <- getCurrentScript
   return $ maybe (maybe impossible Right msrc) Left murl
   where
