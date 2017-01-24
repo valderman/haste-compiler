@@ -52,6 +52,7 @@ Library
         Haste.Events.BasicEvents
         Haste.Events.Core
         Haste.Events.KeyEvents
+        Haste.Events.MessageEvents
         Haste.Events.MouseEvents
         Haste.Events.TouchEvents
         Haste.Foreign.Array
