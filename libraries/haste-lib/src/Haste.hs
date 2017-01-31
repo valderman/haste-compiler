@@ -126,14 +126,14 @@ setLocationHref' = ffi "(function(href){location.href = href;})"
 
 -- | Get the current location host name.
 getLocationHostName :: MonadIO m => m JSString
-getLocationHostName = liftIO getLocationHostName
+getLocationHostName = liftIO getLocationHostName'
 
 getLocationHostName' :: IO JSString
 getLocationHostName' = ffi "(function(){return location.hostname;})"
 
 -- | Get the current location port.
 getLocationPort :: MonadIO m => m Int
-getLocationPort = liftIO getLocationPort
+getLocationPort = liftIO getLocationPort'
 
 getLocationPort' :: IO Int
 getLocationPort' = ffi "(function(){return location.port;})"
