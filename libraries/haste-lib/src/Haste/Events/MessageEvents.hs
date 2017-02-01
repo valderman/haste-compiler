@@ -57,4 +57,4 @@ getContentWindow :: MonadIO m => Elem -> m (Maybe Window)
 getContentWindow e = liftIO $ getContentWindow' e
 
 getContentWindow' :: Elem -> IO (Maybe Window)
-getContentWindow' = ffi "(function(e)){return e.contentWindow;}"
+getContentWindow' = ffi "(function(e){return e.contentWindow;})"
