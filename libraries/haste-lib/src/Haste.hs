@@ -1,12 +1,8 @@
 {-# LANGUAGE ForeignFunctionInterface, EmptyDataDecls, OverloadedStrings #-}
 -- | Haste's companion to the Prelude.
---
---   Note that this module should *not* be imported together with
---   "Haste.App", which provides the same functionality but slightly modified
---   for automatic program slicing.
 module Haste (
     -- * Basic utility functions
-    JSString, JSAny, URL,
+    JSString, JSAny, URL, MonadIO (..),
     alert, prompt, eval, writeLog, catJSStr, fromJSStr,
 
     -- * Location handling
