@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, GeneralizedNewtypeDeriving #-}
 -- | Events relating to mouse keyboard input.
 module Haste.Events.MessageEvents
-  ( MessageEvent (..) , MessageData (..), Window
-  , postMessage, getContentWindow, window, fromAny
+  ( MessageEvent (..) , MessageData (..), Recipient (..), Window
+  , getContentWindow, window, fromAny
   ) where
 import Control.Monad.IO.Class
 import Haste.JSString (JSString)
@@ -13,6 +13,15 @@ import Haste.DOM.Core (IsElem (..), Elem (..))
 -- | A DOM window.
 newtype Window = Window JSAny
   deriving (ToAny, FromAny, Eq)
+
+class Recipient a where
+  -- | Post a message to the given window. Messages are serialized using the
+  --   structured clone algorithm, meaning that you can post pretty much any
+  --   type of data, except functions, references and the like.
+  postMessage :: (ToAny msg, MonadIO m) => a -> msg -> m ()
+
+instance Recipient Window where
+  postMessage wnd msg = liftIO $ postMessage' wnd (toAny msg)
 
 instance IsElem Window where
   elemOf (Window e) = Elem e
@@ -38,12 +47,6 @@ instance Event MessageEvent where
     MessageData <$> get e "data"
                 <*> get e "origin"
                 <*> get e "source"
-
--- | Post a message to the given window. Messages are serialized using the
---   structured clone algorithm, meaning that you can post pretty much any
---   type of data, except functions, references and the like.
-postMessage :: (ToAny a, MonadIO m) => Window -> a -> m ()
-postMessage wnd msg = liftIO $ postMessage' wnd (toAny msg)
 
 postMessage' :: Window -> JSAny -> IO ()
 postMessage' = ffi "(function(w,m){w.postMessage(m,'*');})"
