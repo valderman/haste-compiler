@@ -20,7 +20,7 @@ randomBits = ffi "(function(arr){window['__haste_crypto'].getRandomValues(arr);}
 promise :: MonadConc m
         => ((a -> IO ()) -> (JSString -> IO ()) -> IO ())
         -> m a
-promise f = liftConc $ do
+promise f = liftCIO $ do
   res <- promiseE f
   case res of
     Right x -> return x
@@ -30,7 +30,7 @@ promise f = liftConc $ do
 promiseE :: MonadConc m
         => ((a -> IO ()) -> (JSString -> IO ()) -> IO ())
         -> m (Either JSString a)
-promiseE f = liftConc $ do
+promiseE f = liftCIO $ do
   v <- newEmptyMVar
   liftIO $ f (concurrent . putMVar v . Right) (concurrent . putMVar v . Left)
   takeMVar v

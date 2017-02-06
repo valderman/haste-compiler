@@ -61,7 +61,7 @@ ajaxWithMime mime method url = do
       case (md, merr) of
         (Just d, _)   -> fromAny d >>= concurrent . putMVar res . Right
         (_, Just err) -> concurrent $ putMVar res (Left err)
-    liftConc $ takeMVar res
+    liftCIO $ takeMVar res
   where
     mime'
       | "" /= mime = mime

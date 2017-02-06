@@ -14,11 +14,16 @@ import Haste.Events.Core (MonadEvent (..))
 
 -- | Any monad which supports concurrency.
 class MonadIO m => MonadConc m where
-  liftConc :: CIO a -> m a
-  fork     :: m () -> m ()
+  liftCIO :: CIO a -> m a
+  fork    :: m () -> m ()
+
+-- | Old name for 'liftCIO'.
+{-# DEPRECATED liftConc "liftConc is deprecated; use liftCIO instead" #-}
+liftConc :: MonadConc m => CIO a -> m a
+liftConc = liftCIO
 
 instance MonadConc CIO where
-  liftConc = id
+  liftCIO = id
   fork = forkIO
 
 instance MonadEvent CIO where
@@ -93,7 +98,7 @@ newEmptyMVar = liftIO $ MVar `fmap` newIORef (Empty [])
 -- | Read an MVar. Blocks if the MVar is empty.
 --   Only the first writer in the write queue, if any, is woken.
 takeMVar :: MonadConc m => MVar a -> m a
-takeMVar (MVar ref) = liftConc $ do
+takeMVar (MVar ref) = liftCIO $ do
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -109,7 +114,7 @@ takeMVar (MVar ref) = liftConc $ do
 
 -- | Try to take a value from an MVar, but return @Nothing@ if it is empty.
 tryTakeMVar :: MonadConc m => MVar a -> m (Maybe a)
-tryTakeMVar (MVar ref) = liftConc $ do
+tryTakeMVar (MVar ref) = liftCIO $ do
   join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -142,7 +147,7 @@ readMVar m = do
 -- | Write an MVar. Blocks if the MVar is already full.
 --   Only the first reader in the read queue, if any, is woken.
 putMVar :: MonadConc m => MVar a -> a -> m ()
-putMVar (MVar ref) x = liftConc $ do
+putMVar (MVar ref) x = liftCIO $ do
   callCC $ \next -> join $ liftIO $ do
     v <- readIORef ref
     case v of
@@ -159,7 +164,7 @@ putMVar (MVar ref) x = liftConc $ do
 -- | Try to put a value into an MVar, returning @False@ if the MVar is already
 --   full.
 tryPutMVar :: MonadConc m => MVar a -> a -> m Bool
-tryPutMVar (MVar ref) x = liftConc $ do
+tryPutMVar (MVar ref) x = liftCIO $ do
   join $ liftIO $ do
     v <- readIORef ref
     case v of

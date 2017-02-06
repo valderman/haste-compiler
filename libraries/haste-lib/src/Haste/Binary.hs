@@ -45,7 +45,7 @@ getBlobData  :: MonadConc m => Blob -> m BlobData
 getBlobText' :: MonadConc m => Blob -> m JSString
 
 #ifdef __HASTE__
-getBlobData b = liftConc $ do
+getBlobData b = liftCIO $ do
     res <- newEmptyMVar
     liftIO $ convertBlob b (mkBlobData res (blobSize b))
     takeMVar res
@@ -56,7 +56,7 @@ getBlobData b = liftConc $ do
     convertBlob :: Blob -> (JSAny -> IO ()) -> IO ()
     convertBlob = ffi "(function(b,cb){var r=new FileReader();r.onload=function(){cb(new DataView(r.result));};r.readAsArrayBuffer(b);})"
 
-getBlobText' b = liftConc $ do
+getBlobText' b = liftCIO $ do
     res <- newEmptyMVar
     liftIO $ convertBlob b (concurrent . putMVar res)
     takeMVar res
