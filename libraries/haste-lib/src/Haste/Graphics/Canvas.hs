@@ -34,6 +34,7 @@ import Data.Maybe (fromJust)
 import Haste
 import Haste.DOM.JSString
 import Haste.DOM.Core
+import Haste.Events.Core
 import Haste.Concurrent (CIO) -- for SPECIALISE pragma
 import Haste.Prim.Foreign (ToAny (..), FromAny (..), ffi)
 
@@ -162,6 +163,9 @@ instance ImageBuffer AnyImageBuffer where
 instance IsElem Canvas where
   elemOf (Canvas _ctx e) = e
   fromElem               = getCanvas
+
+instance EventSource Canvas where
+  eventSource = eventSource . elemOf
 
 instance IsElem Bitmap where
   elemOf (Bitmap e) = e

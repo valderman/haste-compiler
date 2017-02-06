@@ -15,6 +15,7 @@ module Haste.Audio (
   ) where
 import Haste.Audio.Events as Events
 import Haste.DOM.JSString
+import Haste.Events.Core
 import Haste.Prim.Foreign
 import Haste.Prim.JSType
 import Haste.Prim
@@ -32,6 +33,9 @@ instance IsElem Audio where
     return $ case tn of
       "AUDIO" -> Just $ Audio e
       _       -> Nothing
+
+instance EventSource Audio where
+  eventSource = eventSource . elemOf
 
 data AudioState = Playing | Paused | Ended
   deriving (Show, Eq)

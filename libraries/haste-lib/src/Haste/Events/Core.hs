@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, FlexibleContexts #-}
 -- | Basic framework for event handling.
 module Haste.Events.Core (
-    Event (..), MonadEvent (..),
+    Event (..), MonadEvent (..), EventSource (..),
     HandlerInfo,
     unregisterHandler, onEvent, preventDefault, stopPropagation
   ) where
@@ -11,6 +11,13 @@ import Haste.Prim.Foreign
 import Control.Monad.IO.Class
 import Data.IORef
 import System.IO.Unsafe
+
+-- | Any type whose underlying DOM object can receive events.
+class EventSource a where
+  eventSource :: a -> JSAny
+
+instance EventSource Elem where
+  eventSource (Elem e) = e
 
 -- | Any monad in which we're able to handle events.
 class MonadIO m => MonadEvent m where
@@ -35,7 +42,7 @@ data HandlerInfo = HandlerInfo {
     -- | Name of the handler's event.
     handlerEvent :: JSString,
     -- | Element the handler is set on.
-    handlerElem  :: Elem,
+    handlerElem  :: JSAny,
     -- | Handle to handler function.
     handlerFun   :: JSAny
   }
@@ -70,7 +77,7 @@ stopPropagation' :: Maybe JSAny -> IO ()
 stopPropagation' = ffi "(function(e){if(e){e.stopPropagation();}})"
 
 -- | Set an event handler on a DOM element.
-onEvent :: (MonadEvent m, IsElem el, Event evt)
+onEvent :: (MonadEvent m, EventSource el, Event evt)
         => el            -- ^ Element to set handler on.
         -> evt           -- ^ Event to handle.
         -> (EventData evt -> m ()) -- ^ Event handler.
@@ -85,7 +92,7 @@ onEvent el evt f = do
     }
   where
     name = eventName evt
-    e    = elemOf el
+    e    = eventSource el
     prepareEvent o = liftIO $ do
       setEvtRef o
       eventData evt o
@@ -95,7 +102,7 @@ onEvent el evt f = do
 --   the Haskell function as the FFI does some marshalling to functions,
 --   meaning that the same function marshalled twice won't be reference equal
 --   to each other.
-setEvt :: Elem -> JSString -> (JSAny -> IO ()) -> IO JSAny
+setEvt :: JSAny -> JSString -> (JSAny -> IO ()) -> IO JSAny
 setEvt = ffi "(function(e,name,f){e.addEventListener(name,f,false);\
              \return [f];})"
 
@@ -103,5 +110,5 @@ setEvt = ffi "(function(e,name,f){e.addEventListener(name,f,false);\
 --   Note @f[0]@ and corresponding @[f]@ in 'setEvt'; this is a workaround for
 --   a bug causing functions being packed into anything to be accidentally
 --   called. Remove when properly fixed.
-unregEvt :: Elem -> JSString -> JSAny -> IO ()
+unregEvt :: JSAny -> JSString -> JSAny -> IO ()
 unregEvt = ffi "(function(e,name,f){e.removeEventListener(name,f[0]);})"

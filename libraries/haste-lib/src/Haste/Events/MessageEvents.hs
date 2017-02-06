@@ -8,7 +8,7 @@ import Control.Monad.IO.Class
 import Haste.JSString (JSString)
 import Haste.Prim.Foreign
 import Haste.Events.Core
-import Haste.DOM.Core (IsElem (..), Elem (..))
+import Haste.DOM.Core (Elem (..))
 
 -- | A DOM window.
 newtype Window = Window JSAny
@@ -23,9 +23,8 @@ class Recipient a where
 instance Recipient Window where
   postMessage wnd msg = liftIO $ postMessage' wnd (toAny msg)
 
-instance IsElem Window where
-  elemOf (Window e) = Elem e
-  fromElem = getContentWindow
+instance EventSource Window where
+  eventSource (Window e) = e
 
 -- | The window in which the program is executing.
 window :: Window
