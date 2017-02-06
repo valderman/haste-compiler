@@ -15,6 +15,7 @@ import Haste.Prim
 import Data.String as S
 #ifndef __HASTE__
 import Haste.Parsing
+import Numeric
 #endif
 import Haste.Prim.Foreign hiding (toObject)
 
@@ -74,7 +75,7 @@ jsStringify :: JSString -> IO JSString
 jsStringify = ffi "JSON.stringify"
 #else
 jsShowD :: Double -> JSString
-jsShowD = toJSStr . show
+jsShowD = toJSStr . flip (showFFloat Nothing) ""
 
 jsStringify :: JSString -> IO JSString
 jsStringify = return . toJSStr . ('"' :) . unq . fromJSStr
