@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, CPP #-}
--- | Events relating to mouse keyboard input.
+-- | Events relating to keyboard input.
 module Haste.Events.KeyEvents (KeyEvent (..), KeyData (..), mkKeyData) where
 import Haste.Prim.Any
 import Haste.Events.Core

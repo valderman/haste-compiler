@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, GeneralizedNewtypeDeriving #-}
--- | Events relating to mouse keyboard input.
+-- | Events relating to the @postMessage@ API for passing messages between
+--   windows.
 module Haste.Events.MessageEvents
   ( MessageEvent (..) , MessageData (..), Recipient (..), Window
   , getContentWindow, window, fromAny
