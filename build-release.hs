@@ -12,7 +12,7 @@ inBuildDir args act = do
   when (isdir && not ("no-rebuild" `elem` args)) $ rmdir "_build"
   mkdir True "_build"
   inDirectory "_build" $ do
-    unless ("no-rebuild" `elem` args) $ run_ "git" ["clone", srcdir] ""
+    unless ("no-rebuild" `elem` args) $ run "git" ["clone", srcdir]
     inDirectory "haste-compiler" act
 
 -- Packages will end up in ghc-$GHC_MAJOR.$GHC_MINOR. If the directory does
@@ -69,43 +69,43 @@ main = shell_ $ do
 
 buildPortable = do
     -- Build compiler
-    run_ "cabal" ["configure", "-f", "portable", "-f", "static"] ""
-    run_ "cabal" ["haddock"] ""
-    run_ "dist/setup/setup" ["build"] ""
+    run "cabal" ["configure", "-f", "portable", "-f", "static"]
+    inDirectory ("libraries/haste-lib") $ run "cabal" ["haddock"]
+    run "dist/setup/setup" ["build"]
 
     -- Copy docs and build manpages
-    cpdir "dist/doc/html/haste-compiler" "haste-compiler/docs"
+    cpdir "libraries/haste-lib/dist/doc/html/haste-lib" "haste-compiler/docs"
     buildManPages
 
     -- Strip symbols
     case Info.os of
       "mingw32" -> do
         -- windows
-        run_ "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"] ""
-        run_ "strip" ["-s", "haste-compiler\\bin\\hastec.exe"] ""
-        run_ "strip" ["-s", "haste-compiler\\bin\\haste-cat.exe"] ""
+        run "strip" ["-s", "haste-compiler\\bin\\haste-pkg.exe"]
+        run "strip" ["-s", "haste-compiler\\bin\\hastec.exe"]
+        run "strip" ["-s", "haste-compiler\\bin\\haste-cat.exe"]
       "linux" -> do
         -- linux
-        run_ "strip" ["-s", "haste-compiler/bin/haste-pkg"] ""
-        run_ "strip" ["-s", "haste-compiler/bin/hastec"] ""
-        run_ "strip" ["-s", "haste-compiler/bin/haste-cat"] ""
+        run "strip" ["-s", "haste-compiler/bin/haste-pkg"]
+        run "strip" ["-s", "haste-compiler/bin/hastec"]
+        run "strip" ["-s", "haste-compiler/bin/haste-cat"]
       _ -> do
         -- darwin
-        run_ "strip" ["haste-compiler/bin/haste-pkg"] ""
-        run_ "strip" ["haste-compiler/bin/hastec"] ""
-        run_ "strip" ["haste-compiler/bin/haste-cat"] ""
+        run "strip" ["haste-compiler/bin/haste-pkg"]
+        run "strip" ["haste-compiler/bin/hastec"]
+        run "strip" ["haste-compiler/bin/haste-cat"]
 
     -- Get versions
     getVersions
 
 getVersions = do
-    ver <- fmap init $ run "haste-compiler/bin/hastec" ["--version"] ""
-    ghcver <- fmap init $ run "ghc" ["--numeric-version"] ""
+    ver <- fmap init $ capture $ run "haste-compiler/bin/hastec" ["--version"]
+    ghcver <- fmap init $ capture $ run "ghc" ["--numeric-version"]
     return (ver, ghcver)
 
 bootPortable = do
     -- Build libs
-    run_ "haste-compiler/bin/haste-boot" ["--force", "--initial"] ""
+    run "haste-compiler/bin/haste-boot" ["--force", "--initial"]
 
     -- Remove unnecessary binaries
     case Info.os of
@@ -125,7 +125,7 @@ buildManPages = do
     buildManPage "hastec"
     buildManPage "haste-cat"
   where
-    buildManPage inf = run_ "pandoc" ["-s", "-o", outf, inf'] ""
+    buildManPage inf = run "pandoc" ["-s", "-o", outf, inf']
       where
         ext | Info.os == "mingw32" = "html"
             | otherwise            = "1"
@@ -142,7 +142,7 @@ buildBinaryTarball ver ghcver = do
     cp "install.sh" "haste-compiler/install.sh"
     cp "uninstall.sh" "haste-compiler/uninstall.sh"
     cp "doc/readme-portable-linux.txt" "haste-compiler/readme.txt"
-    run_ "tar" ["-cjf", tarball, "haste-compiler"] ""
+    run "tar" ["-cjf", tarball, "haste-compiler"]
     mapM_ rm ["haste-compiler/install.sh",
               "haste-compiler/uninstall.sh",
               "haste-compiler/readme.txt"]
@@ -159,7 +159,7 @@ buildBinary7z ver ghcver = do
     cp "man/haste-cat.html" "haste-compiler/man/haste-cat.html"
 
     -- Get versions and create binary tarball
-    run_ "7z" ["a", "-i!haste-compiler", name] ""
+    run "7z" ["a", "-i!haste-compiler", name]
     return $ name
   where
     name =
@@ -173,6 +173,6 @@ deb_arch
 -- Debian packaging based on https://wiki.debian.org/IntroDebianPackaging.
 -- Requires build-essential, devscripts and debhelper.
 buildDebianPackage ver ghcver = do
-  run_ "debuild" ["-e", "LD_LIBRARY_PATH=haste-compiler/haste-cabal",
-                  "-us", "-uc", "-b"] ""
+  run "debuild" ["-e", "LD_LIBRARY_PATH=haste-compiler/haste-cabal",
+                 "-us", "-uc", "-b"]
   return $ "haste-compiler_" ++ ver ++ "_" ++ deb_arch ++ ".deb"
