@@ -70,7 +70,12 @@ main = shell_ $ do
 buildPortable = do
     -- Build compiler
     run "cabal" ["configure", "-f", "portable", "-f", "static"]
-    inDirectory ("libraries/haste-lib") $ run "cabal" ["haddock"]
+    inDirectory ("libraries/haste-lib") $ do
+      run "cabal" ["sandbox", "init"]
+      run "cabal" ["install", "../haste-prim"]
+      run "cabal" ["install", "--only-dependencies"]
+      run "cabal" ["haddock"]
+      run "cabal" ["sandbox", "delete"]
     run "dist/setup/setup" ["build"]
 
     -- Copy docs and build manpages
