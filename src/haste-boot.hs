@@ -25,7 +25,7 @@ libDir = "ghc-7.10"
 primVersion = "0.4.0.0"
 #endif
 
-data HasteCabal = Download | Prebuilt FilePath | Source (Maybe FilePath)
+data HasteCabal = Download | Prebuilt FilePath | Source (Maybe FilePath) | Preinstalled
 
 data Cfg = Cfg {
     getLibs               :: Bool,
@@ -117,9 +117,13 @@ specs = [
            (NoArg $ \cfg -> cfg {getHasteCabal = Download}) $
            "Download pre-built haste-cabal for your platform. " ++
            "This is the default behaviour."
+    , Option "" ["no-haste-cabal"]
+           (NoArg $ \cfg -> cfg {getHasteCabal = Preinstalled}) $
+           "Use whatever haste-cabal is found on your path; it will not be copied."
     , Option "" ["with-haste-cabal"]
            (ReqArg (\f cfg -> cfg {getHasteCabal = Prebuilt f}) "FILE") $
-           "Use FILE to provide haste-cabal."
+           "Use FILE to provide haste-cabal. It will be copied into the " ++
+           "Haste binary directory."
     , Option "" ["build-haste-cabal"]
            (OptArg (\md cfg -> cfg {getHasteCabal = Source md}) "DIR") $
            "Build haste-cabal from the source contained in DIR. " ++
@@ -175,9 +179,10 @@ bootHaste cfg tmpdir =
 
       mkdir True (hasteCabalRootDir portableHaste)
       case getHasteCabal cfg of
-        Download    -> installHasteCabal portableHaste tmpdir
-        Prebuilt fp -> copyHasteCabal portableHaste fp
-        Source mdir -> buildHasteCabal portableHaste (maybe "../cabal" id mdir)
+        Download     -> installHasteCabal portableHaste tmpdir
+        Prebuilt fp  -> copyHasteCabal portableHaste fp
+        Source mdir  -> buildHasteCabal portableHaste (maybe "../cabal" id mdir)
+        Preinstalled -> return ()
 
       -- Spawn off closure download in the background.
       dir <- pwd -- use absolute path for closure to avoid dir changing race
