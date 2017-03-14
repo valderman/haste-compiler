@@ -99,7 +99,6 @@ specs = [
            "Prepare boot files for binary distribution. Should only ever " ++
            "be called by the release build scripts, never by users.\n" ++
            "Implies --local --force."
-#ifndef PORTABLE
     , Option "" ["local"]
            (NoArg $ \cfg -> cfg {useLocalLibs = True}) $
            "Use libraries from source repository rather than " ++
@@ -137,7 +136,6 @@ specs = [
            "Build standard libs for tracing of primitive " ++
            "operations. Only use if you're debugging the code " ++
            "generator."
-#endif
     , Option "v" ["verbose"]
            (NoArg $ \cfg -> cfg {verbose = True}) $
            "Print absolutely everything."
