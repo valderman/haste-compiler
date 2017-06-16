@@ -6,18 +6,20 @@ module Haste.Hash (
 import Haste.Prim.Foreign
 import Control.Monad.IO.Class
 import Haste.Prim
+import Haste.Events.Core
 
 -- | Register a callback to be run whenever the URL hash changes.
 --   The first and second argument of the callback are the old and new and
 --   hash respectively.
-onHashChange :: MonadIO m
-              => (JSString -> JSString -> IO ())
+onHashChange :: MonadEvent m
+              => (JSString -> JSString -> m ())
               -> m ()
 onHashChange f = do
-    firsthash <- getHash
-    liftIO $ jsOnHashChange firsthash f
+  f' <- mkHandler $ uncurry f
+  firsthash <- getHash
+  liftIO $ jsOnHashChange firsthash f'
 
-jsOnHashChange :: JSString -> (JSString -> JSString -> IO ()) -> IO ()
+jsOnHashChange :: JSString -> ((JSString, JSString) -> IO ()) -> IO ()
 jsOnHashChange =
   ffi "(function(firsthash,cb){\
           \window.__old_hash = firsthash;\
@@ -25,7 +27,7 @@ jsOnHashChange =
             \var oldhash = window.__old_hash;\
             \var newhash = window.location.hash.split('#')[1] || '';\
             \window.__old_hash = newhash;\
-            \cb(oldhash,newhash);\
+            \cb([oldhash,newhash]);\
           \};\
        \})"
 
