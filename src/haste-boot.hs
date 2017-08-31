@@ -25,6 +25,9 @@ libDir = "ghc-7.10"
 primVersion = "0.4.0.0"
 #endif
 
+logStr :: String -> Shell ()
+logStr s = echo $ "[haste-boot] " ++ s
+
 data HasteCabal = Download | Prebuilt FilePath | Source (Maybe FilePath) | Preinstalled
 
 data Cfg = Cfg {
@@ -172,6 +175,7 @@ bootHaste cfg tmpdir =
       -- Don't clear dir when it contains binaries; portable should only be built
       -- by scripts anyway, so this dir ought to be clean.
       when (not portableHaste) $ do
+        logStr "Removing old library directories"
         mapM_ clearDir [pkgUserLibDir, jsmodUserDir, pkgUserDir,
                         pkgSysLibDir, jsmodSysDir, pkgSysDir]
 
@@ -193,12 +197,14 @@ bootHaste cfg tmpdir =
         fetchLibs tmpdir
 
       when (not portableHaste || initialPortableBoot cfg) $ do
+        logStr "Installing GHC settings"
         mkdir True hasteSysDir
         copyGhcSettings hasteSysDir
-        void $ capture $ run hastePkgBinary ["init", pkgSysDir]
+        run hastePkgBinary ["init", pkgSysDir]
         buildLibs cfg
 
       when (initialPortableBoot cfg) $ do
+        logStr "Relocating libraries"
         mapM_ relocate ["array", "bytestring", "containers", "base",
                         "deepseq", "dlist", "haste-prim", "time", "haste-lib",
                         "monads-tf", "old-locale", "transformers", "integer-gmp",
@@ -208,7 +214,9 @@ bootHaste cfg tmpdir =
       await closure
 
 
+    logStr "Creating boot file"
     output bootFile (showBootVersion bootVersion)
+    logStr "All done!"
 
 clearDir :: FilePath -> Shell ()
 clearDir dir = do
@@ -284,7 +292,7 @@ hasteCabalLauncher False = unlines
 -- | Fetch the Haste base libs.
 fetchLibs :: FilePath -> Shell ()
 fetchLibs tmpdir = do
-    echo "Downloading base libs from GitHub"
+    logStr "Downloading base libs from GitHub"
     file <- fetchBytes $ mkUrl hasteVersion
     liftIO . unpack tmpdir . read . decompress $ BSL.fromChunks [file]
   where
@@ -294,9 +302,9 @@ fetchLibs tmpdir = do
 -- | Fetch and install the Closure compiler.
 installClosure :: FilePath -> Shell ()
 installClosure dir = do
-    echo "Downloading Google Closure compiler..."
+    logStr "Downloading Google Closure compiler..."
     downloadClosure `orElse` do
-      echo "Couldn't install Closure compiler; continuing without."
+      logStr "Couldn't install Closure compiler; continuing without."
   where
     downloadClosure = do
       fetchBytes closureURI >>= (liftIO . BS.writeFile (dir </> closureCompiler))
@@ -311,6 +319,7 @@ buildLibs cfg = do
     cpdir "include" hasteSysDir
 
     inDirectory ("utils" </> "unlit") $ do
+      logStr "Building unlit"
       let out    = if os == "mingw32" then "unlit.exe" else "unlit"
           static = if os == "darwin" then [] else ["-static"]
           dash_s = if os == "darwin" then [] else ["-s"]
@@ -318,16 +327,20 @@ buildLibs cfg = do
       run "strip" (dash_s ++ [out])
       cp out (hasteSysDir </> out)
 
+    logStr "Setting up builtin_rts"
     run hastePkgBinary ["update", "--global", "libraries" </> "rts.pkg"]
 
     inDirectory "libraries" $ do
+      logStr "Installing libraries"
       inDirectory libDir $ do
         -- Install ghc-prim
         inDirectory "ghc-prim" $ do
+          logStr "Installing ghc-prim"
           hasteCabal Install ["--solver", "topdown"]
 
           -- To get the GHC.Prim module in spite of pretending to have
           -- build-type: Simple
+          logStr "Patching ghc-prim package info"
           let osxprim = if os == "darwin" then "-osx" else ""
           run hastePkgBinary ["unregister", "--global","ghc-prim"]
           run hastePkgBinary ["update", "--global",
@@ -335,22 +348,32 @@ buildLibs cfg = do
 
         -- Install integer-gmp; double install shouldn't be needed anymore.
         inDirectory "integer-gmp" $ do
+          logStr "Installing integer-gmp"
           hasteCabal Install ["--solver", "topdown"]
 
         -- Install base
         inDirectory "base" $ do
+          logStr "Installing base"
           hasteCabal Clean []
           hasteCabal Install ["--solver", "topdown", "-finteger-gmp"]
 
         -- Install array
-        inDirectory "array" $ hasteCabal Clean []
-        inDirectory "array" $ hasteCabal Install []
+        inDirectory "array" $ do
+          logStr "Installing array"
+          hasteCabal Clean []
+          hasteCabal Install []
 
       -- Install haste-prim
-      inDirectory "haste-prim" $ hasteCabal Install []
+      inDirectory "haste-prim" $ do
+        logStr "Installing haste-prim"
+        hasteCabal Install []
 
       -- Install time + hashable + haste-lib
-      inDirectory "time" $ hasteCabal Install []
+      inDirectory "time" $ do
+        logStr "Installing time"
+        hasteCabal Install []
+
+      logStr "Installing hashable + haste-lib"
       hasteCabal Install [ "hashable-1.2.4.0"
                          , "-f-integer-gmp"
                          , "-f-sse2"
@@ -358,6 +381,7 @@ buildLibs cfg = do
                          , "./haste-lib"]
 
       -- Export monads-tf; it seems to be hidden by default
+      logStr "Exposing monads-tf"
       run hastePkgBinary ["expose", "monads-tf"]
   where
     ghcOpts = concat [
@@ -400,4 +424,6 @@ copyGhcSettings dest = do
 #endif
 
 relocate :: String -> Shell ()
-relocate pkg = run hastePkgBinary ["relocate", pkg]
+relocate pkg = do
+  logStr $ "Relocating " ++ pkg
+  run hastePkgBinary ["relocate", pkg]
