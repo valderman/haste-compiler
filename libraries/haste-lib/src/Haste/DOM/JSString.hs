@@ -70,7 +70,7 @@ jsFind = ffi "(function(id){return document.getElementById(id);})"
 jsQuerySelectorAll :: Elem -> JSString -> IO [Elem]
 jsQuerySelectorAll = ffi "(function(e,q){\
   \if(!e || typeof e.querySelectorAll !== 'function') {\
-    \return [];\
+    \throw 'querySelectorAll not supported by this element';\
   \} else {\
     \return e.querySelectorAll(q);\
   \}})"
