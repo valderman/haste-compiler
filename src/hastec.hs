@@ -183,18 +183,19 @@ closurize cfg cloPath f = do
   logStr cfg $ "Minifying " ++ f ++ "..."
   let cloFile = f `Sh.addExtension` ".clo"
   res <- Sh.shell $ do
-    Sh.run "java" (cloArgs arguments) Sh.|> (Sh.stdin >>= Sh.output cloFile)
+    Sh.run "java" (cloArgs arguments cloFile)
     Sh.mv cloFile f
   case res of
     Left e  -> fail $ "Couldn't execute Google Closure compiler: " ++
                       Sh.exitString e
     Right _ -> return ()
   where
-    cloArgs args =
+    cloArgs args cloFile =
       [ "-jar"
       , cloPath
       , "--compilation_level", "ADVANCED_OPTIMIZATIONS"
       , "--jscomp_off", "globalThis"
+      , "--js_output_file", cloFile
       , f
       ] ++ args
 
