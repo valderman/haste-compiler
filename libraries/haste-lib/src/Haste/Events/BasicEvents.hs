@@ -11,6 +11,7 @@ data BasicEvent
   | Blur
   | Submit
   | Scroll
+  | Input
 
 instance Event BasicEvent where
   type EventData BasicEvent = ()
@@ -21,4 +22,5 @@ instance Event BasicEvent where
   eventName Blur   = "blur"
   eventName Submit = "submit"
   eventName Scroll = "scroll"
+  eventName Input  = "input"
   eventData _ _    = return ()
