@@ -2031,9 +2031,12 @@ absolutePath path = return . normalise . (</> path) =<< getCurrentDirectory
 relocate :: [String] -> String -> Sh.Shell ()
 relocate packages pkg = do
     pi <- Sh.capture $ Sh.run hastePkgBinary (packages ++ ["describe", pkg])
-    Sh.echo_ (reloc pi) Sh.|> Sh.run hastePkgBinary relocArgs
+    Sh.withTempFile Sh.TextMode $ \file h -> do
+      Sh.hPutStrLn h (reloc pi)
+      Sh.hClose h
+      Sh.run hastePkgBinary (relocArgs file)
   where
-    relocArgs = packages ++ ["update", "-", "--force", "--global"]
+    relocArgs file = packages ++ ["update", "--force", "--global", file]
     reloc = unlines . map fixPath . lines
 
     fixPath s
