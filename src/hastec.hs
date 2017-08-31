@@ -259,9 +259,10 @@ parseHasteFlags :: Bool -> [String] -> [String]
                 -> Either (IO ()) ([String], Config->Config)
 parseHasteFlags booting args rawargs = do
   case runMode booting args of
+    _ | null rawargs -> Left $ putStrLn noInputFiles
     DontRun msg -> Left $ putStrLn msg
-    Run GHC     -> Left $ callVanillaGHC args
-    Run Haste   -> do
+    Run GHC -> Left $ callVanillaGHC args
+    Run Haste -> do
       case parseArgs hasteOpts helpHeader args of
         Left msg              -> Left $ putStrLn msg
         Right (cfg, rest, []) -> Right (filter (/= "-prof") rest, cfg)
@@ -271,6 +272,10 @@ parseHasteFlags booting args rawargs = do
     Run BuildRunner -> do
       Left $ callVanillaGHC (rawargs ++ ["-package-id", "Cabal-1.23.0.0-f701f4ea98ec7bed5883c4df743045e6"])
   where
+     noInputFiles = init $ unlines
+       [ "hastec: no input files"
+       , "try the `--help' option for usage information"
+       ]
      jsexeIn ("--install-executable":exe:_) = exe
      jsexeIn (_:xs)                         = jsexeIn xs
      jsexeIn _                              = error "No executable to install!"
