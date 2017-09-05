@@ -74,9 +74,10 @@ buildPortable = do
       run "cabal" ["sandbox", "init"]
       run "cabal" ["install", "../haste-prim"]
       run "cabal" ["install", "--only-dependencies"]
+      run "cabal" ["configure"]
       run "cabal" ["haddock"]
       run "cabal" ["sandbox", "delete"]
-    run "dist/setup/setup" ["build"]
+    run "cabal" ["build"]
 
     -- Copy docs and build manpages
     cpdir "libraries/haste-lib/dist/doc/html/haste-lib" "haste-compiler/docs"
