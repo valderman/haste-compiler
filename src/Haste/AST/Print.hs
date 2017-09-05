@@ -42,8 +42,9 @@ instance Pretty LHS where
   pp (LhsExp _ ex) = pp ex
 
 instance Pretty Lit where
-  pp (LNum d)  = put d
-  pp (LStr s)  = "\"" .+. put (fixQuotes $ BS.toString s) .+. "\""
+  pp (LNum d) | d >= 0    = put d
+  pp (LNum d) | otherwise = " " .+. put d
+  pp (LStr s)             = "\"" .+. put (fixQuotes $ BS.toString s) .+. "\""
     where
       fixQuotes ('\\':xs) = "\\\\" ++ fixQuotes xs
       fixQuotes ('"':xs)  = '\\':'"'  : fixQuotes xs
