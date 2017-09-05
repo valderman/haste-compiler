@@ -51,6 +51,8 @@
 #undef sigemptyset
 #undef sigfillset
 #endif
+#else
+#define sigset_t int
 #endif
 #if HAVE_ERRNO_H
 #include <errno.h>
@@ -137,7 +139,7 @@
 #if defined(__MINGW32__)
 /* in Win32Utils.c */
 extern void maperrno (void);
-extern int maperrno_func(DWORD dwErrorCode);
+extern int maperrno_func(unsigned long long dwErrorCode);
 extern HsWord64 getMonotonicUSec(void);
 #endif
 
