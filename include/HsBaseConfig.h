@@ -1,3 +1,4 @@
+
 /* include/HsBaseConfig.h.  Generated from HsBaseConfig.h.in by configure.  */
 /* include/HsBaseConfig.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -380,7 +381,11 @@
 #define HAVE_POLL_H 1
 
 /* Define to 1 if you have the <signal.h> header file. */
+#if __unix__
+#define HAVE_SIGNAL_H 1
+#else
 #undef HAVE_SIGNAL_H
+#endif
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
