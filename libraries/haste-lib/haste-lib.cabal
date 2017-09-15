@@ -4,7 +4,7 @@ License:        BSD3
 License-File:   LICENSE
 Category:       Web
 Synopsis:       Base libraries for haste-compiler.
-Description:    Base libraries for haste-compiler. Only useful for web development, doesn't link with vanilla GHC.
+Description:    Base libraries for haste-compiler. Only useful for web development, with Haste or vanilla GHC + haste-app.
 Cabal-Version:  >= 1.10
 Build-Type:     Simple
 Author:         Anton Ekblad <anton@ekblad.cc>
