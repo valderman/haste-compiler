@@ -121,7 +121,7 @@ Executable hastec
         random,
         system-fileio,
         shellmate >= 0.3.2.2 && <0.4,
-        either,
+        either >= 4.4 && <5,
         filepath,
         directory,
         cryptonite >= 0.10 && < 1.0,
