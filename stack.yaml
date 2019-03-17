@@ -7,3 +7,4 @@ extra-deps:
 - http-conduit-2.2.3
 - http-client-0.5.4
 - http-client-tls-0.3.3
+- tagged-0.8.6
